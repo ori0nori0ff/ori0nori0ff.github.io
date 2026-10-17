@@ -113,20 +113,6 @@
 .loading { color: var(--t3); font-size: 10px; letter-spacing: 1px; }
 
   /* tonight grid */
-  .tg { display: grid; gap: 2px; margin-top: 8px; align-items: stretch; }
-  .tg-l { display: flex; flex-direction: column; justify-content: center; padding-right: 8px; min-height: 26px; }
-  .tg-l b { font: 600 15px/1 'Barlow Condensed', Barlow, sans-serif; text-transform: uppercase; color: var(--soft, #C9D1DB); letter-spacing: .3px; }
-  .tg-l span { font: 500 9px 'JetBrains Mono', monospace; color: var(--t2, #8B9BAE); white-space: nowrap; margin-top: 2px; }
-  .tg-l i { font-style: normal; margin-right: 4px; } .tg-l i.ok { color: #39FF9E; } .tg-l i.no { color: #FF6B6B; }
-  .tg-h { font: 500 9px 'JetBrains Mono', monospace; color: var(--t2, #8B9BAE); text-align: center; align-self: end; }
-  .tg-c { position: relative; min-height: 26px; border-radius: 4px; background: #0F1318; overflow: hidden; }
-  .tg-c u { position: absolute; left: 18%; right: 18%; bottom: 0; border-radius: 2px 2px 0 0; background: #5D6B7E; text-decoration: none; }
-  .tg-cl u { left: 0; right: 0; background: rgba(160,175,195,.55); border-radius: 0; }
-  .tg-c em { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); text-align: center; font: 600 9px 'JetBrains Mono', monospace; color: #fff; font-style: normal; text-shadow: 0 0 3px #000; }
-  .tg-kp { min-height: 34px; } .tg-kp s { position: absolute; left: 0; right: 0; border-top: 1px dashed #FF6B6B; }
-  .tg-mo { display: flex; align-items: center; justify-content: center; font-size: 11px; color: #9AA3B0; } .tg-mo.bright { color: #FFF3C4; background: rgba(255,243,196,.10); }
-  .tg-c.best { box-shadow: inset 0 0 0 1px rgba(57,255,158,.55); }
-  .tg-c.cur { outline: 2px solid #FFE600; outline-offset: -1px; z-index: 1; }
   /* tonight hour by hour (old) */
   .tn-grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 2px; margin-top: 8px; }
   .tn-c { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 0 3px; border-radius: 8px; }
@@ -217,7 +203,7 @@
   .clockdl { margin-top: 0; flex: 1 1 100%; } .clockdl > * { padding: 8px 6px; }
   .enlc canvas { width: 100%; display: block; margin-top: 6px; cursor: zoom-in; }
   .lbl { font-size: 11px; } .app .lbl, .enlv .lbl { font-size: 10.5px; }
-  .tg-h, .tg-l span, .tnleg, .enlleg, .enlbs { font-size: 10.5px !important; }
+  .enlleg, .enlbs { font-size: 10.5px !important; }
   .sstat, .stime, .stag, .mtag { font-size: 11px; }
   button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, .chip:focus-visible, summary:focus-visible { outline: 3px solid #FFE600; outline-offset: 2px; }
   .dl > button { font: 700 11px 'JetBrains Mono', monospace; }
@@ -234,15 +220,60 @@
     .grid.stage { grid-template-columns: repeat(3, 1fr); grid-template-areas: "sun den spd" "sun info info"; }
     .grid.stage > .sunc { grid-area: sun; max-width: none; } #secDen { grid-area: den; } #secSpd { grid-area: spd; } #secInfo { grid-area: info; }
   }
+  /* equal-height cards per row: charts grow into the free space, help text sits at the bottom */
+  @media (min-width: 760px) {
+    .grid { align-items: stretch; }
+    .grid > section, .grid > .stack > section { display: flex; flex-direction: column; }
+    .grid > .stack > section:last-child { flex: 1 1 auto; }
+    svg.fillc { flex: 1 0 auto; height: 0 !important; }
+    #kpchart.fillc { min-height: 150px; } #swChart.fillc { min-height: 190px; }
+    .grid > section > .help:last-child, .grid > section > details:last-child, .sunc > .why:last-child, #globe + .help { margin-top: auto; }
+    #globe { margin-bottom: 14px; }
+    .steps { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: space-evenly; }
+  }
+  /* view switch + languages */
+  .topbar { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: var(--card); }
+  .seg button { border: 0; background: none; color: var(--dim); font: 600 12px 'JetBrains Mono', monospace; padding: 9px 14px; min-height: 40px; cursor: pointer; letter-spacing: .5px; }
+  .seg button[aria-pressed="true"] { background: #39FF9E; color: #0A0A0A; }
+  .locrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; } .locrow b { color: #FFE08A; font: 600 16px 'Barlow Condensed', Barlow, sans-serif; text-transform: uppercase; }
+  body.simple .xfull, body:not(.simple) .xsimple { display: none !important; }
+  /* the guide: 4 live steps for someone who knows nothing about it */
+  .guide h2 { margin-bottom: 4px; }
+  .gsteps { display: grid; gap: 12px; margin-top: 12px; counter-reset: s; }
+  .gstep { position: relative; background: #0F1318; border: 1px solid var(--line); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .gnum { position: absolute; top: 10px; left: 10px; z-index: 2; width: 30px; height: 30px; border-radius: 50%; background: #39FF9E; color: #0A0A0A; font: 700 17px/30px 'Barlow Condensed', Barlow, sans-serif; text-align: center; }
+  .gpic { aspect-ratio: 16 / 10; border-radius: 12px; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+  .gpic img, .gpic canvas { height: 100%; width: auto; max-width: 100%; display: block; }
+  .gstep h3 { margin: 4px 0 0; font: 600 24px/1.05 'Barlow Condensed', Barlow, sans-serif; text-transform: uppercase; color: #fff; }
+  .gstep p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--soft, #C9D1DB); }
+  .glive { font: 600 12px/1.5 'JetBrains Mono', monospace; color: #FFE08A; background: rgba(255,224,138,.07); border-radius: 10px; padding: 8px 10px; }
+  .glive::before { content: '● LIVE  '; color: #FF6B6B; }
+  .gfact { font-size: 13.5px; line-height: 1.5; color: var(--dim); border-left: 3px solid #4A7BFF; padding-left: 10px; }
+  .gfact b { color: #9DB8FF; }
+  .gmore { margin-top: auto; align-self: flex-start; border: 1px solid rgba(57,255,158,.5); background: none; color: #39FF9E; border-radius: 999px; padding: 9px 14px; min-height: 40px; font: 600 12px 'JetBrains Mono', monospace; cursor: pointer; }
+  .gall { display: block; width: 100%; margin-top: 14px; padding: 14px; border-radius: 14px; border: 1px solid var(--line); background: #141A22; color: #fff; font: 600 18px 'Barlow Condensed', Barlow, sans-serif; letter-spacing: .5px; cursor: pointer; }
+  .gkp { flex-direction: column; background: radial-gradient(circle at 50% 120%, rgba(57,255,158,.25), #000 70%); }
+  .gkp b { font: 600 72px/1 'Barlow Condensed', Barlow, sans-serif; } .gkp span { font: 600 13px 'JetBrains Mono', monospace; color: var(--dim); }
+  .gbar { display: grid; grid-template-columns: repeat(9, 1fr); gap: 3px; width: 70%; margin-top: 10px; } .gbar i { height: 7px; border-radius: 2px; background: #232830; }
+  .gaur { position: relative; background: linear-gradient(#020611, #0A1A2A 70%, #0E1712); }
+  .gaur i { position: absolute; bottom: 18%; width: 16%; height: 70%; border-radius: 50% 50% 0 0 / 30% 30% 0 0; background: linear-gradient(to top, rgba(57,255,158,.0), rgba(57,255,158,.75) 30%, rgba(57,255,158,.25) 70%, rgba(255,90,120,.45)); filter: blur(6px); animation: sway 6s ease-in-out infinite alternate; }
+  .gaur i:nth-child(1) { left: 6%; height: 55%; } .gaur i:nth-child(2) { left: 22%; animation-delay: -1s; } .gaur i:nth-child(3) { left: 40%; height: 78%; animation-delay: -2s; } .gaur i:nth-child(4) { left: 58%; animation-delay: -3s; } .gaur i:nth-child(5) { left: 76%; height: 60%; animation-delay: -4s; }
+  .gaur::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 20%; background: #05080A; clip-path: polygon(0 60%, 12% 20%, 22% 55%, 35% 10%, 48% 50%, 60% 25%, 74% 60%, 86% 30%, 100% 55%, 100% 100%, 0 100%); }
+  @keyframes sway { from { transform: skewX(-6deg) scaleY(.92); opacity: .75; } to { transform: skewX(6deg) scaleY(1.05); opacity: 1; } }
+  @media (min-width: 760px) { .gsteps { grid-template-columns: 1fr 1fr; } body.simple .grid.top { grid-template-columns: 1fr 1fr; } body.simple .grid.top > :first-child { grid-column: auto; } }
+  @media (min-width: 1200px) { .gsteps { grid-template-columns: repeat(4, 1fr); } body.simple .grid.top { grid-template-columns: 1.3fr 1fr; } }
 </style>
 </head>
 <body>
 <main>
   <div class="sub" id="upd">Loading live data…</div>
   <h1>Aurora tonight</h1>
-  <div class="sub" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span id="place">from Brașov, Romania</span><button class="locbtn" id="locBtn">📍 CHANGE PLACE</button></div>
-  <div id="locBox" class="hidden"><input id="locQ" type="search" placeholder="Search any city or village…" autocomplete="off" enterkeyhint="search">
-    <div id="locRes"></div><button class="locbtn" id="locGps">◎ USE MY LOCATION</button></div>
+  <div class="sub"><span id="place">from Brașov, Romania</span></div>
+  <div class="topbar">
+    <div class="seg" role="group" aria-label="View"><button data-mode="simple" aria-pressed="false">🌱 Simple</button><button data-mode="full" aria-pressed="false">🔭 Full</button></div>
+    <div class="seg" role="group" aria-label="Language" data-noi18n><button data-lang="en" lang="en">EN</button><button data-lang="ro" lang="ro">RO</button><button data-lang="de" lang="de">DE</button></div>
+  </div>
 
       <div class="grid top">
   <section class="card verdict" id="vcard">
@@ -256,11 +287,10 @@
     </div>
     <div class="lbl" style="margin-top:14px">Tonight hour by hour</div>
     <div id="tonight"><div class="why" style="font-size:12px;color:var(--faint)">Loading…</div></div>
-    <div class="tnleg"><span>Kp bar vs <b style="color:#FF6B6B">- - -</b> needed here</span><span>● bright Moon up · ◐ thin</span><span>brighter green = better chance</span></div>
     <p class="why" id="tnTxt" style="margin-top:8px"></p>
     <div class="help"><b>Kp</b> is the aurora strength scale, 0 to 9. From <span id="needWhere">here</span> you need about <b>Kp <span id="needKp">7</span> or more</b>, a clear sky and a dark place facing north.</div>
   </section>
-  <div class="stack"><section class="card app">
+  <div class="stack xfull" id="kpcard"><section class="card app">
   <div style="display:flex;justify-content:space-between;align-items:baseline">
     <div class="lbl">Kp index now</div><div class="lbl" id="kpScale">G0 · QUIET</div>
   </div>
@@ -274,23 +304,53 @@
   <div style="display:flex;justify-content:space-between;align-items:baseline">
     <div class="lbl">Kp · past 2 days + 3-day forecast</div><div class="lbl">3 H BLOCKS</div>
   </div>
-  <svg id="kpchart"></svg>
+  <svg id="kpchart" class="fillc"></svg>
 </section></div>
   <section class="card">
     <div class="lbl">Where the aurora is right now · OVATION model</div>
     <h2>NOAA aurora forecast</h2>
+    <div class="locrow"><span class="lbl">Your place</span><b id="gPlace">Brașov</b><button class="locbtn" id="locBtn">📍 CHANGE PLACE</button></div>
+    <div id="locBox" class="hidden"><input id="locQ" type="search" placeholder="Search any city or village…" autocomplete="off" enterkeyhint="search">
+      <div id="locRes"></div><button class="locbtn" id="locGps">◎ USE MY LOCATION</button></div>
     <canvas id="globe" role="img" aria-label="Globe with the NOAA live aurora forecast around the North Pole and your place marked"></canvas>
     <div class="help">The <b style="color:var(--green)">green glow</b> is NOAA's live aurora map around the North Pole. The yellow dot is you. The further south the green reaches towards it, the better our chances. <span id="ovTime"></span></div>
   </section>
   </div>
-  <div class="chap"><span aria-hidden="true">1</span><div><h2>From the Sun to Earth</h2><p>Everything starts at the Sun: flares, CMEs (clouds of solar plasma) and coronal holes that blow fast wind. It takes 1–4 days to cross 150 million km. Play the Sun and NOAA's solar wind model on one clock.</p></div></div>
-  <section class="card clock" id="syncCard" aria-label="One clock for the Sun and the solar wind">
+  <section class="card xsimple guide" id="guide" aria-labelledby="gH">
+    <div class="lbl">How does an aurora happen? · 4 steps, live right now</div>
+    <h2 id="gH">From the Sun to your sky</h2>
+    <div class="gsteps">
+      <article class="gstep"><div class="gnum" aria-hidden="true">1</div><div class="gpic"><img id="gSun" alt="The Sun right now, NASA SDO"></div>
+        <h3>The Sun throws</h3><p>Now and then the Sun hurls a giant cloud of hot gas into space — a <b>CME</b>, billions of tonnes at once.</p>
+        <div class="glive" id="gSunLive">–</div>
+        <div class="gfact"><b>Did you know?</b> The Sun is 109 times wider than Earth, and its light needs 8 minutes to reach us.</div>
+        <button class="gmore" data-go="syncCard">Watch the Sun live ›</button></article>
+      <article class="gstep"><div class="gnum" aria-hidden="true">2</div><div class="gpic"><canvas id="gEnl" width="300" height="300" role="img" aria-label="NOAA's solar wind model seen from above: the Sun in the middle, Earth on the green dot"></canvas></div>
+        <h3>The wind travels</h3><p>A stream of particles — the <b>solar wind</b> — blows past Earth all the time. A CME needs <b>1 to 4 days</b> to cross the 150 million km.</p>
+        <div class="glive" id="gEnlLive">–</div>
+        <div class="gfact"><b>Did you know?</b> The solar wind normally blows at about 400 km/s — Bucharest to Paris in 5 seconds.</div>
+        <button class="gmore" data-go="secDen">See the forecast ›</button></article>
+      <article class="gstep"><div class="gnum" aria-hidden="true">3</div><div class="gpic gkp"><b id="gKp">–</b><span>Kp</span><div class="gbar" id="gBar" aria-hidden="true"></div></div>
+        <h3>Earth's shield shakes</h3><p>Earth's magnetic field shields us. When the wind's own magnetism points <b>south</b>, energy leaks in and the field starts to shake. <b>Kp</b> measures it, from 0 (calm) to 9 (huge storm).</p>
+        <div class="glive" id="gKpLive">–</div>
+        <div class="gfact"><b>Did you know?</b> In May 2024 a Kp 9 storm made the aurora visible all over Romania — even in Bucharest.</div>
+        <button class="gmore" data-go="kpcard">See the Kp forecast ›</button></article>
+      <article class="gstep"><div class="gnum" aria-hidden="true">4</div><div class="gpic gaur" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+        <h3>The sky lights up</h3><p>The particles hit the air 100–300 km up and make it glow: <b style="color:#39FF9E">green</b> from oxygen, <b style="color:#FF6B6B">red</b> higher up, purple from nitrogen.</p>
+        <div class="glive" id="gSkyLive">–</div>
+        <div class="gfact"><b>Did you know?</b> A phone camera sees the aurora better than your eyes: in Romania it often looks grey to the eye but green and red in the photo.</div>
+        <button class="gmore" data-go="vcard">Can we see it tonight? ›</button></article>
+    </div>
+    <button class="gall" id="gAll">🔭 Show me everything — the full expert view</button>
+  </section>
+  <div class="chap xfull"><span aria-hidden="true">1</span><div><h2>From the Sun to Earth</h2><p>Everything starts at the Sun: flares, CMEs (clouds of solar plasma) and coronal holes that blow fast wind. It takes 1–4 days to cross 150 million km. Play the Sun and NOAA's solar wind model on one clock.</p></div></div>
+  <section class="card clock xfull" id="syncCard" aria-label="One clock for the Sun and the solar wind">
     <div class="clockrow"><div class="clockt"><div class="lbl">One clock · Sun + solar wind</div><div class="stime" id="syT" aria-live="polite">–</div></div>
       <button class="spbtn" id="syPlay" aria-label="Play the Sun and the solar wind together">▶</button><button class="spbtn" id="sySpd" aria-label="Playback speed">1×</button>
       <input type="range" id="sySlide" min="0" max="1000" value="1000" aria-label="Date and time shown in every chart">
       <div class="dl clockdl"><button id="cardSave">⬇ SHARE CARD</button><button id="linkShare">↗ SHARE LINK</button></div></div>
   </section>
-  <div class="grid stage">
+  <div class="grid stage xfull">
   <section class="card sunc" aria-label="The Sun now">
     <div class="lbl">The Sun · NASA SDO / SOHO</div>
     <div class="sunhead"><div><h2>The Sun now</h2><div class="sstat" id="sunStat">LOADING NASA FRAMES…</div></div><span class="scount" id="sunCount"></span></div>
@@ -319,8 +379,8 @@
     <div class="two"><div class="why" style="margin-top:10px;font-size:13px;color:var(--dim)">NOAA's computer model of the solar wind, seen from above the Sun: the spiral arms are streams of solar wind rotating with the Sun. A CME shows up as a bright bulge (yellow → red → white) racing outward; when it reaches the green Earth dot, density and speed jump — that's when storms (and aurora) can start. The yellow line in each chart = the moment shown. Tap a picture for full screen (turn the phone sideways). New runs every few hours; arrival times are ±7 h or so.</div><div class="help" id="enlHelp">The wind is a stream of particles from the Sun. <b>Faster</b> (over ~500 km/s) and with the magnet pointing <b>south</b> (Bz negative) = the aurora switches on. A <b>bright bulge</b> racing out from the Sun is a CME — when it reaches the green Earth dot, that's the best chance for a big show.</div></div>
   </section>
   </div>
-  <div class="chap"><span aria-hidden="true">2</span><div><h2>Arrival</h2><p>A spacecraft 1.5 million km towards the Sun measures the wind 30–60 minutes before it hits us. Speed, density and above all Bz (the magnetic direction) decide what happens next.</p></div></div>
-  <div class="grid two-col">
+  <div class="chap xfull"><span aria-hidden="true">2</span><div><h2>Arrival</h2><p>A spacecraft 1.5 million km towards the Sun measures the wind 30–60 minutes before it hits us. Speed, density and above all Bz (the magnetic direction) decide what happens next.</p></div></div>
+  <div class="grid two-col xfull">
   <section class="card app">
     <div class="lbl" style="font-size:10px">Right now, 1.5 million km towards the Sun</div>
     <div class="now" style="margin-bottom:12px">
@@ -354,7 +414,7 @@
     <div class="scale" data-sw="e"><b id="scE">–</b><small>Satellites</small></div>
   </div>
   <div class="swnow" id="swNow"></div>
-  <svg id="swChart"></svg>
+  <svg id="swChart" class="fillc"></svg>
   <div id="swList"></div>
   <div id="swG">
     <div class="lbl" style="margin-top:12px">Geomagnetic alerts · last 3 days</div>
@@ -363,8 +423,8 @@
   <details class="howto" id="swHow"><summary>HOW TO READ IT ›</summary><div id="swHowTxt"></div></details>
 </section>
   </div>
-  <div class="chap"><span aria-hidden="true">3</span><div><h2>Your sky — and the bigger picture</h2><p>The last step is local: dark, clear, the Moon out of the way and a view to the north. Storms come more often around the peak of the Sun's 11-year cycle.</p></div></div>
-  <div class="grid two-col">
+  <div class="chap xfull"><span aria-hidden="true">3</span><div><h2>Your sky — and the bigger picture</h2><p>The last step is local: dark, clear, the Moon out of the way and a view to the north. Storms come more often around the peak of the Sun's 11-year cycle.</p></div></div>
+  <div class="grid two-col xfull">
   <section class="card">
     <div class="lbl">How to read all this</div>
     <h2>A good aurora night needs</h2>
@@ -397,25 +457,43 @@
 <div id="enlFull"><div id="enlStage"><div id="enlView"><canvas id="enlFCv"></canvas></div>
   <div class="fctl"><div class="pbtn" id="enlFPlay">▶</div><div class="pbtn spd" style="font:700 10px 'JetBrains Mono',monospace">1×</div><input type="range" id="enlFSlide" min="0" max="0" value="0"><span class="lbl" id="enlFT" style="min-width:150px;text-align:right">–</span><span class="lbl">PINCH · DRAG</span><div class="x" id="enlX">✕</div></div></div></div>
 <div id="toast"></div>
+<script src="i18n.js"></script>
+<script src="i18n.ro.js"></script>
+<script src="i18n.de.js"></script>
 <script src="land.js"></script>
 <script src="globe.js"></script>
 <script src="tonight.js"></script>
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
+i18nApply();
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const API = 'https://services.swpc.noaa.gov/';
 const q = new URLSearchParams(location.search);
+// view: ?mode= > remembered > simple (the page is mostly opened from a shared link by people new to all this)
+let MODE = q.get('mode') || (() => { try { return localStorage.getItem('aurora.mode'); } catch (e) { return null; } })() || 'simple';
+function setMode(m, go) {
+  MODE = m === 'full' ? 'full' : 'simple'; document.body.classList.toggle('simple', MODE === 'simple');
+  document.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === MODE));
+  try { localStorage.setItem('aurora.mode', MODE); } catch (e) {}
+  dispatchEvent(new Event('resize'));
+  if (go) setTimeout(() => { const el = document.getElementById(go); if (el) el.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'start' }); }, 60);
+}
+document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+document.querySelectorAll('[data-lang]').forEach(b => { b.setAttribute('aria-pressed', b.dataset.lang === LANG); b.onclick = () => i18nSet(b.dataset.lang); });
+document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => setMode('full', b.dataset.go));
+$('gAll').onclick = () => setMode('full', 'kpcard');
 const esc = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 // the place: link (?town=&lat=&lon=) > the one picked on this device > Brașov
 let TOWN = (() => {
-  if (q.get('lat') && q.get('lon')) return { name: q.get('town') || 'Your place', lat: +q.get('lat'), lon: +q.get('lon'), sub: q.get('sub') || '' };
+  if (q.get('lat') && q.get('lon')) return { name: q.get('town') || T('Your place'), lat: +q.get('lat'), lon: +q.get('lon'), sub: q.get('sub') || '' };
   try { const l = JSON.parse(localStorage.getItem('aurora.place') || 'null'); if (l && isFinite(l.lat)) return l; } catch (e) {}
-  return { name: 'Brașov', lat: 45.6427, lon: 25.5887, sub: 'Romania' };
+  return { name: 'Brașov', lat: 45.6427, lon: 25.5887, sub: T('Romania') };
 })();
 let TZ = TOWN.tz || 'Europe/Bucharest';
 const need = () => window.AuroraGlobe ? AuroraGlobe.kpNeed(TOWN.lat, TOWN.lon) : 7;
 function placeUI() {
-  $('place').textContent = 'from ' + TOWN.name + (TOWN.sub ? ', ' + TOWN.sub : '');
+  $('place').textContent = T('from {p}', { p: TOWN.name + (TOWN.sub ? ', ' + TOWN.sub : '') }); $('gPlace') && ($('gPlace').textContent = TOWN.name + (TOWN.sub ? ', ' + TOWN.sub : ''));
   $('needWhere').textContent = TOWN.name; $('needKp').textContent = need(); document.querySelectorAll('.needK').forEach(e => e.textContent = need());
 }
 placeUI();
@@ -431,21 +509,21 @@ $('locBtn').onclick = () => { const b = $('locBox'); b.classList.toggle('hidden'
 let locT = 0;
 $('locQ').oninput = () => { clearTimeout(locT); const v = $('locQ').value.trim(); if (v.length < 2) { $('locRes').innerHTML = ''; return; }
   locT = setTimeout(async () => { try {
-    const r = await j('https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(v) + '&count=6&language=en&format=json');
+    const r = await j('https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(v) + '&count=6&language=' + LANG + '&format=json');
     const L = (r.results || []).map(x => ({ name: x.name, lat: x.latitude, lon: x.longitude, tz: x.timezone, sub: [x.admin1, x.country].filter(Boolean).join(', ') }));
-    $('locRes').innerHTML = L.length ? L.map((x, i) => `<button data-i="${i}">${esc(x.name)}<small>${esc(x.sub)}</small></button>`).join('') : '<div class="why">No place found.</div>';
+    $('locRes').innerHTML = L.length ? L.map((x, i) => `<button data-i="${i}">${esc(x.name)}<small>${esc(x.sub)}</small></button>`).join('') : '<div class="why">' + T('No place found.') + '</div>';
     $('locRes').onclick = e => { const b = e.target.closest('[data-i]'); if (b) setPlace(L[+b.dataset.i]); };
-  } catch (e) { $('locRes').innerHTML = '<div class="why">No connection.</div>'; } }, 350); };
+  } catch (e) { $('locRes').innerHTML = '<div class="why">' + T('No connection.') + '</div>'; } }, 350); };
 $('locGps').onclick = () => {
-  if (!navigator.geolocation) { $('locRes').innerHTML = '<div class="why">This browser can\'t share your location.</div>'; return; }
-  $('locGps').textContent = 'FINDING YOU…';
-  navigator.geolocation.getCurrentPosition(p => { $('locGps').textContent = '◎ USE MY LOCATION';
-      setPlace({ name: 'My location', lat: +p.coords.latitude.toFixed(3), lon: +p.coords.longitude.toFixed(3), tz: Intl.DateTimeFormat().resolvedOptions().timeZone, sub: '' }); },
-    () => { $('locGps').textContent = '◎ USE MY LOCATION'; $('locRes').innerHTML = '<div class="why">Location not allowed — search for your town instead.</div>'; },
+  if (!navigator.geolocation) { $('locRes').innerHTML = '<div class="why">' + T('This browser can\'t share your location.') + '</div>'; return; }
+  $('locGps').textContent = T('FINDING YOU…');
+  navigator.geolocation.getCurrentPosition(p => { $('locGps').textContent = T('◎ USE MY LOCATION');
+      setPlace({ name: T('My location'), lat: +p.coords.latitude.toFixed(3), lon: +p.coords.longitude.toFixed(3), tz: Intl.DateTimeFormat().resolvedOptions().timeZone, sub: '' }); },
+    () => { $('locGps').textContent = T('◎ USE MY LOCATION'); $('locRes').innerHTML = '<div class="why">' + T('Location not allowed — search for your town instead.') + '</div>'; },
     { timeout: 15000, maximumAge: 600000 });
 };
-const hhmm = d => new Date(d).toLocaleTimeString('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit' });
-const day = d => new Date(d).toLocaleDateString('en-GB', { timeZone: TZ, weekday: 'short', day: 'numeric' });
+const hhmm = d => new Date(d).toLocaleTimeString(LOC, { timeZone: TZ, hour: '2-digit', minute: '2-digit' });
+const day = d => new Date(d).toLocaleDateString(LOC, { timeZone: TZ, weekday: 'short', day: 'numeric' });
 const kpColor = k => k >= 8 ? '#E05BFF' : k >= 7 ? '#FF4444' : k >= 6 ? '#FF7A3D' : k >= 5 ? '#FFA040' : k >= 4 ? '#E8C766' : '#6EE7A0';
 async function j(u) { const r = await fetch(u, { cache: 'no-store' }); if (!r.ok) throw new Error(r.status); return r.json(); }
 const S = {};
@@ -470,23 +548,25 @@ function verdict() {
     const ss = S.wx.daily.sunset[0]; if (ss) dark = Date.parse(ss + 'Z') - S.wx.utc_offset_seconds * 1000 + 75 * 60000;
   }
   const N = need();   // Kp needed here (from the geomagnetic latitude)
-  const lv = kp >= N + 1 ? ['Likely', '#E05BFF', 'rgba(224,91,255,.22)'] : kp >= N ? ['Possible', '#FF4444', 'rgba(255,68,68,.2)']
-    : kp >= N - 1 ? ['Unlikely', '#FFA040', 'rgba(255,160,64,.16)'] : ['No chance', '#6EE7A0', 'rgba(57,255,158,.10)'];
+  const lv = kp >= N + 1 ? [T('Likely'), '#E05BFF', 'rgba(224,91,255,.22)'] : kp >= N ? [T('Possible'), '#FF4444', 'rgba(255,68,68,.2)']
+    : kp >= N - 1 ? [T('Unlikely'), '#FFA040', 'rgba(255,160,64,.16)'] : [T('No chance'), '#6EE7A0', 'rgba(57,255,158,.10)'];
   $('vword').textContent = lv[0]; $('vword').style.color = lv[1]; $('vcard').style.setProperty('--glow', lv[2]);
-  let t = kp >= N + 1 ? 'A solar storm strong enough for ' + TOWN.name + ' is forecast — the aurora may be visible to the eye low in the north from dark places.'
-    : kp >= N ? 'Forecast right at the limit for ' + TOWN.name + ' — a glow on the northern horizon is possible, best caught with a phone\'s night mode.'
-    : kp >= N - 1 ? 'Close, but usually still too far north for ' + TOWN.name + '. Worth checking again later tonight.'
-    : TOWN.name + ' needs about Kp ' + N + ' to see the aurora. Nothing like that is forecast tonight.';
-  if (kp >= N - 1 && clouds != null) t += clouds > 70 ? ' Clouds will likely block the view.' : clouds > 40 ? ' Some clouds — look for gaps.' : ' Skies look mostly clear.';
+  const P = { p: TOWN.name, n: N };
+  let t = kp >= N + 1 ? T('A solar storm strong enough for {p} is forecast — the aurora may be visible to the eye low in the north from dark places.', P)
+    : kp >= N ? T('Forecast right at the limit for {p} — a glow on the northern horizon is possible, best caught with a phone\'s night mode.', P)
+    : kp >= N - 1 ? T('Close, but usually still too far north for {p}. Worth checking again later tonight.', P)
+    : T('{p} needs about Kp {n} to see the aurora. Nothing like that is forecast tonight.', P);
+  if (kp >= N - 1 && clouds != null) t += ' ' + (clouds > 70 ? T('Clouds will likely block the view.') : clouds > 40 ? T('Some clouds — look for gaps.') : T('Skies look mostly clear.'));
   $('vtext').textContent = t;
   $('fKp').textContent = kp.toFixed(1); $('fKp').style.color = kpColor(kp);
   $('fCloud').textContent = clouds == null ? '–' : clouds + '%';
   $('fDark').textContent = dark ? hhmm(dark) : '–';
   if (window.AuroraTonight && S.wx) {
     const pl = AuroraTonight.plan({ lat: TOWN.lat, lon: TOWN.lon, need: N, kpList: S.kpList, wx: S.wx });
-    S.tnPlan = pl; S.tnNeed = N; AuroraTonight.render($('tonight'), pl, hhmm, kpColor, N, sy.on ? sy.t : 0); $('tnTxt').textContent = S.tonight = AuroraTonight.sentence(pl, N, hhmm);
+    S.tnPlan = pl; S.tnNeed = N; S.kpT = kp; S.clouds = clouds; AuroraTonight.render($('tonight'), pl, hhmm, kpColor, N, sy.on ? sy.t : 0); $('tnTxt').textContent = S.tonight = AuroraTonight.sentence(pl, N, hhmm);
   }
   if (window.redrawDeep) redrawDeep();
+  guide();
 }
 
 /* ── Kp chart: 3-hour bars, next ~3 days ── */
@@ -512,15 +592,15 @@ function toast(m, ms) { const t = $('toast'); t.textContent = m; t.classList.add
 /* ── The Sun now: the app's Sun sheet. Frame lists come from sun/frames.json (GitHub Actions lists NASA's
    archives every hour — NASA allows no browser requests); the pictures themselves load straight from NASA. ── */
 const SUNF = [
-  ['C3', 'LASCO C3', '#4A7BFF', '<b>CMEs.</b> The Sun is hidden behind a disk so we can see what it throws into space. A cloud spreading out <b>all around the disk ("halo")</b> is heading our way — aurora chance in 1–4 days.', 'https://soho.nascom.nasa.gov/data/realtime/c3/512/latest.jpg'],
-  ['0171', 'AIA 171', '#FFB300', '<b>Quiet corona, ~600,000 °C.</b> The glowing loops follow the Sun\'s magnetic field.'],
-  ['0193', 'AIA 193', '#00AAFF', '<b>Hot corona, ~1 million °C.</b> Dark patches are coronal holes: they blow fast solar wind that reaches Earth 2–4 days later.'],
-  ['0304', 'AIA 304', '#FF4400', '<b>Just above the surface, ~50,000 °C.</b> Dark threads (filaments) can lift off and become CMEs.'],
-  ['0094', 'AIA 094', '#44FF88', '<b>Flaring regions, ~6 million °C.</b> Bright spots are active, flare-prone areas.'],
-  ['0131', 'AIA 131', '#00E5CC', '<b>Hottest flare gas, ~10 million °C.</b> A sudden bright flash is a solar flare.'],
-  ['1600', 'AIA 1600', '#FFDD00', '<b>Upper surface.</b> Bright patches mark strong magnetism around sunspots.'],
-  ['HMIIC', 'HMI IC', '#CCCCCC', '<b>The Sun as your eye would see it.</b> Sunspots are where flares and CMEs come from.'],
-  ['HMIB', 'HMI B', '#8888FF', '<b>Magnetic map.</b> White and black are opposite magnetic poles; tangled, mixed spots flare the most.'],
+  ['C3', 'LASCO C3', '#4A7BFF', T('<b>CMEs.</b> The Sun is hidden behind a disk so we can see what it throws into space. A cloud spreading out <b>all around the disk ("halo")</b> is heading our way — aurora chance in 1–4 days.'), 'https://soho.nascom.nasa.gov/data/realtime/c3/512/latest.jpg'],
+  ['0171', 'AIA 171', '#FFB300', T('<b>Quiet corona, ~600,000 °C.</b> The glowing loops follow the Sun\'s magnetic field.')],
+  ['0193', 'AIA 193', '#00AAFF', T('<b>Hot corona, ~1 million °C.</b> Dark patches are coronal holes: they blow fast solar wind that reaches Earth 2–4 days later.')],
+  ['0304', 'AIA 304', '#FF4400', T('<b>Just above the surface, ~50,000 °C.</b> Dark threads (filaments) can lift off and become CMEs.')],
+  ['0094', 'AIA 094', '#44FF88', T('<b>Flaring regions, ~6 million °C.</b> Bright spots are active, flare-prone areas.')],
+  ['0131', 'AIA 131', '#00E5CC', T('<b>Hottest flare gas, ~10 million °C.</b> A sudden bright flash is a solar flare.')],
+  ['1600', 'AIA 1600', '#FFDD00', T('<b>Upper surface.</b> Bright patches mark strong magnetism around sunspots.')],
+  ['HMIIC', 'HMI IC', '#CCCCCC', T('<b>The Sun as your eye would see it.</b> Sunspots are where flares and CMEs come from.')],
+  ['HMIB', 'HMI B', '#8888FF', T('<b>Magnetic map.</b> White and black are opposite magnetic poles; tangled, mixed spots flare the most.')],
 ];
 /* one time axis for every slider: the solar wind model run's span (the Sun's 5 days reach back further),
    or the Sun's own range until the model has loaded — so the same moment sits at the same spot on all three */
@@ -535,11 +615,10 @@ const nearestT = (n, tOf, t) => { let lo = 0, hi = n - 1; while (lo < hi) { cons
 const CLIPS = 'https://github.com/ori0nori0ff/ori0nori0ff.github.io/releases/download/sun-clips/';
 const hiRes = u => u.replace('_1024_', '_2048_').replace('_M_512.jpg', '_M_1k.jpg').replace('_Ic_flat_512.jpg', '_Ic_flat_1k.jpg').replace('_c3_512.jpg', '_c3_1024.jpg');
 const latestOf = f => f[4] || 'https://sdo.gsfc.nasa.gov/assets/img/latest/latest_1024_' + f[0] + '.jpg';
-const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const sun = { F: null, k: 0, i: 0, play: false, timer: null, imgs: [], seq: 0 };
 $('sunPlay').textContent = $('sunFPlay').textContent = '▶';   // nothing plays until asked (one shared clock)
 const sunFr = () => (sun.F && sun.F.filters[SUNF[sun.k][0]]) || [];
-const sunT = t => new Date(t).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: TZ }).replace(',', '');
+const sunT = t => new Date(t).toLocaleString(LOC, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: TZ }).replace(',', '');
 $('sunChips').innerHTML = SUNF.map((f, i) => `<button data-i="${i}" style="color:${f[2]};border-color:${f[2]}66">${f[1]}</button>`).join('');
 $('sunChips').onclick = e => { const b = e.target.closest('button'); if (b) sunPick(+b.dataset.i); };
 async function loadSun() {
@@ -549,7 +628,7 @@ async function loadSun() {
 function sunStatus() {
   const fr = sunFr(), last = fr.length ? fr[fr.length - 1][0] : 0, age = last ? (Date.now() - last) / 60000 : 0;
   $('sunStat').classList.toggle('stale', !!last && age > 120);
-  $('sunStat').textContent = !last ? 'LATEST NASA IMAGE (LOOP NOT READY)' : (age > 120 ? '⚠ NASA FEED STALE · ' : 'NEWEST ') + sunT(last) + ' · ' + (age < 90 ? Math.round(age) + ' MIN AGO' : Math.round(age / 60) + ' H AGO');
+  $('sunStat').textContent = !last ? T('LATEST NASA IMAGE (LOOP NOT READY)') : (age > 120 ? T('⚠ NASA FEED STALE') + ' · ' : T('NEWEST') + ' ') + sunT(last) + ' · ' + (age < 90 ? T('{n} MIN AGO', { n: Math.round(age) }) : T('{n} H AGO', { n: Math.round(age / 60) }));
 }
 function sunPick(k) {
   sun.k = (k + SUNF.length) % SUNF.length; const f = SUNF[sun.k], fr = sunFr(), seq = ++sun.seq;
@@ -558,14 +637,14 @@ function sunPick(k) {
   $('sunLbl').textContent = f[1]; $('sunDot').style.background = f[2]; $('sunCount').textContent = (sun.k + 1) + ' / ' + SUNF.length;
   $('sunHelp').innerHTML = f[3]; $('sunClip').href = CLIPS + 'sun-' + f[0] + '.mp4'; $('sunClip').setAttribute('download', 'sun-' + f[0] + '.mp4');
   sunStatus(); clearInterval(sun.timer); sun.imgs = [];
-  if (!fr.length) { const u = latestOf(f) + '?t=' + Math.floor(Date.now() / 600000); sunImgSrc(u); $('sunSave').href = u; $('sunTime').textContent = $('sunFTime').textContent = 'LATEST';
+  if (!fr.length) { const u = latestOf(f) + '?t=' + Math.floor(Date.now() / 600000); sunImgSrc(u); $('sunSave').href = u; $('sunTime').textContent = $('sunFTime').textContent = T('LATEST');
     $('sunSlide').max = $('sunFSlide').max = 0; $('sunLoad').textContent = ''; return; }
   $('sunSlide').max = $('sunFSlide').max = 1000; sun.i = fr.length - 1;
   // preload newest first; the loop starts once most of it is in
   let done = 0; sun.imgs = fr.map(() => null);
   fr.map((_, i) => fr.length - 1 - i).forEach((i, n) => setTimeout(() => { if (seq !== sun.seq) return;
     const im = new Image(); im.onload = im.onerror = () => { if (seq !== sun.seq) return; done++;
-      $('sunLoad').textContent = done < fr.length ? 'LOADING ' + Math.round(done / fr.length * 100) + '%' : '';
+      $('sunLoad').textContent = done < fr.length ? T('LOADING {p}%', { p: Math.round(done / fr.length * 100) }) : '';
       if (done === Math.ceil(fr.length * .6) && sy.on) syShow(sy.t); };
     im.src = fr[i][1]; sun.imgs[i] = im; }, n * 15));
   sunShow(sun.i); if (typeof sy !== 'undefined' && sy.on) syShow(sy.t);
@@ -576,7 +655,7 @@ function sunShow(i) {
   const u = fr[sun.i][1];
   sunImgSrc(sun.play || sy.on ? u : hiRes(u)); $('sunSave').href = hiRes(u);   // paused → the full-size picture
   $('sunTime').textContent = $('sunFTime').textContent = sunT(fr[sun.i][0]); $('sunSlide').value = $('sunFSlide').value = toPos(fr[sun.i][0]);
-  const ax = axis(); $('sunLbl').textContent = SUNF[sun.k][1] + (sun.i === fr.length - 1 && ax && ax.b > fr[sun.i][0] + 3600e3 ? ' · LATEST' : '');   // later times = only the forecast moves on
+  const ax = axis(); $('sunLbl').textContent = SUNF[sun.k][1] + (sun.i === fr.length - 1 && ax && ax.b > fr[sun.i][0] + 3600e3 ? ' · ' + T('LATEST') : '');   // later times = only the forecast moves on
 }
 function sunStart() { clearInterval(sun.timer); sun.play = true; $('sunPlay').textContent = $('sunFPlay').textContent = '⏸';
   sun.timer = setInterval(() => { const fr = sunFr(); if (!fr.length) return; let n = sun.i;
@@ -593,26 +672,26 @@ $('sunPrev').onclick = () => sunPick(sun.k - 1); $('sunNext').onclick = () => su
   B.addEventListener('pointerup', e => { if (x0 == null) return; const d = e.clientX - x0; x0 = null; if (Math.abs(d) > 50) sunPick(sun.k + (d < 0 ? 1 : -1)); }); })();
 $('sunFullB').onclick = () => { $('sunFull').classList.add('on'); sunShow(sun.i); };
 $('sunFX').onclick = () => $('sunFull').classList.remove('on');
-$('sunClip').onclick = () => toast('Downloading the last 48 h of ' + SUNF[sun.k][1] + '…');
+$('sunClip').onclick = () => toast(T('Downloading the last 48 h of {f}…', { f: SUNF[sun.k][1] }));
 
 /* ── Solar wind forecast: the app's WSA-ENLIL card (NOAA allows browser requests, so frames and clips can be saved) ── */
 const enl = { frames: [], i: 0, play: null, cache: {} };
 const ENL_ARCH = 'https://raw.githubusercontent.com/ori0nori0ff/ori0nori0ff.github.io/enlil/';
 const frameT = u => { const m = u.match(/(\d{8})T(\d{2})(\d{2})(\d{2})/); return m ? Date.parse(`${m[1].slice(0, 4)}-${m[1].slice(4, 6)}-${m[1].slice(6)}T${m[2]}:${m[3]}:${m[4]}Z`) : 0; };
-const dayHm = t => new Date(t).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: TZ }).replace(/,/g, '').toUpperCase();
-const dayD = t => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: TZ }).toUpperCase();
+const dayHm = t => new Date(t).toLocaleString(LOC, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: TZ }).replace(/,/g, '').toUpperCase();
+const dayD = t => new Date(t).toLocaleDateString(LOC, { day: 'numeric', month: 'short', timeZone: TZ }).toUpperCase();
 function enlSummary() {
   const now = Date.now(), F = S.enl.filter(p => p.t >= now);
-  if (!F.length) { $('enlSum').textContent = 'This model run has no forecast left — waiting for the next one.'; return; }
+  if (!F.length) { $('enlSum').textContent = T('This model run has no forecast left — waiting for the next one.'); return; }
   const pn = F.reduce((a, p) => p.n > a.n ? p : a), pv = F.reduce((a, p) => p.v > a.v ? p : a), cme = F.find(p => p.cme);
   const strong = pn.n >= 20 || pv.v >= 600;
-  $('enlSum').innerHTML = (cme ? `<b style="color:#E05BFF">CME impact predicted ≈ ${dayHm(cme.t)}</b> (±7 h). ` : `<b style="color:${strong ? '#FFA040' : '#6EE7A0'}">${strong ? 'Faster / denser wind ahead' : 'No CME impact'}</b> in this run. `)
-    + `Peak density <b>${pn.n.toFixed(0)} /cm³</b> ${dayHm(pn.t)} · peak speed <b>${Math.round(pv.v)} km/s</b> ${dayHm(pv.t)}.`
-    + (cme || strong ? ' Watch the Kp forecast and Bz around then.' : ' Normal is ≈ 5 /cm³ and 350–450 km/s.');
+  $('enlSum').innerHTML = (cme ? T('<b style="color:#E05BFF">CME impact predicted ≈ {t}</b> (±7 h).', { t: dayHm(cme.t) }) : `<b style="color:${strong ? '#FFA040' : '#6EE7A0'}">${strong ? T('Faster / denser wind ahead') : T('No CME impact')}</b> ` + T('in this run.')) + ' '
+    + T('Peak density <b>{n} /cm³</b> {a} · peak speed <b>{v} km/s</b> {b}.', { n: pn.n.toFixed(0), a: dayHm(pn.t), v: Math.round(pv.v), b: dayHm(pv.t) }) + ' '
+    + (cme || strong ? T('Watch the Kp forecast and Bz around then.') : T('Normal is ≈ 5 /cm³ and 350–450 km/s.'));
 }
 // NOAA frame (960×600): per row (density on top, speed 264 px lower) the view from above (disc), from the side
 // (half circle) and NOAA's graphs. We keep the two views, clipped to their shapes, and draw our own graphs.
-const ENL = { n: { y: 0, name: 'DENSITY · PARTICLES PER CM³', col: '#39FF9E' }, v: { y: 264, name: 'SPEED · KM/S', col: '#FFA040' } };
+const ENL = { n: { y: 0, name: T('DENSITY · PARTICLES PER CM³'), col: '#39FF9E' }, v: { y: 264, name: T('SPEED · KM/S'), col: '#FFA040' } };
 const ENL_SUN = [202, 184], ENL_EARTH = [275, 183], ENL_SEARTH = [430, 175], ENL_AU = 73;   // px in the density row
 let enlView = 'f';   // full screen shows density + speed
 const enlImg = src => { let im = enl.cache[src]; if (!im) { im = new Image(); im.crossOrigin = 'anonymous'; im.src = src; enl.cache[src] = im; } return im; };
@@ -639,13 +718,13 @@ function enlViews(g, im, k, x, y, s, fs) {
   const xs = x + 266 * s, ys = y + 7 * s;   // side view: apex (Sun) at NOAA (358, 183) → crop (16, 121)
   g.save(); g.beginPath(); g.moveTo(xs + 16 * s, ys + 121 * s); g.arc(xs + 16 * s, ys + 121 * s, 128 * s, -Math.PI / 3, Math.PI / 3); g.closePath(); g.clip();
   g.drawImage(im, 342, 62 + dy, 148, 244, xs, ys, 148 * s, 244 * s); g.restore();
-  enlCap(g, x, y + fs, 'FROM ABOVE', '#8B9BAE', fs * .85); enlCap(g, xs + 148 * s, y + fs, 'FROM THE SIDE', '#8B9BAE', fs * .85, 'right');
+  enlCap(g, x, y + fs, T('FROM ABOVE'), '#8B9BAE', fs * .85); enlCap(g, xs + 148 * s, y + fs, T('FROM THE SIDE'), '#8B9BAE', fs * .85, 'right');
   // Sun / Earth / STEREO-A (NOAA's markers), labels
   const boxes = [], put = (bx, by, bw, bh) => { boxes.push([bx, by, bw, bh]); }, hit = (bx, by, bw, bh) => boxes.some(q => bx < q[0] + q[2] && bx + bw > q[0] && by < q[1] + q[3] && by + bh > q[1]);
-  let q = D(ENL_SUN); enlLabel(g, q[0], q[1], 'SUN', '#FFE600', -fs * 5.5, -fs * 2.6, fs); put(q[0] - fs * 5.5, q[1] - fs * 3.6, fs * 4.4, fs * 1.6);
-  q = D(ENL_EARTH); enlLabel(g, q[0], q[1], 'EARTH', '#7CFF7C', fs * .8, fs * 3, fs); put(q[0] + fs * .8, q[1] + fs * 2, fs * 6, fs * 1.6);
+  let q = D(ENL_SUN); enlLabel(g, q[0], q[1], T('SUN'), '#FFE600', -fs * 5.5, -fs * 2.6, fs); put(q[0] - fs * 5.5, q[1] - fs * 3.6, fs * 4.4, fs * 1.6);
+  q = D(ENL_EARTH); enlLabel(g, q[0], q[1], T('EARTH'), '#7CFF7C', fs * .8, fs * 3, fs); put(q[0] + fs * .8, q[1] + fs * 2, fs * 6, fs * 1.6);
   if (enl.stereo) { q = D(enl.stereo); enlLabel(g, q[0], q[1], 'STEREO-A', '#FF8A8A', fs, -fs * 2.2, fs); put(q[0] + fs, q[1] - fs * 3.2, fs * 8.8, fs * 1.6); }
-  q = [xs + (ENL_SEARTH[0] - 342) * s, ys + (ENL_SEARTH[1] - 62) * s]; enlLabel(g, q[0], q[1], 'EARTH', '#7CFF7C', -fs * 2, fs * 3.4, fs);
+  q = [xs + (ENL_SEARTH[0] - 342) * s, ys + (ENL_SEARTH[1] - 62) * s]; enlLabel(g, q[0], q[1], T('EARTH'), '#7CFF7C', -fs * 2, fs * 3.4, fs);
 }
 // our own graph of the model at Earth for row k, in the app's style
 function enlChart(g, k, X, Y, W, H, fs) {
@@ -654,7 +733,7 @@ function enlChart(g, k, X, Y, W, H, fs) {
   const lo = k === 'n' ? 0 : 250, hi = k === 'n' ? Math.max(20, ...P.map(val)) * 1.12 : Math.max(700, ...P.map(val)) * 1.06;
   const x = t => X + L + (t - from) / (to - from) * (W - L - fs), y = v => Y + H - B - (v - lo) / (hi - lo) * (H - B - T);
   g.fillStyle = '#0F1216'; g.beginPath(); g.roundRect(X, Y, W, H, 12); g.fill();
-  enlCap(g, X + fs, Y + fs * 1.4, k === 'n' ? 'AT EARTH · DENSITY /CM³' : 'AT EARTH · SPEED KM/S', col, fs * .9);
+  enlCap(g, X + fs, Y + fs * 1.4, k === 'n' ? window.T('AT EARTH · DENSITY /CM³') : window.T('AT EARTH · SPEED KM/S'), col, fs * .9);
   let c0 = null; P.forEach((p, i) => { if (p.cme && c0 == null) c0 = p.t; if ((!p.cme || i === P.length - 1) && c0 != null) { g.fillStyle = 'rgba(224,91,255,.2)'; g.fillRect(x(c0), Y + T, Math.max(2, x(p.t) - x(c0)), H - B - T); c0 = null; } });
   g.lineWidth = 1; g.font = `500 ${fs * .8}px "JetBrains Mono", monospace`;
   (k === 'n' ? [0, 10, 20, 30, 40, 60, 80, 100] : [300, 400, 500, 600, 800, 1000, 1200]).filter(v => v >= lo && v < hi).forEach(v => {
@@ -664,12 +743,12 @@ function enlChart(g, k, X, Y, W, H, fs) {
     g.fillStyle = '#8B9BAE'; g.fillText(dayD(d.getTime()), xx + 3, Y + H - fs * .6); }
   const cut = P[0].old && P.find(p => !p.old);   // archived earlier runs | the current run
   if (cut) { g.setLineDash([4, 4]); g.strokeStyle = '#4B5563'; g.beginPath(); g.moveTo(x(cut.t), Y + T); g.lineTo(x(cut.t), Y + H - B); g.stroke(); g.setLineDash([]);
-    enlCap(g, x(cut.t) - 4, Y + T + fs * .9, '◂ EARLIER RUNS', '#8B9BAE', fs * .75, 'right'); }
+    enlCap(g, x(cut.t) - 4, Y + T + fs * .9, '◂ ' + window.T('EARLIER RUNS'), '#8B9BAE', fs * .75, 'right'); }
   g.beginPath(); g.moveTo(x(from), y(lo)); P.forEach(p => g.lineTo(x(p.t), y(val(p)))); g.lineTo(x(to), y(lo)); g.closePath();
   g.fillStyle = k === 'n' ? 'rgba(57,255,158,.14)' : 'rgba(255,160,64,.12)'; g.fill();
   g.beginPath(); P.forEach((p, i) => i ? g.lineTo(x(p.t), y(val(p))) : g.moveTo(x(p.t), y(val(p)))); g.strokeStyle = col; g.lineWidth = 1.8; g.stroke();
   const now = Date.now(); if (now > from && now < to) { g.setLineDash([2, 3]); g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 1; g.beginPath(); g.moveTo(x(now), Y + T); g.lineTo(x(now), Y + H - B); g.stroke(); g.setLineDash([]);
-    enlCap(g, x(now) + 3, Y + T + fs * .9, 'NOW', '#fff', fs * .8); }
+    enlCap(g, x(now) + 3, Y + T + fs * .9, window.T('NOW'), '#fff', fs * .8); }
   const f = enl.frames[enl.i]; if (f && f.t >= from && f.t <= to) { const p = P.reduce((a, q) => Math.abs(q.t - f.t) < Math.abs(a.t - f.t) ? q : a);
     g.strokeStyle = '#7FB8FF'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x(f.t), Y + T); g.lineTo(x(f.t), Y + H - B); g.stroke();
     g.fillStyle = '#7FB8FF'; g.beginPath(); g.arc(x(p.t), y(val(p)), fs * .4, 0, 7); g.fill();
@@ -708,7 +787,7 @@ function enlFDraw(im) {
 function enlShow(i) {
   if (!enl.frames.length) return;
   enl.i = Math.max(0, Math.min(enl.frames.length - 1, i)); const f = enl.frames[enl.i];
-  enlDraw(); $('enlSlide').value = $('enlFSlide').value = toPos(f.t); $('enlT').textContent = dayHm(f.t); $('enlRun').textContent = f.old ? 'EARLIER RUN' + (f.run ? ' ' + f.run : '') : enl.run ? 'RUN ' + enl.run : ''; $('enlFT').textContent = dayHm(f.t) + ' · LOCAL TIME';
+  enlDraw(); $('enlSlide').value = $('enlFSlide').value = toPos(f.t); $('enlT').textContent = dayHm(f.t); $('enlRun').textContent = f.old ? T('EARLIER RUN') + (f.run ? ' ' + f.run : '') : enl.run ? T('RUN') + ' ' + enl.run : ''; $('enlFT').textContent = dayHm(f.t) + ' · ' + T('LOCAL TIME');
   // preload a few frames ahead, only while you watch (the whole run is ~16 MB)
   for (let k = 1; k <= (enl.play ? 16 : 3); k++) { const n = enl.frames[(enl.i + k * enl.step) % enl.frames.length]; if (n) enlImg(n.u); }
 }
@@ -758,7 +837,7 @@ async function loadEnlil() {
   if (ar && ar.frames) enl.frames = ar.frames.filter(f => f[0] < f0 - 30 * 60000).map(f => ({ u: ENL_ARCH + f[1], t: f[0], run: f[2], old: true })).concat(enl.frames);
   $('enlSlide').max = 1000; setTimeout(() => { const fr = sunFr(); if (fr.length) sunShow(sun.i); }, 0);   // the Sun's slider moves to the shared axis
   const run = (an[0] && an[0].url.match(/enlil_com2_(\d+)_/) || [])[1];
-  $('enlRun').textContent = run ? 'RUN ' + run : ''; enl.run = run;
+  $('enlRun').textContent = run ? T('RUN') + ' ' + run : ''; enl.run = run;
   enlSummary(); enlDraw();
   if (first && enl.frames.length) { const now = Date.now(); let k = 0; enl.frames.forEach((f, i) => { if (Math.abs(f.t - now) < Math.abs(enl.frames[k].t - now)) k = i; }); enlShow(k); }
 }
@@ -771,20 +850,20 @@ function enlComposite(c) {
   const g = c.getContext('2d'); g.fillStyle = '#12161C'; g.fillRect(0, 0, W, H); g.drawImage(a, 0, 0); g.drawImage(b, a.width + gap, 0); return c;
 }
 $('enlSave').onclick = () => { const cv = enlComposite(); if (!enl.frames.length) return;
-  try { cv.toBlob(b => b ? enlFile(b, 'solar-wind-' + (enl.run || 'enlil') + '-' + enl.i + '.png') : toast('Could not save the picture'), 'image/png'); } catch (e) { toast('Could not save the picture'); } };
+  try { cv.toBlob(b => b ? enlFile(b, 'solar-wind-' + (enl.run || 'enlil') + '-' + enl.i + '.png') : toast(T('Could not save the picture')), 'image/png'); } catch (e) { toast(T('Could not save the picture')); } };
 const enlLoaded = im => new Promise(r => { if (im.complete && im.naturalWidth) return r(); im.addEventListener('load', () => r(), { once: true }); im.addEventListener('error', () => r(), { once: true }); });
 $('enlClipB').onclick = async () => {
   const b = $('enlClipB'); if (b.classList.contains('busy') || !enl.frames.length) return;
-  const cv = enlComposite(); if (!window.MediaRecorder || !cv.captureStream) { toast('This browser cannot record clips — try Chrome.'); return; }
+  const cv = enlComposite(); if (!window.MediaRecorder || !cv.captureStream) { toast(T('This browser cannot record clips — try Chrome.')); return; }
   const type = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'].find(t => MediaRecorder.isTypeSupported(t));
-  if (!type) { toast('This browser cannot record clips.'); return; }
+  if (!type) { toast(T('This browser cannot record clips.')); return; }
   stopEnl(); b.classList.add('busy'); const keep = enl.i, chunks = [];
   const rec = new MediaRecorder(cv.captureStream(12), { mimeType: type, videoBitsPerSecond: 5e6 });
   rec.ondataavailable = e => e.data.size && chunks.push(e.data); const stopped = new Promise(r => rec.onstop = r);
   rec.start();
-  for (let i = 0; i < enl.frames.length; i++) { b.textContent = 'RECORDING ' + Math.round(i / enl.frames.length * 100) + '%';
+  for (let i = 0; i < enl.frames.length; i++) { b.textContent = T('RECORDING {p}%', { p: Math.round(i / enl.frames.length * 100) });
     await enlLoaded(enlImg(enl.frames[i].u)); enlShow(i); enlComposite(cv); await new Promise(r => setTimeout(r, 85)); }
-  rec.stop(); await stopped; b.classList.remove('busy'); b.textContent = '⬇ SAVE CLIP';
+  rec.stop(); await stopped; b.classList.remove('busy'); b.textContent = T('⬇ SAVE CLIP');
   enlFile(new Blob(chunks, { type }), 'solar-wind-' + (enl.run || 'enlil') + (type.includes('mp4') ? '.mp4' : '.webm')); enlShow(keep);
 };
 
@@ -801,10 +880,10 @@ function syShow(t) {
   sy.t = Math.max(sy.a, Math.min(sy.b, t));
   $('sySlide').value = Math.round((sy.t - sy.a) / (sy.b - sy.a) * 1000);
   const fr = sunFr(), after = fr.length && sy.t > sy.sunEnd + 45 * 60000;
-  $('syT').textContent = dayHm(sy.t) + (sy.t > Date.now() + 30 * 60000 ? ' · FORECAST' : '');
+  $('syT').textContent = dayHm(sy.t) + (sy.t > Date.now() + 30 * 60000 ? ' · ' + T('FORECAST') : '');
   let su = '';
   if (fr.length) { const i = after ? fr.length - 1 : nearestIdx(fr.length, k => fr[k][0], sy.t); clearInterval(sun.timer); sun.play = false; sunShow(i); su = fr[i][1]; }
-  $('sunLbl').textContent = SUNF[sun.k][1] + (after ? ' · LATEST' : '');
+  $('sunLbl').textContent = SUNF[sun.k][1] + (after ? ' · ' + T('LATEST') : '');
   if (enl.frames.length) { const k = nearestIdx(enl.frames.length, m => enl.frames[m].t, sy.t); if (k !== enl.i) { clearInterval(enl.play); enl.play = null; enlShow(k); } }
   if (sy.timer) playLabel(true);
   const pos = Math.round((sy.t - sy.a) / (sy.b - sy.a) * 1000); SLIDES.forEach(id => { const el = $(id); if (el) { el.max = 1000; el.value = pos; } });
@@ -826,10 +905,10 @@ document.addEventListener('click', e => { const svg = e.target.closest && e.targ
   const [a, b, xa, xb] = JSON.parse(svg.dataset.tx), r = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal, x = (e.clientX - r.left) / r.width * (vb && vb.width || r.width);
   if (x < xa || x > xb) return; const t = a + (x - xa) / (xb - xa) * (b - a); syStop(); sy.on = true; syShow(t); });
 const PLAYS = ['syPlay', 'sunPlay', 'sunFPlay', 'enlPlay', 'enlFPlay'], SLIDES = ['sySlide', 'sunSlide', 'sunFSlide', 'enlSlide', 'enlFSlide'];
-const playLabel = on => PLAYS.forEach(id => { const b = $(id); if (b) { b.textContent = on ? '⏸' : '▶'; b.setAttribute('aria-label', on ? 'Pause' : 'Play'); } });
+const playLabel = on => PLAYS.forEach(id => { const b = $(id); if (b) { b.textContent = on ? '⏸' : '▶'; b.setAttribute('aria-label', on ? T('Pause') : T('Play')); } });
 function syStop() { clearInterval(sy.timer); sy.timer = null; playLabel(false); }
 function syStart() {
-  if (!syRange()) { toast('Still loading the pictures…'); return; }
+  if (!syRange()) { toast(T('Still loading the pictures…')); return; }
   sy.on = true; playLabel(true); if (!sy.t || sy.t >= sy.b) sy.t = sy.a;
   clearInterval(sy.timer); sy.timer = setInterval(() => { let t = sy.t + 40 * 60000 * sy.spd; if (t > sy.b) t = sy.a; syShow(t); }, 120);
 }
@@ -850,13 +929,13 @@ const loadImg = (src, cors) => new Promise(r => { const im = new Image(); if (co
 async function makeCard() {
   const W = 1080, H = 1350, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
   const gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, '#0E1A24'); gr.addColorStop(1, '#0A0A0A'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
-  const T = (t, x, y, sz, col, font, al) => { g.font = `${sz}px ${font || '"JetBrains Mono", monospace'}`; g.fillStyle = col; g.textAlign = al || 'left'; g.fillText(t, x, y); g.textAlign = 'left'; };
+  const Tr = window.T, T = (t, x, y, sz, col, font, al) => { g.font = `${sz}px ${font || '"JetBrains Mono", monospace'}`; g.fillStyle = col; g.textAlign = al || 'left'; g.fillText(t, x, y); g.textAlign = 'left'; };
   const word = $('vword').textContent, col = getComputedStyle($('vword')).color;
-  T('AURORA TONIGHT · ' + TOWN.name.toUpperCase(), 70, 120, 32, '#8B9BAE');
-  T(new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: TZ }).toUpperCase(), 70, 166, 28, '#6B7280');
+  T(Tr('AURORA TONIGHT') + ' · ' + TOWN.name.toUpperCase(), 70, 120, 32, '#8B9BAE');
+  T(new Date().toLocaleDateString(LOC, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: TZ }).toUpperCase(), 70, 166, 28, '#6B7280');
   g.font = '600 190px "Barlow Condensed", Barlow, sans-serif'; let fs = 190; while (g.measureText(word.toUpperCase()).width > W - 140 && fs > 100) { fs -= 10; g.font = `600 ${fs}px "Barlow Condensed", Barlow, sans-serif`; }
   T(word.toUpperCase(), 64, 340, fs, col, '"Barlow Condensed", Barlow, sans-serif');
-  [['KP TONIGHT', $('fKp').textContent, getComputedStyle($('fKp')).color], ['CLOUDS', $('fCloud').textContent, '#fff'], ['DARK FROM', $('fDark').textContent, '#fff']].forEach(([k, v, cc], i) => {
+  [[Tr('KP TONIGHT'), $('fKp').textContent, getComputedStyle($('fKp')).color], [Tr('CLOUDS'), $('fCloud').textContent, '#fff'], [Tr('DARK FROM'), $('fDark').textContent, '#fff']].forEach(([k, v, cc], i) => {
     T(k, 70 + i * 320, 420, 26, '#8B9BAE'); T(v, 70 + i * 320, 505, 84, cc, '"Barlow Condensed", Barlow, sans-serif'); });
   // the two pictures at the shared clock's moment (or now)
   const t = sy.t || Date.now(), fr = sunFr(), si = fr.length ? nearestIdx(fr.length, k => fr[k][0], Math.min(t, fr[fr.length - 1][0])) : -1;
@@ -866,10 +945,10 @@ async function makeCard() {
   [x1, x2].forEach(x => { g.fillStyle = '#000'; g.beginPath(); g.roundRect ? g.roundRect(x, y0, P, P, 28) : g.rect(x, y0, P, P); g.fill(); });
   if (sunIm) { g.save(); g.beginPath(); g.roundRect ? g.roundRect(x1, y0, P, P, 28) : g.rect(x1, y0, P, P); g.clip(); const k = Math.min(P / sunIm.width, P / sunIm.height);
     g.drawImage(sunIm, x1 + (P - sunIm.width * k) / 2, y0 + (P - sunIm.height * k) / 2, sunIm.width * k, sunIm.height * k); g.restore(); }
-  else T('Sun picture not available', x1 + P / 2, y0 + P / 2, 24, '#6B7280', null, 'center');
+  else T(Tr('Sun picture not available'), x1 + P / 2, y0 + P / 2, 24, '#6B7280', null, 'center');
   if (enlIm) { g.save(); g.beginPath(); g.arc(x2 + P / 2, y0 + P / 2, P / 2 - 4, 0, 2 * Math.PI); g.clip(); g.drawImage(enlIm, 76, 58, 258, 258, x2, y0, P, P); g.restore(); }
-  T('THE SUN · ' + SUNF[sun.k][1] + (si >= 0 ? ' · ' + sunT(fr[si][0]) : ''), x1, y0 + P + 40, 22, '#8B9BAE');
-  T('SOLAR WIND FORECAST' + (ek >= 0 ? ' · ' + dayHm(enl.frames[ek].t) : ''), x2, y0 + P + 40, 22, '#8B9BAE');
+  T(Tr('THE SUN') + ' · ' + SUNF[sun.k][1] + (si >= 0 ? ' · ' + sunT(fr[si][0]) : ''), x1, y0 + P + 40, 22, '#8B9BAE');
+  T(Tr('SOLAR WIND FORECAST') + (ek >= 0 ? ' · ' + dayHm(enl.frames[ek].t) : ''), x2, y0 + P + 40, 22, '#8B9BAE');
   // one line from the forecast summary
   const sum = S.tonight || ($('enlSum').textContent || '').split('.')[0];
   g.font = '34px system-ui, sans-serif'; g.fillStyle = '#C9D1DB'; let line = sum; while (g.measureText(line).width > W - 140 && line.length > 10) line = line.slice(0, -2);
@@ -879,21 +958,47 @@ async function makeCard() {
   return c;
 }
 $('cardSave').onclick = async () => {
-  const b = $('cardSave'); if (b.classList.contains('busy')) return; b.classList.add('busy'); b.textContent = 'MAKING THE CARD…';
+  const b = $('cardSave'); if (b.classList.contains('busy')) return; b.classList.add('busy'); b.textContent = T('MAKING THE CARD…');
   try {
     const c = await makeCard(), blob = await new Promise(r => c.toBlob(r, 'image/png'));
     const file = new File([blob], 'aurora-' + TOWN.name.toLowerCase().replace(/\W+/g, '-') + '.png', { type: 'image/png' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], text: 'Aurora tonight from ' + TOWN.name + ': ' + $('vword').textContent + ' — live: ' + location.href }).catch(() => {});
+    if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], text: T('Aurora tonight from {p}: {w} — live: {u}', { p: TOWN.name, w: $('vword').textContent, u: location.href }) }).catch(() => {});
     else enlFile(blob, file.name);
-  } catch (e) { toast('Could not make the card'); }
-  b.classList.remove('busy'); b.textContent = '⬇ SHARE CARD';
+  } catch (e) { toast(T('Could not make the card')); }
+  b.classList.remove('busy'); b.textContent = T('⬇ SHARE CARD');
 };
 $('linkShare').onclick = async () => {
-  const d = { title: 'Aurora tonight · ' + TOWN.name, text: 'Aurora tonight from ' + TOWN.name + ': ' + $('vword').textContent + '. The Sun, the solar wind and how to read it:', url: location.href };
+  const d = { title: T('Aurora tonight') + ' · ' + TOWN.name, text: T('Aurora tonight from {p}: {w}. The Sun, the solar wind and how to read it:', { p: TOWN.name, w: $('vword').textContent }), url: location.href };
   if (navigator.share) { navigator.share(d).catch(() => {}); return; }
-  try { await navigator.clipboard.writeText(d.url); toast('Link copied'); } catch (e) { prompt('Copy this link', d.url); }
+  try { await navigator.clipboard.writeText(d.url); toast(T('Link copied')); } catch (e) { prompt(T('Copy this link'), d.url); }
 };
 
+/* ── the guide (simple view): live numbers in each of the 4 steps ── */
+function guide() {
+  if (!$('guide')) return;
+  // 1 · the Sun: newest AIA 171 frame (gold loops), else NASA's latest
+  const f171 = sun.F && sun.F.filters['0171'], last = f171 && f171.length ? f171[f171.length - 1] : null;
+  const su = last ? last[1].replace('_1024_', '_512_') : 'https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_0171.jpg';
+  if ($('gSun').dataset.u !== su) { $('gSun').dataset.u = su; $('gSun').src = su; }
+  $('gSunLive').textContent = last ? T('The Sun at {t} (AIA 171, ~600,000 °C)', { t: hhmm(last[0]) }) : T('The Sun today (NASA SDO)');
+  // 2 · the wind: the model's view from above at this hour + speed now + the next CME
+  if (enl.frames.length) { const k = nearestIdx(enl.frames.length, m => enl.frames[m].t, Date.now()), im = enlImg(enl.frames[k].u);
+    const draw = () => { const c = $('gEnl'), g = c.getContext('2d'); g.clearRect(0, 0, 300, 300); g.save(); g.beginPath(); g.arc(150, 150, 146, 0, 7); g.clip();
+      g.drawImage(im, 76, 58, 258, 258, 0, 0, 300, 300); g.restore();
+      const P = q => [(q[0] - 76) / 258 * 300, (q[1] - 58) / 258 * 300], sn = P(ENL_SUN), ea = P(ENL_EARTH);
+      g.font = '700 15px "JetBrains Mono", monospace'; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.85)';
+      [[sn, T('SUN'), '#FFE600', -40, -16], [ea, T('EARTH'), '#7CFF7C', 10, 26]].forEach(([q, t, col, dx, dy]) => { g.strokeText(t, q[0] + dx, q[1] + dy); g.fillStyle = col; g.fillText(t, q[0] + dx, q[1] + dy); }); };
+    if (im.complete && im.naturalWidth) draw(); else im.addEventListener('load', draw, { once: true }); }
+  const cme = (S.enl || []).find(p => p.cme && p.t > Date.now());
+  $('gEnlLive').textContent = (S.swV ? T('Wind now {v} km/s', { v: Math.round(S.swV) }) + ' · ' : '') + (cme ? T('a CME should reach Earth ≈ {t}', { t: dayHm(cme.t) }) : T('no CME expected in the next days'));
+  // 3 · the shield: Kp now
+  if (S.kpNow != null) { const k = S.kpNow; $('gKp').textContent = k.toFixed(1); $('gKp').style.color = kpColor(k);
+    $('gBar').innerHTML = Array.from({ length: 9 }, (_, i) => `<i style="background:${i < Math.round(k) ? kpColor(i + 1) : '#232830'}"></i>`).join('');
+    $('gKpLive').textContent = T('Now: Kp {k}', { k: k.toFixed(1) }) + ' · ' + (k >= 7 ? T('strong storm!') : k >= 5 ? T('a storm') : k >= 4 ? T('restless') : T('calm')) + (S.bz != null ? ' · ' + (S.bz < -5 ? T('wind magnet south — good') : S.bz < 0 ? T('wind magnet slightly south') : T('wind magnet north — calm')) : ''); }
+  // 4 · your sky
+  const N = need(), kt = S.kpT;
+  $('gSkyLive').textContent = T('From {p} you need Kp {n}', { p: TOWN.name, n: N }) + (kt != null ? ' · ' + T('tonight Kp {k}', { k: kt.toFixed(1) }) + ' — ' + (kt >= N ? T('possible!') : T('not enough')) : '');
+}
 function drawGlobe() { if (window.AuroraGlobe) AuroraGlobe.draw($('globe'), { ov: S.ov, lat0: Math.min(75, Math.max(50, TOWN.lat + 13)), lon0: TOWN.lon - 7, viewLine: true, label: true, here: TOWN }); }
 addEventListener('resize', () => { drawGlobe(); });
 
@@ -903,19 +1008,20 @@ async function load() {
     j(API + 'json/planetary_k_index_1m.json').then(a => { S.kpNow = +a[a.length - 1].estimated_kp; }),
     j(API + 'products/noaa-planetary-k-index-forecast.json').then(a => { S.kpList = a; }),
     j('https://api.open-meteo.com/v1/forecast?latitude=' + TOWN.lat + '&longitude=' + TOWN.lon + '&hourly=cloud_cover&daily=sunset&forecast_days=2&timezone=auto').then(w => { S.wx = w; if (w.timezone) TZ = w.timezone; }),
-    j(API + 'json/ovation_aurora_latest.json').then(o => { S.ov = AuroraGlobe.grid(o); $('ovTime').textContent = 'NOAA forecast for ' + hhmm(o['Forecast Time']) + '.'; drawGlobe(); }),
+    j(API + 'json/ovation_aurora_latest.json').then(o => { S.ov = AuroraGlobe.grid(o); $('ovTime').textContent = T('NOAA forecast for {t}.', { t: hhmm(o['Forecast Time']) }); drawGlobe(); }),
     j(API + 'products/summary/solar-wind-speed.json').then(a => { const v = +a[0].proton_speed;
       $('swV').innerHTML = Math.round(v) + '<span style="font-size:13px;color:#8B9BAE"> km/s</span>'; $('swV').style.color = v >= 600 ? '#FF7A3D' : v >= 450 ? '#E8C766' : '#E0E0E0';
-      $('swVt').textContent = v >= 600 ? 'Fast — storm fuel.' : v >= 450 ? 'A bit fast.' : 'Calm (300–450 is normal).'; }),
+      $('swVt').textContent = v >= 600 ? T('Fast — storm fuel.') : v >= 450 ? T('A bit fast.') : T('Calm (300–450 is normal).'); S.swV = v; guide(); }),
     j(API + 'products/summary/solar-wind-mag-field.json').then(a => { const bz = +a[0].bz_gsm;
       $('swBz').innerHTML = (bz > 0 ? '+' : '') + bz + '<span style="font-size:13px;color:#8B9BAE"> nT</span>'; $('swBz').style.color = bz <= -10 ? '#FF4444' : bz <= -5 ? '#FFA040' : '#E0E0E0';
-      $('swBzt').textContent = bz <= -10 ? 'Strongly south — aurora ON.' : bz <= -5 ? 'South — helps the aurora.' : bz < 0 ? 'Slightly south.' : 'North — aurora stays quiet.'; }),
-    loadEnlil().catch(() => { $('enlSum').textContent = 'The solar wind model could not be loaded right now.'; }),
+      $('swBzt').textContent = bz <= -10 ? T('Strongly south — aurora ON.') : bz <= -5 ? T('South — helps the aurora.') : bz < 0 ? T('Slightly south.') : T('North — aurora stays quiet.'); S.bz = bz; guide(); }),
+    loadEnlil().catch(() => { $('enlSum').textContent = T('The solar wind model could not be loaded right now.'); }),
     loadSun(),
   ]);
-  verdict(); if (!S.kpList) { $('vword').textContent = 'No data'; $('vtext').textContent = 'NOAA could not be reached. Try again in a minute.'; }
-  $('upd').textContent = 'Live · updated ' + hhmm(Date.now()) + ' local time';
+  verdict(); if (!S.kpList) { $('vword').textContent = T('No data'); $('vtext').textContent = T('NOAA could not be reached. Try again in a minute.'); }
+  $('upd').textContent = T('Live · updated {t} local time', { t: hhmm(Date.now()) }); guide();
 }
+setMode(MODE);
 load(); setInterval(load, 10 * 60000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
 </script>
@@ -930,10 +1036,10 @@ const API = 'https://services.swpc.noaa.gov/';
 const esc = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const BV = { get name() { return TOWN.name; }, get lat() { return TOWN.lat; }, get lon() { return TOWN.lon; } };
 const need = () => AuroraGlobe.kpNeed(TOWN.lat, TOWN.lon);
-const hhmm = d => d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: TZ });
+const hhmm = d => d.toLocaleTimeString(LOC, { hour: '2-digit', minute: '2-digit', timeZone: TZ });
 const kpColor = k => k >= 8 ? '#E05BFF' : k >= 7 ? '#FF4444' : k >= 6 ? '#FF7A3D' : k >= 5 ? '#FFA040' : k >= 4 ? '#E8C766' : '#6EE7A0';
 const gScale = k => k >= 9 ? 5 : k >= 8 ? 4 : k >= 7 ? 3 : k >= 6 ? 2 : k >= 5 ? 1 : 0;
-const G_TXT = ['QUIET', 'MINOR STORM', 'MODERATE STORM', 'STRONG STORM', 'SEVERE STORM', 'EXTREME STORM'];
+const G_TXT = ['QUIET', 'MINOR STORM', 'MODERATE STORM', 'STRONG STORM', 'SEVERE STORM', 'EXTREME STORM'].map(x => T(x));
 async function j(url) { const r = await fetch(url, { cache: 'no-store' }); if (!r.ok) throw new Error(r.status); return r.json(); }
 const S = {};
 /* ── gauge ───────────────────────────────────────────── */
@@ -943,12 +1049,12 @@ function drawKpNow(k) {
   const g = gScale(k); $('kpScale').textContent = 'G' + g + ' · ' + G_TXT[g];
   [...$('gauge').children].forEach((s, i) => { s.style.background = i < Math.round(k) || (i === 0 && k > 0) ? kpColor(i + 1) : '#232830'; });
   const N = need();
-  $('kpWords').innerHTML = k >= N ? 'Strong enough for ' + esc(BV.name) + ' —<br>look north from a dark site!' : k >= 5 ? 'Geomagnetic storm.<br>Watch for more.' : k >= 4 ? 'Active field.<br>Not enough here (need ' + N + ').' : 'Quiet field.<br>' + (N >= 6 ? 'No aurora this far south.' : 'Little aurora tonight.');
+  $('kpWords').innerHTML = k >= N ? T('Strong enough for {p} —<br>look north from a dark site!', { p: esc(BV.name) }) : k >= 5 ? T('Geomagnetic storm.<br>Watch for more.') : k >= 4 ? T('Active field.<br>Not enough here (need {n}).', { n: N }) : T('Quiet field.') + '<br>' + (N >= 6 ? T('No aurora this far south.') : T('Little aurora tonight.'));
 }
 
 /* ── Kp chart (SVG) ──────────────────────────────────── */
 function drawKpChart(list) {
-  const svg = $('kpchart'), W = svg.clientWidth || 340, H = 150, L = 18, B = 18, T = 8;
+  const svg = $('kpchart'), W = svg.clientWidth || 340, H = Math.max(150, svg.clientHeight || 0), L = 18, B = 18, T = 8;
   const now = Date.now(), from = now - 48 * 3.6e6, to = now + 72 * 3.6e6;
   const pts = list.map(p => ({ t: Date.parse(p.time_tag + 'Z'), k: +p.kp, kind: p.observed })).filter(p => p.t + 3 * 3.6e6 > from && p.t < to);
   const x = t => L + (t - from) / (to - from) * (W - L - 4), y = k => H - B - k / 9 * (H - B - T);
@@ -959,7 +1065,7 @@ function drawKpChart(list) {
   });
   const N = need();
   s += `<line x1="${L}" x2="${W - 4}" y1="${y(N)}" y2="${y(N)}" stroke="#FF4444" stroke-dasharray="4 3" stroke-opacity=".6"/>`;
-  s += `<text x="${W - 6}" y="${y(N) - 4}" text-anchor="end" fill="#FF6B6B" font-size="8" font-family="JetBrains Mono">${esc(BV.name.toUpperCase().slice(0, 14))} HORIZON · KP ${N}</text>`;
+  s += `<text x="${W - 6}" y="${y(N) - 4}" text-anchor="end" fill="#FF6B6B" font-size="8" font-family="JetBrains Mono">${window.T('{p} HORIZON · KP {n}', { p: esc(BV.name.toUpperCase().slice(0, 14)), n: N })}</text>`;
   const bw = (W - L - 4) / ((to - from) / (3 * 3.6e6)) - 1.5;
   pts.forEach(p => {
     const x0 = Math.max(L, x(p.t)), h = Math.max(1.5, H - B - y(p.k));
@@ -971,11 +1077,11 @@ function drawKpChart(list) {
   for (; d.getTime() < to; d.setDate(d.getDate() + 1)) {
     const xx = x(d.getTime());
     s += `<line x1="${xx}" x2="${xx}" y1="${T}" y2="${H - B}" stroke="#2C3542"/>`;
-    s += `<text x="${xx + 3}" y="${H - 5}" fill="#8B9BAE" font-size="8" font-family="JetBrains Mono">${d.toLocaleDateString('en', { weekday: 'short' }).toUpperCase()}</text>`;
+    s += `<text x="${xx + 3}" y="${H - 5}" fill="#8B9BAE" font-size="8" font-family="JetBrains Mono">${d.toLocaleDateString(LOC, { weekday: 'short', timeZone: TZ }).toUpperCase()}</text>`;
   }
   const xn = x(now);
   s += `<line x1="${xn}" x2="${xn}" y1="${T}" y2="${H - B}" stroke="#fff" stroke-opacity=".7" stroke-dasharray="2 3"/>`;
-  s += `<text x="${xn + 3}" y="${T + 8}" fill="#fff" font-size="8" font-family="JetBrains Mono">NOW</text>`;
+  s += `<text x="${xn + 3}" y="${T + 8}" fill="#fff" font-size="8" font-family="JetBrains Mono">${window.T('NOW')}</text>`;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.innerHTML = s; svg.dataset.tx = JSON.stringify([from, to, x(from), x(to), H]); window.tcursor && tcursor();
 }
 
@@ -988,7 +1094,7 @@ async function loadWind(force) {
   try {
     if (wRange === 1) {   // ≈ 5 MB: 1-minute data from the spacecraft NOAA uses now (DSCOVR / ACE / IMAP), averaged to 5 min
       if (force || !S.rt || Date.now() - S.rt.at > 15 * 60000) {
-        $('wSrc').textContent = 'LOADING 1-MINUTE DATA…';
+        $('wSrc').textContent = T('LOADING 1-MINUTE DATA…');
         const [m, w] = await Promise.all([j(API + 'json/rtsw/rtsw_mag_1m.json'), j(API + 'json/rtsw/rtsw_wind_1m.json')]);
         const bin = new Map(), B = t => Math.floor(t / 3e5) * 3e5, get = t => bin.get(t) || bin.set(t, { t, n: {} }).get(t);
         const add = (o, k, v) => { if (!okv(v)) return; const a = o.n[k] || (o.n[k] = [0, 0]); a[0] += v; a[1]++; };
@@ -997,7 +1103,7 @@ async function loadWind(force) {
         const src = (m.find(r => r.active) || {}).source || '';
         S.rt = { at: Date.now(), src, pts: [...bin.values()].sort((a, b) => a.t - b.t).map(o => { const r = { t: o.t }; for (const k in o.n) r[k] = o.n[k][0] / o.n[k][1]; return r; }) };
       }
-      S.wind = S.rt.pts; $('wSrc').textContent = `${({ SOLAR1: 'SWFO-L1', DSCOVR: 'DSCOVR', ACE: 'ACE', IMAP: 'IMAP' })[S.rt.src] || S.rt.src || 'NOAA'} SPACECRAFT · 5-MIN AVERAGES`;
+      S.wind = S.rt.pts; $('wSrc').textContent = `${({ SOLAR1: 'SWFO-L1', DSCOVR: 'DSCOVR', ACE: 'ACE', IMAP: 'IMAP' })[S.rt.src] || S.rt.src || 'NOAA'} ${T('SPACECRAFT · 5-MIN AVERAGES')}`;
     } else {
       if (force || !S.ace || Date.now() - S.ace.at > 10 * 60000) {
         const [m, w] = await Promise.all([j(API + 'json/ace/mag/ace_mag_1h.json'), j(API + 'json/ace/swepam/ace_swepam_1h.json')]);
@@ -1006,10 +1112,10 @@ async function loadWind(force) {
         w.forEach(r => { const o = get(Date.parse(r.time_tag + 'Z')); if (okv(r.dens)) o.n = r.dens; if (okv(r.speed)) o.v = r.speed; if (okv(r.temperature)) o.T = r.temperature; });
         S.ace = { at: Date.now(), pts: [...by.values()].sort((a, b) => a.t - b.t) };
       }
-      S.wind = S.ace.pts; $('wSrc').textContent = 'ACE SPACECRAFT · HOURLY AVERAGES';
+      S.wind = S.ace.pts; $('wSrc').textContent = T('ACE SPACECRAFT · HOURLY AVERAGES');
     }
     drawWind();
-  } catch (e) { $('wSrc').textContent = 'COULD NOT LOAD THE SOLAR WIND DATA'; }
+  } catch (e) { $('wSrc').textContent = T('COULD NOT LOAD THE SOLAR WIND DATA'); }
 }
 function drawWind() {
   const now = Date.now(), from = now - wRange * 864e5, P = S.wind.filter(p => p.t >= from);
@@ -1017,9 +1123,9 @@ function drawWind() {
   const L = { bz: last('bz'), bt: last('bt'), v: last('v'), n: last('n'), T: last('T') };
   const cell = (k, v, u, c) => `<div><div class="lbl">${k}</div><b style="color:${c}">${v == null ? '–' : v}<span style="font-size:11px;color:#8B9BAE"> ${u}</span></b></div>`;
   $('wNow').innerHTML = cell('Bz', L.bz == null ? null : (L.bz > 0 ? '+' : '') + L.bz.toFixed(1), 'nT', L.bz <= -10 ? '#FF4444' : L.bz < 0 ? '#FF8A8A' : '#E0E0E0')
-    + cell('Bt', L.bt == null ? null : L.bt.toFixed(1), 'nT', L.bt >= 15 ? '#FFA040' : '#E0E0E0') + cell('Speed', L.v == null ? null : Math.round(L.v), 'km/s', L.v >= 600 ? '#FF7A3D' : L.v >= 450 ? '#E8C766' : '#E0E0E0')
-    + cell('Dens.', L.n == null ? null : L.n.toFixed(1), '/cm³', L.n >= 20 ? '#FFA040' : '#E0E0E0') + cell('Temp', L.T == null ? null : Math.round(L.T / 1000), 'k K', '#E0E0E0');
-  $('wLead').innerHTML = L.v ? `Measured 1.5 million km upstream — this wind reaches Earth in about <b>${Math.round(1.5e6 / L.v / 60)} minutes</b>.` : '';
+    + cell('Bt', L.bt == null ? null : L.bt.toFixed(1), 'nT', L.bt >= 15 ? '#FFA040' : '#E0E0E0') + cell(T('Speed'), L.v == null ? null : Math.round(L.v), 'km/s', L.v >= 600 ? '#FF7A3D' : L.v >= 450 ? '#E8C766' : '#E0E0E0')
+    + cell(T('Dens.'), L.n == null ? null : L.n.toFixed(1), '/cm³', L.n >= 20 ? '#FFA040' : '#E0E0E0') + cell(T('Temp'), L.T == null ? null : Math.round(L.T / 1000), 'k K', '#E0E0E0');
+  $('wLead').innerHTML = L.v ? T('Measured 1.5 million km upstream — this wind reaches Earth in about <b>{m} minutes</b>.', { m: Math.round(1.5e6 / L.v / 60) }) : '';
   // stacked panels: Bt + Bz · Phi · density · speed · temperature (log)
   const svg = $('windchart'), W = svg.clientWidth || 340, Lm = 30, R = 6, ph = 60, gap = 22, top = 14, panels = 5, H = top + panels * (ph + gap) - gap + 18;
   const x = t => Lm + (t - from) / (now - from) * (W - Lm - R);
@@ -1040,11 +1146,11 @@ function drawWind() {
   s += `<path d="${sh}" stroke="#FF4444" stroke-opacity=".35" stroke-width="${Math.max(1, (W - Lm - R) / Math.max(1, P.length))}"/>` + line('bt', bt.yv, '#E0E0E0', 1.2, gapMs) + line('bz', bt.yv, '#FF5A5A', 1.4, gapMs);
   const ph1 = panel(1, 'Phi  °', '#B388FF', 0, 360, [90, 180, 270]);
   P.forEach(p => { if (okv(p.phi)) s += `<circle cx="${x(p.t).toFixed(1)}" cy="${ph1.yv(p.phi).toFixed(1)}" r="1.1" fill="#B388FF"/>`; });
-  const nMax = Math.max(10, ...P.map(p => okv(p.n) ? p.n : 0)) * 1.15, dn = panel(2, 'Density  /cm³', '#FFA040', 0, nMax, [5, 10, 20, 40, 80].filter(v => v < nMax));
+  const nMax = Math.max(10, ...P.map(p => okv(p.n) ? p.n : 0)) * 1.15, dn = panel(2, T('Density') + '  /cm³', '#FFA040', 0, nMax, [5, 10, 20, 40, 80].filter(v => v < nMax));
   s += line('n', dn.yv, '#FFA040', 1.4, gapMs);
-  const vMax = Math.max(700, ...P.map(p => okv(p.v) ? p.v : 0)) * 1.05, sp = panel(3, 'Speed  km/s', '#E8C766', 250, vMax, [300, 400, 500, 600, 800, 1000].filter(v => v < vMax));
+  const vMax = Math.max(700, ...P.map(p => okv(p.v) ? p.v : 0)) * 1.05, sp = panel(3, T('Speed') + '  km/s', '#E8C766', 250, vMax, [300, 400, 500, 600, 800, 1000].filter(v => v < vMax));
   s += line('v', sp.yv, '#E8C766', 1.4, gapMs);
-  const tp = panel(4, 'Temperature  K', '#39FF9E', 1e4, 1e6, [1e4, 1e5, 1e6], 'T', { log: true, fmt: v => v >= 1e6 ? '1M' : v / 1000 + 'k' });
+  const tp = panel(4, T('Temperature') + '  K', '#39FF9E', 1e4, 1e6, [1e4, 1e5, 1e6], 'T', { log: true, fmt: v => v >= 1e6 ? '1M' : v / 1000 + 'k' });
   s += line('T', tp.yv, '#39FF9E', 1.2, gapMs);
   // day / hour ticks + now
   const yb = top + panels * (ph + gap) - gap, step = wRange === 1 ? 6 * 3600e3 : 864e5, d = new Date(from);
@@ -1071,7 +1177,7 @@ const xClass = f => { const c = f >= 1e-4 ? ['X', 1e-4] : f >= 1e-5 ? ['M', 1e-5
 const sciT = v => { const e = Math.round(Math.log10(v)); return e === 0 ? '1' : e === 1 ? '10' : '10' + String(e).replace('-', '⁻').replace(/\d/g, d => '⁰¹²³⁴⁵⁶⁷⁸⁹'[d]); };
 // log-scale chart over the last 3 days: series [{pts, col, w}], threshold lines [{v, label, col}], right-side band labels
 function logChart(series, lo, hi, lines, bands) {
-  const svg = $('swChart'), W = svg.clientWidth || 340, H = 190, L = 34, R = bands ? 16 : 6, T = 8, B = 18, now = Date.now(), from = now - 3 * 864e5;
+  const svg = $('swChart'), W = svg.clientWidth || 340, H = Math.max(190, svg.clientHeight || 0), L = 34, R = bands ? 16 : 6, T = 8, B = 18, now = Date.now(), from = now - 3 * 864e5;
   const x = t => L + (t - from) / (now - from) * (W - L - R), y = v => T + (Math.log10(hi) - Math.log10(Math.max(lo, Math.min(hi, v)))) / (Math.log10(hi) - Math.log10(lo)) * (H - T - B);
   let s = `<rect x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" rx="6" fill="#0F1216"/>`;
   for (let e = Math.ceil(Math.log10(lo)); e <= Math.floor(Math.log10(hi)); e++) { const v = 10 ** e;
@@ -1086,54 +1192,55 @@ function logChart(series, lo, hi, lines, bands) {
 }
 const legend = items => `<div class="enlleg" style="margin-top:6px">${items.map(([c, t]) => `<span><i style="background:${c}"></i>${t}</span>`).join('')}</div>`;
 const HOW = {
-  g: `<p><b>G = geomagnetic storms</b>: the solar wind shaking Earth's magnetic field (the measured solar wind and Kp above show it building). G1 = Kp 5 … G5 = Kp 9.</p>
+  g: T(`<p><b>G = geomagnetic storms</b>: the solar wind shaking Earth's magnetic field (the measured solar wind and Kp above show it building). G1 = Kp 5 … G5 = Kp 9.</p>
     <p><b>What it affects:</b> G1–G2: weak power-grid fluctuations, satellite orientation, aurora in the far north. G3: GPS / HF radio problems, satellite drag, aurora into central Europe. G4–G5: power grids at risk, GPS degraded for hours, aurora overhead in Romania (May 2024 was G5).</p>
-    <p>The alerts below are NOAA's own messages: <b>WATCH</b> = forecast, <b>WARNING</b> = expected soon, <b>ALERT</b> = happening now.</p>`,
-  s: `<p><b>S = solar radiation storms</b>: high-energy protons from a big flare / CME shock, measured by the GOES satellites. They arrive <b>minutes to hours</b> after the flare — much faster than the CME itself.</p>
+    <p>The alerts below are NOAA's own messages: <b>WATCH</b> = forecast, <b>WARNING</b> = expected soon, <b>ALERT</b> = happening now.</p>`),
+  s: T(`<p><b>S = solar radiation storms</b>: high-energy protons from a big flare / CME shock, measured by the GOES satellites. They arrive <b>minutes to hours</b> after the flare — much faster than the CME itself.</p>
     <p><b>Read the yellow line (≥ 10 MeV)</b> against the dashed levels: crossing <b>10</b> = S1, <b>100</b> = S2, <b>1 000</b> = S3, each step ten times stronger. ≥ 100 MeV (blue) rising too means the hardest particles — the dangerous kind.</p>
-    <p><b>What it affects:</b> astronauts, satellite electronics and solar panels, passengers on polar flights (extra dose), HF radio near the poles. On the ground you're shielded — no effect on people in Romania.</p>`,
-  r: `<p><b>R = radio blackouts</b> from solar flares — X-rays reach Earth in 8 minutes, so this is <b>instant</b>. The red line (long wavelength) sets the flare class: <b>A, B, C</b> = small, <b>M</b> = medium (R1–R2), <b>X</b> = big (R3+). Each letter is ten times stronger; the number is the multiplier (M5 = 5 × M1).</p>
+    <p><b>What it affects:</b> astronauts, satellite electronics and solar panels, passengers on polar flights (extra dose), HF radio near the poles. On the ground you're shielded — no effect on people in Romania.</p>`),
+  r: T(`<p><b>R = radio blackouts</b> from solar flares — X-rays reach Earth in 8 minutes, so this is <b>instant</b>. The red line (long wavelength) sets the flare class: <b>A, B, C</b> = small, <b>M</b> = medium (R1–R2), <b>X</b> = big (R3+). Each letter is ten times stronger; the number is the multiplier (M5 = 5 × M1).</p>
     <p><b>What it affects:</b> shortwave (HF) radio and GPS accuracy on the <b>sunlit side</b> of Earth, for minutes to an hour. The blue line (short wavelength) jumps with it during a flare.</p>
-    <p><b>Why it matters for storms:</b> M and X flares often launch a <b>CME</b> — then watch the solar wind forecast: it can hit Earth 1–3 days later.</p>`,
-  e: `<p><b>Electrons ≥ 2 MeV</b> in Earth's outer radiation belt, at the GOES satellites' orbit. Not a NOAA scale, but NOAA alerts above <b>1 000</b> (dashed line).</p>
+    <p><b>Why it matters for storms:</b> M and X flares often launch a <b>CME</b> — then watch the solar wind forecast: it can hit Earth 1–3 days later.</p>`),
+  e: T(`<p><b>Electrons ≥ 2 MeV</b> in Earth's outer radiation belt, at the GOES satellites' orbit. Not a NOAA scale, but NOAA alerts above <b>1 000</b> (dashed line).</p>
     <p>They usually <b>build up 1–3 days after a fast solar wind stream or a geomagnetic storm</b> and stay high for days. High values charge up satellites inside — glitches, failures (they're behind some satellite losses).</p>
-    <p>The daily up-and-down wave is normal: the satellite passes through denser and thinner parts of the belt as Earth turns. No effect on the ground.</p>` };
+    <p>The daily up-and-down wave is normal: the satellite passes through denser and thinner parts of the belt as Earth turns. No effect on the ground.</p>`) };
 async function drawSw() {
   vis2('swG', swTab === 'g'); $('swHowTxt').innerHTML = HOW[swTab]; $('swList').innerHTML = '';
-  if (swTab === 'g') { $('swChart').innerHTML = ''; $('swChart').style.height = '0'; delete $('swChart').dataset.tx;
+  $('swChart').style.display = swTab === 'g' ? 'none' : '';
+  if (swTab === 'g') { $('swChart').innerHTML = ''; delete $('swChart').dataset.tx;
     const g = +($('scG').textContent.slice(1)) || 0;
-    $('swNow').innerHTML = `Now <b>G${g}</b>, Kp ${S.kpNow != null ? S.kpNow.toFixed(1) : '–'}. ` + (g ? `<b style="color:${kpColor(g + 4)}">${G_TXT[g]}</b> under way.` : 'Earth\'s magnetic field is quiet or only unsettled.') + ' The Kp charts above show where it\'s heading.'; return; }
-  $('swNow').textContent = 'Loading GOES data…';
+    $('swNow').innerHTML = T('Now <b>G{g}</b>, Kp {k}.', { g, k: S.kpNow != null ? S.kpNow.toFixed(1) : '–' }) + ' ' + (g ? T('<b style="color:{c}">{s}</b> under way.', { c: kpColor(g + 4), s: G_TXT[g] }) : T('Earth\'s magnetic field is quiet or only unsettled.')) + ' ' + T('The Kp charts above show where it\'s heading.'); return; }
+  $('swNow').textContent = T('Loading GOES data…');
   try { const D = await goes(swTab); if (swTab !== (D === S.gr ? 'r' : D === S.gs ? 's' : 'e')) return;
     if (swTab === 'r') {
       const lg = D.ser['0.1-0.8nm'] || [], sh = D.ser['0.05-0.4nm'] || [], cur = lg.length ? lg[lg.length - 1][1] : 0, mx = lg.reduce((a, p) => p[1] > a[1] ? p : a, [0, 0]);
       logChart([{ pts: sh, col: '#5AA9FF', w: 1 }, { pts: lg, col: '#FF5A5A', w: 1.4 }], 1e-9, 1e-2, [{ v: 1e-5, label: 'R1 · M-CLASS', col: '#FFA040' }, { v: 1e-4, label: 'R3 · X-CLASS', col: '#FF4444' }], [[1e-8, 'A'], [1e-7, 'B'], [1e-6, 'C'], [1e-5, 'M'], [1e-4, 'X']]);
-      $('swNow').innerHTML = `X-rays now <b>${xClass(cur)}</b> · strongest in 3 days <b style="color:${mx[1] >= 1e-5 ? '#FFA040' : '#E0E0E0'}">${xClass(mx[1])}</b> ${dayHm(mx[0])}.`;
+      $('swNow').innerHTML = T('X-rays now <b>{a}</b> · strongest in 3 days <b style="color:{c}">{b}</b> {t}.', { a: xClass(cur), c: mx[1] >= 1e-5 ? '#FFA040' : '#E0E0E0', b: xClass(mx[1]), t: dayHm(mx[0]) });
       const fl = await j(API + 'json/goes/primary/xray-flares-7-day.json').catch(() => []);
       const big = fl.filter(f => /^[MX]/.test(f.max_class)), show = (big.length ? big : fl.filter(f => /^C/.test(f.max_class)).sort((a, b) => b.max_xrlong - a.max_xrlong).slice(0, 3)).sort((a, b) => Date.parse(b.max_time) - Date.parse(a.max_time)).slice(0, 6);
-      $('swList').innerHTML = legend([['#FF5A5A', '0.1–0.8 NM · SETS THE CLASS'], ['#5AA9FF', '0.05–0.4 NM']])
-        + `<div class="lbl" style="margin-top:12px">${big.length ? 'M / X flares' : 'Biggest flares'} · last 7 days</div>`
-        + (show.length ? show.map(f => `<div class="flr"><b style="color:${/^X/.test(f.max_class) ? '#FF4444' : /^M/.test(f.max_class) ? '#FFA040' : '#E0E0E0'}">${f.max_class}</b><span>${dayHm(Date.parse(f.max_time))}</span></div>`).join('') : '<div class="loading">NO FLARES</div>');
+      $('swList').innerHTML = legend([['#FF5A5A', T('0.1–0.8 NM · SETS THE CLASS')], ['#5AA9FF', '0.05–0.4 NM']])
+        + `<div class="lbl" style="margin-top:12px">${big.length ? T('M / X flares') : T('Biggest flares')} · ${T('last 7 days')}</div>`
+        + (show.length ? show.map(f => `<div class="flr"><b style="color:${/^X/.test(f.max_class) ? '#FF4444' : /^M/.test(f.max_class) ? '#FFA040' : '#E0E0E0'}">${f.max_class}</b><span>${dayHm(Date.parse(f.max_time))}</span></div>`).join('') : '<div class="loading">' + T('NO FLARES') + '</div>');
     } else if (swTab === 's') {
       const p10 = D.ser['>=10 MeV'] || [], cur = p10.length ? p10[p10.length - 1][1] : 0, lvl = cur >= 1e5 ? 5 : cur >= 1e4 ? 4 : cur >= 1e3 ? 3 : cur >= 100 ? 2 : cur >= 10 ? 1 : 0;
       logChart([{ pts: D.ser['>=100 MeV'] || [], col: '#5AA9FF', w: 1 }, { pts: D.ser['>=50 MeV'] || [], col: '#B388FF', w: 1 }, { pts: p10, col: '#E8C766', w: 1.5 }], 1e-2, 1e5,
         [{ v: 10, label: 'S1', col: '#FFA040' }, { v: 100, label: 'S2', col: '#FF7A3D' }, { v: 1000, label: 'S3', col: '#FF4444' }, { v: 1e4, label: 'S4', col: '#E05BFF' }]);
-      $('swNow').innerHTML = `≥ 10 MeV protons now <b>${cur < 1 ? cur.toFixed(2) : Math.round(cur)}</b> pfu → <b style="color:${lvl ? '#FFA040' : '#6EE7A0'}">S${lvl}${lvl ? '' : ' · NO RADIATION STORM'}</b>.`;
-      $('swList').innerHTML = legend([['#E8C766', '≥ 10 MEV · SETS THE S LEVEL'], ['#B388FF', '≥ 50 MEV'], ['#5AA9FF', '≥ 100 MEV']]);
+      $('swNow').innerHTML = T('≥ 10 MeV protons now <b>{v}</b> pfu', { v: cur < 1 ? cur.toFixed(2) : Math.round(cur) }) + ` → <b style="color:${lvl ? '#FFA040' : '#6EE7A0'}">S${lvl}${lvl ? '' : ' · ' + T('NO RADIATION STORM')}</b>.`;
+      $('swList').innerHTML = legend([['#E8C766', T('≥ 10 MEV · SETS THE S LEVEL')], ['#B388FF', '≥ 50 MEV'], ['#5AA9FF', '≥ 100 MEV']]);
     } else {
       const e2 = D.ser['>=2 MeV'] || [], cur = e2.length ? e2[e2.length - 1][1] : 0, mx = e2.reduce((a, p) => Math.max(a, p[1]), 0);
-      logChart([{ pts: e2, col: '#FF8A5A', w: 1.4 }], 1e-1, 1e6, [{ v: 1000, label: 'NOAA ALERT · 1000', col: '#FFA040' }]);
-      $('swNow').innerHTML = `≥ 2 MeV electrons now <b>${Math.round(cur)}</b> pfu · 3-day high <b style="color:${mx >= 1000 ? '#FFA040' : '#E0E0E0'}">${Math.round(mx)}</b> — ${mx >= 1000 ? 'satellite charging risk elevated.' : 'below the alert level, normal.'}`;
+      logChart([{ pts: e2, col: '#FF8A5A', w: 1.4 }], 1e-1, 1e6, [{ v: 1000, label: T('NOAA ALERT · 1000'), col: '#FFA040' }]);
+      $('swNow').innerHTML = T('≥ 2 MeV electrons now <b>{v}</b> pfu · 3-day high <b style="color:{c}">{m}</b>', { v: Math.round(cur), c: mx >= 1000 ? '#FFA040' : '#E0E0E0', m: Math.round(mx) }) + ' — ' + (mx >= 1000 ? T('satellite charging risk elevated.') : T('below the alert level, normal.'));
       $('swList').innerHTML = legend([['#FF8A5A', '≥ 2 MEV · GOES']]);
     }
-  } catch (e) { $('swNow').textContent = 'Could not load the GOES data.'; }
+  } catch (e) { $('swNow').textContent = T('Could not load the GOES data.'); }
 }
 function vis2(id, on) { $(id).style.display = on ? '' : 'none'; }
 
 /* ── Solar cycle: cycles 21–25 aligned on their start (SILSO minima), smoothed monthly sunspot number ── */
 const CYC = [[21, '1976-03', '1986-09', '#7FB8FF'], [22, '1986-09', '1996-08', '#8B9BAE'], [23, '1996-08', '2008-12', '#FF6B6B'], [24, '2008-12', '2019-12', '#E05BFF'], [25, '2019-12', null, '#39FF9E']];
 const mIdx = tag => { const [y, m] = tag.split('-').map(Number); return y * 12 + m - 1; };
-const mName = i => new Date(Date.UTC(Math.floor(i / 12), i % 12, 1)).toLocaleDateString('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' }).toUpperCase();
+const mName = i => new Date(Date.UTC(Math.floor(i / 12), i % 12, 1)).toLocaleDateString(LOC, { month: 'short', year: 'numeric', timeZone: 'UTC' }).toUpperCase();
 function drawCycles() {
   const svg = $('cycchart'), W = svg.clientWidth || 340, H = 230, L = 26, B = 20, T = 10, R = 6, C = S.cyc;
   const x = m => L + m / 144 * (W - L - R), y = v => H - B - v / 260 * (H - B - T);
@@ -1147,8 +1254,8 @@ function drawCycles() {
   if (C.pred.length) s += `<path d="${path(C.pred)}" fill="none" stroke="#39FF9E" stroke-width="1.6" stroke-dasharray="4 3" stroke-opacity=".8"/>`;
   s += `<path d="${path(c25.pts)}" fill="none" stroke="#39FF9E" stroke-width="2.6"/>`;
   const pk = c25.pts.reduce((a, p) => p[1] > a[1] ? p : a, [0, 0]);
-  s += `<circle cx="${x(pk[0])}" cy="${y(pk[1])}" r="3.5" fill="#39FF9E"/><text x="${x(pk[0])}" y="${y(pk[1]) - 7}" text-anchor="middle" fill="#CFFFE6" font-size="8" font-family="JetBrains Mono">PEAK ${Math.round(pk[1])}</text>`;
-  const nx = x(C.nowM); s += `<line x1="${nx}" x2="${nx}" y1="${T}" y2="${H - B}" stroke="#fff" stroke-opacity=".7" stroke-dasharray="2 3"/><text x="${nx + 3}" y="${T + 8}" fill="#fff" font-size="8" font-family="JetBrains Mono">NOW</text>`;
+  s += `<circle cx="${x(pk[0])}" cy="${y(pk[1])}" r="3.5" fill="#39FF9E"/><text x="${x(pk[0])}" y="${y(pk[1]) - 7}" text-anchor="middle" fill="#CFFFE6" font-size="8" font-family="JetBrains Mono">${window.T('PEAK')} ${Math.round(pk[1])}</text>`;
+  const nx = x(C.nowM); s += `<line x1="${nx}" x2="${nx}" y1="${T}" y2="${H - B}" stroke="#fff" stroke-opacity=".7" stroke-dasharray="2 3"/><text x="${nx + 3}" y="${T + 8}" fill="#fff" font-size="8" font-family="JetBrains Mono">${window.T('NOW')}</text>`;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.innerHTML = s;
 }
 async function loadCycles() {
@@ -1162,9 +1269,9 @@ async function loadCycles() {
   S.cyc = { cycles, raw, pred: predPts, nowM };
   drawCycles();
   const pk = c25.pts.reduce((a, p) => p[1] > a[1] ? p : a, [0, 0]);
-  $('cycSum').innerHTML = `We're in <b style="color:#39FF9E">cycle 25</b>, year ${Math.floor(nowM / 12) + 1} (month ${nowM}). It peaked at <b>${Math.round(pk[1])}</b> (smoothed) in ${mName(c25.s0 + pk[0])} and is now on the way down — `
-    + `last month's sunspot number: <b>${Math.round(last.ssn)}</b> (${mName(mIdx(last['time-tag']))}).`;
-  $('cycLeg').innerHTML = cycles.map(c => `<span><i style="background:${c.col}"></i>${c.n} · ${c.a.slice(0, 4)}–${c.b ? c.b.slice(0, 4) : 'NOW'}</span>`).join('');
+  $('cycSum').innerHTML = T('We\'re in <b style="color:#39FF9E">cycle 25</b>, year {y} (month {m}). It peaked at <b>{p}</b> (smoothed) in {d} and is now on the way down — last month\'s sunspot number: <b>{n}</b> ({l}).',
+    { y: Math.floor(nowM / 12) + 1, m: nowM, p: Math.round(pk[1]), d: mName(c25.s0 + pk[0]), n: Math.round(last.ssn), l: mName(mIdx(last['time-tag'])) });
+  $('cycLeg').innerHTML = cycles.map(c => `<span><i style="background:${c.col}"></i>${c.n} · ${c.a.slice(0, 4)}–${c.b ? c.b.slice(0, 4) : T('NOW')}</span>`).join('');
 }
 
 
@@ -1174,19 +1281,22 @@ async function loadDeep(force) {
     j(API + 'products/noaa-planetary-k-index-forecast.json').then(a => { S.kpList = a; drawKpChart(a); }),
     j(API + 'products/noaa-scales.json').then(sc => { const n = sc['0'];
       $('scG').textContent = 'G' + (n.G.Scale || 0); $('scS').textContent = 'S' + (n.S.Scale || 0); $('scR').textContent = 'R' + (n.R.Scale || 0);
-      $('scG').style.color = +n.G.Scale ? kpColor(+n.G.Scale + 4) : '#6EE7A0'; $('scGt').textContent = n.G.Text && n.G.Text !== 'none' ? n.G.Text : 'Geomagnetic'; }),
+      $('scG').style.color = +n.G.Scale ? kpColor(+n.G.Scale + 4) : '#6EE7A0'; $('scGt').textContent = n.G.Text && n.G.Text !== 'none' ? T(n.G.Text) : T('Geomagnetic'); }),
     j(API + 'products/alerts.json').then(al => { const since = Date.now() - 3 * 864e5, out = [];
       al.forEach(a => { const t = Date.parse(a.issue_datetime.replace(' ', 'T') + 'Z'); if (t < since || !/geomagnetic/i.test(a.message)) return;
         const m = a.message.match(/^(ALERT|WARNING|WATCH|EXTENDED WARNING|CANCEL WATCH|SUMMARY)[^\r\n]*/m); if (m) out.push({ t, line: m[0] }); });
-      $('alerts').innerHTML = out.length ? out.slice(0, 5).map(a => `<div class="alert"><b>${esc(a.line)}</b><span>${new Date(a.t).toLocaleString('en-GB', { weekday: 'short', hour: '2-digit', minute: '2-digit', timeZone: TZ }).toUpperCase()}</span></div>`).join('')
-        : '<div class="loading">NO GEOMAGNETIC ALERTS</div>'; }),
+      $('alerts').innerHTML = out.length ? out.slice(0, 5).map(a => `<div class="alert"><b>${esc(a.line)}</b><span>${new Date(a.t).toLocaleString(LOC, { weekday: 'short', hour: '2-digit', minute: '2-digit', timeZone: TZ }).toUpperCase()}</span></div>`).join('')
+        : '<div class="loading">' + T('NO GEOMAGNETIC ALERTS') + '</div>'; }),
     loadWind(force),
     goes('e', force).then(D => { const e2 = D.ser['>=2 MeV'] || [], mx = e2.reduce((a, p) => Math.max(a, p[1]), 0);
       $('scE').textContent = mx >= 1000 ? 'HIGH' : 'OK'; $('scE').style.color = mx >= 1000 ? '#FFA040' : '#6EE7A0'; }).catch(() => {}),
-    loadCycles().catch(() => { $('cycSum').textContent = 'Could not load the sunspot data.'; }),
+    loadCycles().catch(() => { $('cycSum').textContent = T('Could not load the sunspot data.'); }),
   ]);
   drawSw();
 }
+if (window.ResizeObserver) { const seen = new WeakMap(); const ro = new ResizeObserver(es => es.forEach(e => { const h = Math.round(e.contentRect.height), w = Math.round(e.contentRect.width), k = w + 'x' + h;
+    if (seen.get(e.target) === k) return; seen.set(e.target, k);
+    if (e.target.id === 'kpchart' && S.kpList) drawKpChart(S.kpList); if (e.target.id === 'swChart' && swTab !== 'g') drawSw(); })); ['kpchart', 'swChart'].forEach(id => ro.observe($(id))); }
 addEventListener('resize', () => { if (S.kpList) drawKpChart(S.kpList); if (S.cyc) drawCycles(); if (S.wind) drawWind(); if (swTab !== 'g') drawSw(); });
 window.redrawDeep = () => { if (S.kpNow != null) drawKpNow(S.kpNow); if (S.kpList) drawKpChart(S.kpList); };
 loadDeep(); setInterval(loadDeep, 10 * 60000);
