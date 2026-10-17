@@ -112,10 +112,11 @@ for r in dst:
     if 0 <= i < n_days:
         J['dst'][i] = v if J['dst'][i] is None else min(J['dst'][i], v)
 pl = get(SWPC + 'products/solar-wind/plasma-7-day.json') or []
-for r in pl[1:]:
-    try:
-        i = day_index(dt.date.fromisoformat(r[0][:10])); v = float(r[2])
-    except (TypeError, ValueError, IndexError):
+for r in pl:
+    try:   # rows are lists (header first) or objects, depending on the product version
+        tt, sp = (r.get('time_tag'), r.get('speed')) if isinstance(r, dict) else (r[0], r[2])
+        i = day_index(dt.date.fromisoformat(str(tt)[:10])); v = float(sp)
+    except (TypeError, ValueError, IndexError, AttributeError):
         continue
     if 0 <= i < n_days and v > 0:
         J['v'][i] = round(max(J['v'][i] or 0, v))
@@ -137,7 +138,7 @@ E['updated'] = int(time.time() * 1000)
 
 # volcanoes (Smithsonian GVP): once a day is plenty
 if not E.get('ongoing') or NOW.hour == 3 or full:
-    W = 'https://webservices.volcano.si.edu/geoserver/GVP-VOTW/ows?service=WFS&version=2.0.0&request=GetFeature&typeName=GVP-VOTW:Smithsonian_VOTW_Holocene_Eruptions&outputFormat=application/json&cql_filter='
+    W = 'https://webservices.volcano.si.edu/geoserver/GVP-VOTW/ows?service=WFS&version=2.0.0&request=GetFeature&typeName=GVP-VOTW:Smithsonian_VOTW_Holocene_Eruptions&outputFormat=application/json&count=5000&sortBy=StartDateYear+D&cql_filter='
     on = get(W + urllib.parse.quote('EndDateYear IS NULL AND StartDateYear>=1990'))
     if on and on.get('features'):
         out = []
