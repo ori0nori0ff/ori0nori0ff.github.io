@@ -172,7 +172,7 @@
     function frame() { if (visible && (dirty || cam.goal || cam.follow && dirty)) draw(); requestAnimationFrame(frame); }
     function resize() { const r = el.getBoundingClientRect(); W = Math.max(200, r.width); H = Math.max(200, r.height); dpr = Math.min(2, devicePixelRatio || 1);
       [cv, ov].forEach(c => { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); c.style.width = W + 'px'; c.style.height = H + 'px'; }); dirty = true; }
-    function setTime(t) { if (!isFinite(t)) return; time = t; el.querySelector('.s3d-t').textContent = new Date(t).toLocaleString(window.LOC || undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: opts.tz ? opts.tz() : undefined });
+    function setTime(t) { if (!isFinite(t)) return; time = t; el.querySelector('.s3d-t').textContent = new Date(t).toLocaleString(window.LOC || 'en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: opts.tz ? opts.tz() : undefined });
       const E = planet('Earth', t), q = cmes.filter(c => { const r = 0.1 + kmsAU(c.v) * (t - c.t) / DAY; return r > 0 && r < 3.4; }).length;
       el.querySelector('.s3d-sub').textContent = tr('wind at Earth ≈ {v} km/s', { v: Math.round(vtab[Math.round((((lonOf(E) - OMEGA * t / DAY) / D2R) % 360 + 360) % 360) % 360]) }) + (q ? ' · ' + tr('{n} CME in flight', { n: q }) : '');
       build(); dirty = true; }
