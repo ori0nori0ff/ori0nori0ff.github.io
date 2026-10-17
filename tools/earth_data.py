@@ -9,7 +9,7 @@
      kp (GFZ Potsdam, CC BY 4.0), ssn (SILSO, Royal Observatory of Belgium), q5 (USGS) go back to 2008;
      dst / v / fl only exist from the day this job started (NOAA keeps ~7 days) — the journal grows by itself.
 """
-import csv, datetime as dt, io, json, math, os, re, sys, time, urllib.parse, urllib.request
+import csv, datetime as dt, io, json, math, os, re, subprocess, sys, time, urllib.parse, urllib.request
 
 UTC = dt.timezone.utc
 NOW = dt.datetime.now(UTC)
@@ -200,6 +200,11 @@ def cmes():
     for u in [f'https://kauai.ccmc.gsfc.nasa.gov/DONKI/WS/get/CMEAnalysis?startDate={a}&endDate={b}&mostAccurateOnly=true&speed=0&halfAngle=0&catalog=ALL',
               f'https://api.nasa.gov/DONKI/CMEAnalysis?startDate={a}&endDate={b}&mostAccurateOnly=true&speed=0&halfAngle=0&catalog=ALL&api_key=' + os.environ.get('NASA_KEY', 'DEMO_KEY')]:
         r = get(u, timeout=90, tries=2)
+        if not isinstance(r, list):   # CCMC answers only over IPv4 from some runners
+            try:
+                r = json.loads(subprocess.run(['curl', '-4', '-s', '-m', '90', '-A', UA['User-Agent'], u], capture_output=True, text=True, timeout=100).stdout or 'null')
+            except Exception:   # noqa: BLE001
+                r = None
         if isinstance(r, list):
             break
         print('donki: no list from', u.split('?')[0], file=sys.stderr)

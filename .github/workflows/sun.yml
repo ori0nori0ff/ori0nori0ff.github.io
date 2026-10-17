@@ -23,6 +23,7 @@ jobs:
         run: sudo apt-get -qq update && sudo apt-get -qq install -y ffmpeg > /dev/null
       - run: python3 tools/sun_frames.py ${{ steps.c.outputs.clips == '1' && '--clips' || '' }}
       - name: Earth data + daily journal
+        env: { NASA_KEY: '${{ secrets.NASA_KEY }}' }   # optional free key from api.nasa.gov (the demo key is often over its limit)
         run: python3 tools/earth_data.py || true
       - name: Publish frame list
         run: |
