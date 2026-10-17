@@ -290,32 +290,6 @@
   .seg button { border: 0; background: none; color: var(--dim); font: 600 12px 'JetBrains Mono', monospace; padding: 9px 14px; min-height: 40px; cursor: pointer; letter-spacing: .5px; }
   .seg button[aria-pressed="true"] { background: #39FF9E; color: #0A0A0A; }
   .locrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; } .locrow b { color: #FFE08A; font: 600 16px 'Barlow Condensed', Barlow, sans-serif; text-transform: uppercase; }
-  body.simple .xfull, body:not(.simple) .xsimple { display: none !important; }
-  /* the guide: 4 live steps for someone who knows nothing about it */
-  .guide h2 { margin-bottom: 4px; }
-  .gsteps { display: grid; gap: 12px; margin-top: 12px; counter-reset: s; }
-  .gstep { position: relative; background: #0F1318; border: 1px solid var(--line); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
-  .gnum { position: absolute; top: 10px; left: 10px; z-index: 2; width: 30px; height: 30px; border-radius: 50%; background: #39FF9E; color: #0A0A0A; font: 700 17px/30px 'Barlow Condensed', Barlow, sans-serif; text-align: center; }
-  .gpic { aspect-ratio: 16 / 10; border-radius: 12px; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; }
-  .gpic img, .gpic canvas { height: 100%; width: auto; max-width: 100%; display: block; }
-  .gstep h3 { margin: 4px 0 0; font: 600 24px/1.05 'Barlow Condensed', Barlow, sans-serif; text-transform: uppercase; color: #fff; }
-  .gstep p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--soft, #C9D1DB); }
-  .glive { font: 600 12px/1.5 'JetBrains Mono', monospace; color: #FFE08A; background: rgba(255,224,138,.07); border-radius: 10px; padding: 8px 10px; }
-  .glive::before { content: '● LIVE  '; color: #FF6B6B; }
-  .gfact { font-size: 13.5px; line-height: 1.5; color: var(--dim); border-left: 3px solid #4A7BFF; padding-left: 10px; }
-  .gfact b { color: #9DB8FF; }
-  .gmore { margin-top: auto; align-self: flex-start; border: 1px solid rgba(57,255,158,.5); background: none; color: #39FF9E; border-radius: 999px; padding: 9px 14px; min-height: 40px; font: 600 12px 'JetBrains Mono', monospace; cursor: pointer; }
-  .gall { display: block; width: 100%; margin-top: 14px; padding: 14px; border-radius: 14px; border: 1px solid var(--line); background: #141A22; color: #fff; font: 600 18px 'Barlow Condensed', Barlow, sans-serif; letter-spacing: .5px; cursor: pointer; }
-  .gkp { flex-direction: column; background: radial-gradient(circle at 50% 120%, rgba(57,255,158,.25), #000 70%); }
-  .gkp b { font: 600 72px/1 'Barlow Condensed', Barlow, sans-serif; } .gkp span { font: 600 13px 'JetBrains Mono', monospace; color: var(--dim); }
-  .gbar { display: grid; grid-template-columns: repeat(9, 1fr); gap: 3px; width: 70%; margin-top: 10px; } .gbar i { height: 7px; border-radius: 2px; background: #232830; }
-  .gaur { position: relative; background: linear-gradient(#020611, #0A1A2A 70%, #0E1712); }
-  .gaur i { position: absolute; bottom: 18%; width: 16%; height: 70%; border-radius: 50% 50% 0 0 / 30% 30% 0 0; background: linear-gradient(to top, rgba(57,255,158,.0), rgba(57,255,158,.75) 30%, rgba(57,255,158,.25) 70%, rgba(255,90,120,.45)); filter: blur(6px); animation: sway 6s ease-in-out infinite alternate; }
-  .gaur i:nth-child(1) { left: 6%; height: 55%; } .gaur i:nth-child(2) { left: 22%; animation-delay: -1s; } .gaur i:nth-child(3) { left: 40%; height: 78%; animation-delay: -2s; } .gaur i:nth-child(4) { left: 58%; animation-delay: -3s; } .gaur i:nth-child(5) { left: 76%; height: 60%; animation-delay: -4s; }
-  .gaur::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 20%; background: #05080A; clip-path: polygon(0 60%, 12% 20%, 22% 55%, 35% 10%, 48% 50%, 60% 25%, 74% 60%, 86% 30%, 100% 55%, 100% 100%, 0 100%); }
-  @keyframes sway { from { transform: skewX(-6deg) scaleY(.92); opacity: .75; } to { transform: skewX(6deg) scaleY(1.05); opacity: 1; } }
-  @media (min-width: 760px) { .gsteps { grid-template-columns: 1fr 1fr; } body.simple .grid.top { grid-template-columns: 1fr 1fr; } body.simple .grid.top > :first-child { grid-column: auto; } }
-  @media (min-width: 1200px) { .gsteps { grid-template-columns: repeat(4, 1fr); } body.simple .grid.top { grid-template-columns: 1.3fr 1fr; } }
   .gl { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
   .glr { display: grid; grid-template-columns: 34px 132px 1fr auto; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: #0F1318; border: 1px solid transparent; }
   .glr b { font-size: 16px; font-weight: 800; font-feature-settings: 'zero'; } .glk { font-size: 12.5px; font-weight: 600; color: #DCE3EB; } .glt { font-size: 13px; color: var(--dim); line-height: 1.35; }
@@ -327,10 +301,8 @@
   h1 { font: 800 32px/1.05 Inter, sans-serif; text-transform: none; letter-spacing: -.5px; }
   h2 { font: 700 21px/1.15 Inter, sans-serif; text-transform: none; letter-spacing: -.2px; }
   .big { font: 800 60px/1 Inter, sans-serif; text-transform: none; letter-spacing: -1.5px; }
-  .gstep h3 { font: 700 20px/1.15 Inter, sans-serif; text-transform: none; letter-spacing: -.2px; }
   .lbl { font-weight: 600; letter-spacing: .07em; }
   .scale b, .kpbig, .fact b, .gkp b { font-feature-settings: 'tnum', 'zero'; font-weight: 800; letter-spacing: -.5px; }
-  .gall { font: 700 16px Inter, sans-serif; }
 </style>
 </head>
 <body>
@@ -339,7 +311,6 @@
   <h1>Aurora tonight</h1>
   <div class="sub"><span id="place">from Brașov, Romania</span></div>
   <div class="topbar">
-    <div class="seg" role="group" aria-label="View"><button data-mode="simple" aria-pressed="false">Simple</button><button data-mode="full" aria-pressed="false">Full</button></div>
     <div class="seg" role="group" aria-label="Language" data-noi18n><button data-lang="en" lang="en">EN</button><button data-lang="ro" lang="ro">RO</button><button data-lang="de" lang="de">DE</button></div>
   </div>
 
@@ -384,29 +355,6 @@
     <div class="help">The <b style="color:var(--green)">green glow</b> is NOAA's live aurora map around the North Pole. The yellow dot is you. The further south the green reaches towards it, the better our chances. <span id="ovTime"></span></div>
   </section>
   </div>
-  <section class="card xsimple guide" id="guide" aria-labelledby="gH">
-    <div class="lbl">How does an aurora happen? · 4 steps, live right now</div>
-    <h2 id="gH">From the Sun to your sky</h2>
-    <div class="gsteps">
-      <article class="gstep"><div class="gnum" aria-hidden="true">1</div><div class="gpic"><img id="gSun" alt="The Sun right now, NASA SDO"></div>
-        <h3>The Sun throws</h3><p>Now and then the Sun hurls a giant cloud of hot gas into space — a <b>CME</b>, billions of tonnes at once.</p>
-        <div class="glive" id="gSunLive">–</div>
-        <button class="gmore" data-go="syncCard">Watch the Sun live ›</button></article>
-      <article class="gstep"><div class="gnum" aria-hidden="true">2</div><div class="gpic"><canvas id="gEnl" width="300" height="300" role="img" aria-label="NOAA's solar wind model seen from above: the Sun in the middle, Earth on the green dot"></canvas></div>
-        <h3>The wind travels</h3><p>A stream of particles — the <b>solar wind</b> — blows past Earth all the time. A CME needs <b>1 to 4 days</b> to cross the 150 million km.</p>
-        <div class="glive" id="gEnlLive">–</div>
-        <button class="gmore" data-go="secDen">See the forecast ›</button></article>
-      <article class="gstep"><div class="gnum" aria-hidden="true">3</div><div class="gpic gkp"><b id="gKp">–</b><span>Kp</span><div class="gbar" id="gBar" aria-hidden="true"></div></div>
-        <h3>Earth's shield shakes</h3><p>Earth's magnetic field shields us. When the wind's own magnetism points <b>south</b>, energy leaks in and the field starts to shake. <b>Kp</b> measures it, from 0 (calm) to 9 (huge storm).</p>
-        <div class="glive" id="gKpLive">–</div>
-        <button class="gmore" data-go="kpcard">See the Kp forecast ›</button></article>
-      <article class="gstep"><div class="gnum" aria-hidden="true">4</div><div class="gpic gaur" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
-        <h3>The sky lights up</h3><p>The particles hit the air 100–300 km up and make it glow: <b style="color:#39FF9E">green</b> from oxygen, <b style="color:#FF6B6B">red</b> higher up, purple from nitrogen.</p>
-        <div class="glive" id="gSkyLive">–</div>
-        <button class="gmore" data-go="vcard">Can we see it tonight? ›</button></article>
-    </div>
-    <button class="gall" id="gAll">Show me everything — the full expert view</button>
-  </section>
   <div class="chap xfull"><span aria-hidden="true">1</span><div><h2>From the Sun to Earth</h2><p>Everything starts at the Sun: flares, CMEs (clouds of solar plasma) and coronal holes that blow fast wind. It takes 1–4 days to cross 150 million km. Play the Sun and NOAA's solar wind model on one clock.</p></div></div>
   <section class="card clock xfull" id="syncCard" aria-label="One clock for the Sun and the solar wind">
     <div class="clockrow"><div class="clockt"><div class="lbl">One clock · Sun + solar wind</div><div class="stime" id="syT" aria-live="polite">–</div></div>
@@ -536,19 +484,8 @@ i18nApply();
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const API = 'https://services.swpc.noaa.gov/';
 const q = new URLSearchParams(location.search);
-// view: ?mode= > remembered > simple (the page is mostly opened from a shared link by people new to all this)
-let MODE = q.get('mode') || (() => { try { return localStorage.getItem('aurora.mode'); } catch (e) { return null; } })() || 'simple';
-function setMode(m, go) {
-  MODE = m === 'full' ? 'full' : 'simple'; document.body.classList.toggle('simple', MODE === 'simple');
-  document.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === MODE));
-  try { localStorage.setItem('aurora.mode', MODE); } catch (e) {}
-  dispatchEvent(new Event('resize'));
-  if (go) setTimeout(() => { const el = document.getElementById(go); if (el) el.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'start' }); }, 60);
-}
-document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => setMode(b.dataset.mode));
 document.querySelectorAll('[data-lang]').forEach(b => { b.setAttribute('aria-pressed', b.dataset.lang === LANG); b.onclick = () => i18nSet(b.dataset.lang); });
-document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => setMode('full', b.dataset.go));
-$('gAll').onclick = () => setMode('full', 'kpcard');
+
 const esc = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 // the place: link (?town=&lat=&lon=) > the one picked on this device > Brașov
 let TOWN = (() => {
@@ -590,7 +527,7 @@ $('locGps').onclick = () => {
 };
 const hhmm = d => new Date(d).toLocaleTimeString(LOC, { timeZone: TZ, hour: '2-digit', minute: '2-digit' });
 const day = d => new Date(d).toLocaleDateString(LOC, { timeZone: TZ, weekday: 'short', day: 'numeric' });
-const kpColor = k => k >= 8 ? '#E05BFF' : k >= 7 ? '#FF4444' : k >= 6 ? '#FF7A3D' : k >= 5 ? '#FFA040' : k >= 4 ? '#E8C766' : '#6EE7A0';
+const kpColor = k => k >= 8 ? '#D9263D' : k >= 7 ? '#FF4444' : k >= 6 ? '#FF7A3D' : k >= 5 ? '#FFA040' : k >= 4 ? '#E8C766' : '#6EE7A0';
 async function j(u) { const r = await fetch(u, { cache: 'no-store' }); if (!r.ok) throw new Error(r.status); return r.json(); }
 const S = {};
 
@@ -614,8 +551,8 @@ function verdict() {
     const ss = S.wx.daily.sunset[0]; if (ss) dark = Date.parse(ss + 'Z') - S.wx.utc_offset_seconds * 1000 + 75 * 60000;
   }
   const N = need();   // Kp needed here (from the geomagnetic latitude)
-  const lv = kp >= N + 1 ? [T('Likely'), '#E05BFF', 'rgba(224,91,255,.22)'] : kp >= N ? [T('Possible'), '#FF4444', 'rgba(255,68,68,.2)']
-    : kp >= N - 1 ? [T('Unlikely'), '#FFA040', 'rgba(255,160,64,.16)'] : [T('No chance'), '#6EE7A0', 'rgba(57,255,158,.10)'];
+  const lv = kp >= N + 1 ? [T('Likely'), '#39FF9E', 'rgba(57,255,158,.22)'] : kp >= N ? [T('Possible'), '#FFD84D', 'rgba(255,216,77,.16)']
+    : kp >= N - 1 ? [T('Unlikely'), '#FFA040', 'rgba(255,160,64,.16)'] : [T('No chance'), '#A3B0C2', 'rgba(163,176,194,.08)'];
   $('vword').textContent = lv[0]; $('vword').style.color = lv[1]; $('vcard').style.setProperty('--glow', lv[2]);
   const P = { p: TOWN.name, n: N };
   let t = kp >= N + 1 ? T('A solar storm strong enough for {p} is forecast — the aurora may be visible to the eye low in the north from dark places.', P)
@@ -632,7 +569,7 @@ function verdict() {
     S.tnPlan = pl; S.tnNeed = N; S.kpT = kp; S.clouds = clouds; AuroraTonight.render($('tonight'), pl, hhmm, kpColor, N, sy.on ? sy.t : 0); $('tnTxt').textContent = S.tonight = AuroraTonight.sentence(pl, N, hhmm);
   }
   if (window.redrawDeep) redrawDeep();
-  guide();
+ 
 }
 
 /* ── Kp chart: 3-hour bars, next ~3 days ── */
@@ -1039,32 +976,6 @@ $('linkShare').onclick = async () => {
   try { await navigator.clipboard.writeText(d.url); toast(T('Link copied')); } catch (e) { prompt(T('Copy this link'), d.url); }
 };
 
-/* ── the guide (simple view): live numbers in each of the 4 steps ── */
-function guide() {
-  if (!$('guide')) return;
-  // 1 · the Sun: newest AIA 171 frame (gold loops), else NASA's latest
-  const f171 = sun.F && sun.F.filters['0171'], last = f171 && f171.length ? f171[f171.length - 1] : null;
-  const su = last ? last[1].replace('_1024_', '_512_') : 'https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_0171.jpg';
-  if ($('gSun').dataset.u !== su) { $('gSun').dataset.u = su; $('gSun').src = su; }
-  $('gSunLive').textContent = last ? T('The Sun at {t} (AIA 171, ~600,000 °C)', { t: hhmm(last[0]) }) : T('The Sun today (NASA SDO)');
-  // 2 · the wind: the model's view from above at this hour + speed now + the next CME
-  if (enl.frames.length) { const k = nearestIdx(enl.frames.length, m => enl.frames[m].t, Date.now()), im = enlImg(enl.frames[k].u);
-    const draw = () => { const c = $('gEnl'), g = c.getContext('2d'); g.clearRect(0, 0, 300, 300); g.save(); g.beginPath(); g.arc(150, 150, 146, 0, 7); g.clip();
-      g.drawImage(im, 76, 58, 258, 258, 0, 0, 300, 300); g.restore();
-      const P = q => [(q[0] - 76) / 258 * 300, (q[1] - 58) / 258 * 300], sn = P(ENL_SUN), ea = P(ENL_EARTH);
-      g.font = '700 15px "JetBrains Mono", monospace'; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.85)';
-      [[sn, T('SUN'), '#FFE600', -40, -16], [ea, T('EARTH'), '#7CFF7C', 10, 26]].forEach(([q, t, col, dx, dy]) => { g.strokeText(t, q[0] + dx, q[1] + dy); g.fillStyle = col; g.fillText(t, q[0] + dx, q[1] + dy); }); };
-    if (im.complete && im.naturalWidth) draw(); else im.addEventListener('load', draw, { once: true }); }
-  const cme = (S.enl || []).find(p => p.cme && p.t > Date.now());
-  $('gEnlLive').textContent = (S.swV ? T('Wind now {v} km/s', { v: Math.round(S.swV) }) + ' · ' : '') + (cme ? T('a CME should reach Earth ≈ {t}', { t: dayHm(cme.t) }) : T('no CME expected in the next days'));
-  // 3 · the shield: Kp now
-  if (S.kpNow != null) { const k = S.kpNow; $('gKp').textContent = k.toFixed(1); $('gKp').style.color = kpColor(k);
-    $('gBar').innerHTML = Array.from({ length: 9 }, (_, i) => `<i style="background:${i < Math.round(k) ? kpColor(i + 1) : '#232830'}"></i>`).join('');
-    $('gKpLive').textContent = T('Now: Kp {k}', { k: k.toFixed(1) }) + ' · ' + (k >= 7 ? T('strong storm!') : k >= 5 ? T('a storm') : k >= 4 ? T('restless') : T('calm')) + (S.bz != null ? ' · ' + (S.bz < -5 ? T('wind magnet south — good') : S.bz < 0 ? T('wind magnet slightly south') : T('wind magnet north — calm')) : ''); }
-  // 4 · your sky
-  const N = need(), kt = S.kpT;
-  $('gSkyLive').textContent = T('From {p} you need Kp {n}', { p: TOWN.name, n: N }) + (kt != null ? ' · ' + T('tonight Kp {k}', { k: kt.toFixed(1) }) + ' — ' + (kt >= N ? T('possible!') : T('not enough')) : '');
-}
 function drawGlobe() { if (window.AuroraGlobe) AuroraGlobe.draw($('globe'), { ov: S.ov, lat0: Math.min(75, Math.max(50, TOWN.lat + 13)), lon0: TOWN.lon - 7, viewLine: true, label: true, here: TOWN }); }
 addEventListener('resize', () => { drawGlobe(); });
 
@@ -1077,17 +988,16 @@ async function load() {
     j(API + 'json/ovation_aurora_latest.json').then(o => { S.ov = AuroraGlobe.grid(o); $('ovTime').textContent = T('NOAA forecast for {t}.', { t: hhmm(o['Forecast Time']) }); drawGlobe(); }),
     j(API + 'products/summary/solar-wind-speed.json').then(a => { const v = +a[0].proton_speed;
       $('swV').innerHTML = Math.round(v) + '<span style="font-size:13px;color:#8B9BAE"> km/s</span>'; $('swV').style.color = v >= 600 ? '#FF7A3D' : v >= 450 ? '#E8C766' : '#E0E0E0';
-      $('swVt').textContent = v >= 600 ? T('Fast — storm fuel.') : v >= 450 ? T('A bit fast.') : T('Calm (300–450 is normal).'); S.swV = v; guide(); }),
+      $('swVt').textContent = v >= 600 ? T('Fast — storm fuel.') : v >= 450 ? T('A bit fast.') : T('Calm (300–450 is normal).'); S.swV = v; }),
     j(API + 'products/summary/solar-wind-mag-field.json').then(a => { const bz = +a[0].bz_gsm;
       $('swBz').innerHTML = (bz > 0 ? '+' : '') + bz + '<span style="font-size:13px;color:#8B9BAE"> nT</span>'; $('swBz').style.color = bz <= -10 ? '#FF4444' : bz <= -5 ? '#FFA040' : '#E0E0E0';
-      $('swBzt').textContent = bz <= -10 ? T('Strongly south — aurora ON.') : bz <= -5 ? T('South — helps the aurora.') : bz < 0 ? T('Slightly south.') : T('North — aurora stays quiet.'); S.bz = bz; guide(); }),
+      $('swBzt').textContent = bz <= -10 ? T('Strongly south — aurora ON.') : bz <= -5 ? T('South — helps the aurora.') : bz < 0 ? T('Slightly south.') : T('North — aurora stays quiet.'); S.bz = bz; }),
     loadEnlil().catch(() => { $('enlSum').textContent = T('The solar wind model could not be loaded right now.'); }),
     loadSun(),
   ]);
   verdict(); if (!S.kpList) { $('vword').textContent = T('No data'); $('vtext').textContent = T('NOAA could not be reached. Try again in a minute.'); }
-  $('upd').textContent = T('Live · updated {t} local time', { t: hhmm(Date.now()) }); guide();
+  $('upd').textContent = T('Live · updated {t} local time', { t: hhmm(Date.now()) });
 }
-setMode(MODE);
 load(); setInterval(load, 10 * 60000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
 </script>
@@ -1103,7 +1013,7 @@ const esc = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&a
 const BV = { get name() { return TOWN.name; }, get lat() { return TOWN.lat; }, get lon() { return TOWN.lon; } };
 const need = () => AuroraGlobe.kpNeed(TOWN.lat, TOWN.lon);
 const hhmm = d => d.toLocaleTimeString(LOC, { hour: '2-digit', minute: '2-digit', timeZone: TZ });
-const kpColor = k => k >= 8 ? '#E05BFF' : k >= 7 ? '#FF4444' : k >= 6 ? '#FF7A3D' : k >= 5 ? '#FFA040' : k >= 4 ? '#E8C766' : '#6EE7A0';
+const kpColor = k => k >= 8 ? '#D9263D' : k >= 7 ? '#FF4444' : k >= 6 ? '#FF7A3D' : k >= 5 ? '#FFA040' : k >= 4 ? '#E8C766' : '#6EE7A0';
 const gScale = k => k >= 9 ? 5 : k >= 8 ? 4 : k >= 7 ? 3 : k >= 6 ? 2 : k >= 5 ? 1 : 0;
 const G_TXT = ['QUIET', 'MINOR STORM', 'MODERATE STORM', 'STRONG STORM', 'SEVERE STORM', 'EXTREME STORM'].map(x => T(x));
 async function j(url) { const r = await fetch(url, { cache: 'no-store' }); if (!r.ok) throw new Error(r.status); return r.json(); }
