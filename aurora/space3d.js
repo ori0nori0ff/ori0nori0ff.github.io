@@ -92,9 +92,9 @@
     const cam = { yaw: -0.6, pitch: 0.55, dist: 3.4, tgt: [0, 0, 0], goal: null };
     let W = 0, H = 0, dpr = 1, M = null, dirty = true, visible = true;
 
-    function setWind(series) {   // trace each at-Earth sample back to the solar longitude (co-rotating) its wind left from
+    function setWind(series_) {   // trace each at-Earth sample back to the solar longitude (co-rotating) its wind left from
       const sum = new Float32Array(360), cnt = new Float32Array(360), nsum = new Float32Array(360);
-      (series || []).forEach(p => { if (!(p.v > 100)) return; const t = p.t, E = planet('Earth', t), r = Math.hypot(E[0], E[2]);
+      (series_ || []).forEach(p => { if (!(p.v > 100)) return; const t = p.t, E = planet('Earth', t), r = Math.hypot(E[0], E[2]);
         const psi = lonOf(E) - OMEGA * (t / DAY) + OMEGA * r / kmsAU(p.v); let b = Math.round(((psi / D2R) % 360 + 360) % 360) % 360;
         sum[b] += p.v; nsum[b] += p.n || 5; cnt[b]++; });
       known = new Uint8Array(360); const v = new Float32Array(360), n = new Float32Array(360);
@@ -104,9 +104,15 @@
         const nb = known[(b + d) % 360] ? (b + d) % 360 : (b - d + 360) % 360, f = d >= 180 ? 1 : Math.min(1, d / 25);
         v[b] = d >= 180 ? 400 : v[nb] * (1 - f) + 400 * f; n[b] = d >= 180 ? 5 : n[nb] * (1 - f) + 5 * f; }
       for (let pass = 0; pass < 2; pass++) for (let b = 0; b < 360; b++) v[b] = (v[(b + 359) % 360] + 2 * v[b] + v[(b + 1) % 360]) / 4;
-      vtab = v; ntab = n; dirty = true;
+      vtab = v; ntab = n; series = series_ || []; setCmes(); dirty = true;
     }
-    function setCmes(list) { cmes = (list || []).filter(c => c.v > 0); dirty = true; }
+    let donki = null, series = [];
+    // without NASA DONKI analyses: CMEs the ENLIL run sends to Earth (its "cloud" flag at Earth), launched towards Earth
+    // early enough to arrive then at that speed — marked as estimates
+    function fromEnlil() { const out = []; let seg = null;
+      series.forEach(p => { if (p.cme) { if (!seg) seg = { t: p.t, v: p.v }; else seg.v = Math.max(seg.v, p.v); } else if (seg) { out.push(seg); seg = null; } }); if (seg) out.push(seg);
+      return out.map(c => ({ t: c.t - (1 - 0.1) / kmsAU(c.v) * DAY, lat: 0, lon: 0, half: 35, v: c.v, est: true })); }
+    function setCmes(list) { if (list) donki = list.filter(c => c.v > 0); cmes = donki && donki.length ? donki : fromEnlil(); dirty = true; }
 
     function build() {
       const td = time / DAY;
@@ -165,7 +171,7 @@
         hits.push({ x: q[0], y: q[1], r: r + 14, name: nm, w: tw + 12 });
         if (boxes.some(b => bx[0] < b[0] + b[2] && bx[0] + bx[2] > b[0] && bx[1] < b[1] + b[3] && bx[1] + bx[3] > b[1]) && nm !== 'Earth') return; boxes.push(bx);
         g2.fillStyle = 'rgba(0,0,0,.55)'; g2.fillRect(...bx); g2.fillStyle = nm === 'Earth' ? '#9CCBFF' : '#DCE3EB'; g2.fillText(lab, q[0] + r + 8, q[1]); });
-      (build.active || []).forEach(({ c, r, ax }) => { const q = proj(ax.map(x => x * r)); if (!q) return; const lab = 'CME ' + Math.round(c.v) + ' km/s';
+      (build.active || []).forEach(({ c, r, ax }) => { const q = proj(ax.map(x => x * r)); if (!q) return; const lab = 'CME ' + Math.round(c.v) + ' km/s' + (c.est ? ' · ' + tr('estimate') : '');
         g2.fillStyle = 'rgba(0,0,0,.6)'; const tw = g2.measureText(lab).width; g2.fillRect(q[0] + 6, q[1] - 8, tw + 8, 16); g2.fillStyle = '#FFE2C2'; g2.fillText(lab, q[0] + 10, q[1]); });
       dirty = false;
     }

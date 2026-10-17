@@ -552,5 +552,6 @@ window.I18N_DICT.ro = {
   "Jupiter": "Jupiter",
   "Saturn": "Saturn",
   "Uranus": "Uranus",
-  "Neptune": "Neptun"
+  "Neptune": "Neptun",
+  "estimate": "estimat"
 };
