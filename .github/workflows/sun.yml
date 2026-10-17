@@ -22,11 +22,13 @@ jobs:
       - if: steps.c.outputs.clips == '1'
         run: sudo apt-get -qq update && sudo apt-get -qq install -y ffmpeg > /dev/null
       - run: python3 tools/sun_frames.py ${{ steps.c.outputs.clips == '1' && '--clips' || '' }}
+      - name: Earth data + daily journal
+        run: python3 tools/earth_data.py || true
       - name: Publish frame list
         run: |
           git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add aurora/sun/frames.json
-          git diff --cached --quiet || { git commit -qm "Sun frames $(date -u +%d.%m\ %H:%M)"; git pull -q --rebase; git push -q; }
+          git add aurora/sun/frames.json aurora/data
+          git diff --cached --quiet || { git commit -qm "Sun frames + Earth data $(date -u +%d.%m\ %H:%M)"; git pull -q --rebase; git push -q; }
       # past ENLIL runs (NOAA keeps only the current one) -> branch "enlil", one commit, force-pushed (no history)
       - name: ENLIL archive
         run: |
