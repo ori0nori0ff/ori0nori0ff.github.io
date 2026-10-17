@@ -1,0 +1,18 @@
+# temporary: which Earth / cosmic-ray sources answer from GitHub, and do they allow browsers (CORS)?
+name: Earth probe
+on: { push: { paths: ['.github/workflows/earth-probe.yml'] }, workflow_dispatch: {} }
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          t() { echo "== $1"; curl -s -m 40 -D /tmp/h -o /tmp/b -H 'Origin: https://ori0nori0ff.github.io' "$1"; head -1 /tmp/h; grep -i 'access-control-allow-origin\|content-type' /tmp/h; wc -c < /tmp/b; head -c ${2:-400} /tmp/b | tr '\r' ' '; echo; }
+          t "https://services.swpc.noaa.gov/products/kyoto-dst.json"
+          t "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson" 200
+          t "https://earthquake.usgs.gov/fdsnws/event/1/query?format=csv&starttime=2026-09-01&endtime=2026-10-01&minmagnitude=5" 300
+          t "https://www.nmdb.eu/nest/draw_graph.php?formchk=1&stations[]=OULU&tabchoice=revori&dtype=corr_for_efficiency&tresolution=60&force=1&yunits=0&date_choice=last&last_days=7&last_label=days_label&output=ascii" 900
+          t "https://kp.gfz-potsdam.de/app/json/?start=2026-10-01T00:00:00Z&end=2026-10-03T00:00:00Z&index=Kp" 300
+          t "https://www.sidc.be/SILSO/INFO/sndtotcsv.php" 200
+          t "https://volcano.si.edu/news/WeeklyVolcanoRSS.xml" 1500
+          t "https://webservices.volcano.si.edu/geoserver/GVP-VOTW/ows?service=WFS&version=2.0.0&request=GetFeature&typeName=GVP-VOTW:Smithsonian_VOTW_Holocene_Eruptions&outputFormat=application/json&count=2&sortBy=StartDate+D" 1500
+          t "https://services.swpc.noaa.gov/json/goes/primary/integral-protons-3-day.json" 100
