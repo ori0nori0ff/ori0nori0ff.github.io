@@ -186,6 +186,27 @@ def cosmic():
     print('cosmic: no data', file=sys.stderr)
     return None
 
+# CMEs for the 3D view: NASA DONKI (CCMC) analyses — when each cloud passed 21.5 solar radii, its direction,
+# width and speed (the cone model NOAA's ENLIL runs use)
+def cmes():
+    a, b = TODAY - dt.timedelta(days=12), TODAY + dt.timedelta(days=1)
+    r = get(f'https://kauai.ccmc.gsfc.nasa.gov/DONKI/WS/get/CMEAnalysis?startDate={a}&endDate={b}&mostAccurateOnly=true&speed=0&halfAngle=0&catalog=ALL', timeout=90)
+    if not isinstance(r, list):
+        return None
+    out = []
+    for c in r:
+        try:
+            t = int(dt.datetime.fromisoformat(c['time21_5'].replace('Z', '+00:00')).timestamp() * 1000)
+            out.append({'t': t, 'lat': float(c.get('latitude') or 0), 'lon': float(c.get('longitude') or 0), 'half': float(c.get('halfAngle') or 30),
+                        'v': float(c['speed']), 'type': c.get('type') or '', 'id': c.get('associatedCMEID') or ''})
+        except (KeyError, TypeError, ValueError):
+            continue
+    print('cmes', len(out))
+    return sorted(out, key=lambda c: c['t'])
+
+cm = cmes()
+if cm is not None:
+    json.dump({'updated': int(time.time() * 1000), 'cmes': cm}, open('aurora/data/cme.json', 'w'), separators=(',', ':'))
 c = cosmic()
 if c or 'cosmic' not in E:
     E['cosmic'] = c
