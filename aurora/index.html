@@ -220,7 +220,9 @@
   .sstat.stale { color: #FF6B6B; }
   .scount { font: 500 11px 'JetBrains Mono', monospace; color: var(--faint); padding-bottom: 4px; }
   #sunBox { position: relative; background: #000; border-radius: 22px; aspect-ratio: 1; overflow: hidden; margin-top: 14px; touch-action: pan-y; }
-  #sunBox img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  #sunBox img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; transition: opacity .14s linear; }
+  @media (prefers-reduced-motion: reduce) { #sunBox img { transition: none; } }
+  #sunBox > :not(img) { z-index: 3; }
   .stag { position: absolute; left: 12px; top: 12px; display: flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 8px; background: rgba(0,0,0,.6);
           font: 700 10px 'JetBrains Mono', monospace; letter-spacing: 1px; color: #fff; }
   .stag i { width: 6px; height: 6px; border-radius: 50%; }
@@ -377,7 +379,7 @@
   <section class="card sunc" aria-label="The Sun now">
     <div class="lbl">The Sun · NASA SDO / SOHO</div>
     <div class="sunhead"><div><h2>The Sun now</h2><div class="sstat" id="sunStat">LOADING NASA FRAMES…</div></div><span class="scount" id="sunCount"></span></div>
-    <div id="sunBox"><img id="sunImg" alt=""><div class="stag"><i id="sunDot"></i><span id="sunLbl">LASCO C3</span></div>
+    <div id="sunBox"><img id="sunImg" alt=""><img id="sunImg2" alt="" aria-hidden="true" style="opacity:0"><div class="stag"><i id="sunDot"></i><span id="sunLbl">LASCO C3</span></div>
       <div class="sload" id="sunLoad"></div>
       <button class="snav" id="sunPrev" style="left:10px" aria-label="Previous picture type">‹</button><button class="snav" id="sunNext" style="right:10px" aria-label="Next picture type">›</button></div>
     <div class="sctl"><button class="spbtn" id="sunPlay" aria-label="Play / pause">⏸</button><span class="stime" id="sunTime">–</span><input type="range" id="sunSlide" min="0" max="0" value="0" aria-label="Time"></div>
@@ -672,14 +674,28 @@ function sunPick(k) {
     const im = new Image(); im.onload = im.onerror = () => { if (seq !== sun.seq) return; done++;
       $('sunLoad').textContent = done < fr.length ? T('LOADING {p}%', { p: Math.round(done / fr.length * 100) }) : '';
       if (done === Math.ceil(fr.length * .6) && sy.on) syShow(sy.t); };
-    im.src = fr[i][1]; sun.imgs[i] = im; }, n * 15));
+    im.src = small(fr[i][1]); sun.imgs[i] = im; }, n * 15));
   sunShow(sun.i); if (typeof sy !== 'undefined' && sy.on) syShow(sy.t);
 }
-function sunImgSrc(u) { $('sunImg').src = u; $('sunFImg').src = u; }
+// two stacked pictures: the next frame is decoded first, then fades in over the current one (no flicker, no half-loaded frames)
+const small = u => u.replace('_1024_', '_512_');
+let sunTop = 0, sunSeq = 0;
+function sunImgSrc(u, fade) {
+  $('sunFImg').src = u; const A = [$('sunImg'), $('sunImg2')], cur = A[sunTop], nxt = A[1 - sunTop], seq = ++sunSeq;
+  if (cur.getAttribute('src') === u) return;
+  if (!fade || REDUCED) { cur.src = u; cur.style.opacity = 1; nxt.style.opacity = 0; return; }
+  const im = new Image(); im.src = u;
+  (im.decode ? im.decode() : new Promise(r => { im.onload = im.onerror = r; })).catch(() => {}).then(() => {
+    if (seq !== sunSeq) return;
+    nxt.style.transition = 'none'; nxt.style.opacity = 0; nxt.style.zIndex = 2; cur.style.zIndex = 1; nxt.src = u; void nxt.offsetWidth;
+    nxt.style.transition = ''; nxt.style.opacity = 1; sunTop = 1 - sunTop;
+    setTimeout(() => { if (seq === sunSeq) { cur.style.transition = 'none'; cur.style.opacity = 0; } }, 160);
+  });
+}
 function sunShow(i) {
   const fr = sunFr(); if (!fr.length) return; sun.i = (i + fr.length) % fr.length;
   const u = fr[sun.i][1];
-  sunImgSrc(sun.play || sy.on ? u : hiRes(u)); $('sunSave').href = hiRes(u);   // paused → the full-size picture
+  const playing = sun.play || !!sy.timer; sunImgSrc(playing ? small(u) : u, playing); $('sunSave').href = hiRes(u);   // playing → light 512 px frames, faded; paused → the sharp one
   $('sunTime').textContent = $('sunFTime').textContent = sunT(fr[sun.i][0]); $('sunSlide').value = $('sunFSlide').value = toPos(fr[sun.i][0]);
   const ax = axis(); $('sunLbl').textContent = SUNF[sun.k][1] + (sun.i === fr.length - 1 && ax && ax.b > fr[sun.i][0] + 3600e3 ? ' · ' + T('LATEST') : '');   // later times = only the forecast moves on
 }
@@ -933,10 +949,16 @@ document.addEventListener('click', e => { const svg = e.target.closest && e.targ
 const PLAYS = ['syPlay', 'sunPlay', 'sunFPlay', 'enlPlay', 'enlFPlay'], SLIDES = ['sySlide', 'sunSlide', 'sunFSlide', 'enlSlide', 'enlFSlide'];
 const playLabel = on => PLAYS.forEach(id => { const b = $(id); if (b) { b.textContent = on ? '⏸' : '▶'; b.setAttribute('aria-label', on ? T('Pause') : T('Play')); } });
 function syStop() { clearInterval(sy.timer); sy.timer = null; playLabel(false); }
+const done = im => !im || im.complete;   // loaded, or failed (don't wait forever)
+function syReady(t) {
+  const fr = sunFr(); if (fr.length && t <= sy.sunEnd + 45 * 60000 && !done(sun.imgs[nearestIdx(fr.length, k => fr[k][0], t)])) return false;
+  if (enl.frames.length) { const f = enl.frames[nearestIdx(enl.frames.length, m => enl.frames[m].t, t)]; if (!done(enlImg(f.u))) return false; }
+  return true;
+}
 function syStart() {
   if (!syRange()) { toast(T('Still loading the pictures…')); return; }
   sy.on = true; playLabel(true); if (!sy.t || sy.t >= sy.b) sy.t = sy.a;
-  clearInterval(sy.timer); sy.timer = setInterval(() => { let t = sy.t + 40 * 60000 * sy.spd; if (t > sy.b) t = sy.a; syShow(t); }, 120);
+  clearInterval(sy.timer); sy.timer = setInterval(() => { let t = sy.t + 40 * 60000 * sy.spd; if (t > sy.b) t = sy.a; if (syReady(t)) syShow(t); }, 110);
 }
 // one control for everything: any play button plays the shared clock, any slider moves every view
 const syToggle = () => sy.timer ? syStop() : syStart();
