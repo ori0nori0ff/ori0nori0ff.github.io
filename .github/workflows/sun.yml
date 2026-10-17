@@ -27,6 +27,16 @@ jobs:
           git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add aurora/sun/frames.json
           git diff --cached --quiet || { git commit -qm "Sun frames $(date -u +%d.%m\ %H:%M)"; git pull -q --rebase; git push -q; }
+      # past ENLIL runs (NOAA keeps only the current one) -> branch "enlil", one commit, force-pushed (no history)
+      - name: ENLIL archive
+        run: |
+          if git fetch -q --depth 1 origin enlil; then git worktree add -q --detach arch FETCH_HEAD; else git worktree add -q --orphan -b seed arch; fi
+          python3 tools/enlil_archive.py arch
+          cd arch
+          git checkout -q --orphan snap
+          git add -A
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -qm "ENLIL archive $(date -u +%d.%m\ %H:%M)"
+          git push -q -f origin snap:enlil
       - name: Upload clips
         if: steps.c.outputs.clips == '1'
         env: { GH_TOKEN: '${{ github.token }}' }

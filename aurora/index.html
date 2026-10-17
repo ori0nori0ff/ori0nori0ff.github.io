@@ -536,8 +536,8 @@ const CLIPS = 'https://github.com/ori0nori0ff/ori0nori0ff.github.io/releases/dow
 const hiRes = u => u.replace('_1024_', '_2048_').replace('_M_512.jpg', '_M_1k.jpg').replace('_Ic_flat_512.jpg', '_Ic_flat_1k.jpg').replace('_c3_512.jpg', '_c3_1024.jpg');
 const latestOf = f => f[4] || 'https://sdo.gsfc.nasa.gov/assets/img/latest/latest_1024_' + f[0] + '.jpg';
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const sun = { F: null, k: 0, i: 0, play: !REDUCED, timer: null, imgs: [], seq: 0 };
-if (REDUCED) $('sunPlay').textContent = $('sunFPlay').textContent = '▶';
+const sun = { F: null, k: 0, i: 0, play: false, timer: null, imgs: [], seq: 0 };
+$('sunPlay').textContent = $('sunFPlay').textContent = '▶';   // nothing plays until asked (one shared clock)
 const sunFr = () => (sun.F && sun.F.filters[SUNF[sun.k][0]]) || [];
 const sunT = t => new Date(t).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: TZ }).replace(',', '');
 $('sunChips').innerHTML = SUNF.map((f, i) => `<button data-i="${i}" style="color:${f[2]};border-color:${f[2]}66">${f[1]}</button>`).join('');
@@ -566,9 +566,9 @@ function sunPick(k) {
   fr.map((_, i) => fr.length - 1 - i).forEach((i, n) => setTimeout(() => { if (seq !== sun.seq) return;
     const im = new Image(); im.onload = im.onerror = () => { if (seq !== sun.seq) return; done++;
       $('sunLoad').textContent = done < fr.length ? 'LOADING ' + Math.round(done / fr.length * 100) + '%' : '';
-      if (done === Math.ceil(fr.length * .6) && sun.play) sunStart(); };
+      if (done === Math.ceil(fr.length * .6) && sy.on) syShow(sy.t); };
     im.src = fr[i][1]; sun.imgs[i] = im; }, n * 15));
-  sunShow(sun.i);
+  sunShow(sun.i); if (typeof sy !== 'undefined' && sy.on) syShow(sy.t);
 }
 function sunImgSrc(u) { $('sunImg').src = u; $('sunFImg').src = u; }
 function sunShow(i) {
@@ -597,6 +597,7 @@ $('sunClip').onclick = () => toast('Downloading the last 48 h of ' + SUNF[sun.k]
 
 /* ── Solar wind forecast: the app's WSA-ENLIL card (NOAA allows browser requests, so frames and clips can be saved) ── */
 const enl = { frames: [], i: 0, play: null, cache: {} };
+const ENL_ARCH = 'https://raw.githubusercontent.com/ori0nori0ff/ori0nori0ff.github.io/enlil/';
 const frameT = u => { const m = u.match(/(\d{8})T(\d{2})(\d{2})(\d{2})/); return m ? Date.parse(`${m[1].slice(0, 4)}-${m[1].slice(4, 6)}-${m[1].slice(6)}T${m[2]}:${m[3]}:${m[4]}Z`) : 0; };
 const dayHm = t => new Date(t).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: TZ }).replace(/,/g, '').toUpperCase();
 const dayD = t => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: TZ }).toUpperCase();
@@ -661,6 +662,9 @@ function enlChart(g, k, X, Y, W, H, fs) {
   const d = new Date(from); d.setHours(24, 0, 0, 0);
   for (; d.getTime() < to; d.setDate(d.getDate() + 1)) { const xx = x(d.getTime()); g.strokeStyle = '#1E2530'; g.beginPath(); g.moveTo(xx, Y + T); g.lineTo(xx, Y + H - B); g.stroke();
     g.fillStyle = '#8B9BAE'; g.fillText(dayD(d.getTime()), xx + 3, Y + H - fs * .6); }
+  const cut = P[0].old && P.find(p => !p.old);   // archived earlier runs | the current run
+  if (cut) { g.setLineDash([4, 4]); g.strokeStyle = '#4B5563'; g.beginPath(); g.moveTo(x(cut.t), Y + T); g.lineTo(x(cut.t), Y + H - B); g.stroke(); g.setLineDash([]);
+    enlCap(g, x(cut.t) - 4, Y + T + fs * .9, '◂ EARLIER RUNS', '#8B9BAE', fs * .75, 'right'); }
   g.beginPath(); g.moveTo(x(from), y(lo)); P.forEach(p => g.lineTo(x(p.t), y(val(p)))); g.lineTo(x(to), y(lo)); g.closePath();
   g.fillStyle = k === 'n' ? 'rgba(57,255,158,.14)' : 'rgba(255,160,64,.12)'; g.fill();
   g.beginPath(); P.forEach((p, i) => i ? g.lineTo(x(p.t), y(val(p))) : g.moveTo(x(p.t), y(val(p)))); g.strokeStyle = col; g.lineWidth = 1.8; g.stroke();
@@ -704,7 +708,7 @@ function enlFDraw(im) {
 function enlShow(i) {
   if (!enl.frames.length) return;
   enl.i = Math.max(0, Math.min(enl.frames.length - 1, i)); const f = enl.frames[enl.i];
-  enlDraw(); $('enlSlide').value = $('enlFSlide').value = toPos(f.t); $('enlT').textContent = dayHm(f.t); $('enlFT').textContent = dayHm(f.t) + ' · LOCAL TIME';
+  enlDraw(); $('enlSlide').value = $('enlFSlide').value = toPos(f.t); $('enlT').textContent = dayHm(f.t); $('enlRun').textContent = f.old ? 'EARLIER RUN' + (f.run ? ' ' + f.run : '') : enl.run ? 'RUN ' + enl.run : ''; $('enlFT').textContent = dayHm(f.t) + ' · LOCAL TIME';
   // preload a few frames ahead, only while you watch (the whole run is ~16 MB)
   for (let k = 1; k <= (enl.play ? 16 : 3); k++) { const n = enl.frames[(enl.i + k * enl.step) % enl.frames.length]; if (n) enlImg(n.u); }
 }
@@ -739,15 +743,19 @@ enl.step = 1;
 document.querySelectorAll('.spd').forEach(b => b.onclick = () => { enl.step = enl.step === 1 ? 2 : enl.step === 2 ? 4 : 1;
   document.querySelectorAll('.spd').forEach(o => o.textContent = enl.step + '×'); });
 async function loadEnlil() {
-  const [ts, an] = await Promise.all([j(API + 'json/enlil_time_series.json'), j(API + 'products/animations/enlil.json')]);
+  const [ts, an, ar] = await Promise.all([j(API + 'json/enlil_time_series.json'), j(API + 'products/animations/enlil.json'), j(ENL_ARCH + 'index.json').catch(() => null)]);
   // ~2-min samples → one point per 30 min (every CME sample kept)
   const P = []; let last = 0;
   ts.map(r => ({ t: Date.parse(r.time_tag + 'Z'), n: +r.earth_particles_per_cm3, v: +r.v_r, cme: r.cloud != null && +r.cloud > 0 })).sort((a, b) => a.t - b.t)
     .forEach(p => { if (p.t - last >= 30 * 60000 || p.cme) { P.push(p); last = p.t; } });
   if (P.length < 2) throw new Error('empty');
-  S.enl = P;
+  // NOAA keeps only the current run (starts ~2-3 days back); our hourly archive of earlier runs fills the Sun's 5 days
+  const t0 = P[0].t, arT = ar && ar.ts ? ar.ts.filter(p => p[0] < t0 - 15 * 60000).map(p => ({ t: p[0], n: p[1], v: p[2], cme: !!p[3], old: true })) : [];
+  S.enl = arT.concat(P);
   const first = !enl.frames.length;
   enl.frames = an.map(f => ({ u: API + f.url.replace(/^\//, ''), t: frameT(f.url) })).filter(f => f.t);
+  const f0 = enl.frames.length ? enl.frames[0].t : Infinity;
+  if (ar && ar.frames) enl.frames = ar.frames.filter(f => f[0] < f0 - 30 * 60000).map(f => ({ u: ENL_ARCH + f[1], t: f[0], run: f[2], old: true })).concat(enl.frames);
   $('enlSlide').max = 1000; setTimeout(() => { const fr = sunFr(); if (fr.length) sunShow(sun.i); }, 0);   // the Sun's slider moves to the shared axis
   const run = (an[0] && an[0].url.match(/enlil_com2_(\d+)_/) || [])[1];
   $('enlRun').textContent = run ? 'RUN ' + run : ''; enl.run = run;
@@ -795,11 +803,12 @@ function syShow(t) {
   const fr = sunFr(), after = fr.length && sy.t > sy.sunEnd + 45 * 60000;
   $('syT').textContent = dayHm(sy.t) + (sy.t > Date.now() + 30 * 60000 ? ' · FORECAST' : '');
   let su = '';
-  if (fr.length) { const i = after ? fr.length - 1 : nearestIdx(fr.length, k => fr[k][0], sy.t); clearInterval(sun.timer); sun.play = false;
-    $('sunPlay').textContent = $('sunFPlay').textContent = '▶'; sunShow(i); su = fr[i][1]; }
+  if (fr.length) { const i = after ? fr.length - 1 : nearestIdx(fr.length, k => fr[k][0], sy.t); clearInterval(sun.timer); sun.play = false; sunShow(i); su = fr[i][1]; }
   $('sunLbl').textContent = SUNF[sun.k][1] + (after ? ' · LATEST' : '');
   if (enl.frames.length) { const k = nearestIdx(enl.frames.length, m => enl.frames[m].t, sy.t); if (k !== enl.i) { clearInterval(enl.play); enl.play = null; enlShow(k); } }
-  miniEnl(); tcursor();
+  if (sy.timer) playLabel(true);
+  const pos = Math.round((sy.t - sy.a) / (sy.b - sy.a) * 1000); SLIDES.forEach(id => { const el = $(id); if (el) { el.max = 1000; el.value = pos; } });
+  tcursor();
 }
 // the from-above disc of the current ENLIL frame (+ Sun / Earth dots), for the phone's side-by-side view
 function miniEnl() {}
@@ -816,21 +825,23 @@ window.tcursor = tcursor;
 document.addEventListener('click', e => { const svg = e.target.closest && e.target.closest('svg[data-tx]'); if (!svg) return;
   const [a, b, xa, xb] = JSON.parse(svg.dataset.tx), r = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal, x = (e.clientX - r.left) / r.width * (vb && vb.width || r.width);
   if (x < xa || x > xb) return; const t = a + (x - xa) / (xb - xa) * (b - a); syStop(); sy.on = true; syShow(t); });
-function syStop() { clearInterval(sy.timer); sy.timer = null; sy.on = false; $('syPlay').textContent = '▶'; }
+const PLAYS = ['syPlay', 'sunPlay', 'sunFPlay', 'enlPlay', 'enlFPlay'], SLIDES = ['sySlide', 'sunSlide', 'sunFSlide', 'enlSlide', 'enlFSlide'];
+const playLabel = on => PLAYS.forEach(id => { const b = $(id); if (b) { b.textContent = on ? '⏸' : '▶'; b.setAttribute('aria-label', on ? 'Pause' : 'Play'); } });
+function syStop() { clearInterval(sy.timer); sy.timer = null; playLabel(false); }
 function syStart() {
   if (!syRange()) { toast('Still loading the pictures…'); return; }
-  sy.on = true; $('syPlay').textContent = '⏸'; if (!sy.t || sy.t >= sy.b) sy.t = sy.a;
+  sy.on = true; playLabel(true); if (!sy.t || sy.t >= sy.b) sy.t = sy.a;
   clearInterval(sy.timer); sy.timer = setInterval(() => { let t = sy.t + 40 * 60000 * sy.spd; if (t > sy.b) t = sy.a; syShow(t); }, 120);
 }
-$('syPlay').onclick = () => sy.timer ? syStop() : syStart();
-$('sySpd').onclick = () => { sy.spd = sy.spd === 1 ? 2 : sy.spd === 2 ? 4 : 1; $('sySpd').textContent = sy.spd + '×'; };
-$('sySlide').oninput = e => { syStop(); sy.on = true; if (syRange()) syShow(sy.a + (sy.b - sy.a) * e.target.value / 1000); };
-// touching a viewer's own controls leaves the shared clock
-['sunPlay', 'sunFPlay', 'enlPlay', 'enlFPlay'].forEach(id => $(id).addEventListener('click', () => { if (sy.timer) syStop(); sy.on = false; }, true));
-['sunSlide', 'sunFSlide', 'enlSlide', 'enlFSlide'].forEach(id => $(id).addEventListener('input', () => { if (sy.timer) syStop(); sy.on = false; }, true));
+// one control for everything: any play button plays the shared clock, any slider moves every view
+const syToggle = () => sy.timer ? syStop() : syStart();
+PLAYS.forEach(id => { const b = $(id); if (b) b.onclick = syToggle; });
+const sySpeed = () => { sy.spd = sy.spd === 1 ? 2 : sy.spd === 2 ? 4 : 1; document.querySelectorAll('#sySpd, .spd').forEach(o => o.textContent = sy.spd + '×'); };
+$('sySpd').onclick = sySpeed; document.querySelectorAll('.spd').forEach(o => o.onclick = sySpeed);
+SLIDES.forEach(id => { const el = $(id); if (el) el.oninput = e => { syStop(); sy.on = true; if (syRange()) syShow(toTime(+e.target.value)); }; });
 addEventListener('resize', () => miniEnl());
 // first picture: "now" once both have loaded
-let syInit = setInterval(() => { if (sunFr().length && enl.frames.length) { clearInterval(syInit); if (syRange()) { sy.t = Math.min(Date.now(), sy.b); $('sySlide').value = Math.round((sy.t - sy.a) / (sy.b - sy.a) * 1000); $('syT').textContent = dayHm(sy.t);
+let syInit = setInterval(() => { if (sunFr().length && enl.frames.length) { clearInterval(syInit); if (syRange()) { sy.on = true; syShow(Math.min(Date.now(), sy.b));
   } } }, 500);
 
 /* ── share card: verdict + the Sun and the solar wind at the same moment (Sun pictures via a CORS image proxy) ── */
