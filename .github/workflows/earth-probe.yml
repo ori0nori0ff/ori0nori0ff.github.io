@@ -6,13 +6,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          t() { echo "== $1"; curl -s -m 40 -D /tmp/h -o /tmp/b -H 'Origin: https://ori0nori0ff.github.io' "$1"; head -1 /tmp/h; grep -i 'access-control-allow-origin\|content-type' /tmp/h; wc -c < /tmp/b; head -c ${2:-400} /tmp/b | tr '\r' ' '; echo; }
-          t "https://services.swpc.noaa.gov/products/kyoto-dst.json"
-          t "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson" 200
-          t "https://earthquake.usgs.gov/fdsnws/event/1/query?format=csv&starttime=2026-09-01&endtime=2026-10-01&minmagnitude=5" 300
-          t "https://www.nmdb.eu/nest/draw_graph.php?formchk=1&stations[]=OULU&tabchoice=revori&dtype=corr_for_efficiency&tresolution=60&force=1&yunits=0&date_choice=last&last_days=7&last_label=days_label&output=ascii" 900
-          t "https://kp.gfz-potsdam.de/app/json/?start=2026-10-01T00:00:00Z&end=2026-10-03T00:00:00Z&index=Kp" 300
-          t "https://www.sidc.be/SILSO/INFO/sndtotcsv.php" 200
-          t "https://volcano.si.edu/news/WeeklyVolcanoRSS.xml" 1500
-          t "https://webservices.volcano.si.edu/geoserver/GVP-VOTW/ows?service=WFS&version=2.0.0&request=GetFeature&typeName=GVP-VOTW:Smithsonian_VOTW_Holocene_Eruptions&outputFormat=application/json&count=2&sortBy=StartDate+D" 1500
-          t "https://services.swpc.noaa.gov/json/goes/primary/integral-protons-3-day.json" 100
+          t() { echo "== $1"; curl -sL -m 60 -D /tmp/h -o /tmp/b -A 'PowHau aurora page' -H 'Origin: https://ori0nori0ff.github.io' "$1"; grep -i '^HTTP\|access-control-allow-origin\|content-type' /tmp/h; wc -c < /tmp/b; head -c ${2:-400} /tmp/b | tr '\r\n' '  '; echo; }
+          t "https://www.nmdb.eu/nest/draw_graph.php?formchk=1&stations[]=OULU&tabchoice=1h&dtype=corr_for_efficiency&tresolution=60&yunits=0&date_choice=bydate&start_day=10&start_month=10&start_year=2026&start_hour=0&start_min=0&end_day=17&end_month=10&end_year=2026&end_hour=23&end_min=59&output=ascii" 700
+          t "https://www.nmdb.eu/nest/draw_graph.php?formchk=1&stations[]=OULU&tabchoice=revori&dtype=corr_for_efficiency&tresolution=60&yunits=0&date_choice=bydate&start_day=10&start_month=10&start_year=2026&start_hour=0&start_min=0&end_day=17&end_month=10&end_year=2026&end_hour=23&end_min=59&output=ascii" 700
+          t "https://cosmicrays.oulu.fi/webform/query.cgi?startday=10&startmonth=10&startyear=2026&starttime=00%3A00&endday=17&endmonth=10&endyear=2026&endtime=23%3A30&resolution=Automatic+choice&picture=on" 500
+          t "https://kp.gfz.de/app/json/?start=2026-10-01T00:00:00Z&end=2026-10-02T00:00:00Z&index=Kp" 400
+          t "https://webservices.volcano.si.edu/geoserver/GVP-VOTW/ows?service=WFS&version=2.0.0&request=GetFeature&typeName=GVP-VOTW:Smithsonian_VOTW_Holocene_Eruptions&outputFormat=application/json&count=1" 2500
+          echo "== layers"; curl -s -m 60 "https://webservices.volcano.si.edu/geoserver/GVP-VOTW/ows?service=WFS&version=2.0.0&request=GetCapabilities" | grep -o '<wfs:Name>[^<]*' | head -40
+          t "https://volcano.si.edu/reports_weekly.cfm" 300
+          t "https://volcanoes.usgs.gov/hans2/api/volcano/getElevatedVolcanoes" 600
+          t "https://volcanoes.usgs.gov/hans2/api/volcano/getCapElevated" 600
