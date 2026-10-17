@@ -64,16 +64,31 @@
       (h.cloud == null ? '' : ', clouds ' + Math.round(h.cloud) + '%') + ', ' + (h.moonUp ? (h.ill > .5 ? 'bright Moon up' : 'thin Moon up') : 'Moon down') + '.';
   }
 
-  /** Draw the strip into el: one column per hour (bar = score, colour = Kp), cloud %, moon. */
-  function render(el, p, fmt, kpColor) {
-    const hs = p.hours, mx = Math.max(.05, ...hs.map(h => h.score));
-    el.innerHTML = `<div class="tn-grid" style="grid-template-columns:repeat(${hs.length},1fr)">` + hs.map(h => {
-      const best = p.best && h.t >= p.best.from && h.t < p.best.to, hgt = Math.round(6 + 46 * h.score / mx);
-      const col = h.kp == null ? '#2C3542' : kpColor(h.kp), dark = h.sun < -12 ? 1 : h.sun < -6 ? .55 : .2;
-      return `<div class="tn-c${best ? ' tn-best' : ''}" title="Kp ${h.kp == null ? '–' : h.kp.toFixed(1)} · clouds ${h.cloud == null ? '–' : Math.round(h.cloud) + '%'}">
-        <div class="tn-bar"><i style="height:${hgt}px;background:${col};opacity:${.35 + .65 * dark}"></i></div>
-        <b>${h.cloud == null ? '' : Math.round(h.cloud)}</b><span class="tn-m">${h.moonUp ? (h.ill > .5 ? '●' : '◐') : ''}</span><em>${fmt(h.t).slice(0, 2)}</em></div>`;
-    }).join('') + '</div>';
+  /**
+   * Draw tonight as a labelled grid into el — rows Dark / Clouds / Aurora (Kp vs needed) / Moon / Chance, one column
+   * per hour, the best window boxed. fmt = hour formatter, need = Kp needed here, cur = highlighted time (optional).
+   */
+  function render(el, p, fmt, kpColor, need, cur) {
+    const hs = p.hours, H = 3600e3; if (!hs.length) { el.innerHTML = ''; return; }
+    const tick = ok => ok ? '<i class="ok">✓</i>' : '<i class="no">✗</i>';
+    const darkH = hs.filter(h => h.sun < -12), dk = darkH.length > 0;
+    const cl = darkH.filter(h => h.cloud != null), avgC = cl.length ? Math.round(cl.reduce((a, h) => a + h.cloud, 0) / cl.length) : null;
+    const maxKp = Math.max(0, ...hs.map(h => h.kp || 0)), moonUp = darkH.filter(h => h.moonUp).length > darkH.length / 2, ill = Math.round(hs[0].ill * 100);
+    const col = (h, inner, cls, title) => `<div class="tg-c ${cls || ''}${p.best && h.t >= p.best.from && h.t < p.best.to ? ' best' : ''}${cur && cur >= h.t && cur < h.t + H ? ' cur' : ''}"${title ? ` title="${title}"` : ''}>${inner}</div>`;
+    const row = (label, sum, cells) => `<div class="tg-l"><b>${label}</b><span>${sum}</span></div>` + cells;
+    const darkCell = h => { const s = h.sun, c = s > -6 ? '#3B4C70' : s > -12 ? '#24324F' : s > -18 ? '#141C31' : '#0A0F1E'; return col(h, '', 'tg-d', 'Sun ' + Math.round(s) + '°').replace('class="tg-c', `style="background:${c}" class="tg-c`); };
+    const cloudCell = h => col(h, h.cloud == null ? '' : `<u style="height:${h.cloud}%"></u><em>${Math.round(h.cloud)}</em>`, 'tg-cl');
+    const kpCell = h => col(h, h.kp == null ? '' : `<u style="height:${Math.max(4, h.kp / 9 * 100)}%;background:${kpColor(h.kp)}"></u><s style="bottom:${need / 9 * 100}%"></s><em>${h.kp.toFixed(0)}</em>`, 'tg-kp');
+    const moonCell = h => col(h, h.moonUp ? (h.ill > .5 ? '●' : '◐') : '', 'tg-mo' + (h.moonUp && h.ill > .5 ? ' bright' : ''));
+    const chanceCell = h => { const v = Math.min(1, h.score / .5); return col(h, '', 'tg-ch').replace('class="tg-c', `style="background:rgba(57,255,158,${(.06 + .9 * v).toFixed(2)})" class="tg-c`); };
+    el.innerHTML = `<div class="tg" style="grid-template-columns:auto repeat(${hs.length},1fr)">` +
+      '<div class="tg-l"></div>' + hs.map(h => `<div class="tg-h">${fmt(h.t).slice(0, 2)}</div>`).join('') +
+      row('Dark', tick(dk) + (dk ? 'from ' + fmt(darkH[0].t) : 'no'), hs.map(darkCell).join('')) +
+      row('Clouds', tick(avgC != null && avgC < 50) + (avgC == null ? '–' : avgC + '%'), hs.map(cloudCell).join('')) +
+      row('Aurora', tick(maxKp >= need) + 'Kp ' + maxKp.toFixed(1) + ' / ' + need, hs.map(kpCell).join('')) +
+      row('Moon', tick(!moonUp || ill < 50) + (moonUp ? ill + '% up' : 'down'), hs.map(moonCell).join('')) +
+      row('Chance', p.best && p.best.score >= .05 ? '<i class="ok">★</i>' + fmt(p.best.from) + '–' + fmt(p.best.to) : '<i class="no">✗</i>none', hs.map(chanceCell).join('')) +
+      '</div>';
   }
 
   window.AuroraTonight = { plan, sentence, render, sunAlt, moonAlt, moonIll };

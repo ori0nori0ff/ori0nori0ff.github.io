@@ -47,6 +47,7 @@
   .now .fact small { display: block; color: var(--dim); font-size: 12px; line-height: 1.35; margin-top: 2px; }
   svg { display: block; width: 100%; height: auto; }
   svg text { font-family: Mono, monospace; }
+  svg[data-tx] { cursor: crosshair; }
   .legend { display: flex; gap: 12px; flex-wrap: wrap; font: 500 10px Mono, monospace; color: var(--dim); margin-top: 6px; }
   .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
   ol.steps { margin: 8px 0 0; padding-left: 0; list-style: none; counter-reset: s; }
@@ -63,6 +64,9 @@
   /* app cards (In depth) */
   .app .lbl { font-size: 9px; } .app .sub { text-transform: none; letter-spacing: .5px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--t2); }
   .app { font: 500 12px 'JetBrains Mono', monospace; } .app .chip { font-size: 10px; white-space: nowrap; }
+  .chap { display: flex; gap: 14px; align-items: flex-start; margin: 34px 2px 2px; }
+  .chap > span { flex: none; width: 34px; height: 34px; border-radius: 50%; border: 1px solid #39FF9E; color: #39FF9E; font: 600 18px/32px 'Barlow Condensed', Barlow, sans-serif; text-align: center; }
+  .chap h2 { font-size: 26px; margin: 2px 0 0; } .chap p { margin: 4px 0 0; color: var(--dim); font-size: 14px; max-width: 760px; }
   .deephead { margin: 30px 2px 0; } .deephead h2 { font-size: 26px; } .deephead p { margin: 4px 0 0; color: var(--dim); font-size: 14px; }
 /* kp now */
 .kpnow { display: flex; align-items: flex-end; gap: 14px; }
@@ -108,7 +112,22 @@
 .cleg i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; margin-right: 5px; vertical-align: 2px; }
 .loading { color: var(--t3); font-size: 10px; letter-spacing: 1px; }
 
-  /* tonight hour by hour */
+  /* tonight grid */
+  .tg { display: grid; gap: 2px; margin-top: 8px; align-items: stretch; }
+  .tg-l { display: flex; flex-direction: column; justify-content: center; padding-right: 8px; min-height: 26px; }
+  .tg-l b { font: 600 15px/1 'Barlow Condensed', Barlow, sans-serif; text-transform: uppercase; color: var(--soft, #C9D1DB); letter-spacing: .3px; }
+  .tg-l span { font: 500 9px 'JetBrains Mono', monospace; color: var(--t2, #8B9BAE); white-space: nowrap; margin-top: 2px; }
+  .tg-l i { font-style: normal; margin-right: 4px; } .tg-l i.ok { color: #39FF9E; } .tg-l i.no { color: #FF6B6B; }
+  .tg-h { font: 500 9px 'JetBrains Mono', monospace; color: var(--t2, #8B9BAE); text-align: center; align-self: end; }
+  .tg-c { position: relative; min-height: 26px; border-radius: 4px; background: #0F1318; overflow: hidden; }
+  .tg-c u { position: absolute; left: 18%; right: 18%; bottom: 0; border-radius: 2px 2px 0 0; background: #5D6B7E; text-decoration: none; }
+  .tg-cl u { left: 0; right: 0; background: rgba(160,175,195,.55); border-radius: 0; }
+  .tg-c em { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); text-align: center; font: 600 9px 'JetBrains Mono', monospace; color: #fff; font-style: normal; text-shadow: 0 0 3px #000; }
+  .tg-kp { min-height: 34px; } .tg-kp s { position: absolute; left: 0; right: 0; border-top: 1px dashed #FF6B6B; }
+  .tg-mo { display: flex; align-items: center; justify-content: center; font-size: 11px; color: #9AA3B0; } .tg-mo.bright { color: #FFF3C4; background: rgba(255,243,196,.10); }
+  .tg-c.best { box-shadow: inset 0 0 0 1px rgba(57,255,158,.55); }
+  .tg-c.cur { outline: 2px solid #FFE600; outline-offset: -1px; z-index: 1; }
+  /* tonight hour by hour (old) */
   .tn-grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 2px; margin-top: 8px; }
   .tn-c { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 0 3px; border-radius: 8px; }
   .tn-c.tn-best { background: rgba(57,255,158,.10); box-shadow: inset 0 0 0 1px rgba(57,255,158,.35); }
@@ -116,19 +135,22 @@
   .tn-c b { font: 500 9px 'JetBrains Mono', monospace; color: #7FA6C9; } .tn-m { font-size: 9px; color: #E8E3C8; height: 11px; } .tn-c em { font: 500 9px 'JetBrains Mono', monospace; color: var(--dim); font-style: normal; }
   .tnleg { display: flex; gap: 10px; flex-wrap: wrap; font: 500 9px 'JetBrains Mono', monospace; color: var(--faint); margin-top: 4px; }
   /* Sun → Earth together */
-  .mini { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .mini { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 12px; }
   .mini > div { position: relative; aspect-ratio: 1; background: #000; border-radius: 16px; overflow: hidden; }
   .mini img, .mini canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
   .mtag { position: absolute; left: 8px; top: 8px; padding: 4px 7px; border-radius: 7px; background: rgba(0,0,0,.6); font: 700 9px 'JetBrains Mono', monospace; letter-spacing: 1px; color: #fff; }
   .mfc { position: absolute; left: 8px; bottom: 8px; padding: 4px 7px; border-radius: 7px; background: rgba(224,91,255,.85); font: 700 9px 'JetBrains Mono', monospace; color: #fff; display: none; }
   #syT { min-width: 140px; }
+  #syncCard .sctl { flex-wrap: wrap; } #syncCard .sctl input { flex: 1 1 100%; order: 3; }
+  .mtag { font-size: 8px; max-width: calc(100% - 16px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #enlCv { max-width: 640px; margin-left: auto; margin-right: auto; }
+  @media (min-width: 700px) { #syncCard .sctl { flex-wrap: nowrap; } #syncCard .sctl input { flex: 1; order: 0; } .mtag { font-size: 9px; } }
   @media (min-width: 1000px) {
     main { max-width: 1180px; padding-left: 24px; padding-right: 24px; }
     .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
     .duo > section { margin-top: 14px; }
-    #mini { display: none; }   /* on a wide screen the two full viewers below are the synced view */
-    #syncCard { position: sticky; top: 8px; z-index: 20; box-shadow: 0 10px 30px rgba(0,0,0,.6); }
-    #syncCard .why { display: none; }
+    #mini { gap: 12px; }
+    #syncCard p.why { display: none; }
   }
   .skel { color: var(--faint); }
   .hidden { display: none !important; }
@@ -197,10 +219,8 @@
   <div id="locBox" class="hidden"><input id="locQ" type="search" placeholder="Search any city or village…" autocomplete="off" enterkeyhint="search">
     <div id="locRes"></div><button class="locbtn" id="locGps">◎ USE MY LOCATION</button></div>
 
-  <div class="duo">
-  <!-- 1. the answer -->
-  <section class="card verdict" id="vcard">
-    <div class="lbl">Can we see it?</div>
+    <section class="card verdict" id="vcard">
+    <div class="lbl">Can we see it? · the answer first, then follow it from the Sun ↓</div>
     <div class="big" id="vword">…</div>
     <p class="why" id="vtext">Checking NOAA's forecast…</p>
     <div class="facts">
@@ -210,33 +230,12 @@
     </div>
     <div class="lbl" style="margin-top:14px">Tonight hour by hour</div>
     <div id="tonight"><div class="why" style="font-size:12px;color:var(--faint)">Loading…</div></div>
-    <div class="tnleg"><span>bar = chance (colour = Kp)</span><span>number = clouds %</span><span>● bright Moon up · ◐ thin Moon</span></div>
+    <div class="tnleg"><span>Kp bar vs <b style="color:#FF6B6B">- - -</b> needed here</span><span>● bright Moon up · ◐ thin</span><span>brighter green = better chance</span></div>
     <p class="why" id="tnTxt" style="margin-top:8px"></p>
     <div class="help"><b>Kp</b> is the aurora strength scale, 0 to 9. From <span id="needWhere">here</span> you need about <b>Kp <span id="needKp">7</span> or more</b>, a clear sky and a dark place facing north.</div>
   </section>
-
-  <!-- 2. aurora oval -->
-  <section class="card">
-    <div class="lbl">Where the aurora is right now</div>
-    <h2>The aurora oval</h2>
-    <canvas id="globe"></canvas>
-    <div class="help">The <b style="color:var(--green)">green glow</b> is NOAA's live aurora map around the North Pole. The yellow dot is you. The further south the green reaches towards it, the better our chances. <span id="ovTime"></span></div>
-  </section>
-
-  </div>
-  <!-- Sun → Earth together: one clock for the Sun viewer and the solar wind forecast -->
-  <section class="card" id="syncCard">
-    <div class="lbl">Watch it travel</div>
-    <h2>Sun → Earth, together</h2>
-    <p class="why">Play the Sun (CMEs) and the solar wind forecast on one clock: a cloud leaving the Sun shows up in the spiral and travels out to Earth. After the newest Sun picture only the forecast moves on.</p>
-    <div class="mini" id="mini"><div><img id="mSun" alt=""><span class="mtag">SUN · <span id="mSunL">LASCO C3</span></span><span class="mfc" id="mFc">LATEST</span></div>
-      <div><canvas id="mEnl"></canvas><span class="mtag">SOLAR WIND · FROM ABOVE</span></div></div>
-    <div class="sctl"><button class="spbtn" id="syPlay" aria-label="Play both">▶</button><button class="spbtn" id="sySpd" style="font:700 10px 'JetBrains Mono',monospace">1×</button><span class="stime" id="syT">–</span><input type="range" id="sySlide" min="0" max="1000" value="1000" aria-label="Date"></div>
-    <div class="dl"><a id="cardSave">⬇ SHARE CARD</a><a id="linkShare">↗ SHARE LINK</a></div>
-  </section>
-
+  <div class="chap"><span>1</span><div><h2>The Sun</h2><p>Everything starts here: flares and CMEs (clouds of solar plasma) and coronal holes that blow fast solar wind. How active the Sun is depends on its 11-year cycle.</p></div></div>
   <div class="duo">
-  <!-- 3. the Sun now (the app's Sun sheet) -->
   <section class="card">
     <div class="lbl">Where it all starts</div>
     <div class="sunhead"><div><h2>The Sun now</h2><div class="sstat" id="sunStat">LOADING NASA FRAMES…</div></div><span class="scount" id="sunCount"></span></div>
@@ -249,17 +248,32 @@
     <div class="help" id="sunHelp"></div>
     <div class="why" style="font-size:12px;color:var(--faint);margin-top:8px">Last 5 days, one frame every ~40 min. Swipe the picture for the next filter. ⬇ IMAGE opens the full-size picture (long-press it to save); clips are refreshed every 3 hours.</div>
   </section>
-  <div id="sunFull"><div class="fimg"><img id="sunFImg" alt=""></div>
-    <div class="sfctl"><button class="spbtn" id="sunFPlay">⏸</button><span class="stime" id="sunFTime">–</span><input type="range" id="sunFSlide" min="0" max="0" value="0"><button class="spbtn" id="sunFX">✕</button></div></div>
-
-  <!-- 4. solar wind -->
+  <section class="card app">
+  <div style="display:flex;justify-content:space-between;align-items:baseline">
+    <div class="lbl">Solar cycle · sunspots</div><div class="lbl">SILSO / NOAA</div>
+  </div>
+  <div class="enlsum" id="cycSum">Loading…</div>
+  <svg id="cycchart"></svg>
+  <div class="cleg" id="cycLeg"></div>
+  <div class="sub" style="margin-top:8px;line-height:1.5">Monthly sunspot number (13-month smoothed) since each cycle began, so the five cycles line up. More sunspots → more flares and CMEs → more storms; the years after the peak often bring the biggest ones. Dots = this cycle's monthly values, dashed = NOAA's prediction.</div>
+</section>
+  </div>
+  <div class="chap"><span>2</span><div><h2>The journey</h2><p>Solar wind and CMEs take 1–4 days to cross 150 million km. Play the Sun and NOAA's solar wind model on one clock and watch them travel.</p></div></div>
+  <section class="card" id="syncCard">
+    <div class="lbl">Watch it travel</div>
+    <h2>Sun → Earth, together</h2>
+    
+    <div class="mini" id="mini"><div><img id="mSun" alt=""><span class="mtag">SUN · <span id="mSunL">LASCO C3</span></span><span class="mfc" id="mFc">LATEST</span></div>
+      <div><canvas id="mEnl"></canvas><span class="mtag" style="color:#39FF9E">DENSITY</span><span class="mfc" id="mEb" style="background:rgba(90,110,140,.9)">MODEL STARTS LATER</span></div>
+      <div><canvas id="mEnlV"></canvas><span class="mtag" style="color:#FFA040">SPEED</span></div></div>
+    <div class="why" style="font-size:12px;color:var(--faint);margin-top:6px">Left: the Sun with its CMEs. Middle and right: NOAA's solar wind model seen from above — density and speed. The yellow dot is the Sun, green is Earth. Every chart on the page marks this moment with a yellow line; tap any chart to jump there.</div>
+    <div class="sctl"><button class="spbtn" id="syPlay" aria-label="Play both">▶</button><button class="spbtn" id="sySpd" style="font:700 10px 'JetBrains Mono',monospace">1×</button><span class="stime" id="syT">–</span><input type="range" id="sySlide" min="0" max="1000" value="1000" aria-label="Date"></div>
+    <div class="dl"><a id="cardSave">⬇ SHARE CARD</a><a id="linkShare">↗ SHARE LINK</a></div>
+  </section>
   <section class="card">
-    <div class="lbl">What is hitting Earth</div>
-    <h2>Solar wind</h2>
-    <div class="now">
-      <div class="fact"><div class="lbl">Speed now</div><b id="swV">–</b><small id="swVt">&nbsp;</small></div>
-      <div class="fact"><div class="lbl">Magnet (Bz) now</div><b id="swBz">–</b><small id="swBzt">&nbsp;</small></div>
-    </div>
+    <div class="lbl">Forecast · NOAA WSA-ENLIL model</div>
+    <h2>The solar wind on its way</h2>
+    
     <div style="height:14px"></div>
   <div style="display:flex;justify-content:space-between;align-items:baseline">
     <div class="lbl">Solar wind forecast · WSA-ENLIL</div><div class="lbl" id="enlRun">–</div>
@@ -275,46 +289,13 @@
     <div class="dl"><a id="enlSave">⬇ FRAME</a><a id="enlClipB">⬇ CLIP</a></div>
     <div class="help" id="enlHelp">The wind is a stream of particles from the Sun. <b>Faster</b> (over ~500 km/s) and with the magnet pointing <b>south</b> (Bz negative) = the aurora switches on. A <b>bright bulge</b> racing out from the Sun is a CME — when it reaches the green Earth dot, that's the best chance for a big show.</div>
   </section>
-
-  </div>
-  <!-- 6. how to -->
-  <section class="card">
-    <div class="lbl">How to read all this</div>
-    <h2>A good aurora night needs</h2>
-    <ol class="steps">
-      <li><b>Kp <span class="needK">7</span>+</b> forecast for tonight where you are (the answer card says it for you).</li>
-      <li><b>Bz negative</b> (south) for an hour or more — that's the "on" switch.</li>
-      <li><b>Fast wind</b>, over 500 km/s, or a CME arriving (red band).</li>
-      <li><b>Clear sky</b> and <b>real dark</b>: away from city lights, facing <b>north</b>, low horizon.</li>
-      <li><b>Use your phone's night mode</b> (3–10 s exposure). From Romania the aurora often looks like a faint grey-pink glow to the eye but shows red / green on camera.</li>
-    </ol>
-    <details><summary>WHY IS IT SO RARE IN THE SOUTH?</summary>
-      <p class="why">The aurora lives in a ring around the North Pole (the oval above). Romania and southern Europe are far south of it. Only big solar storms push the ring far enough south — a few nights per year, more around solar maximum (now, 2024–2027).</p></details>
-  </section>
-  <div class="deephead"><div class="lbl">For the curious</div><h2>In depth</h2><p>The same NOAA data the space-weather people use — every card has a “how to read it”.</p></div>
-  <div class="duo">
-<!-- 2. Kp now -->
-<section class="card app">
-  <div style="display:flex;justify-content:space-between;align-items:baseline">
-    <div class="lbl">Kp index now</div><div class="lbl" id="kpScale">G0 · QUIET</div>
-  </div>
-  <div class="kpnow" style="margin-top:8px">
-    <div class="kpbig" id="kpNow">–</div>
-    <div style="padding-bottom:4px;color:var(--t2);font-size:10px;line-height:1.5" id="kpWords">Planetary index, 0–9.<br>Updated every minute.</div>
-  </div>
-  <div class="gauge" id="gauge"></div>
-  <div class="gscale"><span>0</span><span>QUIET</span><span>5 · G1</span><span>7</span><span>9</span></div>
-</section>
-<!-- 4. Kp forecast -->
-<section class="card app">
-  <div style="display:flex;justify-content:space-between;align-items:baseline">
-    <div class="lbl">Kp · past 2 days + 3-day forecast</div><div class="lbl">3 H BLOCKS</div>
-  </div>
-  <svg id="kpchart"></svg>
-</section>
-  </div>
-<!-- 5a. Real-time solar wind at L1 (what NOAA's ACE MAG / SWEPAM plot shows), measured, not modelled -->
-<section class="card app">
+  <div class="chap"><span>3</span><div><h2>Arrival</h2><p>A spacecraft 1.5 million km towards the Sun measures the wind about 30–60 minutes before it hits us. Speed, density and above all Bz (the magnetic direction) decide what happens next.</p></div></div>
+  <section class="card app">
+    <div class="lbl" style="font-size:10px">Right now, 1.5 million km towards the Sun</div>
+    <div class="now" style="margin-bottom:12px">
+      <div class="fact"><div class="lbl">Speed now</div><b id="swV">–</b><small id="swVt">&nbsp;</small></div>
+      <div class="fact"><div class="lbl">Magnet (Bz) now</div><b id="swBz">–</b><small id="swBzt">&nbsp;</small></div>
+    </div>
   <div style="display:flex;justify-content:space-between;align-items:center">
     <div><div class="lbl">Solar wind · measured at L1</div><div class="sub" id="wSrc" style="margin-top:3px">–</div></div>
     <div class="chips"><div class="chip" data-wr="1">1 D</div><div class="chip on" data-wr="3">3 D</div><div class="chip" data-wr="7">7 D</div></div>
@@ -333,9 +314,34 @@
     <p>For aurora from Romania you want all of it at once: <b>speed 600+, Bt 20+, Bz −15 or lower for hours</b> — then check the Kp and the sky.</p>
   </details>
 </section>
+  <div class="chap"><span>4</span><div><h2>Earth's response</h2><p>When the energy gets in, Earth's magnetic field shakes (Kp rises), the aurora oval grows and pushes south, and NOAA issues storm alerts.</p></div></div>
   <div class="duo">
-<!-- 6. NOAA scales + alerts -->
-<section class="card app">
+  <section class="card app">
+  <div style="display:flex;justify-content:space-between;align-items:baseline">
+    <div class="lbl">Kp index now</div><div class="lbl" id="kpScale">G0 · QUIET</div>
+  </div>
+  <div class="kpnow" style="margin-top:8px">
+    <div class="kpbig" id="kpNow">–</div>
+    <div style="padding-bottom:4px;color:var(--t2);font-size:10px;line-height:1.5" id="kpWords">Planetary index, 0–9.<br>Updated every minute.</div>
+  </div>
+  <div class="gauge" id="gauge"></div>
+  <div class="gscale"><span>0</span><span>QUIET</span><span>5 · G1</span><span>7</span><span>9</span></div>
+</section>
+  <section class="card app">
+  <div style="display:flex;justify-content:space-between;align-items:baseline">
+    <div class="lbl">Kp · past 2 days + 3-day forecast</div><div class="lbl">3 H BLOCKS</div>
+  </div>
+  <svg id="kpchart"></svg>
+</section>
+  </div>
+  <div class="duo">
+  <section class="card">
+    <div class="lbl">Where the aurora is right now</div>
+    <h2>The aurora oval</h2>
+    <canvas id="globe"></canvas>
+    <div class="help">The <b style="color:var(--green)">green glow</b> is NOAA's live aurora map around the North Pole. The yellow dot is you. The further south the green reaches towards it, the better our chances. <span id="ovTime"></span></div>
+  </section>
+  <section class="card app">
   <div class="lbl">Space weather at Earth · NOAA scales now · tap one</div>
   <div class="scales">
     <div class="scale on" data-sw="g"><b id="scG">G0</b><small id="scGt">Geomagnetic</small></div>
@@ -352,17 +358,23 @@
   </div>
   <details class="howto" id="swHow"><summary>HOW TO READ IT ›</summary><div id="swHowTxt"></div></details>
 </section>
-<!-- 5c. Solar cycle: smoothed sunspot number, cycles 21–25 from their start + NOAA's cycle-25 prediction -->
-<section class="card app">
-  <div style="display:flex;justify-content:space-between;align-items:baseline">
-    <div class="lbl">Solar cycle · sunspots</div><div class="lbl">SILSO / NOAA</div>
   </div>
-  <div class="enlsum" id="cycSum">Loading…</div>
-  <svg id="cycchart"></svg>
-  <div class="cleg" id="cycLeg"></div>
-  <div class="sub" style="margin-top:8px;line-height:1.5">Monthly sunspot number (13-month smoothed) since each cycle began, so the five cycles line up. More sunspots → more flares and CMEs → more storms; the years after the peak often bring the biggest ones. Dots = this cycle's monthly values, dashed = NOAA's prediction.</div>
-</section>
-  </div>
+  <div class="chap"><span>5</span><div><h2>Your sky</h2><p>The last step is local: dark, clear, the Moon out of the way and a view to the north. The answer card at the top puts it all together for tonight.</p></div></div>
+  <section class="card">
+    <div class="lbl">How to read all this</div>
+    <h2>A good aurora night needs</h2>
+    <ol class="steps">
+      <li><b>Kp <span class="needK">7</span>+</b> forecast for tonight where you are (the answer card says it for you).</li>
+      <li><b>Bz negative</b> (south) for an hour or more — that's the "on" switch.</li>
+      <li><b>Fast wind</b>, over 500 km/s, or a CME arriving (red band).</li>
+      <li><b>Clear sky</b> and <b>real dark</b>: away from city lights, facing <b>north</b>, low horizon.</li>
+      <li><b>Use your phone's night mode</b> (3–10 s exposure). From Romania the aurora often looks like a faint grey-pink glow to the eye but shows red / green on camera.</li>
+    </ol>
+    <details><summary>WHY IS IT SO RARE IN THE SOUTH?</summary>
+      <p class="why">The aurora lives in a ring around the North Pole (the oval above). Romania and southern Europe are far south of it. Only big solar storms push the ring far enough south — a few nights per year, more around solar maximum (now, 2024–2027).</p></details>
+  </section>
+  <div id="sunFull"><div class="fimg"><img id="sunFImg" alt=""></div>
+    <div class="sfctl"><button class="spbtn" id="sunFPlay">⏸</button><span class="stime" id="sunFTime">–</span><input type="range" id="sunFSlide" min="0" max="0" value="0"><button class="spbtn" id="sunFX">✕</button></div></div>
   <footer>Live data: <a href="https://www.swpc.noaa.gov/" rel="noopener">NOAA SWPC</a> · <a href="https://sdo.gsfc.nasa.gov/" rel="noopener">NASA SDO</a> · <a href="https://soho.nascom.nasa.gov/" rel="noopener">SOHO (ESA/NASA)</a> · <a href="https://open-meteo.com/" rel="noopener">Open-Meteo</a><br>
     Forecasts are estimates. Made with PowHau.</footer>
 </main>
@@ -457,7 +469,7 @@ function verdict() {
   $('fDark').textContent = dark ? hhmm(dark) : '–';
   if (window.AuroraTonight && S.wx) {
     const pl = AuroraTonight.plan({ lat: TOWN.lat, lon: TOWN.lon, need: N, kpList: S.kpList, wx: S.wx });
-    AuroraTonight.render($('tonight'), pl, hhmm, kpColor); $('tnTxt').textContent = S.tonight = AuroraTonight.sentence(pl, N, hhmm);
+    S.tnPlan = pl; S.tnNeed = N; AuroraTonight.render($('tonight'), pl, hhmm, kpColor, N, sy.on ? sy.t : 0); $('tnTxt').textContent = S.tonight = AuroraTonight.sentence(pl, N, hhmm);
   }
   if (window.redrawDeep) redrawDeep();
 }
@@ -499,9 +511,8 @@ const SUNF = [
    or the Sun's own range until the model has loaded — so the same moment sits at the same spot on all three */
 function axis() {
   const E = (typeof enl !== 'undefined' && enl.frames) || [], fr = (sun.F && sun.F.filters[SUNF[sun.k][0]]) || [];
-  if (E.length > 1) return { a: E[0].t, b: E[E.length - 1].t };
-  if (fr.length > 1) return { a: fr[0][0], b: fr[fr.length - 1][0] };
-  return null;
+  const ts = []; if (E.length > 1) ts.push(E[0].t, E[E.length - 1].t); if (fr.length > 1) ts.push(fr[0][0], fr[fr.length - 1][0]);
+  return ts.length ? { a: Math.min(...ts), b: Math.max(...ts) } : null;   // oldest Sun frame → end of the forecast
 }
 const toPos = t => { const x = axis(); return x ? Math.round(Math.max(0, Math.min(1, (t - x.a) / (x.b - x.a))) * 1000) : 0; };
 const toTime = v => { const x = axis(); return x ? x.a + (x.b - x.a) * v / 1000 : Date.now(); };
@@ -765,18 +776,33 @@ function syShow(t) {
   $('mFc').style.display = after ? 'block' : 'none'; $('mSunL').textContent = SUNF[sun.k][1];
   if (su && $('mSun').getAttribute('src') !== su) $('mSun').src = su;
   if (enl.frames.length) { const k = nearestIdx(enl.frames.length, m => enl.frames[m].t, sy.t); if (k !== enl.i) { clearInterval(enl.play); enl.play = null; enlShow(k); } }
-  miniEnl();
+  miniEnl(); tcursor();
 }
 // the from-above disc of the current ENLIL frame (+ Sun / Earth dots), for the phone's side-by-side view
 function miniEnl() {
-  const f = enl.frames[enl.i], cv = $('mEnl'); if (!f || !cv.clientWidth) return; const im = enlImg(f.u);
+  const f = enl.frames[enl.i]; if (!f) return; const im = enlImg(f.u);
   if (!im.complete || !im.naturalWidth) { im.addEventListener('load', () => enl.frames[enl.i] === f && miniEnl(), { once: true }); return; }
-  const W = Math.round(cv.clientWidth * Math.min(2, devicePixelRatio || 1)); if (cv.width !== W) { cv.width = cv.height = W; }
-  const g = cv.getContext('2d'), s = W / 258; g.fillStyle = '#000'; g.fillRect(0, 0, W, W);
-  g.save(); g.beginPath(); g.arc(126 * s, 126 * s, 126 * s, 0, 2 * Math.PI); g.clip(); g.drawImage(im, 76, 58, 258, 258, 0, 0, W, W); g.restore();
-  const dot = (p, c, t) => { const x = (p[0] - 76) * s, y = (p[1] - 58) * s; g.fillStyle = c; g.font = `700 ${Math.max(9, W / 26)}px "JetBrains Mono", monospace`; g.fillText(t, x + 6, y - 6); };
-  dot(ENL_SUN, '#FFE600', 'SUN'); dot(ENL_EARTH, '#7CFF7C', 'EARTH');
+  $('mEb').style.display = sy.on && sy.t < enl.frames[0].t - 3600e3 ? 'block' : 'none';
+  [['mEnl', 0], ['mEnlV', 264]].forEach(([id, dy]) => { const cv = $(id); if (!cv.clientWidth) return;
+    const W = Math.round(cv.clientWidth * Math.min(2, devicePixelRatio || 1)); if (cv.width !== W) { cv.width = cv.height = W; }
+    const g = cv.getContext('2d'), s = W / 258; g.fillStyle = '#000'; g.fillRect(0, 0, W, W);
+    g.save(); g.beginPath(); g.arc(126 * s, 126 * s, 126 * s, 0, 2 * Math.PI); g.clip(); g.drawImage(im, 76, 58 + dy, 258, 258, 0, 0, W, W); g.restore();
+    const dot = (q, c) => { g.fillStyle = c; g.beginPath(); g.arc((q[0] - 76) * s, (q[1] - 58) * s, Math.max(3, W / 60), 0, 6.3); g.fill(); g.strokeStyle = '#000'; g.stroke(); };
+    dot(ENL_SUN, '#FFE600'); dot(ENL_EARTH, '#7CFF7C'); });
 }
+function tcursor() {
+  const t = sy.on ? sy.t : 0;
+  document.querySelectorAll('svg[data-tx]').forEach(svg => { const [a, b, xa, xb, h] = JSON.parse(svg.dataset.tx); let ln = svg.querySelector('.tcur');
+    if (!ln) { ln = document.createElementNS('http://www.w3.org/2000/svg', 'line'); ln.setAttribute('class', 'tcur'); ln.setAttribute('stroke', '#FFE600'); ln.setAttribute('stroke-width', '1.5'); svg.appendChild(ln); }
+    if (!t || t < a || t > b) { ln.style.display = 'none'; return; }
+    const x = xa + (t - a) / (b - a) * (xb - xa); ln.setAttribute('x1', x); ln.setAttribute('x2', x); ln.setAttribute('y1', 0); ln.setAttribute('y2', h); ln.style.display = ''; });
+  if (S.tnPlan) AuroraTonight.render($('tonight'), S.tnPlan, hhmm, kpColor, S.tnNeed, t);
+}
+window.tcursor = tcursor;
+// tap a chart → the shared clock jumps to that moment
+document.addEventListener('click', e => { const svg = e.target.closest && e.target.closest('svg[data-tx]'); if (!svg) return;
+  const [a, b, xa, xb] = JSON.parse(svg.dataset.tx), r = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal, x = (e.clientX - r.left) / r.width * (vb && vb.width || r.width);
+  if (x < xa || x > xb) return; const t = a + (x - xa) / (xb - xa) * (b - a); syStop(); sy.on = true; syShow(t); });
 function syStop() { clearInterval(sy.timer); sy.timer = null; sy.on = false; $('syPlay').textContent = '▶'; }
 function syStart() {
   if (!syRange()) { toast('Still loading the pictures…'); return; }
@@ -926,7 +952,7 @@ function drawKpChart(list) {
   const xn = x(now);
   s += `<line x1="${xn}" x2="${xn}" y1="${T}" y2="${H - B}" stroke="#fff" stroke-opacity=".7" stroke-dasharray="2 3"/>`;
   s += `<text x="${xn + 3}" y="${T + 8}" fill="#fff" font-size="8" font-family="JetBrains Mono">NOW</text>`;
-  svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.innerHTML = s;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.innerHTML = s; svg.dataset.tx = JSON.stringify([from, to, x(from), x(to), H]); window.tcursor && tcursor();
 }
 
 /* ── Real-time solar wind (ACE hourly for 3 / 7 days, NOAA RTSW 1-minute for the last day, loaded only when asked) ── */
@@ -1001,7 +1027,7 @@ function drawWind() {
   if (wRange === 1) d.setMinutes(0, 0, 0), d.setHours(Math.ceil(d.getHours() / 6) * 6); else d.setHours(24, 0, 0, 0);
   for (; d.getTime() < now; d.setTime(d.getTime() + step)) { const xx = x(d.getTime());
     s += `<line x1="${xx}" x2="${xx}" y1="${top}" y2="${yb}" stroke="#2C3542" stroke-opacity=".8"/><text x="${xx + 2}" y="${yb + 11}" fill="#8B9BAE" font-size="8" font-family="JetBrains Mono">${wRange === 1 ? hhmm(d) : dayD(d.getTime())}</text>`; }
-  svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.style.height = H + 'px'; svg.innerHTML = s;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.style.height = H + 'px'; svg.innerHTML = s; svg.dataset.tx = JSON.stringify([from, now, x(from), x(now), H]); window.tcursor && tcursor();
 }
 
 /* ── Space weather at Earth: G (geomagnetic) · S (radiation, GOES protons) · R (radio blackouts, GOES X-rays) · satellites (GOES electrons) ── */
@@ -1032,7 +1058,7 @@ function logChart(series, lo, hi, lines, bands) {
   lines.forEach(l => { s += `<line x1="${L}" x2="${W - R}" y1="${y(l.v)}" y2="${y(l.v)}" stroke="${l.col}" stroke-dasharray="4 3" stroke-opacity=".8"/><text x="${L + 4}" y="${y(l.v) - 3}" fill="${l.col}" font-size="7.5" font-family="JetBrains Mono">${l.label}</text>`; });
   series.forEach(sr => { let dd = '', prev = 0; sr.pts.forEach(([t, v]) => { if (t < from) return; dd += (t - prev > 20 * 60000 ? 'M' : 'L') + x(t).toFixed(1) + ' ' + y(v).toFixed(1); prev = t; });
     s += `<path d="${dd}" fill="none" stroke="${sr.col}" stroke-width="${sr.w || 1.3}" stroke-linejoin="round"/>`; });
-  svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.style.height = H + 'px'; svg.innerHTML = s;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.style.height = H + 'px'; svg.innerHTML = s; svg.dataset.tx = JSON.stringify([from, now, x(from), x(now), H]); window.tcursor && tcursor();
 }
 const legend = items => `<div class="enlleg" style="margin-top:6px">${items.map(([c, t]) => `<span><i style="background:${c}"></i>${t}</span>`).join('')}</div>`;
 const HOW = {
@@ -1050,7 +1076,7 @@ const HOW = {
     <p>The daily up-and-down wave is normal: the satellite passes through denser and thinner parts of the belt as Earth turns. No effect on the ground.</p>` };
 async function drawSw() {
   vis2('swG', swTab === 'g'); $('swHowTxt').innerHTML = HOW[swTab]; $('swList').innerHTML = '';
-  if (swTab === 'g') { $('swChart').innerHTML = ''; $('swChart').style.height = '0';
+  if (swTab === 'g') { $('swChart').innerHTML = ''; $('swChart').style.height = '0'; delete $('swChart').dataset.tx;
     const g = +($('scG').textContent.slice(1)) || 0;
     $('swNow').innerHTML = `Now <b>G${g}</b>, Kp ${S.kpNow != null ? S.kpNow.toFixed(1) : '–'}. ` + (g ? `<b style="color:${kpColor(g + 4)}">${G_TXT[g]}</b> under way.` : 'Earth\'s magnetic field is quiet or only unsettled.') + ' The Kp charts above show where it\'s heading.'; return; }
   $('swNow').textContent = 'Loading GOES data…';
