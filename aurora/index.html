@@ -7,14 +7,67 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Aurora tonight · PowHau</title>
 <meta name="description" content="Can we see the northern lights from Romania tonight? Live aurora forecast, the Sun right now and the solar wind — explained simply.">
-<meta property="og:title" content="Aurora tonight · PowHau">
-<meta property="og:description" content="Live aurora chances for Romania, the Sun right now and the solar wind — explained simply.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ori0nori0ff.github.io/aurora/">
+<meta property="og:title" content="Aurora boreală la noapte — de la Soare până pe cerul tău">
+<meta property="og:description" content="Prognoză live: se vede aurora din România în seara asta? Soarele acum, vântul solar (NOAA ENLIL), Kp, nori și Luna, oră cu oră. Simplu pentru oricine, detaliat pentru pasionați.">
+<meta property="og:image" content="https://ori0nori0ff.github.io/aurora/og.png">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta property="og:locale" content="ro_RO"><meta property="og:locale:alternate" content="en_GB"><meta property="og:locale:alternate" content="de_DE">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#0A0A0A">
 <style>
-  @font-face { font-family: Barlow; src: url(fonts/barlow_condensed_semibold.ttf); font-weight: 600; }
-  @font-face { font-family: Mono; src: url(fonts/jetbrains_mono_medium.ttf); font-weight: 500; }
-  @font-face { font-family: 'JetBrains Mono'; src: url(fonts/jetbrains_mono_medium.ttf); }
-  @font-face { font-family: 'Barlow Condensed'; src: url(fonts/barlow_condensed_semibold.ttf); }
+  /* one clean font everywhere: Inter (OFL, self-hosted). The old family names (used in CSS and on the canvases) map to it too. */
+  @font-face { font-family: 'Inter'; font-weight: 400; font-display: swap; src: url(fonts/inter-latin-400-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+  @font-face { font-family: 'Inter'; font-weight: 400; font-display: swap; src: url(fonts/inter-latin-ext-400-normal.woff2) format('woff2'); unicode-range: U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+  @font-face { font-family: 'Inter'; font-weight: 500; font-display: swap; src: url(fonts/inter-latin-500-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+  @font-face { font-family: 'Inter'; font-weight: 500; font-display: swap; src: url(fonts/inter-latin-ext-500-normal.woff2) format('woff2'); unicode-range: U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+  @font-face { font-family: 'Inter'; font-weight: 600; font-display: swap; src: url(fonts/inter-latin-600-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+  @font-face { font-family: 'Inter'; font-weight: 600; font-display: swap; src: url(fonts/inter-latin-ext-600-normal.woff2) format('woff2'); unicode-range: U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+  @font-face { font-family: 'Inter'; font-weight: 700; font-display: swap; src: url(fonts/inter-latin-700-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+  @font-face { font-family: 'Inter'; font-weight: 700; font-display: swap; src: url(fonts/inter-latin-ext-700-normal.woff2) format('woff2'); unicode-range: U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+  @font-face { font-family: 'Inter'; font-weight: 800; font-display: swap; src: url(fonts/inter-latin-800-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+  @font-face { font-family: 'Inter'; font-weight: 800; font-display: swap; src: url(fonts/inter-latin-ext-800-normal.woff2) format('woff2'); unicode-range: U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+  @font-face { font-family: 'Barlow'; font-weight: 400; font-display: swap; src: url(fonts/inter-latin-400-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+  @font-face { font-family: 'Barlow'; font-weight: 400; font-display: swap; src: url(fonts/inter-latin-ext-400-normal.woff2) format('woff2'); unicode-range: U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+  @font-face { font-family: 'Barlow'; font-weight: 500; font-display: swap; src: url(fonts/inter-latin-500-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+  @font-face { font-family: 'Barlow'; font-weight: 500; font-display: swap; src: url(fonts/inter-latin-ext-500-normal.woff2) format('woff2'); unicode-range: U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+  @font-face { font-family: 'Barlow'; font-weight: 600; font-display: swap; src: url(fonts/inter-latin-600-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+  @font-face { font-family: 'Barlow'; font-weight: 600; font-display: swap; src: url(fonts/inter-latin-ext-600-normal.woff2) format('woff2'); unicode-range: U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+  @font-face { font-family: 'Barlow'; font-weight: 700; font-display: swap; src: url(fonts/inter-latin-700-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+  @font-face { font-family: 'Barlow'; font-weight: 700; font-display: swap; src: url(fonts/inter-latin-ext-700-normal.woff2) format('woff2'); unicode-range: U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+  @font-face { font-family: 'Barlow'; font-weight: 800; font-display: swap; src: url(fonts/inter-latin-800-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+  @font-face { font-family: 'Barlow'; font-weight: 800; font-display: swap; src: url(fonts/inter-latin-ext-800-normal.woff2) format('woff2'); unicode-range: U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+  @font-face { font-family: 'Mono'; font-weight: 400; font-display: swap; src: url(fonts/inter-latin-400-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+  @font-face { font-family: 'Mono'; font-weight: 400; font-display: swap; src: url(fonts/inter-latin-ext-400-normal.woff2) format('woff2'); unicode-range: U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+  @font-face { font-family: 'Mono'; font-weight: 500; font-display: swap; src: url(fonts/inter-latin-500-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+  @font-face { font-family: 'Mono'; font-weight: 500; font-display: swap; src: url(fonts/inter-latin-ext-500-normal.woff2) format('woff2'); unicode-range: U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+  @font-face { font-family: 'Mono'; font-weight: 600; font-display: swap; src: url(fonts/inter-latin-600-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+  @font-face { font-family: 'Mono'; font-weight: 600; font-display: swap; src: url(fonts/inter-latin-ext-600-normal.woff2) format('woff2'); unicode-range: U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+  @font-face { font-family: 'Mono'; font-weight: 700; font-display: swap; src: url(fonts/inter-latin-700-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+  @font-face { font-family: 'Mono'; font-weight: 700; font-display: swap; src: url(fonts/inter-latin-ext-700-normal.woff2) format('woff2'); unicode-range: U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+  @font-face { font-family: 'Mono'; font-weight: 800; font-display: swap; src: url(fonts/inter-latin-800-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+  @font-face { font-family: 'Mono'; font-weight: 800; font-display: swap; src: url(fonts/inter-latin-ext-800-normal.woff2) format('woff2'); unicode-range: U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+  @font-face { font-family: 'JetBrains Mono'; font-weight: 400; font-display: swap; src: url(fonts/inter-latin-400-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+  @font-face { font-family: 'JetBrains Mono'; font-weight: 400; font-display: swap; src: url(fonts/inter-latin-ext-400-normal.woff2) format('woff2'); unicode-range: U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+  @font-face { font-family: 'JetBrains Mono'; font-weight: 500; font-display: swap; src: url(fonts/inter-latin-500-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+  @font-face { font-family: 'JetBrains Mono'; font-weight: 500; font-display: swap; src: url(fonts/inter-latin-ext-500-normal.woff2) format('woff2'); unicode-range: U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+  @font-face { font-family: 'JetBrains Mono'; font-weight: 600; font-display: swap; src: url(fonts/inter-latin-600-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+  @font-face { font-family: 'JetBrains Mono'; font-weight: 600; font-display: swap; src: url(fonts/inter-latin-ext-600-normal.woff2) format('woff2'); unicode-range: U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+  @font-face { font-family: 'JetBrains Mono'; font-weight: 700; font-display: swap; src: url(fonts/inter-latin-700-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+  @font-face { font-family: 'JetBrains Mono'; font-weight: 700; font-display: swap; src: url(fonts/inter-latin-ext-700-normal.woff2) format('woff2'); unicode-range: U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+  @font-face { font-family: 'JetBrains Mono'; font-weight: 800; font-display: swap; src: url(fonts/inter-latin-800-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+  @font-face { font-family: 'JetBrains Mono'; font-weight: 800; font-display: swap; src: url(fonts/inter-latin-ext-800-normal.woff2) format('woff2'); unicode-range: U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+  @font-face { font-family: 'Barlow Condensed'; font-weight: 400; font-display: swap; src: url(fonts/inter-latin-400-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+  @font-face { font-family: 'Barlow Condensed'; font-weight: 400; font-display: swap; src: url(fonts/inter-latin-ext-400-normal.woff2) format('woff2'); unicode-range: U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+  @font-face { font-family: 'Barlow Condensed'; font-weight: 500; font-display: swap; src: url(fonts/inter-latin-500-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+  @font-face { font-family: 'Barlow Condensed'; font-weight: 500; font-display: swap; src: url(fonts/inter-latin-ext-500-normal.woff2) format('woff2'); unicode-range: U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+  @font-face { font-family: 'Barlow Condensed'; font-weight: 600; font-display: swap; src: url(fonts/inter-latin-600-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+  @font-face { font-family: 'Barlow Condensed'; font-weight: 600; font-display: swap; src: url(fonts/inter-latin-ext-600-normal.woff2) format('woff2'); unicode-range: U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+  @font-face { font-family: 'Barlow Condensed'; font-weight: 700; font-display: swap; src: url(fonts/inter-latin-700-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+  @font-face { font-family: 'Barlow Condensed'; font-weight: 700; font-display: swap; src: url(fonts/inter-latin-ext-700-normal.woff2) format('woff2'); unicode-range: U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+  @font-face { font-family: 'Barlow Condensed'; font-weight: 800; font-display: swap; src: url(fonts/inter-latin-800-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+  @font-face { font-family: 'Barlow Condensed'; font-weight: 800; font-display: swap; src: url(fonts/inter-latin-ext-800-normal.woff2) format('woff2'); unicode-range: U+0100-02AF,U+0304,U+0308,U+0329,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
   :root { --bg: #0A0A0A; --card: #12161C; --line: #1E2530; --text: #E0E0E0; --dim: #8B9BAE; --faint: #6B7280; --soft: #C9D1DB;
           --green: #39FF9E; --t2: #8B9BAE; --t3: #6B7280; --aur: #39FF9E; --cyan: #06B6D4; --yellow: #E8C766; --orange: #FFA040; --red: #FF4444; --violet: #E05BFF; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -263,6 +316,21 @@
   @keyframes sway { from { transform: skewX(-6deg) scaleY(.92); opacity: .75; } to { transform: skewX(6deg) scaleY(1.05); opacity: 1; } }
   @media (min-width: 760px) { .gsteps { grid-template-columns: 1fr 1fr; } body.simple .grid.top { grid-template-columns: 1fr 1fr; } body.simple .grid.top > :first-child { grid-column: auto; } }
   @media (min-width: 1200px) { .gsteps { grid-template-columns: repeat(4, 1fr); } body.simple .grid.top { grid-template-columns: 1.3fr 1fr; } }
+  .gl { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+  .glr { display: grid; grid-template-columns: 34px 132px 1fr auto; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: #0F1318; border: 1px solid transparent; }
+  .glr b { font-size: 16px; font-weight: 800; font-feature-settings: 'zero'; } .glk { font-size: 12.5px; font-weight: 600; color: #DCE3EB; } .glt { font-size: 13px; color: var(--dim); line-height: 1.35; }
+  .glt em { font-style: normal; color: #FFE08A; font-weight: 600; } .glr i { font-style: normal; font-size: 10.5px; font-weight: 800; letter-spacing: .08em; color: #0A0A0A; background: #FFE600; border-radius: 6px; padding: 3px 7px; }
+  .glr.now { border-color: rgba(255,230,0,.55); background: rgba(255,230,0,.06); }
+  @media (max-width: 560px) { .glr { grid-template-columns: 30px 1fr auto; } .glt { grid-column: 2 / -1; } }
+  /* type: Inter, sentence-case headings, clear numbers */
+  body { font-family: Inter, system-ui, sans-serif; }
+  h1 { font: 800 32px/1.05 Inter, sans-serif; text-transform: none; letter-spacing: -.5px; }
+  h2 { font: 700 21px/1.15 Inter, sans-serif; text-transform: none; letter-spacing: -.2px; }
+  .big { font: 800 60px/1 Inter, sans-serif; text-transform: none; letter-spacing: -1.5px; }
+  .gstep h3 { font: 700 20px/1.15 Inter, sans-serif; text-transform: none; letter-spacing: -.2px; }
+  .lbl { font-weight: 600; letter-spacing: .07em; }
+  .scale b, .kpbig, .fact b, .gkp b { font-feature-settings: 'tnum', 'zero'; font-weight: 800; letter-spacing: -.5px; }
+  .gall { font: 700 16px Inter, sans-serif; }
 </style>
 </head>
 <body>
@@ -271,7 +339,7 @@
   <h1>Aurora tonight</h1>
   <div class="sub"><span id="place">from Brașov, Romania</span></div>
   <div class="topbar">
-    <div class="seg" role="group" aria-label="View"><button data-mode="simple" aria-pressed="false">🌱 Simple</button><button data-mode="full" aria-pressed="false">🔭 Full</button></div>
+    <div class="seg" role="group" aria-label="View"><button data-mode="simple" aria-pressed="false">Simple</button><button data-mode="full" aria-pressed="false">Full</button></div>
     <div class="seg" role="group" aria-label="Language" data-noi18n><button data-lang="en" lang="en">EN</button><button data-lang="ro" lang="ro">RO</button><button data-lang="de" lang="de">DE</button></div>
   </div>
 
@@ -309,9 +377,9 @@
   <section class="card">
     <div class="lbl">Where the aurora is right now · OVATION model</div>
     <h2>NOAA aurora forecast</h2>
-    <div class="locrow"><span class="lbl">Your place</span><b id="gPlace">Brașov</b><button class="locbtn" id="locBtn">📍 CHANGE PLACE</button></div>
+    <div class="locrow"><span class="lbl">Your place</span><b id="gPlace">Brașov</b><button class="locbtn" id="locBtn">CHANGE PLACE</button></div>
     <div id="locBox" class="hidden"><input id="locQ" type="search" placeholder="Search any city or village…" autocomplete="off" enterkeyhint="search">
-      <div id="locRes"></div><button class="locbtn" id="locGps">◎ USE MY LOCATION</button></div>
+      <div id="locRes"></div><button class="locbtn" id="locGps">USE MY LOCATION</button></div>
     <canvas id="globe" role="img" aria-label="Globe with the NOAA live aurora forecast around the North Pole and your place marked"></canvas>
     <div class="help">The <b style="color:var(--green)">green glow</b> is NOAA's live aurora map around the North Pole. The yellow dot is you. The further south the green reaches towards it, the better our chances. <span id="ovTime"></span></div>
   </section>
@@ -323,25 +391,21 @@
       <article class="gstep"><div class="gnum" aria-hidden="true">1</div><div class="gpic"><img id="gSun" alt="The Sun right now, NASA SDO"></div>
         <h3>The Sun throws</h3><p>Now and then the Sun hurls a giant cloud of hot gas into space — a <b>CME</b>, billions of tonnes at once.</p>
         <div class="glive" id="gSunLive">–</div>
-        <div class="gfact"><b>Did you know?</b> The Sun is 109 times wider than Earth, and its light needs 8 minutes to reach us.</div>
         <button class="gmore" data-go="syncCard">Watch the Sun live ›</button></article>
       <article class="gstep"><div class="gnum" aria-hidden="true">2</div><div class="gpic"><canvas id="gEnl" width="300" height="300" role="img" aria-label="NOAA's solar wind model seen from above: the Sun in the middle, Earth on the green dot"></canvas></div>
         <h3>The wind travels</h3><p>A stream of particles — the <b>solar wind</b> — blows past Earth all the time. A CME needs <b>1 to 4 days</b> to cross the 150 million km.</p>
         <div class="glive" id="gEnlLive">–</div>
-        <div class="gfact"><b>Did you know?</b> The solar wind normally blows at about 400 km/s — Bucharest to Paris in 5 seconds.</div>
         <button class="gmore" data-go="secDen">See the forecast ›</button></article>
       <article class="gstep"><div class="gnum" aria-hidden="true">3</div><div class="gpic gkp"><b id="gKp">–</b><span>Kp</span><div class="gbar" id="gBar" aria-hidden="true"></div></div>
         <h3>Earth's shield shakes</h3><p>Earth's magnetic field shields us. When the wind's own magnetism points <b>south</b>, energy leaks in and the field starts to shake. <b>Kp</b> measures it, from 0 (calm) to 9 (huge storm).</p>
         <div class="glive" id="gKpLive">–</div>
-        <div class="gfact"><b>Did you know?</b> In May 2024 a Kp 9 storm made the aurora visible all over Romania — even in Bucharest.</div>
         <button class="gmore" data-go="kpcard">See the Kp forecast ›</button></article>
       <article class="gstep"><div class="gnum" aria-hidden="true">4</div><div class="gpic gaur" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
         <h3>The sky lights up</h3><p>The particles hit the air 100–300 km up and make it glow: <b style="color:#39FF9E">green</b> from oxygen, <b style="color:#FF6B6B">red</b> higher up, purple from nitrogen.</p>
         <div class="glive" id="gSkyLive">–</div>
-        <div class="gfact"><b>Did you know?</b> A phone camera sees the aurora better than your eyes: in Romania it often looks grey to the eye but green and red in the photo.</div>
         <button class="gmore" data-go="vcard">Can we see it tonight? ›</button></article>
     </div>
-    <button class="gall" id="gAll">🔭 Show me everything — the full expert view</button>
+    <button class="gall" id="gAll">Show me everything — the full expert view</button>
   </section>
   <div class="chap xfull"><span aria-hidden="true">1</span><div><h2>From the Sun to Earth</h2><p>Everything starts at the Sun: flares, CMEs (clouds of solar plasma) and coronal holes that blow fast wind. It takes 1–4 days to cross 150 million km. Play the Sun and NOAA's solar wind model on one clock.</p></div></div>
   <section class="card clock xfull" id="syncCard" aria-label="One clock for the Sun and the solar wind">
@@ -358,7 +422,7 @@
       <div class="sload" id="sunLoad"></div>
       <button class="snav" id="sunPrev" style="left:10px" aria-label="Previous picture type">‹</button><button class="snav" id="sunNext" style="right:10px" aria-label="Next picture type">›</button></div>
     <div class="sctl"><button class="spbtn" id="sunPlay" aria-label="Play / pause">⏸</button><span class="stime" id="sunTime">–</span><input type="range" id="sunSlide" min="0" max="0" value="0" aria-label="Time"></div>
-    <div class="dl"><button id="sunFullB">⛶ FULL</button><a id="sunClip" download>⬇ CLIP · 48 H</a><a id="sunSave" target="_blank" rel="noopener">⬇ IMAGE</a></div>
+    <div class="dl"><button id="sunFullB">FULL SCREEN</button><a id="sunClip" download>⬇ CLIP · 48 H</a><a id="sunSave" target="_blank" rel="noopener">⬇ IMAGE</a></div>
     <div class="schips" id="sunChips"></div>
     <div class="help" id="sunHelp"></div>
     <div class="why" style="font-size:12px;color:var(--faint);margin-top:8px">Last 5 days, one frame every ~40 min. Swipe the picture for the next filter. ⬇ IMAGE opens the full-size picture (long-press it to save); clips are refreshed every 3 hours.</div>
@@ -417,7 +481,9 @@
   <svg id="swChart" class="fillc"></svg>
   <div id="swList"></div>
   <div id="swG">
-    <div class="lbl" style="margin-top:12px">Geomagnetic alerts · last 3 days</div>
+    <div class="lbl" style="margin-top:12px">The G scale · how far south the aurora reaches</div>
+    <div id="gLadder" class="gl"></div>
+    <div class="lbl" style="margin-top:14px">Geomagnetic alerts · last 3 days</div>
     <div id="alerts" style="margin-top:4px"><div class="loading">LOADING…</div></div>
   </div>
   <details class="howto" id="swHow"><summary>HOW TO READ IT ›</summary><div id="swHowTxt"></div></details>
@@ -517,9 +583,9 @@ $('locQ').oninput = () => { clearTimeout(locT); const v = $('locQ').value.trim()
 $('locGps').onclick = () => {
   if (!navigator.geolocation) { $('locRes').innerHTML = '<div class="why">' + T('This browser can\'t share your location.') + '</div>'; return; }
   $('locGps').textContent = T('FINDING YOU…');
-  navigator.geolocation.getCurrentPosition(p => { $('locGps').textContent = T('◎ USE MY LOCATION');
+  navigator.geolocation.getCurrentPosition(p => { $('locGps').textContent = T('USE MY LOCATION');
       setPlace({ name: T('My location'), lat: +p.coords.latitude.toFixed(3), lon: +p.coords.longitude.toFixed(3), tz: Intl.DateTimeFormat().resolvedOptions().timeZone, sub: '' }); },
-    () => { $('locGps').textContent = T('◎ USE MY LOCATION'); $('locRes').innerHTML = '<div class="why">' + T('Location not allowed — search for your town instead.') + '</div>'; },
+    () => { $('locGps').textContent = T('USE MY LOCATION'); $('locRes').innerHTML = '<div class="why">' + T('Location not allowed — search for your town instead.') + '</div>'; },
     { timeout: 15000, maximumAge: 600000 });
 };
 const hhmm = d => new Date(d).toLocaleTimeString(LOC, { timeZone: TZ, hour: '2-digit', minute: '2-digit' });
@@ -1007,7 +1073,7 @@ async function load() {
   await Promise.allSettled([
     j(API + 'json/planetary_k_index_1m.json').then(a => { S.kpNow = +a[a.length - 1].estimated_kp; }),
     j(API + 'products/noaa-planetary-k-index-forecast.json').then(a => { S.kpList = a; }),
-    j('https://api.open-meteo.com/v1/forecast?latitude=' + TOWN.lat + '&longitude=' + TOWN.lon + '&hourly=cloud_cover&daily=sunset&forecast_days=2&timezone=auto').then(w => { S.wx = w; if (w.timezone) TZ = w.timezone; }),
+    j('https://api.open-meteo.com/v1/forecast?latitude=' + TOWN.lat + '&longitude=' + TOWN.lon + '&hourly=cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high&daily=sunset&forecast_days=2&timezone=auto').then(w => { S.wx = w; if (w.timezone) TZ = w.timezone; }),
     j(API + 'json/ovation_aurora_latest.json').then(o => { S.ov = AuroraGlobe.grid(o); $('ovTime').textContent = T('NOAA forecast for {t}.', { t: hhmm(o['Forecast Time']) }); drawGlobe(); }),
     j(API + 'products/summary/solar-wind-speed.json').then(a => { const v = +a[0].proton_speed;
       $('swV').innerHTML = Math.round(v) + '<span style="font-size:13px;color:#8B9BAE"> km/s</span>'; $('swV').style.color = v >= 600 ? '#FF7A3D' : v >= 450 ? '#E8C766' : '#E0E0E0';
@@ -1204,11 +1270,20 @@ const HOW = {
   e: T(`<p><b>Electrons ≥ 2 MeV</b> in Earth's outer radiation belt, at the GOES satellites' orbit. Not a NOAA scale, but NOAA alerts above <b>1 000</b> (dashed line).</p>
     <p>They usually <b>build up 1–3 days after a fast solar wind stream or a geomagnetic storm</b> and stay high for days. High values charge up satellites inside — glitches, failures (they're behind some satellite losses).</p>
     <p>The daily up-and-down wave is normal: the satellite passes through denser and thinner parts of the belt as Earth turns. No effect on the ground.</p>`) };
+// G0–G5 with the Kp they need and how far south the aurora gets; now and "visible from your place" marked
+function gLadder(g) {
+  const N = need(), rows = [[5, '9', T('Extreme'), T('aurora overhead in Romania, power grids at risk')], [4, '8', T('Severe'), T('aurora high in the sky over Romania')],
+    [3, '7', T('Strong'), T('aurora low in the north from Romania')], [2, '6', T('Moderate'), T('aurora over Poland and northern Germany')],
+    [1, '5', T('Minor'), T('aurora over Scandinavia and Scotland')], [0, '0–4', T('Quiet'), T('aurora only near the Arctic Circle')]];
+  $('gLadder').innerHTML = rows.map(([lv, kp, name, txt]) => { const here = lv ? +kp >= N && (lv === 1 || +kp - 1 < N) : N <= 4;
+    return `<div class="glr${lv === g ? ' now' : ''}"><b style="color:${lv ? kpColor(lv + 4) : '#6EE7A0'}">G${lv}</b><span class="glk">Kp ${kp} · ${name}</span><span class="glt">${txt}${here ? ' <em>' + T('← visible from {p}', { p: esc(BV.name) }) + '</em>' : ''}</span>${lv === g ? '<i>' + T('NOW') + '</i>' : ''}</div>`; }).join('');
+}
 async function drawSw() {
   vis2('swG', swTab === 'g'); $('swHowTxt').innerHTML = HOW[swTab]; $('swList').innerHTML = '';
   $('swChart').style.display = swTab === 'g' ? 'none' : '';
   if (swTab === 'g') { $('swChart').innerHTML = ''; delete $('swChart').dataset.tx;
     const g = +($('scG').textContent.slice(1)) || 0;
+    gLadder(g);
     $('swNow').innerHTML = T('Now <b>G{g}</b>, Kp {k}.', { g, k: S.kpNow != null ? S.kpNow.toFixed(1) : '–' }) + ' ' + (g ? T('<b style="color:{c}">{s}</b> under way.', { c: kpColor(g + 4), s: G_TXT[g] }) : T('Earth\'s magnetic field is quiet or only unsettled.')) + ' ' + T('The Kp charts above show where it\'s heading.'); return; }
   $('swNow').textContent = T('Loading GOES data…');
   try { const D = await goes(swTab); if (swTab !== (D === S.gr ? 'r' : D === S.gs ? 's' : 'e')) return;

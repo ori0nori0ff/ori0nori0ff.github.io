@@ -28,9 +28,10 @@
     const now = Date.now(), H = 3600e3, hours = [];
     let t0 = Math.floor(now / H) * H;
     for (let k = 0; k < 14 && sunAlt(t0, o.lat, o.lon) > -3; k++) t0 += H;   // still daytime → start at dusk
-    const cloudAt = t => { const w = o.wx; if (!w || !w.hourly) return null; const off = (w.utc_offset_seconds || 0) * 1000;
-      let best = null, bd = 1e12; w.hourly.time.forEach((s, i) => { const d = Math.abs(Date.parse(s + 'Z') - off - t); if (d < bd) { bd = d; best = w.hourly.cloud_cover[i]; } });
+    const wxAt = (t, key) => { const w = o.wx; if (!w || !w.hourly || !w.hourly[key]) return null; const off = (w.utc_offset_seconds || 0) * 1000;
+      let best = null, bd = 1e12; w.hourly.time.forEach((s, i) => { const d = Math.abs(Date.parse(s + 'Z') - off - t); if (d < bd) { bd = d; best = w.hourly[key][i]; } });
       return bd <= 1.5 * H ? best : null; };
+    const cloudAt = t => wxAt(t, 'cloud_cover');
     const kpAt = t => { let k = null; (o.kpList || []).forEach(p => { const s = Date.parse(p.time_tag + 'Z'); if (t >= s && t < s + 3 * H) k = +p.kp; }); return k; };
     for (let i = 0; i < 15; i++) {
       const t = t0 + i * H, sun = sunAlt(t, o.lat, o.lon);
@@ -39,7 +40,7 @@
       const dark = sun < -15 ? 1 : sun < -10 ? .6 : sun < -6 ? .25 : 0, N = o.need;
       const kf = kp == null ? 0 : kp >= N + 1 ? 1 : kp >= N ? .75 : kp >= N - 1 ? .35 : kp >= N - 2 ? .1 : .02;
       const clear = cloud == null ? .6 : 1 - cloud / 100, moon = ma > 0 ? 1 - .45 * ill : 1;
-      hours.push({ t, sun, cloud, kp, moonUp: ma > 0, ill, score: dark * kf * clear * moon });
+      hours.push({ t, sun, cloud, cl: wxAt(t, 'cloud_cover_low'), cm: wxAt(t, 'cloud_cover_mid'), ch: wxAt(t, 'cloud_cover_high'), kp, ma, moonUp: ma > 0, ill, score: dark * kf * clear * moon });
     }
     const top = hours.reduce((a, h) => h.score > a.score ? h : a, hours[0]);
     let best = null;
@@ -68,10 +69,11 @@
   }
 
   /**
-   * Draw tonight into el: first four plain checks (dark · clear sky · aurora strong enough · Moon), each ✓ / ✗ with one
-   * line, then one hour-by-hour picture — sky shade = how dark, grey clouds hanging from the top, green chance bars
-   * rising from the bottom, the Moon on top, Kp per hour below (✓ when it reaches what's needed), best window in yellow.
-   * fmt = hour formatter, need = Kp needed here, cur = time to mark (optional). Self-styled (works in the app too).
+   * Draw tonight into el, meteogram-style (like meteoblue): one line saying the answer, four conditions in a row
+   * (each with a coloured bar: green = fine, red = the problem), then one chart on a shared time axis —
+   * cloud layers (high / mid / low, darker grey = more cloud), the Kp forecast as a line against the Kp needed here
+   * on a sky that darkens with the night, the chance curve, and the Moon. The best window is a lit band through all.
+   * fmt = hour formatter, need = Kp needed here, cur = time to mark (optional). Fonts inherit from the page.
    */
   function render(el, p, fmt, kpColor, need, cur) {
     const hs = p.hours, H = 3600e3; if (!hs.length) { el.innerHTML = ''; return; }
@@ -79,42 +81,75 @@
     const cl = (dk ? darkH : hs).filter(h => h.cloud != null), avgC = cl.length ? Math.round(cl.reduce((a, h) => a + h.cloud, 0) / cl.length) : null;
     const maxKp = Math.max(0, ...hs.map(h => h.kp || 0)), mh = dk ? darkH : hs, moonUp = mh.filter(h => h.moonUp).length > mh.length / 2, ill = Math.round(hs[0].ill * 100);
     const good = p.best && p.best.score >= .1;
-    const checks = [
-      ['🌑', tr('Dark'), dk, tr('darkness'), dk ? tr('from {t}', { t: fmt(darkH[0].t) }) : tr('not dark enough')],
-      ['☁️', tr('Clear sky'), avgC != null && avgC < 50, tr('a clear sky'), avgC == null ? tr('no cloud data') : avgC >= 85 ? tr('{c}% clouds — covered', { c: avgC }) : avgC >= 50 ? tr('{c}% clouds — mostly covered', { c: avgC }) : avgC >= 20 ? tr('{c}% clouds — some gaps', { c: avgC }) : tr('{c}% clouds — clear', { c: avgC })],
-      ['🧲', tr('Aurora strong enough'), maxKp >= need, tr('a stronger aurora'), tr('Kp {k} · needs {n} here', { k: maxKp.toFixed(1), n: need })],
-      ['🌙', tr('Moon'), !moonUp || ill < 50, tr('a darker sky (the Moon)'), moonUp ? tr('{p}% full, up — brightens the sky', { p: ill }) : tr('down — dark sky')],
+    const C = [   // name, ok, value, note, what's missing
+      [tr('Dark'), dk, dk ? tr('from {t}', { t: fmt(darkH[0].t) }) : '–', dk ? tr('astronomical night') : tr('not dark enough'), tr('darkness')],
+      [tr('Clouds'), avgC != null && avgC < 50, avgC == null ? '–' : avgC + '%', avgC == null ? tr('no cloud data') : avgC >= 85 ? tr('covered') : avgC >= 50 ? tr('mostly covered') : avgC >= 20 ? tr('some gaps') : tr('clear'), tr('a clear sky')],
+      [tr('Aurora (Kp)'), maxKp >= need, maxKp.toFixed(1), tr('needs {n} here', { n: need }), tr('a stronger aurora')],
+      [tr('Moon'), !moonUp || ill < 50, moonUp ? ill + '%' : tr('down'), moonUp ? (ill >= 50 ? tr('brightens the sky') : tr('thin, little light')) : tr('dark sky'), tr('a darker sky (the Moon)')],
     ];
-    const chip = ([ic, name, ok, , txt]) => `<div style="flex:1 1 140px;min-width:0;display:flex;gap:9px;align-items:center;padding:9px 11px;border-radius:12px;background:${ok ? 'rgba(57,255,158,.07)' : 'rgba(255,107,107,.08)'};border:1px solid ${ok ? 'rgba(57,255,158,.35)' : 'rgba(255,107,107,.45)'}">`
-      + `<span style="font-size:20px;line-height:1" aria-hidden="true">${ic}</span><div style="min-width:0"><div style="font:600 15px/1.1 'Barlow Condensed',Barlow,sans-serif;text-transform:uppercase;color:#E6EBF1">${name} <b style="color:${ok ? '#39FF9E' : '#FF6B6B'}">${ok ? '✓' : '✗'}</b></div>`
-      + `<div style="font:500 11px/1.35 'JetBrains Mono',monospace;color:#B4BFCC;margin-top:2px">${txt}</div></div></div>`;
-    const head = good ? `<div style="font:600 13px 'JetBrains Mono',monospace;color:#39FF9E;margin:2px 0 8px">★ ${tr('Best time: {a}–{b}', { a: fmt(p.best.from), b: fmt(p.best.to) })}</div>`
-      : `<div style="font:600 13px 'JetBrains Mono',monospace;color:#FF8A8A;margin:2px 0 8px">${tr('Missing tonight')}: ${checks.filter(c => !c[2]).map(c => c[3]).join(' · ') || tr('better timing')}</div>`;
-    // the hour-by-hour picture
-    const W = Math.max(280, el.clientWidth || 340), Lw = 62, top = 22, ch = 64, cb = 62, gap = 4, kpY = top + ch + cb + 16, Hh = kpY + 30;
-    const cw = (W - Lw) / hs.length, X = i => Lw + i * cw;
+    const OK = '#39FF9E', BAD = '#FF6B6B';
+    const head = good ? `<div style="font-weight:700;font-size:15px;color:${OK};margin:2px 0 10px">${tr('Best time tonight: {a}–{b}', { a: fmt(p.best.from), b: fmt(p.best.to) })}</div>`
+      : `<div style="font-weight:700;font-size:15px;color:#FF9B9B;margin:2px 0 10px">${tr('Missing tonight')}: ${C.filter(c => !c[1]).map(c => c[4]).join(', ') || tr('better timing')}</div>`;
+    const cells = C.map(([n, ok, v, note]) => `<div style="min-width:0;padding:8px 10px 9px;background:#0F1318;border-radius:10px;border-top:3px solid ${ok ? OK : BAD}">`
+      + `<div style="font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#A3B0C2">${n}</div>`
+      + `<div style="font-size:20px;font-weight:700;color:#F1F4F8;margin-top:2px;font-variant-numeric:tabular-nums">${v}</div>`
+      + `<div style="font-size:11.5px;color:${ok ? '#A3B0C2' : '#FF9B9B'};margin-top:1px;line-height:1.3">${note}</div></div>`).join('');
+    // ── the chart ──
+    const W = Math.max(300, el.clientWidth || 340), Lw = 54, Rw = 6, n = hs.length, cw = (W - Lw - Rw) / n;
+    const X = i => Lw + (i + .5) * cw, xt = t => Lw + ((t - hs[0].t) / H + .5) * cw;
+    const layers = hs.some(h => h.cl != null || h.cm != null || h.ch != null);
+    let y = 16; const yCl = y, rowH = 13, hCl = layers ? rowH * 3 : rowH * 2; y += hCl + 10;
+    const yKp = y, hKp = 92; y += hKp + 8; const yCh = y, hCh = 46; y += hCh + 6; const yMo = y, hMo = 14; y += hMo + 6; const yAx = y + 10, Hh = yAx + 4;
+    const t = (x, yy, s, col, sz, anc, w) => `<text x="${x}" y="${yy}" fill="${col}" font-size="${sz}" text-anchor="${anc || 'start'}" font-weight="${w || 500}">${s}</text>`;
+    const smooth = pts => { if (!pts.length) return ''; let d = `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+      for (let i = 0; i < pts.length - 1; i++) { const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+        d += ` C${(p1[0] + (p2[0] - p0[0]) / 6).toFixed(1)} ${(p1[1] + (p2[1] - p0[1]) / 6).toFixed(1)} ${(p2[0] - (p3[0] - p1[0]) / 6).toFixed(1)} ${(p2[1] - (p3[1] - p1[1]) / 6).toFixed(1)} ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`; }
+      return d; };
     const sky = s => s > -6 ? '#3A4E78' : s > -12 ? '#22304F' : s > -18 ? '#141C33' : '#0A0F1E';
-    let g = '';
-    const txt = (x, y, t, col, sz, anc, w) => `<text x="${x}" y="${y}" fill="${col}" font-size="${sz}" font-family="JetBrains Mono, monospace" text-anchor="${anc || 'start'}" font-weight="${w || 500}">${t}</text>`;
-    g += txt(0, top + 14, '☁ ' + tr('CLOUDS'), '#AEB8C6', 9.5, 'start', 700) + txt(0, top + ch + cb - 6, '★ ' + tr('CHANCE'), '#39FF9E', 9.5, 'start', 700) + txt(0, kpY + 4, tr('AURORA'), '#C9D1DB', 9.5, 'start', 700) + txt(0, kpY + 15, tr('Kp · need {n}', { n: need }), '#8E9AAB', 8.5);
-    hs.forEach((h, i) => { const x = X(i) + 1, w = cw - 2;
-      g += `<rect x="${x}" y="${top}" width="${w}" height="${ch + cb}" rx="4" fill="${sky(h.sun)}"><title>${tr('Sun {d}° below the horizon', { d: Math.round(-h.sun) })}</title></rect>`;
-      if (h.cloud != null) { const cH = h.cloud / 100 * ch; g += `<rect x="${x}" y="${top}" width="${w}" height="${Math.max(0, cH)}" rx="4" fill="#9AA6B8" fill-opacity=".6"/>`;
-        if (cw >= 22) g += txt(x + w / 2, top + Math.max(11, Math.min(ch - 3, cH - 4)), Math.round(h.cloud) + (cw >= 34 ? '%' : ''), '#fff', 9, 'middle', 700); }
-      const v = Math.min(1, h.score / .5), bH = v * (cb - 4);
-      if (bH > .5) g += `<rect x="${x + w * .14}" y="${top + ch + cb - bH}" width="${w * .72}" height="${bH}" rx="3" fill="#39FF9E" fill-opacity="${(.35 + .65 * v).toFixed(2)}"/>`;
-      if (h.moonUp) g += txt(x + w / 2, top - 7, h.ill > .5 ? '●' : '◐', h.ill > .5 ? '#FFF3C4' : '#9AA3B0', 11, 'middle');
-      if (h.kp != null) g += txt(x + w / 2, kpY + 6, h.kp.toFixed(0) + (h.kp >= need ? '✓' : ''), kpColor(h.kp), 10, 'middle', 700);
-      g += txt(x + w / 2, Hh - 2, fmt(h.t).slice(0, 2), '#A3B0C2', 9.5, 'middle');
-      if (cur && cur >= h.t && cur < h.t + H) g += `<rect x="${x - 1}" y="${top - 1}" width="${w + 2}" height="${ch + cb + 2}" rx="5" fill="none" stroke="#FFE600" stroke-width="2"/>`;
-    });
-    if (good) { const a = hs.findIndex(h => h.t >= p.best.from), b = hs.findIndex(h => h.t >= p.best.to), x0 = X(a) + 1, x1 = b < 0 ? W - 1 : X(b) - 1;
-      g += `<rect x="${x0}" y="${top + ch + 1}" width="${x1 - x0}" height="${cb - 2}" rx="5" fill="none" stroke="#FFE600" stroke-width="1.5" stroke-dasharray="4 3"/>`; }
-    else g += txt(Lw + (W - Lw) / 2, top + ch + cb / 2 + 4, tr('NO CHANCE IN ANY HOUR'), '#FF8A8A', 10.5, 'middle', 700);
-    const legend = [tr('sky shade = how dark'), tr('grey = clouds'), tr('green = chance'), '● ' + tr('bright Moon') + ' · ◐ ' + tr('thin'), '✓ ' + tr('Kp enough')].join(' · ');
-    el.innerHTML = head + `<div style="display:flex;flex-wrap:wrap;gap:6px">${checks.map(chip).join('')}</div>`
-      + `<svg viewBox="0 0 ${W} ${Hh}" width="100%" style="display:block;margin-top:12px;height:auto" role="img" aria-label="${tr('Tonight hour by hour: darkness, clouds and aurora chance')}">${g}</svg>`
-      + `<div style="font:500 10.5px/1.5 'JetBrains Mono',monospace;color:#8E9AAB;margin-top:4px">${legend}</div>`;
+    const uid = 'tn' + Math.random().toString(36).slice(2, 7);
+    let g = `<defs><linearGradient id="${uid}s" x1="0" x2="1">` + hs.map((h, i) => `<stop offset="${((i + .5) / n).toFixed(3)}" stop-color="${sky(h.sun)}"/>`).join('') + `</linearGradient>`
+      + `<linearGradient id="${uid}c" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#39FF9E" stop-opacity=".75"/><stop offset="1" stop-color="#39FF9E" stop-opacity=".05"/></linearGradient></defs>`;
+    // best window: a lit band through every row
+    if (good) { const x0 = xt(p.best.from) - cw / 2, x1 = xt(p.best.to) - cw / 2;
+      g += `<rect x="${x0}" y="${yCl - 4}" width="${x1 - x0}" height="${yMo + hMo - yCl + 6}" rx="6" fill="#FFE600" fill-opacity=".07" stroke="#FFE600" stroke-opacity=".45" stroke-dasharray="3 3"/>`
+        + t((x0 + x1) / 2, yCl - 6, tr('best {a}–{b}', { a: fmt(p.best.from), b: fmt(p.best.to) }), '#FFE600', 10, 'middle', 700); }
+    // clouds: high / mid / low (or total), grey = cover
+    const rows = layers ? [[tr('High'), 'ch'], [tr('Mid'), 'cm'], [tr('Low'), 'cl']] : [[tr('Clouds'), 'cloud']];
+    g += t(0, yCl + 9, tr('Clouds'), '#C9D1DB', 10.5, 'start', 700);
+    rows.forEach(([lab, k], r) => { const yy = yCl + (layers ? r * rowH : 0), hh = layers ? rowH - 2 : hCl - 2;
+      if (layers) g += t(Lw - 5, yy + 9.5, lab, '#8E9AAB', 9, 'end');
+      hs.forEach((h, i) => { const v = h[k]; if (v == null) return; g += `<rect x="${Lw + i * cw + .5}" y="${yy}" width="${cw - 1}" height="${hh}" fill="#D7DEE8" fill-opacity="${(.06 + .84 * v / 100).toFixed(2)}"><title>${lab} ${Math.round(v)}%</title></rect>`; }); });
+    if (cw >= 24) hs.forEach((h, i) => { if (h.cloud != null) g += t(X(i), yCl + hCl + 8, Math.round(h.cloud) + '%', '#A3B0C2', 8.5, 'middle'); });
+    // Kp on the night sky
+    const kY = k => yKp + hKp - Math.min(9, k) / 9 * hKp;
+    g += `<rect x="${Lw}" y="${yKp}" width="${W - Lw - Rw}" height="${hKp}" rx="6" fill="url(#${uid}s)"/>`;
+    [3, 6, 9].forEach(k => { g += `<line x1="${Lw}" x2="${W - Rw}" y1="${kY(k)}" y2="${kY(k)}" stroke="#fff" stroke-opacity=".07"/>` + t(Lw - 5, kY(k) + 3, k, '#6B7788', 8.5, 'end'); });
+    g += t(0, yKp + 11, tr('Aurora'), '#C9D1DB', 10.5, 'start', 700) + t(0, yKp + 24, 'Kp', '#8E9AAB', 9.5);
+    const kp = hs.map((h, i) => h.kp == null ? null : [X(i), kY(h.kp)]).filter(Boolean);
+    if (kp.length) { const d = smooth(kp);
+      g += `<path d="${d} L${kp[kp.length - 1][0]} ${yKp + hKp} L${kp[0][0]} ${yKp + hKp} Z" fill="#7FB8FF" fill-opacity=".14"/><path d="${d}" fill="none" stroke="#CFE3FF" stroke-width="2"/>`;
+      hs.forEach((h, i) => { if (h.kp != null) g += `<circle cx="${X(i)}" cy="${kY(h.kp)}" r="2.6" fill="${kpColor(h.kp)}"/>`; }); }
+    g += `<line x1="${Lw}" x2="${W - Rw}" y1="${kY(need)}" y2="${kY(need)}" stroke="${BAD}" stroke-width="1.4" stroke-dasharray="5 4"/>`
+      + t(W - Rw - 4, kY(need) - 4, tr('needed here: Kp {n}', { n: need }), '#FF9B9B', 9.5, 'end', 700);
+    // chance curve 0–100 %
+    const cY = v => yCh + hCh - v * (hCh - 4);
+    g += `<rect x="${Lw}" y="${yCh}" width="${W - Lw - Rw}" height="${hCh}" rx="6" fill="#0F1318"/>` + t(0, yCh + 11, tr('Chance'), '#C9D1DB', 10.5, 'start', 700);
+    const cp = hs.map((h, i) => [X(i), cY(Math.min(1, h.score / .5))]), any = hs.some(h => h.score / .5 >= .04);
+    if (any) { const d = smooth(cp); g += `<path d="${d} L${cp[cp.length - 1][0]} ${yCh + hCh} L${cp[0][0]} ${yCh + hCh} Z" fill="url(#${uid}c)"/><path d="${d}" fill="none" stroke="#39FF9E" stroke-width="1.8"/>`;
+      const top = hs.reduce((a, h, i) => h.score > hs[a].score ? i : a, 0), pc = Math.round(Math.min(1, hs[top].score / .5) * 100);
+      g += t(X(top), Math.max(yCh + 10, cY(pc / 100) - 4), pc + '%', '#CFFFE6', 9.5, 'middle', 700); }
+    else g += t(Lw + (W - Lw - Rw) / 2, yCh + hCh / 2 + 4, tr('no chance in any hour'), '#FF9B9B', 10.5, 'middle', 700);
+    // Moon: band while it's up, brighter = fuller
+    g += t(0, yMo + 10, tr('Moon'), '#C9D1DB', 10.5, 'start', 700);
+    let first = -1; hs.forEach((h, i) => { if (!h.moonUp) return; if (first < 0) first = i;
+      g += `<rect x="${Lw + i * cw}" y="${yMo + 2}" width="${cw + .5}" height="${hMo - 4}" fill="#FFF3C4" fill-opacity="${(.12 + .55 * h.ill).toFixed(2)}"/>`; });
+    g += first >= 0 ? t(Lw + first * cw + 4, yMo + 10.5, tr('Moon up · {p}% lit', { p: ill }), '#0A0A0A', 9, 'start', 700) : t(Lw + 4, yMo + 10.5, tr('Moon down all night'), '#8E9AAB', 9);
+    // time axis + the clock's moment
+    const every = cw >= 26 ? 1 : 2;
+    hs.forEach((h, i) => { if (i % every === 0) g += t(X(i), yAx, fmt(h.t), '#A3B0C2', 9.5, 'middle'); });
+    if (cur && cur >= hs[0].t && cur < hs[n - 1].t + H) { const xc = xt(cur - H / 2); g += `<line x1="${xc}" x2="${xc}" y1="${yCl - 2}" y2="${yMo + hMo}" stroke="#FFE600" stroke-width="1.5"/>`; }
+    el.innerHTML = head + `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px">${cells}</div>`
+      + `<svg viewBox="0 0 ${W} ${Hh}" width="100%" style="display:block;margin-top:14px;height:auto;font-family:inherit" role="img" aria-label="${tr('Tonight hour by hour: darkness, clouds and aurora chance')}">${g}</svg>`;
   }
 
   window.AuroraTonight = { plan, sentence, render, sunAlt, moonAlt, moonIll };
