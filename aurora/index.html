@@ -220,7 +220,7 @@
   .sstat.stale { color: #FF6B6B; }
   .scount { font: 500 11px 'JetBrains Mono', monospace; color: var(--faint); padding-bottom: 4px; }
   #sunBox { position: relative; background: #000; border-radius: 22px; aspect-ratio: 1; overflow: hidden; margin-top: 14px; touch-action: pan-y; }
-  #sunBox img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; transition: opacity .14s linear; }
+  #sunBox img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
   @media (prefers-reduced-motion: reduce) { #sunBox img { transition: none; } }
   #sunBox > :not(img) { z-index: 3; }
   .stag { position: absolute; left: 12px; top: 12px; display: flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 8px; background: rgba(0,0,0,.6);
@@ -552,7 +552,7 @@ $('locGps').onclick = () => {
 };
 const hhmm = d => new Date(d).toLocaleTimeString(LOC, { timeZone: TZ, hour: '2-digit', minute: '2-digit' });
 const day = d => new Date(d).toLocaleDateString(LOC, { timeZone: TZ, weekday: 'short', day: 'numeric' });
-const kpColor = k => k >= 8 ? '#D9263D' : k >= 7 ? '#FF4444' : k >= 6 ? '#FF7A3D' : k >= 5 ? '#FFA040' : k >= 4 ? '#E8C766' : '#6EE7A0';
+const kpColor = k => k >= 9 ? '#E879F9' : k >= 8 ? '#B98CFF' : k >= 7 ? '#FF4D4D' : k >= 6 ? '#FF9338' : k >= 5 ? '#FFE14D' : k >= 4 ? '#B8F25C' : '#3FD98A';   // quiet green · active lime · G1 yellow · G2 orange · G3 red · G4 violet · G5 fuchsia
 async function j(u) { const r = await fetch(u, { cache: 'no-store' }); if (!r.ok) throw new Error(r.status); return r.json(); }
 const S = {};
 
@@ -677,8 +677,9 @@ function sunPick(k) {
     im.src = small(fr[i][1]); sun.imgs[i] = im; }, n * 15));
   sunShow(sun.i); if (typeof sy !== 'undefined' && sy.on) syShow(sy.t);
 }
-// two stacked pictures: the next frame is decoded first, then fades in over the current one (no flicker, no half-loaded frames)
-const small = u => u.replace('_1024_', '_512_');
+// two stacked pictures: the next frame is decoded off-screen, then swapped in at once (no half-loaded frames)
+// 512 px frames only where they're enough (small phone boxes); 1024 px elsewhere so the loop stays sharp
+const small = u => ($('sunBox').clientWidth || 400) * (devicePixelRatio || 1) > 720 ? u : u.replace('_1024_', '_512_');
 let sunTop = 0, sunSeq = 0;
 function sunImgSrc(u, fade) {
   $('sunFImg').src = u; const A = [$('sunImg'), $('sunImg2')], cur = A[sunTop], nxt = A[1 - sunTop], seq = ++sunSeq;
@@ -687,9 +688,7 @@ function sunImgSrc(u, fade) {
   const im = new Image(); im.src = u;
   (im.decode ? im.decode() : new Promise(r => { im.onload = im.onerror = r; })).catch(() => {}).then(() => {
     if (seq !== sunSeq) return;
-    nxt.style.transition = 'none'; nxt.style.opacity = 0; nxt.style.zIndex = 2; cur.style.zIndex = 1; nxt.src = u; void nxt.offsetWidth;
-    nxt.style.transition = ''; nxt.style.opacity = 1; sunTop = 1 - sunTop;
-    setTimeout(() => { if (seq === sunSeq) { cur.style.transition = 'none'; cur.style.opacity = 0; } }, 160);
+    nxt.src = u; nxt.style.opacity = 1; nxt.style.zIndex = 2; cur.style.zIndex = 1; cur.style.opacity = 0; sunTop = 1 - sunTop;
   });
 }
 function sunShow(i) {
@@ -958,7 +957,7 @@ function syReady(t) {
 function syStart() {
   if (!syRange()) { toast(T('Still loading the pictures…')); return; }
   sy.on = true; playLabel(true); if (!sy.t || sy.t >= sy.b) sy.t = sy.a;
-  clearInterval(sy.timer); sy.timer = setInterval(() => { let t = sy.t + 40 * 60000 * sy.spd; if (t > sy.b) t = sy.a; if (syReady(t)) syShow(t); }, 110);
+  clearInterval(sy.timer); let wait = 0; sy.timer = setInterval(() => { let t = sy.t + 60 * 60000 * sy.spd; if (t > sy.b) t = sy.a; if (!syReady(t) && wait++ < 3) return; wait = 0; syShow(t); }, 80);
 }
 // one control for everything: any play button plays the shared clock, any slider moves every view
 const syToggle = () => sy.timer ? syStop() : syStart();
@@ -1166,7 +1165,7 @@ const esc = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&a
 const BV = { get name() { return TOWN.name; }, get lat() { return TOWN.lat; }, get lon() { return TOWN.lon; } };
 const need = () => AuroraGlobe.kpNeed(TOWN.lat, TOWN.lon);
 const hhmm = d => d.toLocaleTimeString(LOC, { hour: '2-digit', minute: '2-digit', timeZone: TZ });
-const kpColor = k => k >= 8 ? '#D9263D' : k >= 7 ? '#FF4444' : k >= 6 ? '#FF7A3D' : k >= 5 ? '#FFA040' : k >= 4 ? '#E8C766' : '#6EE7A0';
+const kpColor = k => k >= 9 ? '#E879F9' : k >= 8 ? '#B98CFF' : k >= 7 ? '#FF4D4D' : k >= 6 ? '#FF9338' : k >= 5 ? '#FFE14D' : k >= 4 ? '#B8F25C' : '#3FD98A';   // quiet green · active lime · G1 yellow · G2 orange · G3 red · G4 violet · G5 fuchsia
 const gScale = k => k >= 9 ? 5 : k >= 8 ? 4 : k >= 7 ? 3 : k >= 6 ? 2 : k >= 5 ? 1 : 0;
 const G_TXT = ['QUIET', 'MINOR STORM', 'MODERATE STORM', 'STRONG STORM', 'SEVERE STORM', 'EXTREME STORM'].map(x => T(x));
 async function j(url) { const r = await fetch(url, { cache: 'no-store' }); if (!r.ok) throw new Error(r.status); return r.json(); }
