@@ -100,5 +100,5 @@ if '--clips' in sys.argv:
             continue
         subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-framerate', '12', '-i', f'{work}/%04d.jpg',
                         '-vf', 'scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:(ow-iw)/2:(oh-ih)/2,format=yuv420p',
-                        '-c:x', 'libx264', '-crf', '25', '-movflags', '+faststart', f'clips/sun-{fid}.mp4'], check=False)
+                        '-c:v', 'libx264', '-crf', '25', '-movflags', '+faststart', f'clips/sun-{fid}.mp4'], check=False)
         print('clip', fid, n, 'frames')
