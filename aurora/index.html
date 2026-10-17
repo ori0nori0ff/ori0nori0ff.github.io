@@ -16,7 +16,7 @@
 <meta property="og:locale" content="ro_RO"><meta property="og:locale:alternate" content="en_GB"><meta property="og:locale:alternate" content="de_DE">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#0A0A0A">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://services.swpc.noaa.gov https://api.open-meteo.com https://geocoding-api.open-meteo.com https://raw.githubusercontent.com; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://services.swpc.noaa.gov https://api.open-meteo.com https://geocoding-api.open-meteo.com https://raw.githubusercontent.com https://earthquake.usgs.gov; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
   /* one clean font everywhere: Inter (OFL, self-hosted). The old family names (used in CSS and on the canvases) map to it too. */
@@ -315,6 +315,15 @@
   .safegrid > div { background: #0F1318; border-radius: 12px; padding: 12px 14px; font-size: 14px; line-height: 1.55; color: var(--dim); border-left: 3px solid #39FF9E; }
   .safegrid b { color: #E6EBF1; display: block; margin-bottom: 2px; }
   @media (min-width: 760px) { .safegrid { grid-template-columns: 1fr 1fr; } } @media (min-width: 1200px) { .safegrid { grid-template-columns: repeat(3, 1fr); } }
+  .eqleg { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--dim); margin-top: 6px; } .eqleg i { display: inline-block; margin-right: 6px; vertical-align: -1px; }
+  .eqleg .dot { width: 10px; height: 10px; border-radius: 50%; background: #FFB347; } .eqleg .tri { width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 10px solid #FF4D4D; }
+  #eqMap { width: 100%; display: block; margin-top: 8px; border-radius: 12px; background: #0B1220; }
+  #eqTime, #lgChart { width: 100%; display: block; margin-top: 10px; }
+  .eqr, .vor { display: grid; grid-template-columns: 52px 1fr auto; gap: 10px; align-items: baseline; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  .eqr b, .vor b { font-weight: 800; font-feature-settings: 'tnum'; } .eqr span, .vor span { color: var(--dim); font-size: 12px; white-space: nowrap; }
+  .vol { margin-top: 6px; max-height: 520px; overflow: auto; } .vor b { color: #FF7A7A; }
+  .corr { display: grid; gap: 8px; margin-top: 12px; } .corr > div { background: #0F1318; border-radius: 12px; padding: 10px 14px; font-size: 14px; line-height: 1.5; color: var(--dim); } .corr b { color: #E6EBF1; }
+  @media (min-width: 900px) { .corr { grid-template-columns: 1fr 1fr; } }
 </style>
 </head>
 <body>
@@ -477,6 +486,50 @@
   </div>
   <div id="sunFull"><div class="fimg"><img id="sunFImg" alt=""></div>
     <div class="sfctl"><button class="spbtn" id="sunFPlay">⏸</button><span class="stime" id="sunFTime">–</span><input type="range" id="sunFSlide" min="0" max="0" value="0"><button class="spbtn" id="sunFX">✕</button></div></div>
+  <div class="chap"><span aria-hidden="true">4</span><div><h2>Earth — while the Sun is busy</h2><p>Cosmic rays, Earth's magnetic field, earthquakes and volcanoes on the same clock as the Sun. A curiosity corner: some people link solar storms to earthquakes and eruptions, but science has not shown such a link. Here are the numbers, so you can look for yourself.</p></div></div>
+  <div class="grid two-col">
+  <section class="card app" id="secDst">
+    <div class="lbl">Earth's magnetic field · Dst index · Kyoto / NOAA</div>
+    <h2>How hard storms squeeze Earth's field</h2>
+    <div class="enlsum" id="dstSum">Loading…</div>
+    <svg id="dstChart" class="fillc"></svg>
+    <div class="help">Dst measures how much a storm weakens the magnetic field around the equator. Near 0 = calm; below −50 nT = a storm; below −100 = strong; below −250 = extreme (May 2024 reached −412).</div>
+  </section>
+  <section class="card app" id="secCr">
+    <div class="lbl">Cosmic rays · neutron monitor · NMDB</div>
+    <h2>Cosmic rays at the ground</h2>
+    <div class="enlsum" id="crSum">Loading…</div>
+    <svg id="crChart" class="fillc"></svg>
+    <div class="help">Particles from deep space hit the air and make neutrons that a monitor counts. When a CME passes Earth, its magnetic cloud sweeps some of them away: the count drops by a few percent within hours — a <b>Forbush decrease</b>, a real fingerprint of the Sun at the ground.</div>
+  </section>
+  </div>
+  <div class="grid two-col">
+  <section class="card app" id="secEq">
+    <div class="lbl">Earthquakes M4.5+ · last 7 days · USGS</div>
+    <h2>Earthquakes and volcanoes this week</h2>
+    <div class="enlsum" id="eqSum">Loading…</div>
+    <canvas id="eqMap" role="img" aria-label="World map with this week's earthquakes and the volcanoes erupting now"></canvas>
+    <div class="eqleg"><span><i class="dot"></i>earthquake (size = magnitude)</span><span><i class="tri"></i>erupting volcano</span></div>
+    <svg id="eqTime"></svg>
+    <div id="eqList"></div>
+  </section>
+  <section class="card app" id="secVo">
+    <div class="lbl">Volcanoes · Smithsonian Global Volcanism Program</div>
+    <h2>Erupting now</h2>
+    <div class="enlsum" id="voSum">Loading…</div>
+    <div id="voList" class="vol"></div>
+    <div class="help">Eruptions that began after 1990 and have no end date in the Smithsonian database; many are long, slow eruptions. VEI = how explosive (0 gentle … 8 colossal).</div>
+  </section>
+  </div>
+  <section class="card app" id="secLong">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <div><div class="lbl">Our journal · every day since 2008 · it grows by itself</div><h2 style="margin-top:4px">Sun and Earth, side by side</h2></div>
+      <div class="chips" id="lgRange"><div class="chip" data-lr="90">90 D</div><div class="chip on" data-lr="365">1 Y</div><div class="chip" data-lr="1825">5 Y</div><div class="chip" data-lr="0">ALL</div></div>
+    </div>
+    <svg id="lgChart"></svg>
+    <div class="corr" id="lgCorr"></div>
+    <div class="help">Every day the page's robot writes down the strongest Kp (GFZ Potsdam), the sunspot number (SILSO), the M5+ earthquakes (USGS) and eruptions that started (Smithsonian); the strongest storm (Dst), fastest wind and biggest flare (NOAA) are kept from October 2026 on. The test compares storm days with quiet days: if solar storms triggered earthquakes, storm days would clearly have more.</div>
+  </section>
   <section class="card safe" id="safe" aria-labelledby="hSafe">
     <div class="lbl">Safe for you · safe for us</div>
     <h2 id="hSafe">Safe and private</h2>
@@ -1437,6 +1490,134 @@ if (window.ResizeObserver) { const seen = new WeakMap(); const ro = new ResizeOb
 addEventListener('resize', () => { if (S.kpList) drawKpChart(S.kpList); if (S.cyc) drawCycles(); if (S.wind) drawWind(); if (swTab !== 'g') drawSw(); });
 window.redrawDeep = () => { if (S.kpNow != null) drawKpNow(S.kpNow); if (S.kpList) drawKpChart(S.kpList); };
 loadDeep(); setInterval(loadDeep, 10 * 60000);
+})();
+</script>
+<script>
+/* ── 4 · Earth: Dst, cosmic rays, earthquakes, volcanoes and the daily journal (aurora/data/*.json by the hourly job) ── */
+(function () {
+'use strict';
+const $ = id => document.getElementById(id), API = 'https://services.swpc.noaa.gov/';
+const D = {}, j = async u => { const r = await fetch(u, { cache: 'no-store' }); if (!r.ok) throw new Error(r.status); return r.json(); };
+const fmtD = t => new Date(t).toLocaleDateString(LOC, { day: 'numeric', month: 'short', timeZone: TZ }).toUpperCase();
+const fmtDT = t => new Date(t).toLocaleString(LOC, { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: TZ });
+const txt = (x, y, s, col, sz, anc, w) => `<text x="${x}" y="${y}" fill="${col}" font-size="${sz}" text-anchor="${anc || 'start'}" font-weight="${w || 500}">${s}</text>`;
+function frame(svg, H, from, to, L, R, T, B) {   // shared bits of a time chart: day ticks, now line, cursor map
+  const W = svg.clientWidth || 340, x = t => L + (t - from) / (to - from) * (W - L - R); let s = '';
+  const d = new Date(from); d.setHours(24, 0, 0, 0);
+  for (; d.getTime() < to; d.setDate(d.getDate() + 1)) { const xx = x(d.getTime()); s += `<line x1="${xx}" x2="${xx}" y1="${T}" y2="${H - B}" stroke="#2C3542"/>` + txt(xx + 3, H - 5, fmtD(d.getTime()), '#8E9AAB', 9); }
+  return { W, x, s, done: inner => { svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.innerHTML = s + inner; svg.dataset.tx = JSON.stringify([from, to, x(from), x(to), H]); window.tcursor && tcursor(); } };
+}
+// Dst: last 7 days
+function drawDst() {
+  const P = D.dst; if (!P || !P.length) return; const svg = $('dstChart'), H = Math.max(200, svg.clientHeight || 0), L = 36, R = 8, T = 10, B = 18;
+  const from = P[0][0], to = Date.now(), lo = Math.min(-120, ...P.map(p => p[1])) * 1.08, hi = 40;
+  const f = frame(svg, H, from, to, L, R, T, B), y = v => T + (hi - v) / (hi - lo) * (H - T - B); let s = '';
+  [[0, '#3A4350', '0'], [-50, '#FFE14D', '−50 ' + T_('storm')], [-100, '#FF9338', '−100 ' + T_('strong')], [-250, '#FF4D4D', '−250 ' + T_('extreme')]].filter(l => l[0] > lo).forEach(([v, c, l]) => {
+    s += `<line x1="${L}" x2="${f.W - R}" y1="${y(v)}" y2="${y(v)}" stroke="${c}" stroke-opacity="${v ? .55 : 1}" stroke-dasharray="${v ? '4 3' : ''}"/>` + txt(L - 4, y(v) + 3, v, '#6B7788', 8.5, 'end') + (v ? txt(f.W - R - 4, y(v) - 3, l, c, 9, 'end', 700) : ''); });
+  let d = ''; P.forEach((p, i) => { d += (i ? 'L' : 'M') + f.x(p[0]).toFixed(1) + ' ' + y(p[1]).toFixed(1); });
+  s += `<path d="${d} L${f.x(P[P.length - 1][0])} ${y(0)} L${f.x(P[0][0])} ${y(0)} Z" fill="#FF6B6B" fill-opacity=".14"/><path d="${d}" fill="none" stroke="#FF8A8A" stroke-width="1.8"/>`;
+  f.done(s);
+  const mn = P.reduce((a, p) => p[1] < a[1] ? p : a), now = P[P.length - 1][1], lvl = v => v <= -250 ? T_('an extreme storm') : v <= -100 ? T_('a strong storm') : v <= -50 ? T_('a storm') : v <= -30 ? T_('unsettled') : T_('calm');
+  $('dstSum').innerHTML = T_('Now <b>{v} nT</b> — {l}. Lowest this week <b>{m} nT</b> ({t}).', { v: now, l: lvl(now), m: mn[1], t: fmtDT(mn[0]) });
+}
+// cosmic rays: % against the 7-day mean
+function drawCr() {
+  const C = D.earth && D.earth.cosmic; if (!C || !C.pts || C.pts.length < 10) { $('secCr').style.display = 'none'; return; }
+  $('secCr').style.display = ''; const P = C.pts, svg = $('crChart'), H = Math.max(200, svg.clientHeight || 0), L = 36, R = 8, T = 10, B = 18;
+  const from = P[0][0], to = Math.max(Date.now(), P[P.length - 1][0]), lo = Math.min(-3, ...P.map(p => p[1])) * 1.1, hi = Math.max(3, ...P.map(p => p[1])) * 1.1;
+  const f = frame(svg, H, from, to, L, R, T, B), y = v => T + (hi - v) / (hi - lo) * (H - T - B); let s = '';
+  [-4, -2, 0, 2, 4].filter(v => v > lo && v < hi).forEach(v => { s += `<line x1="${L}" x2="${f.W - R}" y1="${y(v)}" y2="${y(v)}" stroke="${v ? '#1E2530' : '#3A4350'}"/>` + txt(L - 4, y(v) + 3, (v > 0 ? '+' : '') + v + '%', '#6B7788', 8.5, 'end'); });
+  let d = ''; P.forEach((p, i) => { d += (i ? 'L' : 'M') + f.x(p[0]).toFixed(1) + ' ' + y(p[1]).toFixed(1); });
+  s += `<path d="${d}" fill="none" stroke="#7FB8FF" stroke-width="1.6"/>`; f.done(s);
+  const mn = P.reduce((a, p) => p[1] < a[1] ? p : a);
+  $('crSum').innerHTML = T_('Station {s}. Lowest this week <b>{v}%</b> below normal ({t}).', { s: C.station, v: Math.abs(mn[1]).toFixed(1), t: fmtDT(mn[0]) }) + ' ' + (mn[1] <= -3 ? T_('A drop like that usually means a CME went past.') : T_('No clear Forbush decrease this week.'));
+}
+// world map (equirectangular, Natural Earth land) with quakes and erupting volcanoes
+function drawMap() {
+  const cv = $('eqMap'), W = cv.clientWidth || 340, H = Math.round(W / 2), dpr = Math.max(2, devicePixelRatio || 1);
+  if (cv.width !== W * dpr) { cv.width = W * dpr; cv.height = H * dpr; cv.style.height = H + 'px'; }
+  const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.fillStyle = '#0B1220'; g.fillRect(0, 0, W, H);
+  const X = lon => (lon + 180) / 360 * W, Y = lat => (90 - lat) / 180 * H;
+  g.fillStyle = '#1F2A3A'; (window.LAND || []).forEach(r => { g.beginPath(); r.forEach((p, i) => i ? g.lineTo(X(p[0]), Y(p[1])) : g.moveTo(X(p[0]), Y(p[1]))); g.closePath(); g.fill(); });
+  g.strokeStyle = 'rgba(255,255,255,.05)'; for (let la = -60; la <= 60; la += 30) { g.beginPath(); g.moveTo(0, Y(la)); g.lineTo(W, Y(la)); g.stroke(); }
+  ((D.earth && D.earth.ongoing) || []).forEach(v => { const x = X(v[2]), y = Y(v[1]), s = 4.5; g.fillStyle = '#FF4D4D'; g.beginPath(); g.moveTo(x, y - s); g.lineTo(x + s, y + s * .8); g.lineTo(x - s, y + s * .8); g.closePath(); g.fill(); });
+  (D.eq || []).slice().sort((a, b) => a.m - b.m).forEach(q => { const r = Math.max(2, (q.m - 4) * 3.2); g.fillStyle = q.m >= 6 ? 'rgba(255,147,56,.85)' : 'rgba(255,179,71,.55)'; g.beginPath(); g.arc(X(q.lon), Y(q.lat), r, 0, 7); g.fill();
+    if (q.m >= 6) { g.strokeStyle = '#fff'; g.lineWidth = 1; g.stroke(); } });
+  g.fillStyle = '#FFE08A'; g.beginPath(); g.arc(X(TOWN.lon), Y(TOWN.lat), 3, 0, 7); g.fill();
+}
+// the week's quakes on the clock, Kp bars behind them
+function drawEqTime() {
+  const svg = $('eqTime'), H = 130, L = 36, R = 8, T = 10, B = 18, to = Date.now(), from = to - 7 * 864e5, f = frame(svg, H, from, to, L, R, T, B);
+  const y = m => T + (8 - Math.min(8, m)) / (8 - 4.5) * (H - T - B); let s = '';
+  ((typeof S !== 'undefined' && S.kpList) || []).forEach(p => { const t = Date.parse(p.time_tag + 'Z'); if (t < from || t > to) return; const k = +p.kp, x0 = f.x(t), w = f.x(t + 3 * 3600e3) - x0;
+    s += `<rect x="${x0}" y="${H - B - k / 9 * (H - T - B)}" width="${Math.max(1, w - 1)}" height="${k / 9 * (H - T - B)}" fill="${kpColor(k)}" fill-opacity=".18"/>`; });
+  [5, 6, 7].forEach(m => { s += `<line x1="${L}" x2="${f.W - R}" y1="${y(m)}" y2="${y(m)}" stroke="#1E2530"/>` + txt(L - 4, y(m) + 3, 'M' + m, '#6B7788', 8.5, 'end'); });
+  (D.eq || []).forEach(q => { if (q.t >= from) s += `<circle cx="${f.x(q.t).toFixed(1)}" cy="${y(q.m).toFixed(1)}" r="${Math.max(2, (q.m - 4) * 2.2)}" fill="${q.m >= 6 ? '#FF9338' : '#FFB347'}" fill-opacity=".8"/>`; });
+  s += txt(f.W - R - 4, T + 9, T_('dots = earthquakes · coloured bars = Kp'), '#8E9AAB', 9, 'end'); f.done(s);
+}
+function drawEq() {
+  const Q = D.eq || []; if (!Q.length) return; drawMap(); drawEqTime();
+  const n6 = Q.filter(q => q.m >= 6).length, top = Q.slice().sort((a, b) => b.m - a.m).slice(0, 6);
+  $('eqSum').innerHTML = T_('<b>{n}</b> earthquakes of magnitude 4.5 or more in the last 7 days, <b>{b}</b> of them 6+. A normal week has about 100–150 and two or three 6+.', { n: Q.length, b: n6 });
+  $('eqList').innerHTML = top.map(q => `<div class="eqr"><b style="color:${q.m >= 6 ? '#FF9338' : '#FFB347'}">M${q.m.toFixed(1)}</b><div>${esc(q.place || '')}</div><span>${fmtDT(q.t)}</span></div>`).join('');
+}
+function drawVo() {
+  const V = (D.earth && D.earth.ongoing) || []; if (!V.length) { $('voSum').textContent = T_('Volcano data not available right now.'); return; }
+  $('voSum').innerHTML = T_('<b>{n}</b> eruptions are going on around the world.', { n: V.length });
+  $('voList').innerHTML = V.map(v => `<div class="vor"><b>▲</b><div>${esc(v[0])}${v[4] != null ? ' <span>VEI ' + v[4] + '</span>' : ''}</div><span>${T_('since {d}', { d: new Date(v[3] + 'T00:00:00Z').toLocaleDateString(LOC, { month: 'short', year: 'numeric', timeZone: 'UTC' }) })}</span></div>`).join('');
+}
+// the journal: panels over the chosen range (daily, weekly or monthly bins) + the storm-day test
+let lgDays = 365;
+document.querySelectorAll('[data-lr]').forEach(c => c.onclick = () => { lgDays = +c.dataset.lr; document.querySelectorAll('[data-lr]').forEach(o => o.classList.toggle('on', o === c)); drawLong(); });
+function drawLong() {
+  const J = D.journal; if (!J) return; const n = J.kp.length, d0 = Date.parse(J.from + 'T00:00:00Z'), a = lgDays ? Math.max(0, n - lgDays) : 0, days = n - a;
+  const bin = days > 2000 ? 30 : days > 400 ? 7 : 1, nb = Math.ceil(days / bin), avg = (arr, i0) => { let s = 0, c = 0; for (let i = i0; i < Math.min(n, i0 + bin); i++) if (arr[i] != null) { s += arr[i]; c++; } return c ? s / c : null; };
+  const mx = (arr, i0) => { let m = null; for (let i = i0; i < Math.min(n, i0 + bin); i++) if (arr[i] != null) m = m == null ? arr[i] : Math.max(m, arr[i]); return m; };
+  const mn = (arr, i0) => { let m = null; for (let i = i0; i < Math.min(n, i0 + bin); i++) if (arr[i] != null) m = m == null ? arr[i] : Math.min(m, arr[i]); return m; };
+  const B = Array.from({ length: nb }, (_, k) => { const i0 = a + k * bin; return { t: d0 + i0 * 864e5, kp: mx(J.kp, i0), kpa: avg(J.kp, i0), ssn: avg(J.ssn, i0), q5: avg(J.q5, i0), dst: mn(J.dst, i0) }; });
+  // eruption starts per month (only for ranges of a year or more)
+  const EM = D.earth && D.earth.eruptMonthly, eru = EM && days >= 365 ? (() => { const [y0, m0] = EM.from.split('-').map(Number), out = [];
+    EM.n.forEach((c, i) => { const t = Date.UTC(y0, m0 - 1 + i, 1); if (t >= d0 + a * 864e5) out.push([t, c]); }); return out; })() : null;
+  const hasDst = B.some(b => b.dst != null), panels = [['kp', T_('Strongest Kp'), 9], ['ssn', T_('Sunspots'), null], ['q5', T_('M5+ earthquakes per day'), null]].concat(eru ? [['eru', T_('Eruptions started per month'), null]] : []).concat(hasDst ? [['dst', 'Dst (nT)', null]] : []);
+  const svg = $('lgChart'), W = svg.clientWidth || 340, L = 40, R = 8, ph = 74, gap = 24, top = 16, H = top + panels.length * (ph + gap) - gap + 20, from = B[0].t, to = d0 + n * 864e5;
+  const x = t => L + (t - from) / (to - from) * (W - L - R), bw = Math.max(1, (W - L - R) / nb - (bin > 1 ? .6 : .2)); let s = '';
+  panels.forEach(([k, name], pi) => {
+    const y0 = top + pi * (ph + gap); s += `<rect x="${L}" y="${y0}" width="${W - L - R}" height="${ph}" rx="6" fill="#0F1318"/>` + txt(L, y0 - 5, name, '#C9D1DB', 10.5, 'start', 700);
+    if (k === 'eru') { const m = Math.max(4, ...eru.map(e => e[1])); eru.forEach(([t, c]) => { const h = c / m * (ph - 4); s += `<rect x="${x(t)}" y="${y0 + ph - h}" width="${Math.max(1, x(t + 30 * 864e5) - x(t) - .6)}" height="${h}" fill="#FF6B6B" fill-opacity=".75"/>`; }); s += txt(L - 4, y0 + 9, m, '#6B7788', 8.5, 'end'); return; }
+    const vals = B.map(b => b[k]).filter(v => v != null); if (!vals.length) { s += txt(L + 8, y0 + ph / 2 + 4, T_('collected from October 2026 on'), '#6B7788', 10); return; }
+    if (k === 'dst') { const lo = Math.min(-100, ...vals); B.forEach(b => { if (b.dst == null) return; const h = b.dst / lo * (ph - 4); s += `<rect x="${x(b.t)}" y="${y0}" width="${bw}" height="${h}" fill="#FF8A8A" fill-opacity=".7"/>`; }); s += txt(L - 4, y0 + ph, Math.round(lo), '#6B7788', 8.5, 'end'); return; }
+    const m = k === 'kp' ? 9 : Math.max(1, ...vals) * 1.1, yv = v => y0 + ph - v / m * (ph - 4);
+    s += txt(L - 4, y0 + 9, Math.round(m), '#6B7788', 8.5, 'end') + txt(L - 4, y0 + ph, 0, '#6B7788', 8.5, 'end');
+    if (k === 'ssn') { let d = ''; B.forEach((b, i) => { if (b.ssn != null) d += (d ? 'L' : 'M') + (x(b.t) + bw / 2).toFixed(1) + ' ' + yv(b.ssn).toFixed(1); }); s += `<path d="${d}" fill="none" stroke="#FFD24D" stroke-width="1.6"/>`; }
+    else B.forEach(b => { const v = b[k]; if (v == null) return; s += `<rect x="${x(b.t).toFixed(1)}" y="${yv(v).toFixed(1)}" width="${bw.toFixed(1)}" height="${(y0 + ph - yv(v)).toFixed(1)}" fill="${k === 'kp' ? kpColor(v) : '#FFB347'}" fill-opacity="${k === 'kp' ? .85 : .7}"/>`; });
+  });
+  const yb = top + panels.length * (ph + gap) - gap, yr = new Date(from).getUTCFullYear();
+  if (days > 400) for (let Y = yr + 1; Date.UTC(Y, 0, 1) < to; Y++) { const xx = x(Date.UTC(Y, 0, 1)); s += `<line x1="${xx}" x2="${xx}" y1="${top}" y2="${yb}" stroke="#2C3542"/>` + txt(xx + 3, yb + 13, Y, '#8E9AAB', 9); }
+  else { const d = new Date(from); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() + 1); for (; d.getTime() < to; d.setUTCMonth(d.getUTCMonth() + 1)) { const xx = x(d.getTime()); s += `<line x1="${xx}" x2="${xx}" y1="${top}" y2="${yb}" stroke="#2C3542"/>` + txt(xx + 3, yb + 13, d.toLocaleDateString(LOC, { month: 'short', timeZone: 'UTC' }).toUpperCase(), '#8E9AAB', 9); } }
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.innerHTML = s; svg.dataset.tx = JSON.stringify([from, to, x(from), x(to), H]); window.tcursor && tcursor();
+  // the honest test: quakes on storm days vs quiet days, and sunspots vs quakes month by month
+  let sq = 0, sn = 0, qq = 0, qn = 0; for (let i = a; i < n; i++) { const k = J.kp[i], q = J.q5[i]; if (k == null || q == null) continue; if (k >= 5) { sq += q; sn++; } else if (k < 4) { qq += q; qn++; } }
+  const ms = [], mq = []; for (let i = a; i < n; i += 30) { const s1 = avg(J.ssn, i), q1 = avg(J.q5, i); if (s1 != null && q1 != null) { ms.push(s1); mq.push(q1); } }
+  const r = (() => { if (ms.length < 6) return null; const mx_ = ms.reduce((p, c) => p + c, 0) / ms.length, my = mq.reduce((p, c) => p + c, 0) / mq.length; let num = 0, dx = 0, dy = 0; ms.forEach((v, i) => { num += (v - mx_) * (mq[i] - my); dx += (v - mx_) ** 2; dy += (mq[i] - my) ** 2; }); return num / Math.sqrt(dx * dy); })();
+  const st = sn ? sq / sn : null, qu = qn ? qq / qn : null, diff = st != null && qu ? (st - qu) / qu : null;
+  $('lgCorr').innerHTML = `<div>${st != null && qu != null ? T_('Storm days (Kp 5+): <b>{a}</b> M5+ earthquakes a day ({n} days). Quiet days (Kp under 4): <b>{b}</b> a day ({m} days).', { a: st.toFixed(2), n: sn, b: qu.toFixed(2), m: qn }) + ' ' + (Math.abs(diff) < .15 ? T_('<b>No clear difference.</b>') : diff > 0 ? T_('Storm days have a bit more — with this few days that can easily be chance.') : T_('Storm days have a bit fewer — with this few days that can easily be chance.')) : T_('Not enough storm days in this range for the test.')}</div>`
+    + `<div>${r != null ? T_('Sunspots vs earthquakes, month by month: correlation <b>r = {r}</b>.', { r: r.toFixed(2) }) + ' ' + (Math.abs(r) < .2 ? T_('Close to 0 means no link.') : Math.abs(r) < .4 ? T_('A weak link — it may be chance.') : T_('A noticeable link in this range — worth a closer look, but it is not proof.')) : T_('Choose a longer range for the month-by-month test.')}</div>`;
+}
+const T_ = (s, o) => window.T(s, o);
+async function loadEarth() {
+  await Promise.allSettled([
+    j(API + 'products/kyoto-dst.json').then(a => { D.dst = a.map(r => [Date.parse(r.time_tag + 'Z'), +r.dst]).filter(p => isFinite(p[1])); drawDst(); }),
+    j('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson').then(g => { D.eq = g.features.map(f => ({ t: f.properties.time, m: f.properties.mag, place: f.properties.place, lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] })); }),
+    j('data/earth.json?t=' + Math.floor(Date.now() / 600000)).then(e => { D.earth = e; }),
+    j('data/journal.json?t=' + Math.floor(Date.now() / 3600000)).then(J => { D.journal = J; }),
+  ]);
+  drawCr(); drawEq(); drawVo(); drawLong();
+}
+const redraw = () => { drawDst(); drawCr(); if (D.eq) { drawMap(); drawEqTime(); } drawLong(); };
+let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(redraw, 150); });
+if (window.ResizeObserver) { const seen = new WeakMap(); new ResizeObserver(es => es.forEach(e => { const k = Math.round(e.contentRect.width) + 'x' + Math.round(e.contentRect.height); if (seen.get(e.target) === k) return; seen.set(e.target, k); e.target.id === 'dstChart' ? drawDst() : drawCr(); })).observe($('dstChart')); }
+loadEarth(); setInterval(loadEarth, 15 * 60000);
+window.earthReport = () => ({ dst: $('dstChart'), cr: $('secCr').style.display === 'none' ? null : $('crChart'), map: $('eqMap'), eqt: $('eqTime'), lg: $('lgChart'), sums: ['dstSum', 'crSum', 'eqSum', 'voSum'].map(id => $(id).textContent), corr: [...$('lgCorr').children].map(d => d.textContent), vo: (D.earth && D.earth.ongoing) || [] });
 })();
 </script>
 </body>
