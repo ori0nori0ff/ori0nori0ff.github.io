@@ -318,6 +318,7 @@
   .eqleg { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--dim); margin-top: 6px; } .eqleg i { display: inline-block; margin-right: 6px; vertical-align: -1px; }
   .eqleg .dot { width: 10px; height: 10px; border-radius: 50%; background: #FFB347; } .eqleg .tri { width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 10px solid #FF4D4D; }
   #eqMap { width: 100%; display: block; margin-top: 8px; border-radius: 12px; background: #0B1220; }
+  #space3d { width: 100%; aspect-ratio: 16 / 9; min-height: 340px; max-height: 78vh; margin-top: 10px; }
   #eqTime, #lgChart { width: 100%; display: block; margin-top: 10px; }
   .eqr, .vor { display: grid; grid-template-columns: 52px 1fr auto; gap: 10px; align-items: baseline; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
   .eqr b, .vor b { font-weight: 800; font-feature-settings: 'tnum'; } .eqr span, .vor span { color: var(--dim); font-size: 12px; white-space: nowrap; }
@@ -413,6 +414,11 @@
     <div class="two"><div class="why" style="margin-top:10px;font-size:13px;color:var(--dim)">NOAA's computer model of the solar wind, seen from above the Sun: the spiral arms are streams of solar wind rotating with the Sun. A CME shows up as a bright bulge (yellow → red → white) racing outward; when it reaches the green Earth dot, density and speed jump — that's when storms (and aurora) can start. The yellow line in each chart = the moment shown. Tap a picture for full screen (turn the phone sideways). New runs every few hours; arrival times are ±7 h or so.</div><div class="help" id="enlHelp">The wind is a stream of particles from the Sun. <b>Faster</b> (over ~500 km/s) and with the magnet pointing <b>south</b> (Bz negative) = the aurora switches on. A <b>bright bulge</b> racing out from the Sun is a CME — when it reaches the green Earth dot, that's the best chance for a big show.</div></div>
   </section>
   </div>
+  <section class="card" id="sec3d" aria-labelledby="h3d">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><div><div class="lbl">3D model · planets, solar wind and CMEs on the same clock</div><h2 id="h3d" style="margin-top:4px">Fly through the solar wind</h2></div></div>
+    <div id="space3d" role="img" aria-label="3D model of the solar system with the solar wind streaming from the Sun and the CMEs in flight"></div>
+    <div class="help">A model, not a photo: the planets sit where they really are at the clock's time; the solar wind streams out of the turning Sun (speed and colour from NOAA's model at Earth); CMEs from NASA's DONKI catalogue grow at their measured speed and direction. Distances are real, sizes are not. Drag to turn, pinch or scroll to zoom, tap a planet to fly to it — the play button above moves everything together.</div>
+  </section>
   <div class="chap xfull"><span aria-hidden="true">2</span><div><h2>Arrival</h2><p>A spacecraft 1.5 million km towards the Sun measures the wind 30–60 minutes before it hits us. Speed, density and above all Bz (the magnetic direction) decide what happens next.</p></div></div>
   <div class="grid two-col xfull">
   <section class="card app">
@@ -518,7 +524,7 @@
     <h2>Erupting now</h2>
     <div class="enlsum" id="voSum">Loading…</div>
     <div id="voList" class="vol"></div>
-    <div class="help">Eruptions that began after 1990 and have no end date in the Smithsonian database; many are long, slow eruptions. VEI = how explosive (0 gentle … 8 colossal).</div>
+    <div class="help">Eruptions still active at the Smithsonian database's latest update (it is updated every few months, so the newest ones can be missing); many are long, slow eruptions. VEI = how explosive (0 gentle … 8 colossal).</div>
   </section>
   </div>
   <section class="card app" id="secLong">
@@ -555,6 +561,7 @@
 <script src="land.js"></script>
 <script src="globe.js"></script>
 <script src="tonight.js"></script>
+<script src="space3d.js"></script>
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
@@ -924,7 +931,7 @@ async function loadEnlil() {
   if (P.length < 2) throw new Error('empty');
   // NOAA keeps only the current run (starts ~2-3 days back); our hourly archive of earlier runs fills the Sun's 5 days
   const t0 = P[0].t, arT = ar && ar.ts ? ar.ts.filter(p => p[0] < t0 - 15 * 60000).map(p => ({ t: p[0], n: p[1], v: p[2], cme: !!p[3], old: true })) : [];
-  S.enl = arT.concat(P);
+  S.enl = arT.concat(P); if (window.space3d) space3d.setWind(S.enl);
   const first = !enl.frames.length;
   enl.frames = an.map(f => ({ u: API + f.url.replace(/^\//, ''), t: frameT(f.url) })).filter(f => f.t);
   const f0 = enl.frames.length ? enl.frames[0].t : Infinity;
@@ -980,6 +987,7 @@ function syShow(t) {
   $('sunLbl').textContent = SUNF[sun.k][1] + (after ? ' · ' + T('LATEST') : '');
   if (enl.frames.length) { const k = nearestIdx(enl.frames.length, m => enl.frames[m].t, sy.t); if (k !== enl.i) { clearInterval(enl.play); enl.play = null; enlShow(k); } }
   if (sy.timer) playLabel(true);
+  if (window.space3d) space3d.setTime(sy.t);
   const pos = Math.round((sy.t - sy.a) / (sy.b - sy.a) * 1000); SLIDES.forEach(id => { const el = $(id); if (el) { el.max = 1000; el.value = pos; } });
   tcursor();
 }
@@ -1181,6 +1189,9 @@ $('repSave').onclick = async () => {
   } catch (e) { console.error(e); toast(T('Could not make the report')); }
   b.classList.remove('busy'); b.textContent = keep;
 };
+/* ── 3D: planets + solar wind + CMEs (space3d.js), driven by the shared clock ── */
+window.space3d = window.Space3D ? Space3D.create($('space3d'), { wind: S.enl || [], time: Date.now(), tz: () => TZ }) : null;
+j('data/cme.json?t=' + Math.floor(Date.now() / 600000)).then(c => { if (window.space3d) space3d.setCmes(c.cmes); }).catch(() => {});
 function drawGlobe() { if (window.AuroraGlobe) AuroraGlobe.draw($('globe'), { ov: S.ov, lat0: Math.min(75, Math.max(50, TOWN.lat + 13)), lon0: TOWN.lon - 7, viewLine: true, label: true, here: TOWN }); }
 addEventListener('resize', () => { drawGlobe(); });
 
@@ -1563,7 +1574,7 @@ function drawEq() {
 }
 function drawVo() {
   const V = (D.earth && D.earth.ongoing) || []; if (!V.length) { $('voSum').textContent = T_('Volcano data not available right now.'); return; }
-  $('voSum').innerHTML = T_('<b>{n}</b> eruptions are going on around the world.', { n: V.length });
+  $('voSum').innerHTML = T_('<b>{n}</b> eruptions going on, according to the Smithsonian database (last update {d}).', { n: V.length, d: D.earth.gvpAsOf ? new Date(D.earth.gvpAsOf + 'T00:00:00Z').toLocaleDateString(LOC, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }) : '–' });
   $('voList').innerHTML = V.map(v => `<div class="vor"><b>▲</b><div>${esc(v[0])}${v[4] != null ? ' <span>VEI ' + v[4] + '</span>' : ''}</div><span>${T_('since {d}', { d: new Date(v[3] + 'T00:00:00Z').toLocaleDateString(LOC, { month: 'short', year: 'numeric', timeZone: 'UTC' }) })}</span></div>`).join('');
 }
 // the journal: panels over the chosen range (daily, weekly or monthly bins) + the storm-day test
