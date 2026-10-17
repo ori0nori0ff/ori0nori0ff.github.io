@@ -5,7 +5,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          B=https://services.swpc.noaa.gov/products/animations/enlil/
+          B=https://services.swpc.noaa.gov/images/animations/enlil/
           curl -s -D /tmp/h -o /tmp/l -H 'Origin: https://ori0nori0ff.github.io' $B; grep -i -E '^HTTP|access-control' /tmp/h; wc -c /tmp/l
           grep -o -E 'enlil_com2_[0-9]+_[0-9]{8}T[0-9]{6}\.jpg' /tmp/l | sort -u > /tmp/f; wc -l /tmp/f; head -3 /tmp/f; tail -3 /tmp/f
           echo runs:; sed -E 's/enlil_com2_([0-9]+)_.*/\1/' /tmp/f | sort | uniq -c | tail -20
