@@ -137,7 +137,8 @@ E = load('aurora/data/earth.json', {})
 E['updated'] = int(time.time() * 1000)
 
 # volcanoes (Smithsonian GVP): once a day is plenty
-if not E.get('ongoing') or NOW.hour == 3 or full:
+if not E.get('ongoing') or NOW.hour == 3 or full or E.get('gvp') != 2:
+    E['gvp'] = 2
     W = 'https://webservices.volcano.si.edu/geoserver/GVP-VOTW/ows?service=WFS&version=2.0.0&request=GetFeature&typeName=GVP-VOTW:Smithsonian_VOTW_Holocene_Eruptions&outputFormat=application/json&count=5000&sortBy=StartDateYear+D&cql_filter='
     on = get(W + urllib.parse.quote('EndDateYear IS NULL AND StartDateYear>=1990'))
     if on and on.get('features'):
