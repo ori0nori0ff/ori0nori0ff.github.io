@@ -449,5 +449,21 @@ window.I18N_DICT.de = {
   "no chance in any hour": "in keiner Stunde eine Chance",
   "Moon up · {p}% lit": "Mond am Himmel · {p}% beleuchtet",
   "Moon down all night": "Mond die ganze Nacht unter dem Horizont",
-  "The G scale · how far south the aurora reaches": "Die G-Skala · wie weit südlich Polarlicht reicht"
+  "The G scale · how far south the aurora reaches": "Die G-Skala · wie weit südlich Polarlicht reicht",
+  "The Sun": "Die Sonne",
+  "Solar wind forecast": "Sonnenwind-Vorhersage",
+  "Space weather at Earth": "Weltraumwetter an der Erde",
+  "MAKING THE REPORT…": "BERICHT WIRD ERSTELLT…",
+  "Aurora report": "Polarlicht-Bericht",
+  "Could not make the report": "Bericht konnte nicht erstellt werden",
+  "No cookies, no tracking, nothing about you is stored": "Keine Cookies, kein Tracking, nichts über dich wird gespeichert",
+  "⬇ Save the full report (image)": "⬇ Ganzen Bericht speichern (Bild)",
+  "Safe for you · safe for us": "Sicher für dich · sicher für uns",
+  "Safe and private": "Sicher und privat",
+  "<b>No account, no cookies, no ads.</b> There are no trackers or analytics on this page — we don't know who visits it.": "<b>Kein Konto, keine Cookies, keine Werbung.</b> Auf dieser Seite gibt es keine Tracker oder Statistiken — wir wissen nicht, wer sie besucht.",
+  "<b>Your place stays on your device.</b> It is saved only in your browser. Your GPS is used only when you tap “use my location”; a town search goes to Open-Meteo just to find its coordinates.": "<b>Dein Ort bleibt auf deinem Gerät.</b> Er wird nur in deinem Browser gespeichert. GPS wird nur genutzt, wenn du „meinen Standort verwenden“ tippst; eine Ortssuche geht nur an Open-Meteo, um die Koordinaten zu finden.",
+  "<b>Nothing is uploaded.</b> Share cards, the report and clips are made on your own device and only go where you send them.": "<b>Nichts wird hochgeladen.</b> Teilkarten, Bericht und Clips entstehen auf deinem Gerät und gehen nur dorthin, wohin du sie schickst.",
+  "<b>Only public science data.</b> NOAA, NASA, ESA/SOHO and Open-Meteo. For the share card the Sun picture passes through the wsrv.nl image proxy, which sees only the NASA picture's address.": "<b>Nur öffentliche Wissenschaftsdaten.</b> NOAA, NASA, ESA/SOHO und Open-Meteo. Für die Teilkarte läuft das Sonnenbild über den Bild-Proxy wsrv.nl, der nur die Adresse des NASA-Bildes sieht.",
+  "<b>Locked down.</b> HTTPS on GitHub Pages and a strict security policy: the page can only talk to these data sources, loads no outside scripts, and its fonts are hosted here.": "<b>Abgesichert.</b> HTTPS auf GitHub Pages und eine strenge Sicherheitsrichtlinie: Die Seite darf nur mit diesen Datenquellen sprechen, lädt keine fremden Skripte, und die Schriften liegen hier.",
+  "<b>Safe for us too.</b> No server, no database of visitors, no passwords or keys in the page. The code is public on GitHub, anyone can check it.": "<b>Auch für uns sicher.</b> Kein Server, keine Besucherdatenbank, keine Passwörter oder Schlüssel in der Seite. Der Code ist öffentlich auf GitHub, jeder kann ihn prüfen."
 };

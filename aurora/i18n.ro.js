@@ -449,5 +449,21 @@ window.I18N_DICT.ro = {
   "no chance in any hour": "nicio șansă în nicio oră",
   "Moon up · {p}% lit": "Luna e sus · {p}% luminată",
   "Moon down all night": "Luna sub orizont toată noaptea",
-  "The G scale · how far south the aurora reaches": "Scara G · cât de spre sud ajunge aurora"
+  "The G scale · how far south the aurora reaches": "Scara G · cât de spre sud ajunge aurora",
+  "The Sun": "Soarele",
+  "Solar wind forecast": "Prognoza vântului solar",
+  "Space weather at Earth": "Vremea spațială la Pământ",
+  "MAKING THE REPORT…": "SE FACE RAPORTUL…",
+  "Aurora report": "Raport auroră",
+  "Could not make the report": "Nu am putut face raportul",
+  "No cookies, no tracking, nothing about you is stored": "Fără cookie-uri, fără urmărire, nu se salvează nimic despre tine",
+  "⬇ Save the full report (image)": "⬇ Salvează tot raportul (imagine)",
+  "Safe for you · safe for us": "Sigur pentru tine · sigur pentru noi",
+  "Safe and private": "Sigur și privat",
+  "<b>No account, no cookies, no ads.</b> There are no trackers or analytics on this page — we don't know who visits it.": "<b>Fără cont, fără cookie-uri, fără reclame.</b> Pagina nu are niciun sistem de urmărire sau statistici — nu știm cine o vizitează.",
+  "<b>Your place stays on your device.</b> It is saved only in your browser. Your GPS is used only when you tap “use my location”; a town search goes to Open-Meteo just to find its coordinates.": "<b>Locul tău rămâne pe dispozitivul tău.</b> E salvat doar în browserul tău. GPS-ul e folosit doar când apeși „folosește locația mea”; căutarea unui oraș merge la Open-Meteo doar ca să-i afle coordonatele.",
+  "<b>Nothing is uploaded.</b> Share cards, the report and clips are made on your own device and only go where you send them.": "<b>Nu se încarcă nimic.</b> Cardurile, raportul și clipurile se fac pe dispozitivul tău și ajung doar unde le trimiți tu.",
+  "<b>Only public science data.</b> NOAA, NASA, ESA/SOHO and Open-Meteo. For the share card the Sun picture passes through the wsrv.nl image proxy, which sees only the NASA picture's address.": "<b>Doar date științifice publice.</b> NOAA, NASA, ESA/SOHO și Open-Meteo. Pentru cardul de distribuire, poza Soarelui trece prin proxy-ul de imagini wsrv.nl, care vede doar adresa pozei NASA.",
+  "<b>Locked down.</b> HTTPS on GitHub Pages and a strict security policy: the page can only talk to these data sources, loads no outside scripts, and its fonts are hosted here.": "<b>Securizată.</b> HTTPS pe GitHub Pages și o politică de securitate strictă: pagina poate comunica doar cu aceste surse de date, nu încarcă scripturi din afară, iar fonturile sunt găzduite aici.",
+  "<b>Safe for us too.</b> No server, no database of visitors, no passwords or keys in the page. The code is public on GitHub, anyone can check it.": "<b>Sigură și pentru noi.</b> Fără server, fără bază de date cu vizitatori, fără parole sau chei în pagină. Codul e public pe GitHub, oricine îl poate verifica."
 };

@@ -16,6 +16,8 @@
 <meta property="og:locale" content="ro_RO"><meta property="og:locale:alternate" content="en_GB"><meta property="og:locale:alternate" content="de_DE">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#0A0A0A">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://services.swpc.noaa.gov https://api.open-meteo.com https://geocoding-api.open-meteo.com https://raw.githubusercontent.com; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
   /* one clean font everywhere: Inter (OFL, self-hosted). The old family names (used in CSS and on the canvases) map to it too. */
   @font-face { font-family: 'Inter'; font-weight: 400; font-display: swap; src: url(fonts/inter-latin-400-normal.woff2) format('woff2'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
@@ -303,14 +305,23 @@
   .big { font: 800 60px/1 Inter, sans-serif; text-transform: none; letter-spacing: -1.5px; }
   .lbl { font-weight: 600; letter-spacing: .07em; }
   .scale b, .kpbig, .fact b, .gkp b { font-feature-settings: 'tnum', 'zero'; font-weight: 800; letter-spacing: -.5px; }
+  body.reporting svg.fillc { flex: none !important; height: 230px !important; min-height: 0 !important; }
+  .savebtn { border: 1px solid rgba(57,255,158,.55); background: rgba(57,255,158,.08); color: #39FF9E; border-radius: 999px; padding: 0 16px; min-height: 40px; font: 600 13px Inter, sans-serif; cursor: pointer; }
+  .savebtn.busy { opacity: .6; cursor: progress; }
+  .safelink { color: #8FE3B0; text-decoration: none; border-bottom: 1px dotted rgba(143,227,176,.6); text-transform: none; letter-spacing: 0; }
+  .safe h2 { margin-bottom: 8px; } .safegrid { display: grid; gap: 10px; margin-top: 6px; }
+  .safegrid > div { background: #0F1318; border-radius: 12px; padding: 12px 14px; font-size: 14px; line-height: 1.55; color: var(--dim); border-left: 3px solid #39FF9E; }
+  .safegrid b { color: #E6EBF1; display: block; margin-bottom: 2px; }
+  @media (min-width: 760px) { .safegrid { grid-template-columns: 1fr 1fr; } } @media (min-width: 1200px) { .safegrid { grid-template-columns: repeat(3, 1fr); } }
 </style>
 </head>
 <body>
 <main>
   <div class="sub" id="upd">Loading live data…</div>
   <h1>Aurora tonight</h1>
-  <div class="sub"><span id="place">from Brașov, Romania</span></div>
+  <div class="sub"><span id="place">from Brașov, Romania</span> · <a href="#safe" class="safelink">No cookies, no tracking, nothing about you is stored</a></div>
   <div class="topbar">
+    <button class="savebtn" id="repSave">⬇ Save the full report (image)</button>
     <div class="seg" role="group" aria-label="Language" data-noi18n><button data-lang="en" lang="en">EN</button><button data-lang="ro" lang="ro">RO</button><button data-lang="de" lang="de">DE</button></div>
   </div>
 
@@ -464,6 +475,18 @@
   </div>
   <div id="sunFull"><div class="fimg"><img id="sunFImg" alt=""></div>
     <div class="sfctl"><button class="spbtn" id="sunFPlay">⏸</button><span class="stime" id="sunFTime">–</span><input type="range" id="sunFSlide" min="0" max="0" value="0"><button class="spbtn" id="sunFX">✕</button></div></div>
+  <section class="card safe" id="safe" aria-labelledby="hSafe">
+    <div class="lbl">Safe for you · safe for us</div>
+    <h2 id="hSafe">Safe and private</h2>
+    <div class="safegrid">
+      <div><b>No account, no cookies, no ads.</b> There are no trackers or analytics on this page — we don't know who visits it.</div>
+      <div><b>Your place stays on your device.</b> It is saved only in your browser. Your GPS is used only when you tap “use my location”; a town search goes to Open-Meteo just to find its coordinates.</div>
+      <div><b>Nothing is uploaded.</b> Share cards, the report and clips are made on your own device and only go where you send them.</div>
+      <div><b>Only public science data.</b> NOAA, NASA, ESA/SOHO and Open-Meteo. For the share card the Sun picture passes through the wsrv.nl image proxy, which sees only the NASA picture's address.</div>
+      <div><b>Locked down.</b> HTTPS on GitHub Pages and a strict security policy: the page can only talk to these data sources, loads no outside scripts, and its fonts are hosted here.</div>
+      <div><b>Safe for us too.</b> No server, no database of visitors, no passwords or keys in the page. The code is public on GitHub, anyone can check it.</div>
+    </div>
+  </section>
   <footer>Live data: <a href="https://www.swpc.noaa.gov/" rel="noopener">NOAA SWPC</a> · <a href="https://sdo.gsfc.nasa.gov/" rel="noopener">NASA SDO</a> · <a href="https://soho.nascom.nasa.gov/" rel="noopener">SOHO (ESA/NASA)</a> · <a href="https://open-meteo.com/" rel="noopener">Open-Meteo</a><br>
     Forecasts are estimates. Made with PowHau.</footer>
 </main>
@@ -976,6 +999,114 @@ $('linkShare').onclick = async () => {
   try { await navigator.clipboard.writeText(d.url); toast(T('Link copied')); } catch (e) { prompt(T('Copy this link'), d.url); }
 };
 
+/* ── the full report: every card on one tall picture, made on this device ── */
+const b64 = buf => { let s = '', a = new Uint8Array(buf); for (let i = 0; i < a.length; i += 0x8000) s += String.fromCharCode.apply(null, a.subarray(i, i + 0x8000)); return btoa(s); };
+let fontCss = null;
+async function svgFonts() {   // the page's fonts, embedded, so chart text keeps them inside a picture
+  if (fontCss != null) return fontCss;
+  try { const f = async n => b64(await (await fetch('fonts/' + n)).arrayBuffer());
+    const [a, b, c] = await Promise.all([f('inter-latin-500-normal.woff2'), f('inter-latin-700-normal.woff2'), f('inter-latin-ext-500-normal.woff2')]);
+    fontCss = ['Inter', 'JetBrains Mono'].map(n => `@font-face{font-family:'${n}';font-weight:400 600;src:url(data:font/woff2;base64,${a})}@font-face{font-family:'${n}';font-weight:700 900;src:url(data:font/woff2;base64,${b})}@font-face{font-family:'${n}';src:url(data:font/woff2;base64,${c});unicode-range:U+0100-02AF}`).join('');
+  } catch (e) { fontCss = ''; }
+  return fontCss;
+}
+async function svgImg(svg) {   // an on-page SVG chart → an image (2× for a sharp picture)
+  if (!svg || !svg.viewBox || !svg.viewBox.baseVal || !svg.viewBox.baseVal.width || svg.style.display === 'none') return null;
+  const vb = svg.viewBox.baseVal, c = svg.cloneNode(true), css = await svgFonts();
+  c.setAttribute('xmlns', 'http://www.w3.org/2000/svg'); c.setAttribute('width', vb.width * 2); c.setAttribute('height', vb.height * 2);
+  c.setAttribute('style', 'font-family:Inter,sans-serif'); c.querySelectorAll('title').forEach(t => t.remove());
+  const st = document.createElementNS('http://www.w3.org/2000/svg', 'style'); st.textContent = css; c.insertBefore(st, c.firstChild);
+  const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(c)], { type: 'image/svg+xml' }));
+  const im = await loadImg(url); URL.revokeObjectURL(url); return im ? { im, w: vb.width, h: vb.height } : null;
+}
+async function makeReport() {
+  await Promise.all(['500 16px Inter', '700 16px Inter', '800 40px Inter'].map(f => document.fonts.load(f).catch(() => {})));
+  const W = 1800, P = 48, G = 24, cv = document.createElement('canvas'); cv.width = W; cv.height = 9000; const g = cv.getContext('2d');
+  g.fillStyle = '#0A0A0A'; g.fillRect(0, 0, W, cv.height);
+  const font = (w, sz) => `${w} ${sz}px Inter, system-ui, sans-serif`;
+  const text = (t, x, y, w, sz, col, al) => { g.font = font(w, sz); g.fillStyle = col; g.textAlign = al || 'left'; g.fillText(t, x, y); g.textAlign = 'left'; };
+  const wrap = (t, x, y, mw, w, sz, col, lh) => { g.font = font(w, sz); g.fillStyle = col; let line = '', n = 0;
+    String(t || '').split(/\s+/).forEach(word => { const tt = line ? line + ' ' + word : word; if (g.measureText(tt).width > mw && line) { g.fillText(line, x, y + n * lh); n++; line = word; } else line = tt; });
+    if (line) { g.fillText(line, x, y + n * lh); n++; } return n * lh; };
+  const card = (x, y, w, h, lbl) => { g.fillStyle = '#12161C'; g.strokeStyle = '#232830'; g.lineWidth = 2; g.beginPath(); g.roundRect(x, y, w, h, 22); g.fill(); g.stroke();
+    if (lbl) text(lbl.toUpperCase(), x + 26, y + 40, 600, 15, '#A3B0C2'); };
+  const fit = (im, mw, mh) => { const iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height, k = Math.min(mw / iw, mh ? mh / ih : 1e9); return [iw * k, ih * k]; };
+  const cardH = (inner) => inner + 72;
+  let y = P;
+  // header
+  const word = $('vword').textContent, col = getComputedStyle($('vword')).color;
+  text(T('AURORA TONIGHT').toUpperCase() + ' · ' + TOWN.name.toUpperCase() + (TOWN.sub ? ', ' + TOWN.sub.toUpperCase() : ''), P, y + 26, 600, 20, '#A3B0C2');
+  text(new Date().toLocaleString(LOC, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: TZ }), P, y + 58, 500, 20, '#6B7788');
+  text(word, P - 4, y + 160, 800, 110, col);
+  const vh = wrap($('vtext').textContent, P, y + 210, W * .56, 500, 24, '#C9D1DB', 34);
+  const facts = [[T('KP TONIGHT'), $('fKp').textContent, getComputedStyle($('fKp')).color], [T('CLOUDS'), $('fCloud').textContent, '#fff'], [T('DARK FROM'), $('fDark').textContent, '#fff'], [T('Kp index now'), $('kpNow').textContent, getComputedStyle($('kpNow')).color]];
+  const fx = W * .62, fw = (W - P - fx - G) / 2;
+  facts.forEach(([k, v, c], i) => { const x = fx + (i % 2) * (fw + G), yy = y + 90 + Math.floor(i / 2) * 120; card(x, yy, fw, 104); text(k.toUpperCase(), x + 22, yy + 34, 600, 14, '#A3B0C2'); text(v, x + 22, yy + 86, 800, 46, c); });
+  y += Math.max(210 + vh, 330) + G;
+  // tonight | globe
+  const lw = Math.round((W - 2 * P - G) * .62), rw = W - 2 * P - G - lw, tn = $('tonight'), tnSvg = await svgImg(tn.querySelector('svg'));
+  const cells = [...tn.querySelectorAll(':scope > div:nth-child(2) > div')], headTxt = tn.firstElementChild ? tn.firstElementChild.textContent : '';
+  const cw = (lw - 52 - 3 * 12) / 4, tsvH = tnSvg ? (lw - 52) / tnSvg.w * tnSvg.h : 0, tnH = 50 + 110 + 20 + tsvH + 60;
+  const gl = $('globe'), [gw, gh] = gl.width ? fit(gl, rw - 52, tnH - 30) : [0, 0], rowH = cardH(Math.max(tnH, gh + 50));
+  card(P, y, lw, rowH, T('Tonight hour by hour'));
+  text(headTxt, P + 26, y + 80, 700, 22, getComputedStyle(tn.firstElementChild || tn).color);
+  cells.forEach((c, i) => { const x = P + 26 + i * (cw + 12), yy = y + 100, d = c.children; g.fillStyle = '#0F1318'; g.beginPath(); g.roundRect(x, yy, cw, 104, 12); g.fill();
+    g.fillStyle = c.style.borderTopColor || '#39FF9E'; g.fillRect(x, yy, cw, 4);
+    text((d[0] && d[0].textContent || '').toUpperCase(), x + 14, yy + 30, 600, 13, '#A3B0C2'); text(d[1] ? d[1].textContent : '', x + 14, yy + 64, 700, 26, '#F1F4F8');
+    g.save(); g.beginPath(); g.rect(x, yy, cw - 6, 104); g.clip(); text(d[2] ? d[2].textContent : '', x + 14, yy + 90, 500, 15, d[2] ? getComputedStyle(d[2]).color : '#A3B0C2'); g.restore(); });
+  if (tnSvg) g.drawImage(tnSvg.im, P + 26, y + 228, lw - 52, tsvH);
+  wrap($('tnTxt').textContent, P + 26, y + 228 + tsvH + 36, lw - 52, 500, 18, '#C9D1DB', 26);
+  card(P + lw + G, y, rw, rowH, T('NOAA aurora forecast'));
+  if (gw) g.drawImage(gl, P + lw + G + (rw - gw) / 2, y + 60, gw, gh);
+  y += rowH + G;
+  // Sun | density | speed
+  const w3 = (W - 2 * P - 2 * G) / 3, t0 = sy.t || Date.now(), fr = sunFr(), si = fr.length ? nearestIdx(fr.length, k => fr[k][0], Math.min(t0, fr[fr.length - 1][0])) : -1;
+  const sunIm = await loadImg(viaProxy(si >= 0 ? fr[si][1] : latestOf(SUNF[sun.k])), true);
+  const eN = $('enlCvN'), eV = $('enlCvV'), [ew, eh] = eN.width ? fit(eN, w3 - 52) : [0, 0], h3 = cardH(Math.max(w3 - 52, eh) + 40);
+  card(P, y, w3, h3, T('The Sun') + ' · ' + SUNF[sun.k][1] + (si >= 0 ? ' · ' + sunT(fr[si][0]) : ''));
+  if (sunIm) { const [sw, sh] = fit(sunIm, w3 - 52, h3 - 110); g.save(); g.beginPath(); g.roundRect(P + 26, y + 60, sw, sh, 16); g.clip(); g.drawImage(sunIm, P + 26 + (w3 - 52 - sw) / 2, y + 60, sw, sh); g.restore(); }
+  else text(T('Sun picture not available'), P + w3 / 2, y + h3 / 2, 500, 18, '#6B7788', 'center');
+  [[eN, T('Density')], [eV, T('Speed')]].forEach(([c, n], i) => { const x = P + (i + 1) * (w3 + G); card(x, y, w3, h3, T('Solar wind forecast') + ' · ' + n + ' · ' + ($('enlT').textContent || ''));
+    if (ew) g.drawImage(c, x + 26, y + 60, ew, eh); });
+  y += h3 + G;
+  const sumH = cardH(wrap($('enlSum').textContent, -9999, 0, W - 2 * P - 52, 500, 19, '#000', 28) + 10);
+  card(P, y, W - 2 * P, sumH, T('Solar wind forecast') + ' · WSA-ENLIL'); wrap($('enlSum').textContent, P + 26, y + 80, W - 2 * P - 52, 500, 19, '#E6EBF1', 28);
+  y += sumH + G;
+  // Kp chart | space weather
+  document.body.classList.add('reporting'); await new Promise(r => setTimeout(r, 250));   // grown charts back to their natural height
+  const hw = (W - 2 * P - G) / 2, kp = await svgImg($('kpchart')), sw2 = await svgImg($('swChart')), wd = await svgImg($('windchart')), cy = await svgImg($('cycchart'));
+  document.body.classList.remove('reporting');
+  const ih = s2 => s2 ? (hw - 52) / s2.w * s2.h : 0, swTxt = $('swNow').textContent, ladder = [...document.querySelectorAll('#gLadder .glr')];
+  const swInner = 40 + 30 + (sw2 ? ih(sw2) : ladder.length * 46), rH = cardH(Math.max(ih(kp) + 10, swInner));
+  card(P, y, hw, rH, T('Kp · past 2 days + 3-day forecast')); if (kp) g.drawImage(kp.im, P + 26, y + 60, hw - 52, ih(kp));
+  const x2 = P + hw + G; card(x2, y, hw, rH, T('Space weather at Earth') + ' · ' + ['scG', 'scS', 'scR', 'scE'].map(id => $(id).textContent).join(' · '));
+  wrap(swTxt, x2 + 26, y + 80, hw - 52, 500, 17, '#E6EBF1', 24);
+  if (sw2) g.drawImage(sw2.im, x2 + 26, y + 110, hw - 52, ih(sw2));
+  else ladder.forEach((r, i) => { const yy = y + 110 + i * 46, now = r.classList.contains('now'); g.fillStyle = now ? 'rgba(255,230,0,.08)' : '#0F1318'; g.beginPath(); g.roundRect(x2 + 26, yy, hw - 52, 40, 10); g.fill();
+    const b = r.querySelector('b'); text(b.textContent, x2 + 42, yy + 27, 800, 18, getComputedStyle(b).color); text(r.querySelector('.glk').textContent, x2 + 100, yy + 27, 600, 15, '#DCE3EB');
+    g.save(); g.beginPath(); g.rect(x2 + 300, yy, hw - 330, 40); g.clip(); text(r.querySelector('.glt').textContent, x2 + 300, yy + 27, 500, 15, '#A3B0C2'); g.restore(); });
+  y += rH + G;
+  // measured wind | solar cycle
+  const cycTxtH = wrap($('cycSum').textContent, -9999, 0, hw - 52, 500, 16, '#000', 23), r2 = cardH(Math.max(ih(wd), ih(cy) + cycTxtH + 20) + 40);
+  card(P, y, hw, r2, T('Solar wind · measured at L1') + ' · ' + $('wSrc').textContent); if (wd) g.drawImage(wd.im, P + 26, y + 70, hw - 52, ih(wd));
+  card(x2, y, hw, r2, T('Solar cycle · sunspots')); const ch2 = wrap($('cycSum').textContent, x2 + 26, y + 80, hw - 52, 500, 16, '#E6EBF1', 23); if (cy) g.drawImage(cy.im, x2 + 26, y + 90 + ch2, hw - 52, ih(cy));
+  y += r2 + G;
+  // footer
+  text('ori0nori0ff.github.io/aurora', P, y + 30, 700, 24, '#5EE6FF');
+  text('NOAA SWPC · NASA SDO · SOHO (ESA/NASA) · Open-Meteo · PowHau', W - P, y + 30, 500, 18, '#6B7788', 'right');
+  y += 60;
+  const out = document.createElement('canvas'); out.width = W; out.height = y; out.getContext('2d').drawImage(cv, 0, 0); return out;
+}
+$('repSave').onclick = async () => {
+  const b = $('repSave'); if (b.classList.contains('busy')) return; const keep = b.textContent; b.classList.add('busy'); b.textContent = T('MAKING THE REPORT…');
+  try {
+    const c = await makeReport(), blob = await new Promise(r => c.toBlob(r, 'image/png'));
+    const name = 'aurora-report-' + TOWN.name.toLowerCase().replace(/\W+/g, '-') + '-' + new Date().toISOString().slice(0, 10) + '.png', file = new File([blob], name, { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] }) && matchMedia('(pointer: coarse)').matches) await navigator.share({ files: [file], text: T('Aurora report') + ' · ' + TOWN.name + ' — ' + location.href }).catch(() => {});
+    else enlFile(blob, name);
+  } catch (e) { console.error(e); toast(T('Could not make the report')); }
+  b.classList.remove('busy'); b.textContent = keep;
+};
 function drawGlobe() { if (window.AuroraGlobe) AuroraGlobe.draw($('globe'), { ov: S.ov, lat0: Math.min(75, Math.max(50, TOWN.lat + 13)), lon0: TOWN.lon - 7, viewLine: true, label: true, here: TOWN }); }
 addEventListener('resize', () => { drawGlobe(); });
 

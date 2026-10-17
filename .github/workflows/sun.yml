@@ -2,7 +2,7 @@
 # demand) also 48-hour MP4 clips per filter, uploaded to the "sun-clips" release (kept out of git history).
 name: Sun frames
 on:
-  schedule: [{ cron: '23 * * * *' }]
+  schedule: [{ cron: '23 * * * *' }, { cron: '53 * * * *' }]   # two slots: GitHub often skips or delays one
   workflow_dispatch:
     inputs:
       clips: { description: 'Also render clips', type: boolean, default: true }
@@ -18,7 +18,7 @@ jobs:
         id: c
         run: |
           h=$(date -u +%H)
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.clips }}" = "true" ] || [ $((10#$h % 3)) -eq 0 ]; then echo "clips=1" >> $GITHUB_OUTPUT; fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.clips }}" = "true" ] || { [ $((10#$h % 3)) -eq 0 ] && [ $((10#$(date -u +%M))) -lt 45 ]; }; then echo "clips=1" >> $GITHUB_OUTPUT; fi
       - if: steps.c.outputs.clips == '1'
         run: sudo apt-get -qq update && sudo apt-get -qq install -y ffmpeg > /dev/null
       - run: python3 tools/sun_frames.py ${{ steps.c.outputs.clips == '1' && '--clips' || '' }}
