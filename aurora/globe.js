@@ -40,7 +40,8 @@
 
   /**
    * draw(canvas, opts) — opts: ov (OVATION grid or null), lat0/lon0 (view centre, degrees),
-   * viewLine (bool), label (bool, "BRAȘOV" text), graticule (bool), rim (css colour or null).
+   * viewLine (bool), label (bool, place name), graticule (bool), rim (css colour or null),
+   * here ({lat, lon, name}: the marked place, default Brașov).
    */
   function draw(cv, o) {
     o = Object.assign({ ov: null, lat0: 58, lon0: 18, viewLine: true, label: true, graticule: true, rim: 'rgba(57,255,158,.18)' }, o || {});
@@ -103,11 +104,11 @@
       g.stroke(); g.restore();
     }
     if (o.rim) { g.strokeStyle = o.rim; g.lineWidth = 2 * dpr; g.beginPath(); g.arc(cx, cy, R, 0, 2 * Math.PI); g.stroke(); }
-    const q = proj(BV.lat, BV.lon);
+    const H = o.here || { lat: BV.lat, lon: BV.lon, name: 'Brașov' }, q = proj(H.lat, H.lon);
     if (q) {
       g.fillStyle = '#FFB300'; g.strokeStyle = '#0A0A0A'; g.lineWidth = 2 * dpr;
       g.beginPath(); g.arc(q[0], q[1], (o.label ? 4 : 3) * dpr, 0, 2 * Math.PI); g.fill(); g.stroke();
-      if (o.label) { g.font = `700 ${10 * dpr}px 'JetBrains Mono', monospace`; g.fillStyle = '#FFE08A'; g.fillText('BRAȘOV', q[0] + 8 * dpr, q[1] + 4 * dpr); }
+      if (o.label) { g.font = `700 ${10 * dpr}px 'JetBrains Mono', monospace`; g.fillStyle = '#FFE08A'; g.fillText(String(H.name || '').toUpperCase().slice(0, 18), q[0] + 8 * dpr, q[1] + 4 * dpr); }
     }
     return true;
   }
@@ -119,5 +120,18 @@
     return G;
   }
 
-  window.AuroraGlobe = { draw, grid };
+  /**
+   * Kp needed to see the aurora (low on the northern horizon) from a place, from its geomagnetic latitude
+   * (dipole pole 80.7° N 72.7° W). Brașov ≈ 43.6° → 7, Paris ≈ 6.5, London ≈ 5.5, Stockholm ≈ 4, Tromsø ≈ 1. An estimate.
+   */
+  function kpNeed(lat, lon) {
+    const r = Math.PI / 180, P = 80.7 * r, L = -72.7 * r, a = Math.abs(lat) * r;   // southern hemisphere: mirror (rough)
+    const m = Math.asin(Math.sin(a) * Math.sin(P) + Math.cos(a) * Math.cos(P) * Math.cos(lon * r - L)) / r;
+    const T = [[67, 1], [62, 2.5], [58, 4], [53, 5.5], [50, 6.5], [43.6, 7], [40, 8], [36, 9]];
+    if (m >= T[0][0]) return 1;
+    for (let i = 1; i < T.length; i++) if (m >= T[i][0]) { const [m0, k0] = T[i - 1], [m1, k1] = T[i]; return Math.round((k1 + (k0 - k1) * (m - m1) / (m0 - m1)) * 2) / 2; }
+    return 9;
+  }
+
+  window.AuroraGlobe = { draw, grid, kpNeed };
 })();

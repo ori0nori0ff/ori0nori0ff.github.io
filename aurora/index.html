@@ -57,13 +57,21 @@
   footer { margin-top: 22px; color: var(--faint); font: 500 10px/1.7 Mono, monospace; text-align: center; }
   footer a { color: var(--dim); }
   .skel { color: var(--faint); }
+  .hidden { display: none !important; }
+  .locbtn { border: 1px solid var(--line); background: var(--card); color: var(--soft); border-radius: 999px; padding: 6px 11px; font: 500 10px Mono, monospace; letter-spacing: .8px; cursor: pointer; }
+  #locBox { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+  #locQ { width: 100%; padding: 11px 13px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); color: #fff; font: 15px system-ui; outline: none; }
+  #locRes button { display: block; width: 100%; text-align: left; padding: 10px; border: 0; border-bottom: 1px solid var(--line); background: none; color: var(--text); font: 15px system-ui; cursor: pointer; }
+  #locRes button small { color: var(--dim); margin-left: 6px; }
 </style>
 </head>
 <body>
 <main>
   <div class="sub" id="upd">Loading live data…</div>
   <h1>Aurora tonight</h1>
-  <div class="sub" id="place">from Brașov, Romania</div>
+  <div class="sub" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span id="place">from Brașov, Romania</span><button class="locbtn" id="locBtn">📍 CHANGE PLACE</button></div>
+  <div id="locBox" class="hidden"><input id="locQ" type="search" placeholder="Search any city or village…" autocomplete="off" enterkeyhint="search">
+    <div id="locRes"></div><button class="locbtn" id="locGps">◎ USE MY LOCATION</button></div>
 
   <!-- 1. the answer -->
   <section class="card verdict" id="vcard">
@@ -75,7 +83,7 @@
       <div class="fact"><div class="lbl">Clouds</div><b id="fCloud">–</b></div>
       <div class="fact"><div class="lbl">Dark from</div><b id="fDark">–</b></div>
     </div>
-    <div class="help"><b>Kp</b> is the aurora strength scale, 0 to 9. In Romania we need about <b>Kp 7 or more</b>, a clear sky and a dark place facing north.</div>
+    <div class="help"><b>Kp</b> is the aurora strength scale, 0 to 9. From <span id="needWhere">here</span> you need about <b>Kp <span id="needKp">7</span> or more</b>, a clear sky and a dark place facing north.</div>
   </section>
 
   <!-- 2. aurora oval -->
@@ -83,7 +91,7 @@
     <div class="lbl">Where the aurora is right now</div>
     <h2>The aurora oval</h2>
     <canvas id="globe"></canvas>
-    <div class="help">The <b style="color:var(--green)">green glow</b> is NOAA's live aurora map around the North Pole. The yellow dot is us. The further south the green reaches towards it, the better our chances. <span id="ovTime"></span></div>
+    <div class="help">The <b style="color:var(--green)">green glow</b> is NOAA's live aurora map around the North Pole. The yellow dot is you. The further south the green reaches towards it, the better our chances. <span id="ovTime"></span></div>
   </section>
 
   <!-- 3. the Sun now -->
@@ -116,7 +124,7 @@
     <div class="lbl">Aurora strength, next 3 days</div>
     <h2>Kp forecast</h2>
     <div id="kp" class="skel">Loading…</div>
-    <div class="legend"><span><i style="background:#6EE7A0"></i>quiet</span><span><i style="background:#E8C766"></i>active</span><span><i style="background:#FF7A3D"></i>storm</span><span><i style="background:#FF4444"></i>strong storm — watch Romania</span></div>
+    <div class="legend"><span><i style="background:#6EE7A0"></i>quiet</span><span><i style="background:#E8C766"></i>active</span><span><i style="background:#FF7A3D"></i>storm</span><span><i style="background:#FF4444"></i>strong storm</span><span style="color:#FF6B6B">- - - your line</span></div>
   </section>
 
   <!-- 6. how to -->
@@ -124,14 +132,14 @@
     <div class="lbl">How to read all this</div>
     <h2>A good aurora night needs</h2>
     <ol class="steps">
-      <li><b>Kp 7+</b> forecast for tonight (the answer card says it for you).</li>
+      <li><b>Kp <span class="needK">7</span>+</b> forecast for tonight where you are (the answer card says it for you).</li>
       <li><b>Bz negative</b> (south) for an hour or more — that's the "on" switch.</li>
       <li><b>Fast wind</b>, over 500 km/s, or a CME arriving (red band).</li>
       <li><b>Clear sky</b> and <b>real dark</b>: away from city lights, facing <b>north</b>, low horizon.</li>
       <li><b>Use your phone's night mode</b> (3–10 s exposure). From Romania the aurora often looks like a faint grey-pink glow to the eye but shows red / green on camera.</li>
     </ol>
-    <details><summary>WHY IS IT SO RARE HERE?</summary>
-      <p class="why">The aurora lives in a ring around the North Pole (the oval above). Romania is far south of it. Only big solar storms push the ring far enough south — a few nights per year, more around solar maximum (now, 2024–2027).</p></details>
+    <details><summary>WHY IS IT SO RARE IN THE SOUTH?</summary>
+      <p class="why">The aurora lives in a ring around the North Pole (the oval above). Romania and southern Europe are far south of it. Only big solar storms push the ring far enough south — a few nights per year, more around solar maximum (now, 2024–2027).</p></details>
   </section>
 
   <footer>Live data: <a href="https://www.swpc.noaa.gov/" rel="noopener">NOAA SWPC</a> · <a href="https://sdo.gsfc.nasa.gov/" rel="noopener">NASA SDO</a> · <a href="https://soho.nascom.nasa.gov/" rel="noopener">SOHO (ESA/NASA)</a> · <a href="https://open-meteo.com/" rel="noopener">Open-Meteo</a><br>
@@ -145,9 +153,45 @@
 const $ = id => document.getElementById(id);
 const API = 'https://services.swpc.noaa.gov/';
 const q = new URLSearchParams(location.search);
-const TOWN = { name: q.get('town') || 'Brașov', lat: +q.get('lat') || 45.6427, lon: +q.get('lon') || 25.5887 };
-$('place').textContent = 'from ' + TOWN.name + ', Romania';
-const TZ = 'Europe/Bucharest';
+const esc = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// the place: link (?town=&lat=&lon=) > the one picked on this device > Brașov
+let TOWN = (() => {
+  if (q.get('lat') && q.get('lon')) return { name: q.get('town') || 'Your place', lat: +q.get('lat'), lon: +q.get('lon'), sub: q.get('sub') || '' };
+  try { const l = JSON.parse(localStorage.getItem('aurora.place') || 'null'); if (l && isFinite(l.lat)) return l; } catch (e) {}
+  return { name: 'Brașov', lat: 45.6427, lon: 25.5887, sub: 'Romania' };
+})();
+let TZ = TOWN.tz || 'Europe/Bucharest';
+const need = () => window.AuroraGlobe ? AuroraGlobe.kpNeed(TOWN.lat, TOWN.lon) : 7;
+function placeUI() {
+  $('place').textContent = 'from ' + TOWN.name + (TOWN.sub ? ', ' + TOWN.sub : '');
+  $('needWhere').textContent = TOWN.name; $('needKp').textContent = need(); document.querySelectorAll('.needK').forEach(e => e.textContent = need());
+}
+placeUI();
+function setPlace(l) {
+  TOWN = l; TZ = l.tz || TZ;
+  try { localStorage.setItem('aurora.place', JSON.stringify(l)); } catch (e) {}
+  const u = new URL(location.href); u.searchParams.set('town', l.name); u.searchParams.set('lat', (+l.lat).toFixed(4)); u.searchParams.set('lon', (+l.lon).toFixed(4));
+  if (l.sub) u.searchParams.set('sub', l.sub); else u.searchParams.delete('sub');
+  history.replaceState(null, '', u);   // the address bar = a link to share for this place
+  $('locBox').classList.add('hidden'); placeUI(); drawGlobe(); S.wx = null; load();
+}
+$('locBtn').onclick = () => { const b = $('locBox'); b.classList.toggle('hidden'); if (!b.classList.contains('hidden')) { $('locQ').value = ''; $('locRes').innerHTML = ''; $('locQ').focus(); } };
+let locT = 0;
+$('locQ').oninput = () => { clearTimeout(locT); const v = $('locQ').value.trim(); if (v.length < 2) { $('locRes').innerHTML = ''; return; }
+  locT = setTimeout(async () => { try {
+    const r = await j('https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(v) + '&count=6&language=en&format=json');
+    const L = (r.results || []).map(x => ({ name: x.name, lat: x.latitude, lon: x.longitude, tz: x.timezone, sub: [x.admin1, x.country].filter(Boolean).join(', ') }));
+    $('locRes').innerHTML = L.length ? L.map((x, i) => `<button data-i="${i}">${esc(x.name)}<small>${esc(x.sub)}</small></button>`).join('') : '<div class="why">No place found.</div>';
+    $('locRes').onclick = e => { const b = e.target.closest('[data-i]'); if (b) setPlace(L[+b.dataset.i]); };
+  } catch (e) { $('locRes').innerHTML = '<div class="why">No connection.</div>'; } }, 350); };
+$('locGps').onclick = () => {
+  if (!navigator.geolocation) { $('locRes').innerHTML = '<div class="why">This browser can\'t share your location.</div>'; return; }
+  $('locGps').textContent = 'FINDING YOU…';
+  navigator.geolocation.getCurrentPosition(p => { $('locGps').textContent = '◎ USE MY LOCATION';
+      setPlace({ name: 'My location', lat: +p.coords.latitude.toFixed(3), lon: +p.coords.longitude.toFixed(3), tz: Intl.DateTimeFormat().resolvedOptions().timeZone, sub: '' }); },
+    () => { $('locGps').textContent = '◎ USE MY LOCATION'; $('locRes').innerHTML = '<div class="why">Location not allowed — search for your town instead.</div>'; },
+    { timeout: 15000, maximumAge: 600000 });
+};
 const hhmm = d => new Date(d).toLocaleTimeString('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit' });
 const day = d => new Date(d).toLocaleDateString('en-GB', { timeZone: TZ, weekday: 'short', day: 'numeric' });
 const kpColor = k => k >= 8 ? '#E05BFF' : k >= 7 ? '#FF4444' : k >= 6 ? '#FF7A3D' : k >= 5 ? '#FFA040' : k >= 4 ? '#E8C766' : '#6EE7A0';
@@ -195,14 +239,15 @@ function verdict() {
     if (v.length) clouds = Math.round(v.reduce((a, x) => a + x, 0) / v.length);
     const ss = S.wx.daily.sunset[0]; if (ss) dark = Date.parse(ss + 'Z') - S.wx.utc_offset_seconds * 1000 + 75 * 60000;
   }
-  const lv = kp >= 8 ? ['Likely', '#E05BFF', 'rgba(224,91,255,.22)'] : kp >= 7 ? ['Possible', '#FF4444', 'rgba(255,68,68,.2)']
-    : kp >= 6 ? ['Unlikely', '#FFA040', 'rgba(255,160,64,.16)'] : ['No chance', '#6EE7A0', 'rgba(57,255,158,.10)'];
+  const N = need();   // Kp needed here (from the geomagnetic latitude)
+  const lv = kp >= N + 1 ? ['Likely', '#E05BFF', 'rgba(224,91,255,.22)'] : kp >= N ? ['Possible', '#FF4444', 'rgba(255,68,68,.2)']
+    : kp >= N - 1 ? ['Unlikely', '#FFA040', 'rgba(255,160,64,.16)'] : ['No chance', '#6EE7A0', 'rgba(57,255,158,.10)'];
   $('vword').textContent = lv[0]; $('vword').style.color = lv[1]; $('vcard').style.setProperty('--glow', lv[2]);
-  let t = kp >= 8 ? 'A severe solar storm is forecast — the aurora may be visible to the eye low in the north from dark places.'
-    : kp >= 7 ? 'A strong storm is forecast — a glow on the northern horizon is possible, best caught with a phone\'s night mode.'
-    : kp >= 6 ? 'A moderate storm — usually still too far north for Romania. Worth checking again later tonight.'
-    : 'Romania needs a strong solar storm (Kp 7+). Nothing like that is forecast tonight.';
-  if (kp >= 6 && clouds != null) t += clouds > 70 ? ' Clouds will likely block the view.' : clouds > 40 ? ' Some clouds — look for gaps.' : ' Skies look mostly clear.';
+  let t = kp >= N + 1 ? 'A solar storm strong enough for ' + TOWN.name + ' is forecast — the aurora may be visible to the eye low in the north from dark places.'
+    : kp >= N ? 'Forecast right at the limit for ' + TOWN.name + ' — a glow on the northern horizon is possible, best caught with a phone\'s night mode.'
+    : kp >= N - 1 ? 'Close, but usually still too far north for ' + TOWN.name + '. Worth checking again later tonight.'
+    : TOWN.name + ' needs about Kp ' + N + ' to see the aurora. Nothing like that is forecast tonight.';
+  if (kp >= N - 1 && clouds != null) t += clouds > 70 ? ' Clouds will likely block the view.' : clouds > 40 ? ' Some clouds — look for gaps.' : ' Skies look mostly clear.';
   $('vtext').textContent = t;
   $('fKp').textContent = kp.toFixed(1); $('fKp').style.color = kpColor(kp);
   $('fCloud').textContent = clouds == null ? '–' : clouds + '%';
@@ -215,8 +260,9 @@ function kpChart() {
   if (!pts.length) { $('kp').textContent = 'No forecast right now.'; return; }
   const W = 520, H = 170, L = 24, B = 26, bw = (W - L) / pts.length, y = k => H - B - k / 9 * (H - B - 8);
   let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Kp forecast">`;
-  [3, 5, 7, 9].forEach(k => svg += `<line x1="${L}" x2="${W}" y1="${y(k)}" y2="${y(k)}" stroke="${k === 7 ? 'rgba(255,68,68,.5)' : '#1E2530'}" ${k === 7 ? 'stroke-dasharray="4 4"' : ''}/><text x="0" y="${y(k) + 4}" font-size="11" fill="#6B7280">${k}</text>`);
-  svg += `<text x="${W}" y="${y(7) - 5}" font-size="10" fill="#FF6B6B" text-anchor="end">ROMANIA LINE</text>`;
+  const N = need();
+  [3, 5, 7, 9].forEach(k => svg += `<line x1="${L}" x2="${W}" y1="${y(k)}" y2="${y(k)}" stroke="#1E2530"/><text x="0" y="${y(k) + 4}" font-size="11" fill="#6B7280">${k}</text>`);
+  svg += `<line x1="${L}" x2="${W}" y1="${y(N)}" y2="${y(N)}" stroke="rgba(255,68,68,.6)" stroke-dasharray="4 4"/><text x="${W}" y="${y(N) - 5}" font-size="10" fill="#FF6B6B" text-anchor="end">NEEDED IN ${esc(TOWN.name.toUpperCase().slice(0, 16))} · KP ${N}</text>`;
   let lastDay = '', lastX = -99;
   pts.forEach((p, i) => {
     const x = L + i * bw + 2, h = Math.max(2, H - B - y(p.k));
@@ -249,7 +295,7 @@ function enlChart() {
 }
 $('enlHelp').dataset.base = $('enlHelp').innerHTML;
 
-function drawGlobe() { if (window.AuroraGlobe) AuroraGlobe.draw($('globe'), { ov: S.ov, lat0: 58, lon0: 18, viewLine: true, label: TOWN.name === 'Brașov' }); }
+function drawGlobe() { if (window.AuroraGlobe) AuroraGlobe.draw($('globe'), { ov: S.ov, lat0: Math.min(75, Math.max(50, TOWN.lat + 13)), lon0: TOWN.lon - 7, viewLine: true, label: true, here: TOWN }); }
 addEventListener('resize', () => { drawGlobe(); });
 
 async function load() {
@@ -257,7 +303,7 @@ async function load() {
   await Promise.allSettled([
     j(API + 'json/planetary_k_index_1m.json').then(a => { S.kpNow = +a[a.length - 1].estimated_kp; }),
     j(API + 'products/noaa-planetary-k-index-forecast.json').then(a => { S.kpList = a; kpChart(); }),
-    j('https://api.open-meteo.com/v1/forecast?latitude=' + TOWN.lat + '&longitude=' + TOWN.lon + '&hourly=cloud_cover&daily=sunset&forecast_days=2&timezone=Europe%2FBucharest').then(w => { S.wx = w; }),
+    j('https://api.open-meteo.com/v1/forecast?latitude=' + TOWN.lat + '&longitude=' + TOWN.lon + '&hourly=cloud_cover&daily=sunset&forecast_days=2&timezone=auto').then(w => { S.wx = w; if (w.timezone) TZ = w.timezone; }),
     j(API + 'json/ovation_aurora_latest.json').then(o => { S.ov = AuroraGlobe.grid(o); $('ovTime').textContent = 'NOAA forecast for ' + hhmm(o['Forecast Time']) + '.'; drawGlobe(); }),
     j(API + 'products/summary/solar-wind-speed.json').then(a => { const v = +a[0].proton_speed;
       $('swV').innerHTML = Math.round(v) + '<span style="font-size:13px;color:#8B9BAE"> km/s</span>'; $('swV').style.color = v >= 600 ? '#FF7A3D' : v >= 450 ? '#E8C766' : '#E0E0E0';
@@ -272,7 +318,7 @@ async function load() {
       S.enl = P; enlChart(); }),
   ]);
   verdict(); if (!S.kpList) { $('vword').textContent = 'No data'; $('vtext').textContent = 'NOAA could not be reached. Try again in a minute.'; }
-  $('upd').textContent = 'Live · updated ' + hhmm(Date.now()) + ' Romanian time';
+  $('upd').textContent = 'Live · updated ' + hhmm(Date.now()) + ' local time';
 }
 load(); setInterval(load, 10 * 60000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
