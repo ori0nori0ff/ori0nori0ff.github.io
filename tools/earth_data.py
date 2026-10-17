@@ -111,14 +111,15 @@ for r in dst:
         continue
     if 0 <= i < n_days:
         J['dst'][i] = v if J['dst'][i] is None else min(J['dst'][i], v)
-pl = get(SWPC + 'products/solar-wind/plasma-7-day.json') or []
+pl = get(SWPC + 'json/rtsw/rtsw_wind_1m.json', timeout=180) or []
 for r in pl:
-    try:   # rows are lists (header first) or objects, depending on the product version
-        tt, sp = (r.get('time_tag'), r.get('speed')) if isinstance(r, dict) else (r[0], r[2])
-        i = day_index(dt.date.fromisoformat(str(tt)[:10])); v = float(sp)
-    except (TypeError, ValueError, IndexError, AttributeError):
+    try:
+        if not r.get('active'):
+            continue
+        i = day_index(dt.date.fromisoformat(r['time_tag'][:10])); v = float(r['proton_speed'])
+    except (KeyError, TypeError, ValueError, AttributeError):
         continue
-    if 0 <= i < n_days and v > 0:
+    if 0 <= i < n_days and 150 < v < 3000:
         J['v'][i] = round(max(J['v'][i] or 0, v))
 fl = get(SWPC + 'json/goes/primary/xray-flares-7-day.json') or []
 for f in fl:
@@ -137,19 +138,24 @@ E = load('aurora/data/earth.json', {})
 E['updated'] = int(time.time() * 1000)
 
 # volcanoes (Smithsonian GVP): once a day is plenty
-if not E.get('ongoing') or NOW.hour == 3 or full or E.get('gvp') != 2:
-    E['gvp'] = 2
+if not E.get('ongoing') or NOW.hour == 3 or full or E.get('gvp') != 3:
+    E['gvp'] = 3
     W = 'https://webservices.volcano.si.edu/geoserver/GVP-VOTW/ows?service=WFS&version=2.0.0&request=GetFeature&typeName=GVP-VOTW:Smithsonian_VOTW_Holocene_Eruptions&outputFormat=application/json&count=5000&sortBy=StartDateYear+D&cql_filter='
-    on = get(W + urllib.parse.quote('EndDateYear IS NULL AND StartDateYear>=1990'))
+    on = get(W + urllib.parse.quote(f'StartDateYear>={TODAY.year - 30}'))
     if on and on.get('features'):
-        out = []
-        for f in on['features']:
+        def ymd(p, k):
+            y = p.get(k + 'Year')
+            return dt.date(y, max(1, p.get(k + 'Month') or 1), max(1, min(28, p.get(k + 'Day') or 1))) if y else None
+        rows = [(f, ymd(f['properties'], 'StartDate'), ymd(f['properties'], 'EndDate')) for f in on['features'] if f['properties'].get('Activity_Type') == 'Confirmed Eruption']
+        asof = max((e for _, _, e in rows if e and e <= TODAY), default=TODAY)
+        E['gvpAsOf'] = asof.isoformat()
+        out, seen = [], set()
+        for f, st_, en in sorted(rows, key=lambda r: r[1] or dt.date(1900, 1, 1), reverse=True):
             p, c = f['properties'], f['geometry']['coordinates']
-            if p.get('Activity_Type') not in ('Confirmed Eruption', None):
-                continue
-            st = f"{p['StartDateYear']:04d}-{max(1, p.get('StartDateMonth') or 1):02d}-{max(1, p.get('StartDateDay') or 1):02d}"
-            out.append([p['Volcano_Name'], round(c[1], 3), round(c[0], 3), st, p.get('ExplosivityIndexMax')])
-        E['ongoing'] = sorted(out, key=lambda r: r[3], reverse=True)
+            if (en is None or (asof - en).days <= 45) and p['Volcano_Name'] not in seen:
+                seen.add(p['Volcano_Name'])
+                out.append([p['Volcano_Name'], round(c[1], 3), round(c[0], 3), (st_ or asof).isoformat(), p.get('ExplosivityIndexMax')])
+        E['ongoing'] = out
     st = get(W + urllib.parse.quote(f'StartDateYear>={START.year}'))
     if st and st.get('features'):
         n = [0] * ((TODAY.year - START.year) * 12 + TODAY.month)
@@ -190,7 +196,13 @@ def cosmic():
 # width and speed (the cone model NOAA's ENLIL runs use)
 def cmes():
     a, b = TODAY - dt.timedelta(days=12), TODAY + dt.timedelta(days=1)
-    r = get(f'https://kauai.ccmc.gsfc.nasa.gov/DONKI/WS/get/CMEAnalysis?startDate={a}&endDate={b}&mostAccurateOnly=true&speed=0&halfAngle=0&catalog=ALL', timeout=90)
+    r = None
+    for u in [f'https://kauai.ccmc.gsfc.nasa.gov/DONKI/WS/get/CMEAnalysis?startDate={a}&endDate={b}&mostAccurateOnly=true&speed=0&halfAngle=0&catalog=ALL',
+              f'https://api.nasa.gov/DONKI/CMEAnalysis?startDate={a}&endDate={b}&mostAccurateOnly=true&speed=0&halfAngle=0&catalog=ALL&api_key=' + os.environ.get('NASA_KEY', 'DEMO_KEY')]:
+        r = get(u, timeout=90, tries=2)
+        if isinstance(r, list):
+            break
+        print('donki: no list from', u.split('?')[0], file=sys.stderr)
     if not isinstance(r, list):
         return None
     out = []
