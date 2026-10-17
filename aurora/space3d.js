@@ -31,6 +31,12 @@
     return [x, z, -y];
   }
   const lonOf = p => Math.atan2(-p[2], p[0]);   // ecliptic longitude of a scene point
+  // equatorial (RA, Dec in degrees) → scene direction (ecliptic x, up = ecliptic north, like planet())
+  function eqDir(ra, de) { const e = 23.439 * D2R, a = ra * D2R, d = de * D2R, x = Math.cos(d) * Math.cos(a), y = Math.cos(d) * Math.sin(a), z = Math.sin(d);
+    const ye = y * Math.cos(e) + z * Math.sin(e), ze = -y * Math.sin(e) + z * Math.cos(e); return [x, ze, -ye]; }
+  // the Sun's motion: towards the solar apex in Hercules (vs nearby stars, ~20 km/s) or along the galactic rotation
+  // towards Cygnus (galactic l = 90°, around the Milky Way's centre, ~230 km/s)
+  const TRAVEL = { lsr: { dir: eqDir(271, 30), v: 20 }, gal: { dir: eqDir(318.0, 48.3), v: 230 } };
   // speed colours: slow blue → normal green → fast yellow → very fast red
   function speedCol(v) {
     const S = [[300, [70, 120, 255]], [420, [60, 220, 160]], [550, [255, 225, 80]], [700, [255, 130, 50]], [900, [255, 60, 80]]];
@@ -53,8 +59,17 @@
 .s3d-top{position:absolute;left:12px;top:10px;pointer-events:none;display:flex;flex-direction:column;gap:2px;text-shadow:0 1px 3px #000}
 .s3d-t{font:700 15px Inter,system-ui,sans-serif;color:#FFE600}.s3d-sub{font:500 12px Inter,system-ui,sans-serif;color:#C9D1DB}
 .s3d-btns{position:absolute;left:10px;bottom:10px;display:flex;gap:6px;flex-wrap:wrap;max-width:calc(100% - 70px)}
-.s3d-btns button,.s3d-full{border:1px solid rgba(255,255,255,.18);background:rgba(10,14,20,.75);color:#E6EBF1;border-radius:999px;padding:7px 12px;min-height:36px;font:600 12px Inter,system-ui,sans-serif;cursor:pointer}
-.s3d-full{position:absolute;right:10px;top:10px;width:40px;padding:0;font-size:17px}
+.s3d-btns button,.s3d-ctl button{border:1px solid rgba(255,255,255,.18);background:rgba(10,14,20,.75);color:#E6EBF1;border-radius:999px;padding:7px 12px;min-height:36px;font:600 12px Inter,system-ui,sans-serif;cursor:pointer}
+.s3d-ctl{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:6px}.s3d-ctl button{width:40px;height:40px;padding:0;font-size:18px;line-height:1}
+.s3d-tabs{position:absolute;left:50%;top:10px;transform:translateX(-50%);display:flex;border:1px solid rgba(255,255,255,.18);border-radius:999px;overflow:hidden;background:rgba(10,14,20,.75)}
+.s3d-tabs button{border:0;background:none;color:#C9D1DB;padding:8px 14px;min-height:36px;font:600 12px Inter,system-ui,sans-serif;cursor:pointer}.s3d-tabs button[aria-pressed=true]{background:#39FF9E;color:#0A0A0A}
+.s3d-btns button[aria-pressed=true]{border-color:#39FF9E;color:#39FF9E}.s3d .s3d-hx{display:none}.s3d.hx .s3d-hx{display:flex}.s3d.hx .s3d-sys,.s3d.hx .s3d-leg{display:none}
+.s3d-info{position:absolute;right:60px;top:10px;max-width:250px;background:rgba(10,14,20,.88);border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:10px 12px;font:500 12px/1.5 Inter,system-ui,sans-serif;color:#C9D1DB}
+.s3d-info b{display:block;font-size:15px;color:#fff;margin-bottom:2px}.s3d-info button{float:right;border:0;background:none;color:#A3B0C2;font-size:14px;cursor:pointer;margin:-4px -4px 0 6px}
+.s3d-help{position:absolute;inset:56px 60px 60px 10px;overflow:auto;background:rgba(8,11,17,.94);border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:14px 16px;font:500 13px/1.55 Inter,system-ui,sans-serif;color:#C9D1DB}
+.s3d-help b{color:#fff;font-size:14px}.s3d-help p{margin:2px 0 12px}.s3d-hx-x{float:right;border:0;background:none;color:#A3B0C2;font-size:16px;cursor:pointer}
+.s3d:focus-visible{outline:3px solid #FFE600;outline-offset:2px}
+@media (max-width:640px){.s3d-tabs{top:52px;left:12px;transform:none}.s3d-tabs button{padding:7px 10px;font-size:11px}.s3d-info{right:56px;max-width:190px}}
 .s3d-leg{position:absolute;right:12px;bottom:14px;font:500 11px Inter,system-ui,sans-serif;color:#A3B0C2;pointer-events:none;text-shadow:0 1px 2px #000}
 .s3d-leg i{display:inline-block;width:9px;height:9px;border-radius:50%;margin:0 3px 0 8px;vertical-align:-1px}
 .s3d.s3d-fs{position:fixed!important;inset:0;z-index:200;border-radius:0;height:auto!important;aspect-ratio:auto!important}body.s3d-lock{overflow:hidden}
@@ -65,8 +80,15 @@
     el.classList.add('s3d');
     el.innerHTML = `<canvas class="s3d-gl"></canvas><canvas class="s3d-ov"></canvas>
       <div class="s3d-top"><b class="s3d-t">–</b><span class="s3d-sub"></span></div>
-      <div class="s3d-btns"><button data-v="inner">${tr('Inner planets')}</button><button data-v="all">${tr('Whole system')}</button><button data-v="earth">${tr('From Earth')}</button><button data-v="top">${tr('From above')}</button></div>
-      <button class="s3d-full" aria-label="${tr('Full screen')}">⛶</button>
+      <div class="s3d-tabs" role="tablist"><button data-m="sys" aria-pressed="true">${tr('Solar system')}</button><button data-m="helix" aria-pressed="false">${tr('Spiral through space')}</button></div>
+      <div class="s3d-btns s3d-sys"><button data-v="inner">${tr('Inner planets')}</button><button data-v="all">${tr('Whole system')}</button><button data-v="earth">${tr('From Earth')}</button><button data-v="top">${tr('From above')}</button></div>
+      <div class="s3d-btns s3d-hx"><button class="s3d-hplay" aria-label="${tr('Play')}">▶</button><button class="s3d-hspd">1×</button><button data-f="lsr" aria-pressed="true">${tr('vs nearby stars · 20 km/s')}</button><button data-f="gal" aria-pressed="false">${tr('around the Milky Way · 230 km/s')}</button></div>
+      <div class="s3d-ctl"><button class="s3d-full" aria-label="${tr('Full screen')}">⛶</button><button data-z="-1" aria-label="${tr('Zoom in')}">+</button><button data-z="1" aria-label="${tr('Zoom out')}">−</button><button class="s3d-reset" aria-label="${tr('Reset the view')}">⟲</button><button class="s3d-q" aria-label="${tr('How it works')}">?</button></div>
+      <div class="s3d-info" hidden></div>
+      <div class="s3d-help" hidden><button class="s3d-hx-x" aria-label="${tr('Close')}">✕</button>
+        <b>${tr('Moving around')}</b><p>${tr('Drag to turn · pinch or scroll to zoom · two fingers or right-drag to move sideways · double-tap to reset · tap a planet to fly to it and see its numbers. Keys: arrows turn, + / − zoom, R reset, space play.')}</p>
+        <b>${tr('Solar system')}</b><p>${tr('Planets at their real positions for the shown time (NASA JPL orbital elements). The solar wind leaves the Sun in all directions while the Sun turns once every ~25 days, so the streams wind up into a spiral (the Parker spiral) — like water from a turning garden sprinkler. Speed and colour come from NOAA’s model at Earth. CMEs grow from the Sun at their measured speed and direction (NASA DONKI, or estimated from NOAA’s model). Distances are real, sizes are not.')}</p>
+        <b>${tr('Spiral through space')}</b><p>${tr('The Sun is not standing still: it moves ~20 km/s towards the constellation Hercules compared with nearby stars, and ~230 km/s around the centre of the Milky Way. The planets come along, so each one draws a spiral (a helix) around the Sun’s path. The orbits are tilted about 60° to that path, so the spirals are slanted — the planets are not dragged behind the Sun like a comet tail, as some popular videos show.')}</p></div>
       <div class="s3d-leg"><i style="background:rgb(70,120,255)"></i>300 <i style="background:rgb(60,220,160)"></i>420 <i style="background:rgb(255,225,80)"></i>550 <i style="background:rgb(255,130,50)"></i>700+ km/s <i style="background:#fff"></i>CME</div>`;
     const cv = el.querySelector('.s3d-gl'), ov = el.querySelector('.s3d-ov'), g2 = ov.getContext('2d');
     const gl = cv.getContext('webgl', { antialias: true, premultipliedAlpha: true, preserveDrawingBuffer: true });
@@ -87,10 +109,12 @@
     const JS = 64, KS = 340, DT = 1 / 24, wind = mk(JS * KS), lat = new Float32Array(JS * KS);   // 64 source longitudes × 340 emissions every hour (~14 days)
     for (let i = 0; i < JS * KS; i++) lat[i] = (rnd() - .5) * (rnd() < .2 ? 0.3 : 0.08);
     const cmeB = mk(12 * 700);
+    const HX = ['Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn'], HXN = 700, trails = mk((HX.length + 1) * HXN);
+    let mode = 'sys', frameK = 'lsr', hTime = Date.now(), hPlay = false, hRate = 1, hLast = 0, info = null;
     let vtab = new Float32Array(360).fill(400), ntab = new Float32Array(360).fill(5), known = new Uint8Array(360), cmes = [], time = Date.now();
     // camera
     const cam = { yaw: -0.6, pitch: 0.55, dist: 3.4, tgt: [0, 0, 0], goal: null };
-    let W = 0, H = 0, dpr = 1, M = null, dirty = true, visible = true;
+    let W = 0, H = 0, dpr = 1, M = null, dirty = true, visible = true, spin = [0, 0];
 
     function setWind(series_) {   // trace each at-Earth sample back to the solar longitude (co-rotating) its wind left from
       const sum = new Float32Array(360), cnt = new Float32Array(360), nsum = new Float32Array(360);
@@ -114,7 +138,22 @@
       return out.map(c => ({ t: c.t - (1 - 0.1) / kmsAU(c.v) * DAY, lat: 0, lon: 0, half: 35, v: c.v, est: true })); }
     function setCmes(list) { if (list) donki = list.filter(c => c.v > 0); cmes = donki && donki.length ? donki : fromEnlil(); dirty = true; }
 
+    // the planets' paths relative to the Sun's position now: p(t') + V·(t' − t) — behind the Sun for t' < t
+    function hxBasis() { const d = TRAVEL[frameK].dir, N = [0, 1, 0], k = d[1], y0 = [N[0] - k * d[0], N[1] - k * d[1], N[2] - k * d[2]], l = Math.hypot(...y0), ey = y0.map(x => x / l);
+      const ez = [d[1] * ey[2] - d[2] * ey[1], d[2] * ey[0] - d[0] * ey[2], d[0] * ey[1] - d[1] * ey[0]]; return [d, ey, ez]; }
+    const toHx = p => { if (mode !== 'helix') return p; const [a, b, c] = hxBasis(); return [a[0] * p[0] + a[1] * p[1] + a[2] * p[2], b[0] * p[0] + b[1] * p[1] + b[2] * p[2], c[0] * p[0] + c[1] * p[1] + c[2] * p[2]]; };
+    function hxMat() { const [a, b, c] = hxBasis(); return [a[0], b[0], c[0], 0, a[1], b[1], c[1], 0, a[2], b[2], c[2], 0, 0, 0, 0, 1]; }
+    function buildHelix() {
+      const T = TRAVEL[frameK], V = T.dir.map(x => x * kmsAU(T.v)), t = hTime; let n = 0;
+      HX.forEach((nm, pi) => { const per = Math.pow(EL[nm][0][0], 1.5) * 365.25, span = Math.min(per * 2.6, 70 * 365.25) * DAY, col = EL[nm][2].match(/\w\w/g).map(h => parseInt(h, 16) / 255);
+        for (let i = 0; i < HXN; i++) { const f = i / (HXN - 1), tp = t - span * (1 - f), p = planet(nm, tp), dd = (tp - t) / DAY;
+          trails.p.set([p[0] + V[0] * dd, p[1] + V[1] * dd, p[2] + V[2] * dd], n * 3); trails.c.set([col[0], col[1], col[2], .15 + .75 * f * f], n * 4); trails.s[n] = 1; n++; } });
+      const span = 6 * 365.25 * DAY; for (let i = 0; i < HXN; i++) { const f = i / (HXN - 1), dd = -span * (1 - f) / DAY;
+        trails.p.set(V.map(x => x * dd), n * 3); trails.c.set([1, .8, .35, .1 + .6 * f], n * 4); trails.s[n] = 1; n++; }
+      trails.n = n; upload(trails);
+    }
     function build() {
+      if (mode === 'helix') { buildHelix(); return; }
       const td = time / DAY;
       // orbits: the path each planet traces over one period
       if (Math.abs(time - (build.orbT || -1e15)) > 5 * DAY) { build.orbT = time; let o = 0; ORB.forEach(nm => { const per = Math.pow(EL[nm][0][0], 1.5) * 365.25 * DAY, col = nm === 'Earth' ? [.35, .6, 1, .55] : [.6, .7, .85, .22];
@@ -148,13 +187,16 @@
     function draw() {
       if (cam.goal) { const g = cam.goal; ['dist', 'yaw', 'pitch'].forEach(k => { if (g[k] != null) cam[k] += (g[k] - cam[k]) * .12; }); if (g.tgt) cam.tgt = cam.tgt.map((v, i) => v + (g.tgt[i] - v) * .12);
         if (Math.abs(cam.dist - (g.dist ?? cam.dist)) < .002 && (!g.tgt || Math.hypot(...cam.tgt.map((v, i) => v - g.tgt[i])) < .002)) cam.goal = null; dirty = true; }
-      if (cam.follow) { cam.tgt = planet(cam.follow, time); }
-      const eye = camEye(); M = mul(persp(45 * D2R, W / H, 0.005, 2000), lookAt(eye, cam.tgt, [0, 1, 0]));
+      if (spin[0] || spin[1]) { cam.yaw += spin[0]; cam.pitch = Math.max(-1.5, Math.min(1.55, cam.pitch + spin[1])); spin = spin.map(v => Math.abs(v) < 1e-4 ? 0 : v * .92); dirty = true; }
+      const now = mode === 'helix' ? hTime : time;
+      if (cam.follow) { cam.tgt = toHx(planet(cam.follow, now)); }
+      const eye = camEye(); M = mul(persp(45 * D2R, W / H, 0.005, 4000), lookAt(eye, cam.tgt, [0, 1, 0])); if (mode === 'helix') M = mul(M, hxMat());
       gl.viewport(0, 0, cv.width, cv.height); gl.clearColor(0.02, 0.03, 0.06, 1); gl.clear(gl.COLOR_BUFFER_BIT);
       gl.uniformMatrix4fv(U.m, false, new Float32Array(M)); gl.uniform1f(U.k, dpr * Math.min(W, H) / 900);
       gl.uniform1f(U.mx, 4 * dpr); gl.uniform1f(U.pt, 1); bind(stars); gl.drawArrays(gl.POINTS, 0, stars.n);
-      gl.uniform1f(U.pt, 0); bind(orbits); for (let i = 0; i < ORB.length; i++) gl.drawArrays(gl.LINE_STRIP, i * 181, 181);
-      gl.uniform1f(U.pt, 1); gl.uniform1f(U.mx, 7 * dpr); bind(wind); gl.drawArrays(gl.POINTS, 0, wind.n); gl.uniform1f(U.mx, 6 * dpr); bind(cmeB); gl.drawArrays(gl.POINTS, 0, cmeB.n);
+      if (mode === 'helix') { gl.uniform1f(U.pt, 0); bind(trails); for (let i = 0; i <= HX.length; i++) gl.drawArrays(gl.LINE_STRIP, i * HXN, HXN); }
+      else { gl.uniform1f(U.pt, 0); bind(orbits); for (let i = 0; i < ORB.length; i++) gl.drawArrays(gl.LINE_STRIP, i * 181, 181);
+        gl.uniform1f(U.pt, 1); gl.uniform1f(U.mx, 7 * dpr); bind(wind); gl.drawArrays(gl.POINTS, 0, wind.n); gl.uniform1f(U.mx, 6 * dpr); bind(cmeB); gl.drawArrays(gl.POINTS, 0, cmeB.n); }
       // overlay: Sun, planets, labels, CME tags
       g2.setTransform(dpr, 0, 0, dpr, 0, 0); g2.clearRect(0, 0, W, H); hits = [];
       const s = proj([0, 0, 0]);
@@ -164,40 +206,89 @@
         gr = g2.createRadialGradient(s[0] - R * .2, s[1] - R * .2, 0, s[0], s[1], R); gr.addColorStop(0, '#FFF6D8'); gr.addColorStop(.7, '#FFC24A'); gr.addColorStop(1, '#FF8A1E');
         g2.fillStyle = gr; g2.beginPath(); g2.arc(s[0], s[1], R, 0, 7); g2.fill(); hits.push({ x: s[0], y: s[1], r: R + 6, name: 'Sun' }); }
       g2.font = '600 12px Inter, system-ui, sans-serif'; g2.textBaseline = 'middle'; const boxes = [];
-      ['Earth'].concat(ORB.filter(n => n !== 'Earth')).forEach(nm => { const p = planet(nm, time), q = proj(p); if (!q) return; const r = Math.max(2.5, EL[nm][3] * Math.min(1.8, 1.6 / Math.sqrt(q[2])));
+      if (mode === 'helix') { const T = TRAVEL[frameK], a = proj(T.dir.map(x => x * 1.4 * Math.max(1, cam.dist / 8))), o = proj([0, 0, 0]);
+        if (a && o) { g2.strokeStyle = '#FFE08A'; g2.lineWidth = 2; g2.beginPath(); g2.moveTo(o[0], o[1]); g2.lineTo(a[0], a[1]); g2.stroke(); const ang = Math.atan2(a[1] - o[1], a[0] - o[0]);
+          g2.fillStyle = '#FFE08A'; g2.beginPath(); g2.moveTo(a[0], a[1]); g2.lineTo(a[0] - 10 * Math.cos(ang - .4), a[1] - 10 * Math.sin(ang - .4)); g2.lineTo(a[0] - 10 * Math.cos(ang + .4), a[1] - 10 * Math.sin(ang + .4)); g2.fill();
+          g2.font = '700 12px Inter, system-ui, sans-serif'; const lab = (frameK === 'lsr' ? tr('towards Hercules') : tr('towards Cygnus · around the galaxy')) + ' · ' + T.v + ' km/s';
+          g2.fillStyle = 'rgba(0,0,0,.6)'; g2.fillRect(a[0] + 8, a[1] - 9, g2.measureText(lab).width + 10, 18); g2.fillStyle = '#FFE08A'; g2.fillText(lab, a[0] + 13, a[1] + 4); } }
+      g2.font = '600 12px Inter, system-ui, sans-serif'; g2.textBaseline = 'middle';
+      ['Earth'].concat(ORB.filter(n => n !== 'Earth')).forEach(nm => { if (mode === 'helix' && !HX.includes(nm)) return; const p = planet(nm, now), q = proj(p); if (!q) return; const r = Math.max(2.5, EL[nm][3] * Math.min(1.8, 1.6 / Math.sqrt(q[2])));
         g2.fillStyle = EL[nm][2]; g2.beginPath(); g2.arc(q[0], q[1], r, 0, 7); g2.fill();
         if (nm === 'Earth') { g2.strokeStyle = 'rgba(90,169,255,.6)'; g2.lineWidth = 1.5; g2.beginPath(); g2.arc(q[0], q[1], r + 4, 0, 7); g2.stroke(); }
         const lab = tr(nm), tw = g2.measureText(lab).width, bx = [q[0] + r + 4, q[1] - 8, tw + 8, 16];
         hits.push({ x: q[0], y: q[1], r: r + 14, name: nm, w: tw + 12 });
         if (boxes.some(b => bx[0] < b[0] + b[2] && bx[0] + bx[2] > b[0] && bx[1] < b[1] + b[3] && bx[1] + bx[3] > b[1]) && nm !== 'Earth') return; boxes.push(bx);
         g2.fillStyle = 'rgba(0,0,0,.55)'; g2.fillRect(...bx); g2.fillStyle = nm === 'Earth' ? '#9CCBFF' : '#DCE3EB'; g2.fillText(lab, q[0] + r + 8, q[1]); });
-      (build.active || []).forEach(({ c, r, ax }) => { const q = proj(ax.map(x => x * r)); if (!q) return; const lab = 'CME ' + Math.round(c.v) + ' km/s' + (c.est ? ' · ' + tr('estimate') : '');
+      if (mode !== 'helix') (build.active || []).forEach(({ c, r, ax }) => { const q = proj(ax.map(x => x * r)); if (!q) return; const lab = 'CME ' + Math.round(c.v) + ' km/s' + (c.est ? ' · ' + tr('estimate') : '');
         g2.fillStyle = 'rgba(0,0,0,.6)'; const tw = g2.measureText(lab).width; g2.fillRect(q[0] + 6, q[1] - 8, tw + 8, 16); g2.fillStyle = '#FFE2C2'; g2.fillText(lab, q[0] + 10, q[1]); });
+      if (info) showInfo(info);
       dirty = false;
     }
-    function frame() { if (visible && (dirty || cam.goal || cam.follow && dirty)) draw(); requestAnimationFrame(frame); }
+    // a planet's numbers: distance to the Sun, speed on its orbit (vis-viva), light time, distance from Earth
+    function showInfo(nm) {
+      const box = el.querySelector('.s3d-info'), t = mode === 'helix' ? hTime : time, p = planet(nm, t), r = Math.hypot(...p), a = EL[nm][0][0], v = 29.78 * Math.sqrt(2 / r - 1 / a), E = planet('Earth', t), de = Math.hypot(p[0] - E[0], p[1] - E[1], p[2] - E[2]);
+      box.hidden = false; box.innerHTML = `<button aria-label="${tr('Close')}">✕</button><b>${tr(nm)}</b>${tr('From the Sun')}: ${r.toFixed(2)} AU · ${Math.round(r * 149.6)} ${tr('million km')}<br>${tr('Speed on its orbit')}: ${v.toFixed(1)} km/s<br>${tr('Sunlight needs')} ${(r * 8.317).toFixed(1)} min`
+        + (nm !== 'Earth' ? `<br>${tr('From Earth')}: ${de.toFixed(2)} AU` : '') + `<br><small style="color:#8E9AAB">${tr('The camera follows it — drag to look around.')}</small>`;
+      box.querySelector('button').onclick = () => { info = null; box.hidden = true; cam.follow = null; view(mode === 'helix' ? 'hx' : 'inner'); };
+    }
+    function frame(ts) {
+      if (mode === 'helix' && hPlay) { const dt = Math.min(100, ts - (hLast || ts)); hTime += dt / 1000 * hRate * 0.25 * 365.25 * DAY; buildHelix(); hDate(); dirty = true; }   // 1× = a quarter year per second
+      hLast = ts; if (visible && (dirty || cam.goal || spin[0] || spin[1])) draw(); requestAnimationFrame(frame); }
+    function hDate() { el.querySelector('.s3d-t').textContent = new Date(hTime).toLocaleDateString(window.LOC || 'en-GB', { month: 'long', year: 'numeric' });
+      el.querySelector('.s3d-sub').textContent = tr('the Sun moves {d} AU a year', { d: (kmsAU(TRAVEL[frameK].v) * 365.25).toFixed(1) }); }
     function resize() { const r = el.getBoundingClientRect(); W = Math.max(200, r.width); H = Math.max(200, r.height); dpr = Math.min(2, devicePixelRatio || 1);
       [cv, ov].forEach(c => { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); c.style.width = W + 'px'; c.style.height = H + 'px'; }); dirty = true; }
-    function setTime(t) { if (!isFinite(t)) return; time = t; el.querySelector('.s3d-t').textContent = new Date(t).toLocaleString(window.LOC || 'en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: opts.tz ? opts.tz() : undefined });
+    function setTime(t) { if (!isFinite(t)) return; time = t; if (mode === 'helix') return; el.querySelector('.s3d-t').textContent = new Date(t).toLocaleString(window.LOC || 'en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: opts.tz ? opts.tz() : undefined });
       const E = planet('Earth', t), q = cmes.filter(c => { const r = 0.1 + kmsAU(c.v) * (t - c.t) / DAY; return r > 0 && r < 3.4; }).length;
       el.querySelector('.s3d-sub').textContent = tr('wind at Earth ≈ {v} km/s', { v: Math.round(vtab[Math.round((((lonOf(E) - OMEGA * t / DAY) / D2R) % 360 + 360) % 360) % 360]) }) + (q ? ' · ' + tr('{n} CME in flight', { n: q }) : '');
       build(); dirty = true; }
-    const VIEWS = { inner: { dist: 3.4, pitch: .55, tgt: [0, 0, 0] }, all: { dist: 62, pitch: .7, tgt: [0, 0, 0] }, top: { dist: 4.2, pitch: 1.5, tgt: [0, 0, 0] } };
-    function view(v) { cam.follow = null;
+    const VIEWS = { hx: null, inner: { dist: 3.4, pitch: .55, tgt: [0, 0, 0] }, all: { dist: 62, pitch: .7, tgt: [0, 0, 0] }, top: { dist: 4.2, pitch: 1.5, tgt: [0, 0, 0] } };
+    function view(v) { cam.follow = null; spin = [0, 0];
+      if (v === 'hx' || (mode === 'helix' && v === 'inner')) {   // frame the inner planets' last ~2 years (lsr) / ~1 year (galaxy), seen from the side
+        const T = TRAVEL[frameK], d = T.dir, V = d.map(x => x * kmsAU(T.v)), span = (frameK === 'lsr' ? 2.4 : 1.1) * 365.25, P = [[0, 0, 0]];
+        ['Mercury', 'Venus', 'Earth', 'Mars'].forEach(nm => { for (let i = 0; i <= 40; i++) { const dd = -span * i / 40, q = planet(nm, hTime + dd * DAY); P.push([q[0] + V[0] * dd, q[1] + V[1] * dd, q[2] + V[2] * dd]); } });
+        const c = [0, 1, 2].map(k => P.reduce((a, q) => a + q[k], 0) / P.length), rad = Math.max(...P.map(q => Math.hypot(q[0] - c[0], q[1] - c[1], q[2] - c[2])));
+        const tg = toHx(c); tg[0] += rad * .3; cam.goal = { tgt: tg, dist: rad / Math.tan(22.5 * D2R) / Math.max(1, Math.min(1.6, W / H)) * 1.15, pitch: .18, yaw: Math.PI / 2 }; dirty = true; return; }
       if (v === 'earth') { const E = planet('Earth', time); const lon = lonOf(E); cam.goal = { tgt: [0, 0, 0], dist: Math.hypot(E[0], E[2]) * 1.35, pitch: .12, yaw: -lon }; }
       else cam.goal = Object.assign({}, VIEWS[v] || VIEWS.inner); dirty = true; }
     // controls: drag = turn, wheel / pinch = zoom, tap a planet = fly to it
-    const pts = new Map(); let d0 = 0, z0 = 0, moved = 0;
-    ov.addEventListener('pointerdown', e => { ov.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]); moved = 0; if (pts.size === 2) { const [a, b] = [...pts.values()]; d0 = Math.hypot(a[0] - b[0], a[1] - b[1]); z0 = cam.dist; } });
+    const pts = new Map(); let d0 = 0, z0 = 0, moved = 0, panBtn = false, lastTap = 0, mid0 = null;
+    const pan = (dx, dy) => {   // move the target in the camera's plane
+      const k = cam.dist * .0016, cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw), right = [-sy, 0, cy], upv = [-Math.sin(cam.pitch) * cy, Math.cos(cam.pitch), -Math.sin(cam.pitch) * sy];
+      cam.follow = null; cam.tgt = cam.tgt.map((v, i) => v - right[i] * dx * k + upv[i] * dy * k); dirty = true; };
+    ov.addEventListener('contextmenu', e => e.preventDefault());
+    ov.addEventListener('pointerdown', e => { ov.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]); moved = 0; spin = [0, 0]; panBtn = e.button === 2 || e.shiftKey;
+      if (pts.size === 2) { const [a, b] = [...pts.values()]; d0 = Math.hypot(a[0] - b[0], a[1] - b[1]); z0 = cam.dist; mid0 = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; } });
     ov.addEventListener('pointermove', e => { const p = pts.get(e.pointerId); if (!p) return; const dx = e.clientX - p[0], dy = e.clientY - p[1]; pts.set(e.pointerId, [e.clientX, e.clientY]);
-      if (pts.size === 1) { cam.yaw += dx * .006; cam.pitch = Math.max(-1.5, Math.min(1.55, cam.pitch + dy * .006)); moved += Math.abs(dx) + Math.abs(dy); cam.goal = null; dirty = true; }
-      else if (pts.size === 2) { const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); cam.dist = Math.max(.08, Math.min(120, z0 * d0 / Math.max(10, d))); moved = 99; cam.goal = null; dirty = true; } });
-    const up = e => { pts.delete(e.pointerId); if (moved < 6 && e.type === 'pointerup') { const r = ov.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+      if (pts.size === 1) { moved += Math.abs(dx) + Math.abs(dy); cam.goal = null;
+        if (panBtn) pan(dx, dy); else { cam.yaw += dx * .006; cam.pitch = Math.max(-1.5, Math.min(1.55, cam.pitch + dy * .006)); spin = [dx * .006, dy * .006]; } dirty = true; }
+      else if (pts.size === 2) { const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+        cam.dist = Math.max(.08, Math.min(400, z0 * d0 / Math.max(10, d))); if (mid0) { pan(mid[0] - mid0[0], mid[1] - mid0[1]); mid0 = mid; } moved = 99; cam.goal = null; dirty = true; } });
+    const up = e => { pts.delete(e.pointerId); if (pts.size < 2) mid0 = null; if (pts.size === 0 && moved > 6) { /* keep the spin going */ } else spin = [0, 0];
+      if (moved < 6 && e.type === 'pointerup') { const r = ov.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top, now = performance.now();
+        if (now - lastTap < 320) { lastTap = 0; info = null; el.querySelector('.s3d-info').hidden = true; view(mode === 'helix' ? 'hx' : 'inner'); return; } lastTap = now;
         const h = hits.find(h => Math.hypot(h.x - x, h.y - y) < h.r || (h.w && x > h.x && x < h.x + h.w + 10 && Math.abs(y - h.y) < 10));
-        if (h && h.name !== 'Sun') { cam.follow = null; const p = planet(h.name, time); cam.goal = { tgt: p, dist: Math.max(.25, Math.hypot(...p) * .25) }; setTimeout(() => { cam.follow = h.name; }, 900); }
-        else if (h) view('inner'); } };
+        if (h && h.name !== 'Sun') { cam.follow = null; const p = planet(h.name, mode === 'helix' ? hTime : time); cam.goal = { tgt: toHx(p), dist: Math.max(.25, Math.hypot(...p) * .25) }; info = h.name; setTimeout(() => { if (info === h.name) cam.follow = h.name; }, 900); dirty = true; }
+        else if (h) { info = null; el.querySelector('.s3d-info').hidden = true; view(mode === 'helix' ? 'hx' : 'inner'); } } };
     ov.addEventListener('pointerup', up); ov.addEventListener('pointercancel', up);
-    ov.addEventListener('wheel', e => { e.preventDefault(); cam.dist = Math.max(.08, Math.min(120, cam.dist * Math.exp(e.deltaY * .0012))); cam.goal = null; dirty = true; }, { passive: false });
+    const zoom = f => { cam.dist = Math.max(.08, Math.min(400, cam.dist * f)); cam.goal = null; dirty = true; };
+    ov.addEventListener('wheel', e => { e.preventDefault(); zoom(Math.exp(e.deltaY * .0012)); }, { passive: false });
+    el.querySelectorAll('[data-z]').forEach(b => b.onclick = () => zoom(+b.dataset.z > 0 ? 1.35 : 1 / 1.35));
+    el.querySelector('.s3d-reset').onclick = () => { info = null; el.querySelector('.s3d-info').hidden = true; view(mode === 'helix' ? 'hx' : 'inner'); };
+    el.querySelector('.s3d-q').onclick = () => { const h = el.querySelector('.s3d-help'); h.hidden = !h.hidden; };
+    el.querySelector('.s3d-hx-x').onclick = () => { el.querySelector('.s3d-help').hidden = true; };
+    el.tabIndex = 0;
+    el.addEventListener('keydown', e => { const k = e.key; if (/^Arrow/.test(k)) { e.preventDefault(); if (k === 'ArrowLeft') cam.yaw -= .08; if (k === 'ArrowRight') cam.yaw += .08; if (k === 'ArrowUp') cam.pitch = Math.min(1.55, cam.pitch + .06); if (k === 'ArrowDown') cam.pitch = Math.max(-1.5, cam.pitch - .06); cam.goal = null; dirty = true; }
+      else if (k === '+' || k === '=') zoom(1 / 1.2); else if (k === '-') zoom(1.2); else if (k === 'r' || k === 'R') view(mode === 'helix' ? 'hx' : 'inner');
+      else if (k === ' ' && mode === 'helix') { e.preventDefault(); togglePlay(); } else if (k === 'Escape' && el.classList.contains('s3d-fs')) el.querySelector('.s3d-full').click(); });
+    // modes
+    const togglePlay = () => { hPlay = !hPlay; const b = el.querySelector('.s3d-hplay'); b.textContent = hPlay ? '⏸' : '▶'; b.setAttribute('aria-label', hPlay ? tr('Pause') : tr('Play')); hLast = 0; };
+    el.querySelector('.s3d-hplay').onclick = togglePlay;
+    el.querySelector('.s3d-hspd').onclick = e => { hRate = hRate === 1 ? 4 : hRate === 4 ? 16 : 1; e.target.textContent = hRate + '×'; };
+    el.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { frameK = b.dataset.f; el.querySelectorAll('[data-f]').forEach(o => o.setAttribute('aria-pressed', o === b)); buildHelix(); hDate(); view('hx'); });
+    function setMode(m) { mode = m; el.classList.toggle('hx', m === 'helix'); el.querySelectorAll('[data-m]').forEach(o => o.setAttribute('aria-pressed', o.dataset.m === m)); info = null; el.querySelector('.s3d-info').hidden = true;
+      if (m === 'helix') { hTime = time; buildHelix(); hDate(); view('hx'); if (!hPlay) togglePlay(); } else { if (hPlay) togglePlay(); build.orbT = null; setTime(time); view('inner'); } dirty = true; }
+    el.querySelectorAll('[data-m]').forEach(b => b.onclick = () => setMode(b.dataset.m));
     el.querySelectorAll('[data-v]').forEach(b => b.onclick = () => view(b.dataset.v));
     el.querySelector('.s3d-full').onclick = () => { el.classList.toggle('s3d-fs'); document.body.classList.toggle('s3d-lock', el.classList.contains('s3d-fs')); setTimeout(resize, 60); };
     if (window.ResizeObserver) new ResizeObserver(resize).observe(el); else addEventListener('resize', resize);
