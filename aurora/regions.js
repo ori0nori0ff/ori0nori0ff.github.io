@@ -122,7 +122,7 @@
       <div class="sr-box"><img alt="${tr('The Sun now with its active regions')}"><canvas role="img" aria-label="${tr('Active regions and flares of the last 24 hours on the Sun')}"></canvas></div>
       <div class="sr-meta">${tr('LOADING…')}</div>
       <div class="sr-lg"><span><i style="background:#FFE600"></i>${tr('C flare')}</span><span><i style="background:#FFA040"></i>${tr('M flare')}</span><span><i style="background:#FF4444"></i>${tr('X flare')}</span><span><i style="background:#3EE08F"></i>${tr('coronal hole')}</span><span><i style="background:#7BE0FF;opacity:.6"></i>${tr('faces Earth')}</span></div></div><div class="sr-r">
-      <div class="sr-sum"></div><div class="sr-list"></div><div class="sr-h">${tr('CORONAL HOLES · FAST SOLAR WIND')}</div><div class="sr-holes"><div class="sr-s">${tr('LOADING…')}</div></div><div class="sr-x"></div></div>`;
+      <div class="sr-sum"></div><div class="sr-list"></div><div class="sr-h">${tr('CORONAL HOLES · FAST SOLAR WIND')}</div><div class="sr-holes"><div class="sr-s">${tr('LOADING…')}</div></div></div><div class="sr-x"></div>`;
     const q = s => el.querySelector(s), im = q('img'), cv = q('canvas'), g = cv.getContext('2d');
     el.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { F = +b.dataset.f; el.querySelectorAll('[data-f]').forEach(x => x.setAttribute('aria-pressed', +x.dataset.f === F)); im.src = imgUrl(FILT[F][0]); });
     el.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { const kk = b.dataset.k; if (kk === 'mk') mk = !mk; else if (kk === 'ch') ch = !ch; else zone = !zone; b.setAttribute('aria-pressed', kk === 'mk' ? mk : kk === 'ch' ? ch : zone); draw(); });
@@ -194,7 +194,7 @@
     const refresh = () => load().then(d => { D = d; list(); draw(); }).catch(() => { q('.sr-meta').textContent = tr('NOAA region data unavailable right now.'); });
     refresh();
     holes().then(h => { HO = h; holeList(); draw(); }).catch(() => { HO = { err: 1 }; holeList(); });
-    return { refresh, select(id) { sel = id; list(); draw(); } };
+    return { refresh, select(id) { sel = id; list(); draw(); }, setLimit(n) { o.limit = n; list(); }, count: () => D ? D.regions.length : 0 };
   }
   window.SunRegions = { load, holes, mount, flareInfo, where };
 })();

@@ -148,10 +148,11 @@
 .flr b { font: 600 15px 'Barlow Condensed', sans-serif; }
 .swjump { margin-top: 12px; font: 700 10.5px 'JetBrains Mono', monospace; letter-spacing: .06em; color: #7BE0FF; background: none; border: 1px solid #7BE0FF66; border-radius: 99px; padding: 9px 12px; cursor: pointer; text-align: left; }
 .flr .flw { flex: 1; margin: 0 10px; color: #A3B0C2; font: 600 10.5px 'JetBrains Mono', monospace; align-self: center; } .flr .flw b { font: inherit; color: #7BE0FF; }
-#srHost { display: grid; grid-template-columns: minmax(0, 560px) minmax(0, 1fr); column-gap: 28px; align-items: start; }
-#srHost .sr-r > .sr-sum { margin-top: 0; } #srHost .sr-l { position: sticky; top: 120px; }
+#srHost { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.618fr); column-gap: 28px; align-items: start; }   /* golden ratio: Sun : lists = 1 : φ */
+#srHost .sr-box { max-width: none; }
+#srHost .sr-r > .sr-sum { margin-top: 0; } #srHost .sr-x { grid-column: 1 / -1; }   /* X-rays + flares: full width under the Sun and the lists */
 #srXChart { width: 100%; display: block; margin-top: 8px; }
-@media (max-width: 899px) { #srHost { display: block; } #srHost .sr-l { position: static; } #srHost .sr-r { margin-top: 6px; } }
+@media (max-width: 899px) { #srHost { display: block; } #srHost .sr-r { margin-top: 6px; } }
 .scale { background: #0F1216; border-radius: 12px; padding: 10px; text-align: center; }
 .scale b { display: block; font: 600 26px/1 'Barlow Condensed', sans-serif; }
 .scale small { display: block; color: var(--t3); font-size: 8px; letter-spacing: 1px; margin-top: 4px; text-transform: uppercase; }
@@ -743,7 +744,11 @@ $('sunChips').innerHTML = SUNF.map((f, i) => `<button data-i="${i}" style="color
 $('sunChips').onclick = e => { const b = e.target.closest('button'); if (b) sunPick(+b.dataset.i); };
 const flWhere = (RI, f) => { const i = RI && window.SunRegions && SunRegions.flareInfo(RI, f.begin_time); if (!i || !i.region) return '';
   return `<span class="flw">${i.region}${i.lat != null ? ' · ' + SunRegions.where(i) : ''}${i.earth ? ' · <b>↯ ' + T('faced Earth') + '</b>' : ''}</span>`; };
-(function () { const h = document.getElementById('srHost'); if (!h) return; let done = false; const go = () => { if (!done && window.SunRegions) { done = true; SunRegions.mount(h, { limit: 6 }); (function x() { window.srXray ? srXray() : setTimeout(x, 800); })(); } };
+(function () { const h = document.getElementById('srHost'); if (!h) return; let done = false; const go = () => { if (!done && window.SunRegions) { done = true; const api = SunRegions.mount(h, { limit: 6 });
+    // PC: show as many regions as fit beside the Sun, so both columns end together (golden-ratio columns, equal heights)
+    const fit = () => { const l = h.querySelector('.sr-l'), r = h.querySelector('.sr-r'); if (!l || !r || !api.count() || getComputedStyle(h).display !== 'grid') return;
+      let best = 3, bd = 1e9; for (let n = 3; n <= api.count(); n++) { api.setLimit(n); const d = Math.abs(r.offsetHeight - l.offsetHeight); if (d < bd) { bd = d; best = n; } } api.setLimit(best); };
+    [2500, 6000, 12000].forEach(ms => setTimeout(fit, ms)); addEventListener('resize', () => { clearTimeout(fit.t); fit.t = setTimeout(fit, 300); }); (function x() { window.srXray ? srXray() : setTimeout(x, 800); })(); } };
   if (window.IntersectionObserver) new IntersectionObserver((e, o) => { if (e.some(x => x.isIntersecting)) { o.disconnect(); go(); } }, { rootMargin: '600px' }).observe(h); else go(); })();
 async function loadSun() {
   try { sun.F = await j('sun/frames.json?t=' + Math.floor(Date.now() / 300000)); } catch (e) { sun.F = null; }
