@@ -1,0 +1,165 @@
+/* PowHau · Earth up close (plain WebGL 1, no libraries) — the "Earth" mode of space3d.js, app + public page.
+   A globe built from Web-Mercator tiles (quadtree, more detail as you zoom): NASA GIBS Blue Marble or today's VIIRS
+   true colour (with today's clouds) up to z 8–9, then Sentinel-2 cloudless (EOX, ~10 m) up to z 15; NASA Black
+   Marble city lights on the night side; day / night from the real Sun position; a thin atmosphere; pins.
+   Earth3D.create(el, { places: [{name, lat, lon}], time: () => ms, onBack }) → { show(), hide(), setTime(t), flyTo(lat, lon, km) } */
+(function () {
+  'use strict';
+  const tr = (s, o) => window.T ? window.T(s, o) : String(s).replace(/\{(\w+)\}/g, (m, k) => o && o[k] != null ? o[k] : m);
+  const D2R = Math.PI / 180, R_KM = 6371, MAXLAT = 85.05113;
+  const day = t => new Date(t - 864e5).toISOString().slice(0, 10);   // yesterday: today's VIIRS mosaic fills during the day
+  const SRC = {
+    clear: (z, x, y) => z <= 8 ? `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/2004-08/GoogleMapsCompatible_Level8/${z}/${y}/${x}.jpeg` : null,
+    today: (z, x, y, t) => z <= 9 ? `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/${day(t)}/GoogleMapsCompatible_Level9/${z}/${y}/${x}.jpg` : null,
+    detail: (z, x, y) => `https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2021_3857/default/GoogleMapsCompatible/${z}/${y}/${x}.jpg`,
+    night: (z, x, y) => `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/${z}/${y}/${x}.png`,
+  };
+  const DETAIL_FROM = { clear: 9, today: 10 }, MAXZ = 15;
+  const lat2y = (lat, z) => (1 - Math.log(Math.tan(Math.PI / 4 + lat * D2R / 2)) / Math.PI) / 2 * (1 << z);
+  const y2lat = (y, z) => Math.atan(Math.sinh(Math.PI * (1 - 2 * y / (1 << z)))) / D2R;
+  const xyz = (lat, lon, r) => { const a = lat * D2R, b = lon * D2R; return [r * Math.cos(a) * Math.cos(b), r * Math.sin(a), -r * Math.cos(a) * Math.sin(b)]; };
+  // sub-solar point (low precision is plenty for day / night)
+  function sunDir(t) { const d = new Date(t), doy = (t - Date.UTC(d.getUTCFullYear(), 0, 0)) / 864e5, dec = 23.44 * Math.sin(2 * Math.PI * (doy - 81) / 365.25);
+    const B = 2 * Math.PI * (doy - 81) / 364, eot = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B), hrs = d.getUTCHours() + d.getUTCMinutes() / 60 + eot / 60;
+    return xyz(dec, (12 - hrs) * 15, 1); }
+
+  const VS = 'attribute vec3 p;attribute vec2 uv;uniform mat4 m;uniform vec4 ud;uniform vec4 un;varying vec2 vd;varying vec2 vn;varying vec3 vp;void main(){gl_Position=m*vec4(p,1.);vd=uv*ud.xy+ud.zw;vn=uv*un.xy+un.zw;vp=p;}';
+  const FS = 'precision mediump float;uniform sampler2D td;uniform sampler2D tn;uniform vec3 sun;uniform float hn;varying vec2 vd;varying vec2 vn;varying vec3 vp;void main(){vec3 n=normalize(vp);float d=dot(n,sun);float dl=smoothstep(-.12,.18,d);vec3 c=texture2D(td,vd).rgb;vec3 l=texture2D(tn,vn).rgb*hn;vec3 night=c*.06+l*vec3(1.,.82,.55)*1.5;gl_FragColor=vec4(mix(night,c*(.75+.35*max(d,0.)),dl),1.);}';
+  const persp = (fov, asp, n, f) => { const t = 1 / Math.tan(fov / 2); return [t / asp, 0, 0, 0, 0, t, 0, 0, 0, 0, (f + n) / (n - f), -1, 0, 0, 2 * f * n / (n - f), 0]; };
+  const lookAt = (e, c, u) => { let z = [e[0] - c[0], e[1] - c[1], e[2] - c[2]], l = Math.hypot(...z); z = z.map(v => v / l);
+    let x = [u[1] * z[2] - u[2] * z[1], u[2] * z[0] - u[0] * z[2], u[0] * z[1] - u[1] * z[0]]; l = Math.hypot(...x); x = x.map(v => v / l);
+    const y = [z[1] * x[2] - z[2] * x[1], z[2] * x[0] - z[0] * x[2], z[0] * x[1] - z[1] * x[0]];
+    return [x[0], y[0], z[0], 0, x[1], y[1], z[1], 0, x[2], y[2], z[2], 0, -(x[0] * e[0] + x[1] * e[1] + x[2] * e[2]), -(y[0] * e[0] + y[1] * e[1] + y[2] * e[2]), -(z[0] * e[0] + z[1] * e[1] + z[2] * e[2]), 1]; };
+  const mul = (a, b) => { const o = new Array(16); for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { let s = 0; for (let k = 0; k < 4; k++) s += a[k * 4 + j] * b[i * 4 + k]; o[i * 4 + j] = s; } return o; };
+
+  const CSS = `.e3d{position:absolute;inset:0;display:none;background:#000}.e3d.on{display:block}.e3d canvas{position:absolute;left:0;top:0;touch-action:none}
+.e3d-ui{position:absolute;left:10px;bottom:10px;display:flex;gap:6px;flex-wrap:wrap;max-width:calc(100% - 70px)}
+.e3d-ui button{border:1px solid rgba(255,255,255,.18);background:rgba(10,14,20,.78);color:#E6EBF1;border-radius:999px;padding:7px 12px;min-height:36px;font:600 12px Inter,system-ui,sans-serif;cursor:pointer}
+.e3d-ui button[aria-pressed=true]{border-color:#39FF9E;color:#39FF9E}
+.e3d-alt{position:absolute;left:12px;top:10px;font:700 15px Inter,system-ui,sans-serif;color:#FFE600;text-shadow:0 1px 3px #000;pointer-events:none}
+.e3d-alt small{display:block;font:500 12px Inter,system-ui,sans-serif;color:#C9D1DB}
+.e3d-attr{position:absolute;right:10px;bottom:6px;font:500 10px Inter,system-ui,sans-serif;color:rgba(220,227,235,.7);text-shadow:0 1px 2px #000;pointer-events:none;max-width:60%;text-align:right}`;
+
+  function create(host, opts) {
+    opts = opts || {};
+    if (!document.getElementById('e3d-css')) { const st = document.createElement('style'); st.id = 'e3d-css'; st.textContent = CSS; document.head.appendChild(st); }
+    const el = document.createElement('div'); el.className = 'e3d'; host.appendChild(el);
+    el.innerHTML = `<canvas class="e3d-gl"></canvas><canvas class="e3d-ov"></canvas><div class="e3d-alt">–</div>
+      <div class="e3d-ui"><button data-b="back">‹ ${tr('Solar system')}</button><button data-b="home">${tr('My place')}</button><button data-s="today" aria-pressed="true">${tr('Today (clouds)')}</button><button data-s="clear" aria-pressed="false">${tr('Clear view')}</button></div>
+      <div class="e3d-attr">NASA GIBS · Blue Marble · Black Marble · VIIRS · Sentinel-2 cloudless 2021 by EOX</div>`;
+    const cv = el.querySelector('.e3d-gl'), ov = el.querySelector('.e3d-ov'), g2 = ov.getContext('2d');
+    const gl = cv.getContext('webgl', { antialias: true, preserveDrawingBuffer: true });
+    const api = { show() {}, hide() {}, setTime() {}, flyTo() {} };
+    if (!gl) return api;
+    const sh = (t, s) => { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); return o; };
+    const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(pr); gl.useProgram(pr);
+    const L = { p: gl.getAttribLocation(pr, 'p'), uv: gl.getAttribLocation(pr, 'uv') }, U = {}; ['m', 'ud', 'un', 'td', 'tn', 'sun', 'hn'].forEach(k => U[k] = gl.getUniformLocation(pr, k));
+    gl.uniform1i(U.td, 0); gl.uniform1i(U.tn, 1); gl.enable(gl.DEPTH_TEST); gl.enable(gl.CULL_FACE);
+    // one shared index buffer for an N×N tile grid
+    const N = 16, idx = []; for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const a = j * (N + 1) + i; idx.push(a, a + N + 1, a + 1, a + 1, a + N + 1, a + N + 2); }
+    const ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(idx), gl.STATIC_DRAW);
+    const blank = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, blank); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([12, 24, 48, 255]));
+    const black = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, black); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
+    function cap(north) { const v = [0, north ? 1 : -1, 0, .5, .5]; for (let i = 0; i <= 64; i++) { const p = xyz(north ? MAXLAT : -MAXLAT, i / 64 * 360 - 180, 1); v.push(p[0], p[1], p[2], .5, .5); }
+      const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(v), gl.STATIC_DRAW);
+      const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(north ? [200, 214, 228, 255] : [225, 232, 240, 255])); return { b, t, north }; }
+    const caps = [cap(true), cap(false)];
+    // tile geometry cache (positions on the unit sphere + uv), texture cache (LRU)
+    const geo = new Map(), tex = new Map(); let loading = 0, frameNo = 0;
+    function tileGeo(z, x, y) { const k = z + '/' + x + '/' + y; let g = geo.get(k); if (g) return g;
+      const v = new Float32Array((N + 1) * (N + 1) * 5); let o = 0;
+      for (let j = 0; j <= N; j++) { const yy = y + j / N, lat = y2lat(yy, z); for (let i = 0; i <= N; i++) { const lon = (x + i / N) / (1 << z) * 360 - 180, p = xyz(lat, lon, 1); v.set([p[0], p[1], p[2], i / N, j / N], o); o += 5; } }
+      const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, v, gl.STATIC_DRAW);
+      g = { b, c: xyz(y2lat(y + .5, z), (x + .5) / (1 << z) * 360 - 180, 1), corners: [[0, 0], [1, 0], [0, 1], [1, 1], [.5, 0], [.5, 1], [0, .5], [1, .5]].map(([a, c]) => xyz(y2lat(y + c, z), (x + a) / (1 << z) * 360 - 180, 1)) };
+      geo.set(k, g); if (geo.size > 1500) { const [fk, fv] = geo.entries().next().value; gl.deleteBuffer(fv.b); geo.delete(fk); } return g; }
+    function texture(url) { if (!url) return null; let t = tex.get(url); if (t) { t.used = frameNo; return t.ok ? t : null; }
+      t = { used: frameNo, ok: false }; tex.set(url, t); if (loading > 24) { tex.delete(url); return null; }
+      const im = new Image(); im.crossOrigin = 'anonymous'; loading++;
+      im.onload = () => { loading--; const g = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, g); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, im);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); t.g = g; t.ok = true; dirty = true; };
+      im.onerror = () => { loading--; t.bad = true; }; im.src = url;
+      if (tex.size > 420) { let old = null; tex.forEach((v, k) => { if (v.ok && (!old || v.used < old[1].used)) old = [k, v]; }); if (old) { gl.deleteTexture(old[1].g); tex.delete(old[0]); } }
+      return null; }
+    const url = (z, x, y, kind) => kind === 'night' ? (z <= 8 ? SRC.night(z, x, y) : null) : (z >= DETAIL_FROM[src] ? (z <= MAXZ ? SRC.detail(z, x, y) : null) : SRC[src](z, x, y, now()));
+    // the nearest loaded texture for a tile: itself or an ancestor (uv scaled into the ancestor's square)
+    function bestTex(z, x, y, kind) { for (let zz = z, xx = x, yy = y; zz >= 0; zz--, xx >>= 1, yy >>= 1) { const u = url(zz, xx, yy, kind); const t = u && texture(u);
+        if (t) { const s = 1 / (1 << (z - zz)); return { g: t.g, tf: [s, s, (x - (xx << (z - zz))) * s, (y - (yy << (z - zz))) * s] }; } } return null; }
+
+    let W = 0, H = 0, dpr = 1, M = null, dirty = true, visible = false, src = 'today', sunV = [1, 0, 0];
+    const cam = { lat: 45.6, lon: 25.6, alt: 18000, goal: null };   // alt in km above the surface
+    const now = () => (opts.time ? opts.time() : Date.now());
+    function eyePos() { const r = 1 + cam.alt / R_KM; return xyz(cam.lat, cam.lon, r); }
+    const proj = p => { const x = M[0] * p[0] + M[4] * p[1] + M[8] * p[2] + M[12], y = M[1] * p[0] + M[5] * p[1] + M[9] * p[2] + M[13], w = M[3] * p[0] + M[7] * p[1] + M[11] * p[2] + M[15];
+      return w <= 1e-6 ? null : [(x / w * .5 + .5) * W, (1 - (y / w * .5 + .5)) * H, w]; };
+    const list = [];
+    function select(z, x, y, eye) {   // quadtree: keep a tile if it faces us and is on screen; split while it looks big
+      const g = tileGeo(z, x, y), toEye = [eye[0] - g.c[0], eye[1] - g.c[1], eye[2] - g.c[2]];
+      if (z >= 3 && g.corners.every(q => q[0] * (eye[0] - q[0]) + q[1] * (eye[1] - q[1]) + q[2] * (eye[2] - q[2]) < 0)) return;   // every corner on the far side
+      const ps = g.corners.concat([g.c]).map(proj);
+      if (z >= 2) { if (ps.some(q => !q)) { if (z > 6) return; } else { const xs = ps.map(q => q[0]), ys = ps.map(q => q[1]); if (Math.max(...xs) < 0 || Math.min(...xs) > W || Math.max(...ys) < 0 || Math.min(...ys) > H) return; } }
+      const ok = ps.filter(Boolean), size = ok.length < 2 ? 1e9 : Math.hypot(Math.max(...ok.map(q => q[0])) - Math.min(...ok.map(q => q[0])), Math.max(...ok.map(q => q[1])) - Math.min(...ok.map(q => q[1])));
+      if (z < MAXZ && (z < 2 || size > 360 * dpr / Math.max(1, dpr) ) && list.length < 220) { for (let k = 0; k < 4; k++) select(z + 1, x * 2 + (k & 1), y * 2 + (k >> 1), eye); return; }
+      list.push([z, x, y]);
+    }
+    function draw() {
+      frameNo++;
+      if (cam.goal) { const g = cam.goal; cam.lat += (g.lat - cam.lat) * .1; let dl = ((g.lon - cam.lon + 540) % 360) - 180; cam.lon += dl * .1; cam.alt *= Math.pow(g.alt / cam.alt, .1);
+        if (Math.abs(g.lat - cam.lat) < .01 && Math.abs(dl) < .01 && Math.abs(Math.log(g.alt / cam.alt)) < .01) cam.goal = null; dirty = true; }
+      const eye = eyePos(), up = Math.abs(cam.lat) > 89 ? [0, 0, -1] : [0, 1, 0], near = Math.max(cam.alt / R_KM * .3, 1e-5);
+      M = mul(persp(45 * D2R, W / H, near, 1 + cam.alt / R_KM + 2), lookAt(eye, [0, 0, 0], up));
+      gl.viewport(0, 0, cv.width, cv.height); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.useProgram(pr); gl.uniformMatrix4fv(U.m, false, new Float32Array(M)); sunV = sunDir(now()); gl.uniform3fv(U.sun, sunV);
+      list.length = 0; select(0, 0, 0, eye); list.sort((a, b) => a[0] - b[0]);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); let pending = false;
+      list.forEach(([z, x, y]) => { const g = tileGeo(z, x, y), d = bestTex(z, x, y, 'day'), n = bestTex(Math.min(z, 8), x >> Math.max(0, z - 8), y >> Math.max(0, z - 8), 'night');
+        if (!d || d.tf[0] < 1) pending = true;
+        gl.bindBuffer(gl.ARRAY_BUFFER, g.b); gl.enableVertexAttribArray(L.p); gl.vertexAttribPointer(L.p, 3, gl.FLOAT, false, 20, 0); gl.enableVertexAttribArray(L.uv); gl.vertexAttribPointer(L.uv, 2, gl.FLOAT, false, 20, 12);
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, d ? d.g : blank); gl.uniform4fv(U.ud, d ? d.tf : [1, 1, 0, 0]);
+        let ntf = [1, 1, 0, 0]; if (n) { const s = z > 8 ? 1 / (1 << (z - 8)) : 1, ox = z > 8 ? (x - ((x >> (z - 8)) << (z - 8))) * s : 0, oy = z > 8 ? (y - ((y >> (z - 8)) << (z - 8))) * s : 0; ntf = [n.tf[0] * s, n.tf[1] * s, n.tf[2] + ox * n.tf[0], n.tf[3] + oy * n.tf[1]]; }
+        gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, n ? n.g : black); gl.uniform4fv(U.un, ntf); gl.uniform1f(U.hn, n ? 1 : 0);
+        gl.drawElements(gl.TRIANGLES, N * N * 6, gl.UNSIGNED_SHORT, 0); });
+      gl.disable(gl.CULL_FACE); caps.forEach(c => { gl.bindBuffer(gl.ARRAY_BUFFER, c.b); gl.vertexAttribPointer(L.p, 3, gl.FLOAT, false, 20, 0); gl.vertexAttribPointer(L.uv, 2, gl.FLOAT, false, 20, 12);
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, c.t); gl.uniform4fv(U.ud, [1, 1, 0, 0]); gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, black); gl.uniform1f(U.hn, 0);
+        gl.drawArrays(gl.TRIANGLE_FAN, 0, 66); }); gl.enable(gl.CULL_FACE);
+      // overlay: atmosphere rim, pins, altitude
+      g2.setTransform(dpr, 0, 0, dpr, 0, 0); g2.clearRect(0, 0, W, H);
+      const c = proj([0, 0, 0]), rEye = 1 + cam.alt / R_KM, ang = Math.asin(Math.min(1, 1 / rEye)), rpx = Math.tan(ang) / Math.tan(22.5 * D2R) * H / 2;
+      if (c && cam.alt > 600) { const gr = g2.createRadialGradient(c[0], c[1], rpx * .97, c[0], c[1], rpx * 1.08); gr.addColorStop(0, 'rgba(110,170,255,0)'); gr.addColorStop(.35, 'rgba(110,170,255,.45)'); gr.addColorStop(1, 'rgba(110,170,255,0)');
+        g2.fillStyle = gr; g2.beginPath(); g2.arc(c[0], c[1], rpx * 1.08, 0, 7); g2.fill(); }
+      g2.font = '700 12px Inter, system-ui, sans-serif'; g2.textBaseline = 'middle';
+      (opts.places || []).forEach(pl => { const p = xyz(pl.lat, pl.lon, 1.0002), q = proj(p); if (!q) return; const toEye = [eye[0] - p[0], eye[1] - p[1], eye[2] - p[2]]; if (p[0] * toEye[0] + p[1] * toEye[1] + p[2] * toEye[2] < 0) return;
+        g2.fillStyle = '#FFE08A'; g2.beginPath(); g2.arc(q[0], q[1], 4.5, 0, 7); g2.fill(); g2.strokeStyle = '#000'; g2.lineWidth = 1.5; g2.stroke();
+        const tw = g2.measureText(pl.name).width; g2.fillStyle = 'rgba(0,0,0,.6)'; g2.fillRect(q[0] + 8, q[1] - 9, tw + 10, 18); g2.fillStyle = '#FFE08A'; g2.fillText(pl.name, q[0] + 13, q[1]); });
+      const a = cam.alt, al = a >= 1000 ? Math.round(a).toLocaleString(window.LOC || 'en-GB') + ' km' : a >= 10 ? a.toFixed(0) + ' km' : (a * 1000).toFixed(0) + ' m';
+      el.querySelector('.e3d-alt').innerHTML = `${tr('Altitude')} ${al}<small>${cam.lat.toFixed(2)}°, ${cam.lon.toFixed(2)}° · ${new Date(now()).toLocaleString(window.LOC || 'en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })} UTC</small>`;
+      dirty = pending || loading > 0;
+    }
+    function frame() { if (visible && (dirty || cam.goal || spin[0] || spin[1])) { if (spin[0] || spin[1]) { move(spin[0], spin[1]); spin = spin.map(v => Math.abs(v) < .05 ? 0 : v * .9); } draw(); } requestAnimationFrame(frame); }
+    function resize() { const r = host.getBoundingClientRect(); W = Math.max(200, r.width); H = Math.max(200, r.height); dpr = Math.min(2, devicePixelRatio || 1);
+      [cv, ov].forEach(c => { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); c.style.width = W + 'px'; c.style.height = H + 'px'; }); dirty = true; }
+    // controls: drag = move over the globe (slower near the ground), pinch / wheel = altitude, double-tap = zoom in there
+    let spin = [0, 0]; const pts = new Map(); let d0 = 0, a0 = 0, moved = 0, lastTap = 0;
+    function move(dx, dy) { const k = (cam.alt / R_KM) / (H / 2) * 50; cam.lon -= dx * k / Math.max(.2, Math.cos(cam.lat * D2R)); cam.lat = Math.max(-85, Math.min(85, cam.lat + dy * k)); cam.goal = null; dirty = true; }
+    const zoom = f => { cam.alt = Math.max(.3, Math.min(60000, cam.alt * f)); cam.goal = null; dirty = true; };
+    ov.addEventListener('pointerdown', e => { ov.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]); moved = 0; spin = [0, 0]; if (pts.size === 2) { const [a, b] = [...pts.values()]; d0 = Math.hypot(a[0] - b[0], a[1] - b[1]); a0 = cam.alt; } });
+    ov.addEventListener('pointermove', e => { const p = pts.get(e.pointerId); if (!p) return; const dx = e.clientX - p[0], dy = e.clientY - p[1]; pts.set(e.pointerId, [e.clientX, e.clientY]);
+      if (pts.size === 1) { move(dx, dy); spin = [dx, dy]; moved += Math.abs(dx) + Math.abs(dy); } else if (pts.size === 2) { const [a, b] = [...pts.values()]; cam.alt = Math.max(.3, Math.min(60000, a0 * d0 / Math.max(10, Math.hypot(a[0] - b[0], a[1] - b[1])))); moved = 99; dirty = true; } });
+    const up = e => { pts.delete(e.pointerId); if (moved > 6 && pts.size === 0) return; spin = [0, 0];
+      if (moved < 6 && e.type === 'pointerup') { const t = performance.now(); if (t - lastTap < 320) { const r = ov.getBoundingClientRect(); move(-(e.clientX - r.left - W / 2), -(e.clientY - r.top - H / 2)); zoom(.4); lastTap = 0; } else lastTap = t; } };
+    ov.addEventListener('pointerup', up); ov.addEventListener('pointercancel', up);
+    ov.addEventListener('wheel', e => { e.preventDefault(); zoom(Math.exp(e.deltaY * .0015)); }, { passive: false });
+    el.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { src = b.dataset.s; el.querySelectorAll('[data-s]').forEach(o => o.setAttribute('aria-pressed', o === b)); dirty = true; });
+    el.querySelector('[data-b=back]').onclick = () => opts.onBack && opts.onBack();
+    el.querySelector('[data-b=home]').onclick = () => { const p = (opts.places || [])[0]; if (p) cam.goal = { lat: p.lat, lon: p.lon, alt: 60 }; dirty = true; };
+    if (window.ResizeObserver) new ResizeObserver(resize).observe(host);
+    resize(); requestAnimationFrame(frame);
+    api.show = (lat, lon) => { el.classList.add('on'); visible = true; resize(); if (lat != null) { cam.lat = lat; cam.lon = lon; } cam.alt = 30000; cam.goal = { lat: cam.lat, lon: cam.lon, alt: 12000 }; dirty = true; };
+    api.hide = () => { el.classList.remove('on'); visible = false; };
+    api.setTime = () => { dirty = true; };
+    api.flyTo = (lat, lon, km) => { cam.goal = { lat, lon, alt: km || 50 }; dirty = true; };
+    api.setPlaces = p => { opts.places = p; dirty = true; };
+    return api;
+  }
+  window.Earth3D = { create, sunDir };
+})();

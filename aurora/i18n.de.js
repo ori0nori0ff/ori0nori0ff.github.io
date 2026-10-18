@@ -574,5 +574,10 @@ window.I18N_DICT.de = {
   "Speed on its orbit": "Bahngeschwindigkeit",
   "Sunlight needs": "Sonnenlicht braucht",
   "The camera follows it — drag to look around.": "Die Kamera folgt ihm — ziehe, um dich umzusehen.",
-  "the Sun moves {d} AU a year": "die Sonne legt {d} AE pro Jahr zurück"
+  "the Sun moves {d} AU a year": "die Sonne legt {d} AE pro Jahr zurück",
+  "Fly down to Earth": "Zur Erde fliegen",
+  "My place": "Mein Ort",
+  "Today (clouds)": "Heute (mit Wolken)",
+  "Clear view": "Wolkenlos",
+  "Altitude": "Höhe"
 };

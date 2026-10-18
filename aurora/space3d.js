@@ -68,6 +68,7 @@
 .s3d-info b{display:block;font-size:15px;color:#fff;margin-bottom:2px}.s3d-info button{float:right;border:0;background:none;color:#A3B0C2;font-size:14px;cursor:pointer;margin:-4px -4px 0 6px}
 .s3d-help{position:absolute;inset:56px 60px 60px 10px;overflow:auto;background:rgba(8,11,17,.94);border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:14px 16px;font:500 13px/1.55 Inter,system-ui,sans-serif;color:#C9D1DB}
 .s3d-help b{color:#fff;font-size:14px}.s3d-help p{margin:2px 0 12px}.s3d-hx-x{float:right;border:0;background:none;color:#A3B0C2;font-size:16px;cursor:pointer}
+.s3d.ea .s3d-gl,.s3d.ea .s3d-ov,.s3d.ea .s3d-btns,.s3d.ea .s3d-leg,.s3d.ea .s3d-top,.s3d.ea .s3d-info,.s3d.ea .s3d-help,.s3d.ea .s3d-ctl button:not(.s3d-full){display:none!important}.s3d.ea .s3d-tabs,.s3d.ea .s3d-ctl{z-index:5}
 .s3d:focus-visible{outline:3px solid #FFE600;outline-offset:2px}
 @media (max-width:640px){.s3d-tabs{top:52px;left:12px;transform:none}.s3d-tabs button{padding:7px 10px;font-size:11px}.s3d-info{right:56px;max-width:190px}}
 .s3d-leg{position:absolute;right:12px;bottom:14px;font:500 11px Inter,system-ui,sans-serif;color:#A3B0C2;pointer-events:none;text-shadow:0 1px 2px #000}
@@ -80,7 +81,7 @@
     el.classList.add('s3d');
     el.innerHTML = `<canvas class="s3d-gl"></canvas><canvas class="s3d-ov"></canvas>
       <div class="s3d-top"><b class="s3d-t">–</b><span class="s3d-sub"></span></div>
-      <div class="s3d-tabs" role="tablist"><button data-m="sys" aria-pressed="true">${tr('Solar system')}</button><button data-m="helix" aria-pressed="false">${tr('Spiral through space')}</button></div>
+      <div class="s3d-tabs" role="tablist"><button data-m="sys" aria-pressed="true">${tr('Solar system')}</button><button data-m="helix" aria-pressed="false">${tr('Spiral through space')}</button><button data-m="earth" aria-pressed="false">${tr('Earth')}</button></div>
       <div class="s3d-btns s3d-sys"><button data-v="inner">${tr('Inner planets')}</button><button data-v="all">${tr('Whole system')}</button><button data-v="earth">${tr('From Earth')}</button><button data-v="top">${tr('From above')}</button></div>
       <div class="s3d-btns s3d-hx"><button class="s3d-hplay" aria-label="${tr('Play')}">▶</button><button class="s3d-hspd">1×</button><button data-f="lsr" aria-pressed="true">${tr('vs nearby stars · 20 km/s')}</button><button data-f="gal" aria-pressed="false">${tr('around the Milky Way · 230 km/s')}</button></div>
       <div class="s3d-ctl"><button class="s3d-full" aria-label="${tr('Full screen')}">⛶</button><button data-z="-1" aria-label="${tr('Zoom in')}">+</button><button data-z="1" aria-label="${tr('Zoom out')}">−</button><button class="s3d-reset" aria-label="${tr('Reset the view')}">⟲</button><button class="s3d-q" aria-label="${tr('How it works')}">?</button></div>
@@ -228,12 +229,13 @@
     function showInfo(nm) {
       const box = el.querySelector('.s3d-info'), t = mode === 'helix' ? hTime : time, p = planet(nm, t), r = Math.hypot(...p), a = EL[nm][0][0], v = 29.78 * Math.sqrt(2 / r - 1 / a), E = planet('Earth', t), de = Math.hypot(p[0] - E[0], p[1] - E[1], p[2] - E[2]);
       box.hidden = false; box.innerHTML = `<button aria-label="${tr('Close')}">✕</button><b>${tr(nm)}</b>${tr('From the Sun')}: ${r.toFixed(2)} AU · ${Math.round(r * 149.6)} ${tr('million km')}<br>${tr('Speed on its orbit')}: ${v.toFixed(1)} km/s<br>${tr('Sunlight needs')} ${(r * 8.317).toFixed(1)} min`
-        + (nm !== 'Earth' ? `<br>${tr('From Earth')}: ${de.toFixed(2)} AU` : '') + `<br><small style="color:#8E9AAB">${tr('The camera follows it — drag to look around.')}</small>`;
+        + (nm !== 'Earth' ? `<br>${tr('From Earth')}: ${de.toFixed(2)} AU` : (window.Earth3D ? `<br><button class="s3d-goearth" style="float:none;margin:6px 0 0;border:1px solid #39FF9E;color:#39FF9E;border-radius:999px;padding:5px 10px;font:600 12px Inter,system-ui,sans-serif">${tr('Fly down to Earth')} ›</button>` : '')) + `<br><small style="color:#8E9AAB">${tr('The camera follows it — drag to look around.')}</small>`;
+      const ge = box.querySelector('.s3d-goearth'); if (ge) ge.onclick = () => setMode('earth');
       box.querySelector('button').onclick = () => { info = null; box.hidden = true; cam.follow = null; view(mode === 'helix' ? 'hx' : 'inner'); };
     }
     function frame(ts) {
       if (mode === 'helix' && hPlay) { const dt = Math.min(100, ts - (hLast || ts)); hTime += dt / 1000 * hRate * 0.25 * 365.25 * DAY; buildHelix(); hDate(); dirty = true; }   // 1× = a quarter year per second
-      hLast = ts; if (visible && (dirty || cam.goal || spin[0] || spin[1])) draw(); requestAnimationFrame(frame); }
+      hLast = ts; if (mode !== 'earth' && visible && (dirty || cam.goal || spin[0] || spin[1])) draw(); requestAnimationFrame(frame); }
     function hDate() { el.querySelector('.s3d-t').textContent = new Date(hTime).toLocaleDateString(window.LOC || 'en-GB', { month: 'long', year: 'numeric' });
       el.querySelector('.s3d-sub').textContent = tr('the Sun moves {d} AU a year', { d: (kmsAU(TRAVEL[frameK].v) * 365.25).toFixed(1) }); }
     function resize() { const r = el.getBoundingClientRect(); W = Math.max(200, r.width); H = Math.max(200, r.height); dpr = Math.min(2, devicePixelRatio || 1);
@@ -286,7 +288,13 @@
     el.querySelector('.s3d-hplay').onclick = togglePlay;
     el.querySelector('.s3d-hspd').onclick = e => { hRate = hRate === 1 ? 4 : hRate === 4 ? 16 : 1; e.target.textContent = hRate + '×'; };
     el.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { frameK = b.dataset.f; el.querySelectorAll('[data-f]').forEach(o => o.setAttribute('aria-pressed', o === b)); buildHelix(); hDate(); view('hx'); });
-    function setMode(m) { mode = m; el.classList.toggle('hx', m === 'helix'); el.querySelectorAll('[data-m]').forEach(o => o.setAttribute('aria-pressed', o.dataset.m === m)); info = null; el.querySelector('.s3d-info').hidden = true;
+    let earth = null;
+    function setMode(m) {
+      if (m === 'earth') { if (!window.Earth3D) return; if (!earth) earth = Earth3D.create(el, { places: opts.places ? opts.places() : [], time: () => time, onBack: () => setMode('sys') });
+        if (hPlay) togglePlay(); mode = 'earth'; el.classList.add('ea'); el.classList.remove('hx'); el.querySelectorAll('[data-m]').forEach(o => o.setAttribute('aria-pressed', o.dataset.m === m)); info = null;
+        const pl = opts.places ? opts.places()[0] : null; if (opts.places) earth.setPlaces(opts.places()); earth.show(pl ? pl.lat : 45.6, pl ? pl.lon : 25.6); return; }
+      if (earth) earth.hide(); el.classList.remove('ea');
+      mode = m; el.classList.toggle('hx', m === 'helix'); el.querySelectorAll('[data-m]').forEach(o => o.setAttribute('aria-pressed', o.dataset.m === m)); info = null; el.querySelector('.s3d-info').hidden = true;
       if (m === 'helix') { hTime = time; buildHelix(); hDate(); view('hx'); if (!hPlay) togglePlay(); } else { if (hPlay) togglePlay(); build.orbT = null; setTime(time); view('inner'); } dirty = true; }
     el.querySelectorAll('[data-m]').forEach(b => b.onclick = () => setMode(b.dataset.m));
     el.querySelectorAll('[data-v]').forEach(b => b.onclick = () => view(b.dataset.v));

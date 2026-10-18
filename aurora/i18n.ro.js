@@ -574,5 +574,10 @@ window.I18N_DICT.ro = {
   "Speed on its orbit": "Viteza pe orbită",
   "Sunlight needs": "Lumina Soarelui are nevoie de",
   "The camera follows it — drag to look around.": "Camera o urmărește — trage ca să te uiți în jur.",
-  "the Sun moves {d} AU a year": "Soarele parcurge {d} UA pe an"
+  "the Sun moves {d} AU a year": "Soarele parcurge {d} UA pe an",
+  "Fly down to Earth": "Coboară pe Pământ",
+  "My place": "Locul meu",
+  "Today (clouds)": "Azi (cu nori)",
+  "Clear view": "Fără nori",
+  "Altitude": "Altitudine"
 };
