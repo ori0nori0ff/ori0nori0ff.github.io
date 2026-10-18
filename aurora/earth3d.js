@@ -66,11 +66,24 @@
     const caps = [cap(true), cap(false)];
     // tile geometry cache (positions on the unit sphere + uv), texture cache (LRU)
     const geo = new Map(), tex = new Map(); let loading = 0, frameNo = 0;
-    function tileGeo(z, x, y) { const k = z + '/' + x + '/' + y; let g = geo.get(k); if (g) return g;
+    const dem = new Map(), EXAG = 1.5, DEMZ = 12; let demLoading = 0;
+    function demTile(z, x, y) { const k = z + '/' + x + '/' + y; let d = dem.get(k); if (d) return d.h ? d : null; if (demLoading > 8) return null;
+      d = {}; dem.set(k, d); demLoading++; const im = new Image(); im.crossOrigin = 'anonymous';
+      im.onload = () => { demLoading--; try { const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d'); g.drawImage(im, 0, 0); const px = g.getImageData(0, 0, 256, 256).data, h = new Float32Array(65536);
+          for (let i = 0; i < 65536; i++) h[i] = Math.max(0, px[i * 4] * 256 + px[i * 4 + 1] + px[i * 4 + 2] / 256 - 32768); d.h = h; dirty = true; } catch (e) { d.bad = true; } };
+      im.onerror = () => { demLoading--; d.bad = true; }; im.src = `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${z}/${x}/${y}.png`;
+      if (dem.size > 160) dem.delete(dem.keys().next().value); return null; }
+    function heightAt(z, x, y, u, v) {   // metres at (u, v) inside tile z/x/y, from the DEM tile covering it (z ≤ 12)
+      if (z < 7) return 0; const zz = Math.min(z, DEMZ), s = 1 << (z - zz), dx = x >> (z - zz), dy = y >> (z - zz), d = demTile(zz, dx, dy); if (!d) return null;
+      const fu = ((x - dx * s) + u) / s, fv = ((y - dy * s) + v) / s; return d.h[Math.min(255, Math.floor(fv * 256)) * 256 + Math.min(255, Math.floor(fu * 256))]; }
+    function tileGeo(z, x, y) { const k = z + '/' + x + '/' + y; let g = geo.get(k);
+      if (g && (g.dem || z < 7 || heightAt(z, x, y, .5, .5) == null)) return g;
+      if (g) { gl.deleteBuffer(g.b); geo.delete(k); }
       const v = new Float32Array((N + 1) * (N + 1) * 5); let o = 0;
-      for (let j = 0; j <= N; j++) { const yy = y + j / N, lat = y2lat(yy, z); for (let i = 0; i <= N; i++) { const lon = (x + i / N) / (1 << z) * 360 - 180, p = xyz(lat, lon, 1); v.set([p[0], p[1], p[2], i / N, j / N], o); o += 5; } }
+      const withDem = z >= 7 && heightAt(z, x, y, .5, .5) != null;
+      for (let j = 0; j <= N; j++) { const yy = y + j / N, lat = y2lat(yy, z); for (let i = 0; i <= N; i++) { const lon = (x + i / N) / (1 << z) * 360 - 180, hm = withDem ? heightAt(z, x, y, i / N, j / N) || 0 : 0, p = xyz(lat, lon, 1 + hm / 6371000 * EXAG); v.set([p[0], p[1], p[2], i / N, j / N], o); o += 5; } }
       const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, v, gl.STATIC_DRAW);
-      g = { b, c: xyz(y2lat(y + .5, z), (x + .5) / (1 << z) * 360 - 180, 1), corners: [[0, 0], [1, 0], [0, 1], [1, 1], [.5, 0], [.5, 1], [0, .5], [1, .5]].map(([a, c]) => xyz(y2lat(y + c, z), (x + a) / (1 << z) * 360 - 180, 1)) };
+      g = { b, c: xyz(y2lat(y + .5, z), (x + .5) / (1 << z) * 360 - 180, 1), dem: withDem, corners: [[0, 0], [1, 0], [0, 1], [1, 1], [.5, 0], [.5, 1], [0, .5], [1, .5]].map(([a, c]) => xyz(y2lat(y + c, z), (x + a) / (1 << z) * 360 - 180, 1)) };
       geo.set(k, g); if (geo.size > 1500) { const [fk, fv] = geo.entries().next().value; gl.deleteBuffer(fv.b); geo.delete(fk); } return g; }
     function texture(url) { if (!url) return null; let t = tex.get(url); if (t) { t.used = frameNo; return t.ok ? t : null; }
       t = { used: frameNo, ok: false }; tex.set(url, t); if (loading > 24) { tex.delete(url); return null; }
@@ -89,6 +102,7 @@
     let W = 0, H = 0, dpr = 1, M = null, dirty = true, visible = false, src = 'today', sunV = [1, 0, 0];
     const cam = { lat: 45.6, lon: 25.6, alt: 18000, goal: null };   // alt in km above the surface
     const now = () => (opts.time ? opts.time() : Date.now());
+    const lonlatTile = (lat, lon, z) => { const t = 1 << z, xf = (lon + 180) / 360 * t, yf = lat2y(lat, z); return [z, Math.floor(xf), Math.floor(yf), xf % 1, yf % 1]; };
     function eyePos() { const r = 1 + cam.alt / R_KM; return xyz(cam.lat, cam.lon, r); }
     const proj = p => { const x = M[0] * p[0] + M[4] * p[1] + M[8] * p[2] + M[12], y = M[1] * p[0] + M[5] * p[1] + M[9] * p[2] + M[13], w = M[3] * p[0] + M[7] * p[1] + M[11] * p[2] + M[15];
       return w <= 1e-6 ? null : [(x / w * .5 + .5) * W, (1 - (y / w * .5 + .5)) * H, w]; };
@@ -106,8 +120,10 @@
       frameNo++;
       if (cam.goal) { const g = cam.goal; cam.lat += (g.lat - cam.lat) * .1; let dl = ((g.lon - cam.lon + 540) % 360) - 180; cam.lon += dl * .1; cam.alt *= Math.pow(g.alt / cam.alt, .1);
         if (Math.abs(g.lat - cam.lat) < .01 && Math.abs(dl) < .01 && Math.abs(Math.log(g.alt / cam.alt)) < .01) cam.goal = null; dirty = true; }
-      const eye = eyePos(), up = Math.abs(cam.lat) > 89 ? [0, 0, -1] : [0, 1, 0], near = Math.max(cam.alt / R_KM * .3, 1e-5);
-      M = mul(persp(45 * D2R, W / H, near, 1 + cam.alt / R_KM + 2), lookAt(eye, [0, 0, 0], up));
+      const a = cam.lat * D2R, b = cam.lon * D2R, n = xyz(cam.lat, cam.lon, 1), north = [-Math.sin(a) * Math.cos(b), Math.cos(a), Math.sin(a) * Math.sin(b)], h = cam.alt / R_KM;
+      const tilt = cam.alt < 400 ? (1 - cam.alt / 400) * 1.05 : 0, gh = (cam.alt < 400 ? heightAt(...lonlatTile(cam.lat, cam.lon, 12)) || 0 : 0) / 6371000 * EXAG, tgt = n.map(v => v * (1 + gh));
+      const eye = tgt.map((v, i) => v + n[i] * h * Math.cos(tilt) - north[i] * h * Math.sin(tilt)), near = Math.max(h * .05, 2e-7);
+      M = mul(persp(45 * D2R, W / H, near, 1 + h + 2), lookAt(eye, tgt, north));
       gl.viewport(0, 0, cv.width, cv.height); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       gl.useProgram(pr); gl.uniformMatrix4fv(U.m, false, new Float32Array(M)); sunV = sunDir(now()); gl.uniform3fv(U.sun, sunV);
       list.length = 0; select(0, 0, 0, eye); list.sort((a, b) => a[0] - b[0]);
@@ -124,16 +140,23 @@
         gl.drawArrays(gl.TRIANGLE_FAN, 0, 66); }); gl.enable(gl.CULL_FACE);
       // overlay: atmosphere rim, pins, altitude
       g2.setTransform(dpr, 0, 0, dpr, 0, 0); g2.clearRect(0, 0, W, H);
-      const c = proj([0, 0, 0]), rEye = 1 + cam.alt / R_KM, ang = Math.asin(Math.min(1, 1 / rEye)), rpx = Math.tan(ang) / Math.tan(22.5 * D2R) * H / 2;
-      if (c && cam.alt > 600) { const gr = g2.createRadialGradient(c[0], c[1], rpx * .97, c[0], c[1], rpx * 1.08); gr.addColorStop(0, 'rgba(110,170,255,0)'); gr.addColorStop(.35, 'rgba(110,170,255,.45)'); gr.addColorStop(1, 'rgba(110,170,255,0)');
+      const c = proj([0, 0, 0]), rEye = Math.hypot(...eye), ang = Math.asin(Math.min(1, 1 / rEye)), rpx = Math.tan(ang) / Math.tan(22.5 * D2R) * H / 2;
+      if (c && cam.alt > 1500) { const gr = g2.createRadialGradient(c[0], c[1], rpx * .97, c[0], c[1], rpx * 1.08); gr.addColorStop(0, 'rgba(110,170,255,0)'); gr.addColorStop(.35, 'rgba(110,170,255,.45)'); gr.addColorStop(1, 'rgba(110,170,255,0)');
         g2.fillStyle = gr; g2.beginPath(); g2.arc(c[0], c[1], rpx * 1.08, 0, 7); g2.fill(); }
+      const G = opts.aurora && opts.aurora();
+      if (G && cam.alt > 1200) { g2.globalCompositeOperation = 'lighter'; const sz = Math.max(1.5, rpx / 90);
+        for (let la = -89; la <= 89; la++) { if (Math.abs(la) < 38) continue; for (let lo = 0; lo < 360; lo += 2) { const v = G[lo * 181 + la + 90]; if (v < 6) continue;
+          const p = xyz(la, lo > 180 ? lo - 360 : lo, 1.012), dn = p[0] * sunV[0] + p[1] * sunV[1] + p[2] * sunV[2]; if (dn > .12) continue;
+          if (p[0] * (eye[0] - p[0]) + p[1] * (eye[1] - p[1]) + p[2] * (eye[2] - p[2]) < 0) continue; const q = proj(p); if (!q) continue;
+          g2.fillStyle = v > 40 ? `rgba(255,90,120,${Math.min(.5, v / 120)})` : `rgba(57,255,158,${Math.min(.55, v / 60)})`; g2.fillRect(q[0] - sz, q[1] - sz, sz * 2, sz * 2); } }
+        g2.globalCompositeOperation = 'source-over'; }
       g2.font = '700 12px Inter, system-ui, sans-serif'; g2.textBaseline = 'middle';
       (opts.places || []).forEach(pl => { const p = xyz(pl.lat, pl.lon, 1.0002), q = proj(p); if (!q) return; const toEye = [eye[0] - p[0], eye[1] - p[1], eye[2] - p[2]]; if (p[0] * toEye[0] + p[1] * toEye[1] + p[2] * toEye[2] < 0) return;
         g2.fillStyle = '#FFE08A'; g2.beginPath(); g2.arc(q[0], q[1], 4.5, 0, 7); g2.fill(); g2.strokeStyle = '#000'; g2.lineWidth = 1.5; g2.stroke();
         const tw = g2.measureText(pl.name).width; g2.fillStyle = 'rgba(0,0,0,.6)'; g2.fillRect(q[0] + 8, q[1] - 9, tw + 10, 18); g2.fillStyle = '#FFE08A'; g2.fillText(pl.name, q[0] + 13, q[1]); });
-      const a = cam.alt, al = a >= 1000 ? Math.round(a).toLocaleString(window.LOC || 'en-GB') + ' km' : a >= 10 ? a.toFixed(0) + ' km' : (a * 1000).toFixed(0) + ' m';
+      const ak = cam.alt, al = ak >= 1000 ? Math.round(ak).toLocaleString(window.LOC || 'en-GB') + ' km' : ak >= 10 ? ak.toFixed(0) + ' km' : (ak * 1000).toFixed(0) + ' m';
       el.querySelector('.e3d-alt').innerHTML = `${tr('Altitude')} ${al}<small>${cam.lat.toFixed(2)}°, ${cam.lon.toFixed(2)}° · ${new Date(now()).toLocaleString(window.LOC || 'en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })} UTC</small>`;
-      dirty = pending || loading > 0;
+      dirty = pending || loading > 0 || demLoading > 0;
     }
     function frame() { if (visible && (dirty || cam.goal || spin[0] || spin[1])) { if (spin[0] || spin[1]) { move(spin[0], spin[1]); spin = spin.map(v => Math.abs(v) < .05 ? 0 : v * .9); } draw(); } requestAnimationFrame(frame); }
     function resize() { const r = host.getBoundingClientRect(); W = Math.max(200, r.width); H = Math.max(200, r.height); dpr = Math.min(2, devicePixelRatio || 1);

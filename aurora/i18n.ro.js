@@ -579,5 +579,12 @@ window.I18N_DICT.ro = {
   "My place": "Locul meu",
   "Today (clouds)": "Azi (cu nori)",
   "Clear view": "Fără nori",
-  "Altitude": "Altitudine"
+  "Altitude": "Altitudine",
+  "Galaxy": "Galaxia",
+  "The Sun — we are here": "Soarele — noi suntem aici",
+  "Centre · black hole Sagittarius A*": "Centrul · gaura neagră Săgetătorul A*",
+  "10,000 light years": "10.000 de ani-lumină",
+  "Today": "Azi",
+  "In {n} million years": "Peste {n} milioane de ani",
+  "one lap around the galaxy ≈ 230 million years · up and down through the disc every ~70": "o tură în jurul galaxiei ≈ 230 milioane de ani · sus-jos prin disc la ~70"
 };

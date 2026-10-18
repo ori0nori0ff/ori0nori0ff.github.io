@@ -579,5 +579,12 @@ window.I18N_DICT.de = {
   "My place": "Mein Ort",
   "Today (clouds)": "Heute (mit Wolken)",
   "Clear view": "Wolkenlos",
-  "Altitude": "Höhe"
+  "Altitude": "Höhe",
+  "Galaxy": "Galaxis",
+  "The Sun — we are here": "Die Sonne — wir sind hier",
+  "Centre · black hole Sagittarius A*": "Zentrum · Schwarzes Loch Sagittarius A*",
+  "10,000 light years": "10.000 Lichtjahre",
+  "Today": "Heute",
+  "In {n} million years": "In {n} Millionen Jahren",
+  "one lap around the galaxy ≈ 230 million years · up and down through the disc every ~70": "eine Runde um die Galaxis ≈ 230 Millionen Jahre · auf und ab durch die Scheibe alle ~70"
 };

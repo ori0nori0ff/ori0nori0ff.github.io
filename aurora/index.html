@@ -1191,7 +1191,7 @@ $('repSave').onclick = async () => {
   b.classList.remove('busy'); b.textContent = keep;
 };
 /* ── 3D: planets + solar wind + CMEs (space3d.js), driven by the shared clock ── */
-window.space3d = window.Space3D ? Space3D.create($('space3d'), { wind: S.enl || [], time: Date.now(), tz: () => TZ, places: () => [{ name: TOWN.name, lat: TOWN.lat, lon: TOWN.lon }] }) : null;
+window.space3d = window.Space3D ? Space3D.create($('space3d'), { wind: S.enl || [], time: Date.now(), tz: () => TZ, places: () => [{ name: TOWN.name, lat: TOWN.lat, lon: TOWN.lon }], aurora: () => S.ov }) : null;
 j('data/cme.json?t=' + Math.floor(Date.now() / 600000)).then(c => { if (window.space3d) space3d.setCmes(c.cmes); }).catch(() => {});
 function drawGlobe() { if (window.AuroraGlobe) AuroraGlobe.draw($('globe'), { ov: S.ov, lat0: Math.min(75, Math.max(50, TOWN.lat + 13)), lon0: TOWN.lon - 7, viewLine: true, label: true, here: TOWN }); }
 addEventListener('resize', () => { drawGlobe(); });
