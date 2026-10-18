@@ -1403,10 +1403,10 @@ function drawWind() {
   const now = Date.now(), from = now - wRange * 864e5, P = S.wind.filter(p => p.t >= from);
   const last = k => { for (let i = P.length - 1; i >= 0; i--) if (okv(P[i][k])) return P[i][k]; return null; };
   const L = { bz: last('bz'), bt: last('bt'), v: last('v'), n: last('n'), T: last('T') };
-  const cell = (k, v, u, c) => `<div><div class="lbl">${k}</div><b style="color:${c}">${v == null ? '–' : v}<span style="font-size:11px;color:#8B9BAE"> ${u}</span></b></div>`;
-  $('wNow').innerHTML = cell('Bz', L.bz == null ? null : (L.bz > 0 ? '+' : '') + L.bz.toFixed(1), 'nT', L.bz <= -10 ? '#FF4444' : L.bz < 0 ? '#FF8A8A' : '#E0E0E0')
-    + cell('Bt', L.bt == null ? null : L.bt.toFixed(1), 'nT', L.bt >= 15 ? '#FFA040' : '#E0E0E0') + cell(T('Speed'), L.v == null ? null : Math.round(L.v), 'km/s', L.v >= 600 ? '#FF7A3D' : L.v >= 450 ? '#E8C766' : '#E0E0E0')
-    + cell(T('Dens.'), L.n == null ? null : L.n.toFixed(1), '/cm³', L.n >= 20 ? '#FFA040' : '#E0E0E0') + cell(T('Temp'), L.T == null ? null : Math.round(L.T / 1000), 'k K', '#E0E0E0');
+  const cell = (k, v, u, c, g) => `<div><div class="lbl" style="color:${g}">${k}</div><b style="color:${c}">${v == null ? '–' : v}<span style="font-size:11px;color:${g}"> ${u}</span></b></div>`;   // g = its line colour in the chart, c = value (warns past a threshold)
+  $('wNow').innerHTML = cell('Bz', L.bz == null ? null : (L.bz > 0 ? '+' : '') + L.bz.toFixed(1), 'nT', L.bz <= -10 ? '#FF4444' : L.bz < 0 ? '#FF8A8A' : '#E0E0E0', '#FF5A5A')
+    + cell('Bt', L.bt == null ? null : L.bt.toFixed(1), 'nT', L.bt >= 15 ? '#FFA040' : '#E0E0E0', '#E0E0E0') + cell(T('Speed'), L.v == null ? null : Math.round(L.v), 'km/s', L.v >= 600 ? '#FF7A3D' : L.v >= 450 ? '#E8C766' : '#E0E0E0', '#E8C766')
+    + cell(T('Dens.'), L.n == null ? null : L.n.toFixed(1), '/cm³', L.n >= 20 ? '#FFA040' : '#E0E0E0', '#FFA040') + cell(T('Temp'), L.T == null ? null : Math.round(L.T / 1000), 'k K', '#E0E0E0', '#39FF9E');
   $('wLead').innerHTML = L.v ? T('Measured 1.5 million km upstream — this wind reaches Earth in about <b>{m} minutes</b>.', { m: Math.round(1.5e6 / L.v / 60) }) : '';
   // stacked panels: Bt + Bz · Phi · density · speed · temperature (log)
   const svg = $('windchart'), W = svg.clientWidth || 340, Lm = 30, R = 6, ph = 60, gap = 22, top = 14, panels = 5, H = top + panels * (ph + gap) - gap + 18;

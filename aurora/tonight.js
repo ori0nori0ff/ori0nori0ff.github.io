@@ -75,7 +75,7 @@
    * on a sky that darkens with the night, the chance curve, and the Moon. The best window is a lit band through all.
    * fmt = hour formatter, need = Kp needed here, cur = time to mark (optional). Fonts inherit from the page.
    */
-  // o.compact (phones): no summary tiles — the card above already shows those numbers
+  // o.compact (phones): no summary tiles — the card above already shows those numbers; o.noClouds / o.noKp drop those rows (app: Kp gauge instead)
   function render(el, p, fmt, kpColor, need, cur, o) {
     o = o || {};
     const hs = p.hours, H = 3600e3; if (!hs.length) { el.innerHTML = ''; return; }
@@ -101,8 +101,8 @@
     const X = i => Lw + (i + .5) * cw, xt = t => Lw + ((t - hs[0].t) / H + .5) * cw;
     const layers = hs.some(h => h.cl != null || h.cm != null || h.ch != null);
     const TT = 15;   // a row's title sits above it
-    let y = TT; const yCl = y, rowH = 13, hCl = layers ? rowH * 3 : rowH * 2; y += hCl + 14 + TT;
-    const yKp = y, hKp = 92; y += hKp + 8 + TT; const yCh = y, hCh = 46; y += hCh + 8 + TT; const yMo = y, hMo = 14; y += hMo + 6; const yAx = y + 10, Hh = yAx + 4;
+    let y = TT; const yCl = y, rowH = 13, hCl = o.noClouds ? 0 : layers ? rowH * 3 : rowH * 2; if (!o.noClouds) y += hCl + 14 + TT;
+    const yKp = y, hKp = o.noKp ? 0 : 92; if (!o.noKp) y += hKp + 8 + TT; const yCh = y, hCh = 46; y += hCh + 8 + TT; const yMo = y, hMo = 14; y += hMo + 6; const yAx = y + 10, Hh = yAx + 4;
     const title = (yy, s1, s2) => t(0, yy - 5, s1, '#C9D1DB', 10.5, 'start', 700) + (s2 ? t(0, yy - 5, '', '#8E9AAB', 9.5) : '');
     const t = (x, yy, s, col, sz, anc, w) => `<text x="${x}" y="${yy}" fill="${col}" font-size="${sz}" text-anchor="${anc || 'start'}" font-weight="${w || 500}">${s}</text>`;
     const smooth = pts => { if (!pts.length) return ''; let d = `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
@@ -118,14 +118,15 @@
       g += `<rect x="${x0}" y="${yCl - 2}" width="${x1 - x0}" height="${yMo + hMo - yCl + 4}" rx="6" fill="#FFE600" fill-opacity=".07" stroke="#FFE600" stroke-opacity=".45" stroke-dasharray="3 3"/>`
         + t(Math.min(W - 40, Math.max(90, (x0 + x1) / 2)), yCl - 5, tr('best {a}–{b}', { a: fmt(p.best.from), b: fmt(p.best.to) }), '#FFE600', 10, 'middle', 700); }
     // clouds: high / mid / low (or total), grey = cover
-    const rows = layers ? [[tr('High'), 'ch'], [tr('Mid'), 'cm'], [tr('Low'), 'cl']] : [[tr('Clouds'), 'cloud']];
-    g += title(yCl, tr('Clouds'));
+    const rows = o.noClouds ? [] : layers ? [[tr('High'), 'ch'], [tr('Mid'), 'cm'], [tr('Low'), 'cl']] : [[tr('Clouds'), 'cloud']];
+    if (!o.noClouds) g += title(yCl, tr('Clouds'));
     rows.forEach(([lab, k], r) => { const yy = yCl + (layers ? r * rowH : 0), hh = layers ? rowH - 2 : hCl - 2;
       if (layers) g += t(Lw - 5, yy + 9.5, lab, '#8E9AAB', 9, 'end');
       hs.forEach((h, i) => { const v = h[k]; if (v == null) return; g += `<rect x="${Lw + i * cw + .5}" y="${yy}" width="${cw - 1}" height="${hh}" fill="#D7DEE8" fill-opacity="${(.06 + .84 * v / 100).toFixed(2)}"><title>${lab} ${Math.round(v)}%</title></rect>`; }); });
-    if (cw >= 24) hs.forEach((h, i) => { if (h.cloud != null) g += t(X(i), yCl + hCl + 8, Math.round(h.cloud) + '%', '#A3B0C2', 8.5, 'middle'); });
+    if (cw >= 24 && !o.noClouds) hs.forEach((h, i) => { if (h.cloud != null) g += t(X(i), yCl + hCl + 8, Math.round(h.cloud) + '%', '#A3B0C2', 8.5, 'middle'); });
     // Kp on the night sky
     const kY = k => yKp + hKp - Math.min(9, k) / 9 * hKp;
+    if (!o.noKp) {
     g += `<rect x="${Lw}" y="${yKp}" width="${W - Lw - Rw}" height="${hKp}" rx="6" fill="url(#${uid}s)"/>`;
     [3, 6, 9].forEach(k => { g += `<line x1="${Lw}" x2="${W - Rw}" y1="${kY(k)}" y2="${kY(k)}" stroke="#fff" stroke-opacity=".07"/>` + t(Lw - 5, kY(k) + 3, k, '#6B7788', 8.5, 'end'); });
     g += title(yKp, tr('Aurora') + ' · Kp');
@@ -135,6 +136,7 @@
       hs.forEach((h, i) => { if (h.kp != null) g += `<circle cx="${X(i)}" cy="${kY(h.kp)}" r="2.6" fill="${kpColor(h.kp)}"/>`; }); }
     g += `<line x1="${Lw}" x2="${W - Rw}" y1="${kY(need)}" y2="${kY(need)}" stroke="${BAD}" stroke-width="1.4" stroke-dasharray="5 4"/>`
       + t(W - Rw - 4, kY(need) - 4, tr('needed here: Kp {n}', { n: need }), '#FF9B9B', 9.5, 'end', 700);
+    }
     // chance curve 0–100 %
     const cY = v => yCh + hCh - v * (hCh - 4);
     g += `<rect x="${Lw}" y="${yCh}" width="${W - Lw - Rw}" height="${hCh}" rx="6" fill="#0F1318"/>` + title(yCh, tr('Chance'));
