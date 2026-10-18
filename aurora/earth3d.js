@@ -71,7 +71,7 @@
     const caps = [cap(true), cap(false)];
     // tile geometry cache (positions on the unit sphere + uv), texture cache (LRU)
     const geo = new Map(), tex = new Map(); let loading = 0, frameNo = 0, esriBad = 0;
-    const dem = new Map(), EXAG = 1.5, DEMZ = 12; let demLoading = 0;
+    const dem = new Map(), EXAG = 1, DEMZ = 12; let demLoading = 0;
     function demTile(z, x, y) { const k = z + '/' + x + '/' + y; let d = dem.get(k); if (d) return d.h ? d : null; if (demLoading > 8) return null;
       d = {}; dem.set(k, d); demLoading++; const im = new Image(); im.crossOrigin = 'anonymous';
       im.onload = () => { demLoading--; try { const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d'); g.drawImage(im, 0, 0); const px = g.getImageData(0, 0, 256, 256).data, h = new Float32Array(65536);
@@ -116,11 +116,15 @@
     const list = [];
     function select(z, x, y, eye) {   // quadtree: keep a tile if it faces us and is on screen; split while it looks big
       const g = tileGeo(z, x, y), toEye = [eye[0] - g.c[0], eye[1] - g.c[1], eye[2] - g.c[2]];
-      const under = (() => { const t = 1 << z, cx = (cam.lon + 180) / 360 * t, cy = lat2y(cam.lat, z); return cx >= x && cx < x + 1 && cy >= y && cy < y + 1; })();
+      const under = (() => { const t = 1 << z, cx = (cam.lon + 180) / 360 * t, cy = lat2y(cam.lat, z); return cx >= x && cx < x + 1 && cy >= y && cy < y + 1; })()
+        || Math.hypot(g.c[0] - eye[0], g.c[1] - eye[1], g.c[2] - eye[2]) < Math.max(4 * (Math.hypot(...eye) - 1), 2.2 * Math.PI / (1 << z));   // around the camera: never culled, only split
       if (z >= 2 && !under && g.corners.concat([g.c]).every(q => q[0] * (eye[0] - q[0]) + q[1] * (eye[1] - q[1]) + q[2] * (eye[2] - q[2]) < 0)) return;   // all of it beyond the horizon
       const ps = g.corners.concat([g.c]).map(proj);
+      if (!under) {   // frustum test in clip space: out if every point is beyond the same side
+        const C = g.corners.concat([g.c]).map(p => [M[0] * p[0] + M[4] * p[1] + M[8] * p[2] + M[12], M[1] * p[0] + M[5] * p[1] + M[9] * p[2] + M[13], M[3] * p[0] + M[7] * p[1] + M[11] * p[2] + M[15]]);
+        const t = c => .15 * Math.abs(c[2]) + 1e-9; if (C.every(c => c[2] <= 0) || C.every(c => c[0] - c[2] > t(c)) || C.every(c => -c[0] - c[2] > t(c)) || C.every(c => c[1] - c[2] > t(c)) || C.every(c => -c[1] - c[2] > t(c))) return; }
       const straddle = ps.some(q => !q);   // part of the tile is behind the camera: keep it and split it
-      if (z >= 2 && !under) { if (straddle) { if (z > 6) { list.push([z, x, y]); return; } } else { const xs = ps.map(q => q[0]), ys = ps.map(q => q[1]); if (Math.max(...xs) < 0 || Math.min(...xs) > W || Math.max(...ys) < 0 || Math.min(...ys) > H) return; } }
+      if (z >= 2 && !under) { if (straddle) { if (z >= 14) { list.push([z, x, y]); return; } } else { const xs = ps.map(q => q[0]), ys = ps.map(q => q[1]); if (Math.max(...xs) < 0 || Math.min(...xs) > W || Math.max(...ys) < 0 || Math.min(...ys) > H) return; } }
       const ok = ps.filter(Boolean), size = straddle || ok.length < 2 ? 1e9 : Math.hypot(Math.max(...ok.map(q => q[0])) - Math.min(...ok.map(q => q[0])), Math.max(...ok.map(q => q[1])) - Math.min(...ok.map(q => q[1])));
       if (z < MAXZ && (z < 2 || size > 360 * dpr / Math.max(1, dpr) ) && list.length < 220) { const kids = [0, 1, 2, 3].map(k => [x * 2 + (k & 1), y * 2 + (k >> 1)]).map(([cx, cy]) => { const c = tileGeo(z + 1, cx, cy).c; return [cx, cy, (c[0] - eye[0]) ** 2 + (c[1] - eye[1]) ** 2 + (c[2] - eye[2]) ** 2]; }).sort((a, b) => a[2] - b[2]);
         kids.forEach(([cx, cy]) => select(z + 1, cx, cy, eye)); return; }   // nearest first, so detail near the camera wins the tile budget
@@ -131,9 +135,11 @@
       if (cam.goal) { const g = cam.goal; cam.lat += (g.lat - cam.lat) * .1; let dl = ((g.lon - cam.lon + 540) % 360) - 180; cam.lon += dl * .1; cam.alt *= Math.pow(g.alt / cam.alt, .1);
         if (Math.abs(g.lat - cam.lat) < .01 && Math.abs(dl) < .01 && Math.abs(Math.log(g.alt / cam.alt)) < .01) cam.goal = null; dirty = true; }
       const a = cam.lat * D2R, b = cam.lon * D2R, n = xyz(cam.lat, cam.lon, 1), north = [-Math.sin(a) * Math.cos(b), Math.cos(a), Math.sin(a) * Math.sin(b)], h = cam.alt / R_KM;
-      const tilt = cam.alt < 400 ? (1 - cam.alt / 400) * 1.05 : 0, gh = (cam.alt < 400 ? heightAt(...lonlatTile(cam.lat, cam.lon, 12)) || 0 : 0) / 6371000 * EXAG, tgt = n.map(v => v * (1 + gh));
-      const eye = tgt.map((v, i) => v + n[i] * h * Math.cos(tilt) - north[i] * h * Math.sin(tilt)), near = Math.max(h * .05, 2e-7);
-      M = mul(persp(45 * D2R, W / H, near, 1 + h + 2), lookAt(eye, tgt, north));
+      const tilt = cam.alt < 400 ? (1 - cam.alt / 400) * .95 : 0, gh = (cam.alt < 400 ? heightAt(...lonlatTile(cam.lat, cam.lon, 12)) || 0 : 0) / 6371000 * EXAG, tgt = n.map(v => v * (1 + gh));
+      // the eye stays h above the ground under the target; tilting moves it south (so it never sinks into hills)
+      const eye = tgt.map((v, i) => v + n[i] * h - north[i] * h * Math.tan(tilt)), hz = Math.sqrt(2 * (h + gh) + (h + gh) ** 2);   // distance to the horizon
+      const near = Math.max(h * .08, 1e-7), far = Math.min(4, hz * 1.6 + h * 3 + .002);
+      M = mul(persp(45 * D2R, W / H, near, far), lookAt(eye, tgt, north));
       gl.viewport(0, 0, cv.width, cv.height); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       gl.useProgram(pr); gl.uniformMatrix4fv(U.m, false, new Float32Array(M)); sunV = sunDir(now()); gl.uniform3fv(U.sun, sunV); gl.uniform1f(U.nk, cam.alt > 2500 ? 1 : cam.alt < 800 ? .12 : .12 + .88 * (cam.alt - 800) / 1700);   // near the ground: the picture in daylight, like Google Earth
       list.length = 0; select(0, 0, 0, eye); list.sort((a, b) => a[0] - b[0]);
