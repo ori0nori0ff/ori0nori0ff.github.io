@@ -12,11 +12,12 @@
     clear: (z, x, y) => z <= 8 ? `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/2004-08/GoogleMapsCompatible_Level8/${z}/${y}/${x}.jpeg` : null,
     today: (z, x, y, t) => z <= 9 ? `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/${day(t)}/GoogleMapsCompatible_Level9/${z}/${y}/${x}.jpg` : null,
     detail: (z, x, y) => `https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2021_3857/default/GoogleMapsCompatible/${z}/${y}/${x}.jpg`,
-    map: (z, x, y) => `https://${'abcd'[(x + y) % 4]}.basemaps.cartocdn.com/rastertiles/voyager/${z}/${x}/${y}.png`,
-    lab: (z, x, y) => `https://${'abcd'[(x + y) % 4]}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/${z}/${x}/${y}.png`,
+    esri: (z, x, y) => `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`,
+    map: (z, x, y) => `https://tile.openstreetmap.org/${z}/${x}/${y}.png`,
+    lab: (z, x, y) => `https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/${z}/${y}/${x}`,
     night: (z, x, y) => `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/${z}/${y}/${x}.png`,
   };
-  const DETAIL_FROM = { clear: 9, today: 10 }, SATZ = 15, MAXZ = 18;
+  const DETAIL_FROM = { clear: 9, today: 10 }, SATZ = 18, EOXZ = 15, MAXZ = 18;
   const lat2y = (lat, z) => (1 - Math.log(Math.tan(Math.PI / 4 + lat * D2R / 2)) / Math.PI) / 2 * (1 << z);
   const y2lat = (y, z) => Math.atan(Math.sinh(Math.PI * (1 - 2 * y / (1 << z)))) / D2R;
   const xyz = (lat, lon, r) => { const a = lat * D2R, b = lon * D2R; return [r * Math.cos(a) * Math.cos(b), r * Math.sin(a), -r * Math.cos(a) * Math.sin(b)]; };
@@ -50,7 +51,7 @@
     el.innerHTML = `<canvas class="e3d-gl"></canvas><canvas class="e3d-ov"></canvas><div class="e3d-alt">–</div>
       <div class="e3d-ui"><button data-b="back">‹ ${tr('Solar system')}</button><button data-b="home">${tr('My place')}</button><button data-s="today" aria-pressed="true">${tr('Today (clouds)')}</button><button data-s="clear" aria-pressed="false">${tr('Clear view')}</button><button data-s="map" aria-pressed="false">${tr('Map')}</button><button data-l aria-pressed="true">${tr('Names')}</button>
         <input type="datetime-local" class="e3d-date" aria-label="${tr('Date and time')}"><button data-b="now">${tr('Now')}</button></div>
-      <div class="e3d-attr">NASA GIBS · Blue Marble · Black Marble · VIIRS · Sentinel-2 cloudless 2021 by EOX</div>`;
+      <div class="e3d-attr">NASA GIBS · Blue Marble · Black Marble · VIIRS · Esri, Maxar, Earthstar Geographics · © OpenStreetMap contributors · Sentinel-2 cloudless by EOX</div>`;
     const cv = el.querySelector('.e3d-gl'), ov = el.querySelector('.e3d-ov'), g2 = ov.getContext('2d');
     const gl = cv.getContext('webgl', { antialias: true, preserveDrawingBuffer: true });
     const api = { show() {}, hide() {}, setTime() {}, flyTo() {} };
@@ -69,7 +70,7 @@
       const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(north ? [200, 214, 228, 255] : [225, 232, 240, 255])); return { b, t, north }; }
     const caps = [cap(true), cap(false)];
     // tile geometry cache (positions on the unit sphere + uv), texture cache (LRU)
-    const geo = new Map(), tex = new Map(); let loading = 0, frameNo = 0;
+    const geo = new Map(), tex = new Map(); let loading = 0, frameNo = 0, esriBad = 0;
     const dem = new Map(), EXAG = 1.5, DEMZ = 12; let demLoading = 0;
     function demTile(z, x, y) { const k = z + '/' + x + '/' + y; let d = dem.get(k); if (d) return d.h ? d : null; if (demLoading > 8) return null;
       d = {}; dem.set(k, d); demLoading++; const im = new Image(); im.crossOrigin = 'anonymous';
@@ -95,11 +96,12 @@
       im.onload = () => { loading--; const g = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, g); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, im);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); t.g = g; t.ok = true; dirty = true; };
-      im.onerror = () => { loading--; t.bad = true; }; im.src = url;
+      im.onerror = () => { loading--; t.bad = true; if (url.indexOf('World_Imagery') > 0 && ++esriBad === 6) { dirty = true; } }; im.src = url;
       if (tex.size > 420) { let old = null; tex.forEach((v, k) => { if (v.ok && (!old || v.used < old[1].used)) old = [k, v]; }); if (old) { gl.deleteTexture(old[1].g); tex.delete(old[0]); } }
       return null; }
     const url = (z, x, y, kind) => kind === 'night' ? (z <= 8 ? SRC.night(z, x, y) : null) : kind === 'lab' ? (z >= 2 && z <= MAXZ ? SRC.lab(z, x, y) : null)
-      : src === 'map' ? (z <= MAXZ ? SRC.map(z, x, y) : null) : (z >= DETAIL_FROM[src] ? (z <= SATZ ? SRC.detail(z, x, y) : null) : SRC[src](z, x, y, now()));
+      : src === 'map' ? (z <= MAXZ ? SRC.map(z, x, y) : null)
+      : (z >= DETAIL_FROM[src] ? (esriBad < 6 ? SRC.esri(z, x, y) : z <= EOXZ ? SRC.detail(z, x, y) : null) : SRC[src](z, x, y, now()));   // Esri World Imagery (sharp, no key); Sentinel-2 if Esri fails
     // the nearest loaded texture for a tile: itself or an ancestor (uv scaled into the ancestor's square)
     function bestTex(z, x, y, kind) { for (let zz = z, xx = x, yy = y; zz >= 0; zz--, xx >>= 1, yy >>= 1) { const u = url(zz, xx, yy, kind); const t = u && texture(u);
         if (t) { const s = 1 / (1 << (z - zz)); return { g: t.g, tf: [s, s, (x - (xx << (z - zz))) * s, (y - (yy << (z - zz))) * s] }; } } return null; }
@@ -114,12 +116,14 @@
     const list = [];
     function select(z, x, y, eye) {   // quadtree: keep a tile if it faces us and is on screen; split while it looks big
       const g = tileGeo(z, x, y), toEye = [eye[0] - g.c[0], eye[1] - g.c[1], eye[2] - g.c[2]];
-      if (z >= 3 && g.corners.every(q => q[0] * (eye[0] - q[0]) + q[1] * (eye[1] - q[1]) + q[2] * (eye[2] - q[2]) < 0)) return;   // every corner on the far side
+      const under = (() => { const t = 1 << z, cx = (cam.lon + 180) / 360 * t, cy = lat2y(cam.lat, z); return cx >= x && cx < x + 1 && cy >= y && cy < y + 1; })();
+      if (z >= 2 && !under && g.corners.concat([g.c]).every(q => q[0] * (eye[0] - q[0]) + q[1] * (eye[1] - q[1]) + q[2] * (eye[2] - q[2]) < 0)) return;   // all of it beyond the horizon
       const ps = g.corners.concat([g.c]).map(proj);
       const straddle = ps.some(q => !q);   // part of the tile is behind the camera: keep it and split it
-      if (z >= 2) { if (straddle) { if (z > 6) { list.push([z, x, y]); return; } } else { const xs = ps.map(q => q[0]), ys = ps.map(q => q[1]); if (Math.max(...xs) < 0 || Math.min(...xs) > W || Math.max(...ys) < 0 || Math.min(...ys) > H) return; } }
+      if (z >= 2 && !under) { if (straddle) { if (z > 6) { list.push([z, x, y]); return; } } else { const xs = ps.map(q => q[0]), ys = ps.map(q => q[1]); if (Math.max(...xs) < 0 || Math.min(...xs) > W || Math.max(...ys) < 0 || Math.min(...ys) > H) return; } }
       const ok = ps.filter(Boolean), size = straddle || ok.length < 2 ? 1e9 : Math.hypot(Math.max(...ok.map(q => q[0])) - Math.min(...ok.map(q => q[0])), Math.max(...ok.map(q => q[1])) - Math.min(...ok.map(q => q[1])));
-      if (z < (src === 'map' || labels ? MAXZ : SATZ + 1) && (z < 2 || size > 360 * dpr / Math.max(1, dpr) ) && list.length < 220) { for (let k = 0; k < 4; k++) select(z + 1, x * 2 + (k & 1), y * 2 + (k >> 1), eye); return; }
+      if (z < MAXZ && (z < 2 || size > 360 * dpr / Math.max(1, dpr) ) && list.length < 220) { const kids = [0, 1, 2, 3].map(k => [x * 2 + (k & 1), y * 2 + (k >> 1)]).map(([cx, cy]) => { const c = tileGeo(z + 1, cx, cy).c; return [cx, cy, (c[0] - eye[0]) ** 2 + (c[1] - eye[1]) ** 2 + (c[2] - eye[2]) ** 2]; }).sort((a, b) => a[2] - b[2]);
+        kids.forEach(([cx, cy]) => select(z + 1, cx, cy, eye)); return; }   // nearest first, so detail near the camera wins the tile budget
       list.push([z, x, y]);
     }
     function draw() {
