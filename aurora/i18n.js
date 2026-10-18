@@ -41,5 +41,7 @@
   window.i18nApply = (root) => { walk(root || document.body); document.title = T(document.title); };
   window.i18nNames = NAMES;
   window.i18nSet = l => { try { localStorage.setItem('aurora.lang', l); } catch (e) {}
-    const u = new URL(location.href); u.searchParams.set('lang', l); location.replace(u); };
+    // reload at the top: drop an old #anchor (e.g. #safe at the bottom) and don't let the browser restore the old scroll
+    const u = new URL(location.href); u.searchParams.set('lang', l); u.hash = ''; try { sessionStorage.setItem('aurora.top', '1'); } catch (e) {} location.replace(u); };
+  try { if (sessionStorage.getItem('aurora.top')) { sessionStorage.removeItem('aurora.top'); history.scrollRestoration = 'manual'; scrollTo(0, 0); addEventListener('load', () => scrollTo(0, 0)); } } catch (e) {}
 })();
