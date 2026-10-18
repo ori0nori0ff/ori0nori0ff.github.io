@@ -60,7 +60,7 @@
   const CSS = `.sr-bar{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 0 8px}.sr-bar::-webkit-scrollbar{display:none}
 .sr-b{flex:none;font:700 10.5px/1 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.05em;color:#C9D1DB;background:none;border:1px solid #3A414D;border-radius:99px;padding:8px 10px;cursor:pointer}
 .sr-b[aria-pressed=true]{background:#FFE600;color:#0A0A0A;border-color:#FFE600}.sr-b:focus-visible{outline:2px solid #FFE600;outline-offset:2px}
-.sr-box{position:relative;aspect-ratio:1;background:#000;border-radius:10px;overflow:hidden;max-width:560px;margin:0 auto}.sr-box img,.sr-box canvas{position:absolute;inset:0;width:100%;height:100%}
+.sr-box{position:relative;width:100%;aspect-ratio:1;background:#000;border-radius:10px;overflow:hidden;max-width:560px;margin:0 auto}.sr-box img,.sr-box canvas{position:absolute;inset:0;width:100%;height:100%}
 .sr-meta{font:10.5px 'JetBrains Mono',ui-monospace,monospace;color:#8E9AAB;margin-top:6px;letter-spacing:.04em}
 .sr-sum{font-size:13px;color:#A3B0C2;margin:10px 0 2px}.sr-sum b{font-weight:700}
 .sr-rg{display:grid;grid-template-columns:52px 1fr auto;gap:2px 10px;padding:9px 6px;border-top:1px solid #1E232B;cursor:pointer;border-radius:8px;width:100%;text-align:left;background:none;color:inherit;font:inherit;border-left:0;border-right:0;border-bottom:0}
