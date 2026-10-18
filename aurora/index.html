@@ -220,9 +220,11 @@
   .sstat.stale { color: #FF6B6B; }
   .scount { font: 500 11px 'JetBrains Mono', monospace; color: var(--faint); padding-bottom: 4px; }
   #sunBox { position: relative; background: #000; border-radius: 22px; aspect-ratio: 1; overflow: hidden; margin-top: 14px; touch-action: pan-y; }
-  #sunBox img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  #sunBox img, #sunVid { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  #sunVid { z-index: 2; background: #000; display: none; } #sunBox.vid #sunVid { display: block; }
+  .vidbtn { flex: none; height: 32px; padding: 0 10px; border-radius: 16px; border: 1px solid #FFB347; background: none; color: #FFB347; font: 700 11px 'JetBrains Mono', monospace; letter-spacing: .5px; cursor: pointer; } .vidbtn[aria-pressed=true] { background: #FFB347; color: #0A0A0A; }
   @media (prefers-reduced-motion: reduce) { #sunBox img { transition: none; } }
-  #sunBox > :not(img) { z-index: 3; }
+  #sunBox > :not(img):not(video) { z-index: 3; }
   .stag { position: absolute; left: 12px; top: 12px; display: flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 8px; background: rgba(0,0,0,.6);
           font: 700 10px 'JetBrains Mono', monospace; letter-spacing: 1px; color: #fff; }
   .stag i { width: 6px; height: 6px; border-radius: 50%; }
@@ -400,10 +402,10 @@
   <section class="card sunc" aria-label="The Sun now">
     <div class="lbl">The Sun · NASA SDO / SOHO</div>
     <div class="sunhead"><div><h2>The Sun now</h2><div class="sstat" id="sunStat">LOADING NASA FRAMES…</div></div><span class="scount" id="sunCount"></span></div>
-    <div id="sunBox"><img id="sunImg" alt=""><img id="sunImg2" alt="" aria-hidden="true" style="opacity:0"><div class="stag"><i id="sunDot"></i><span id="sunLbl">LASCO C3</span></div>
+    <div id="sunBox"><video id="sunVid" muted playsinline loop preload="none" aria-hidden="true"></video><img id="sunImg" alt=""><img id="sunImg2" alt="" aria-hidden="true" style="opacity:0"><div class="stag"><i id="sunDot"></i><span id="sunLbl">LASCO C3</span></div>
       <div class="sload" id="sunLoad"></div>
       <button class="snav" id="sunPrev" style="left:10px" aria-label="Previous picture type">‹</button><button class="snav" id="sunNext" style="right:10px" aria-label="Next picture type">›</button></div>
-    <div class="sctl"><button class="spbtn" id="sunPlay" aria-label="Play / pause">⏸</button><span class="stime" id="sunTime">–</span><input type="range" id="sunSlide" min="0" max="0" value="0" aria-label="Time"></div>
+    <div class="sctl"><button class="spbtn" id="sunPlay" aria-label="Play / pause">⏸</button><button class="vidbtn" id="sunVidB" aria-pressed="false">▶ VIDEO</button><span class="stime" id="sunTime">–</span><input type="range" id="sunSlide" min="0" max="0" value="0" aria-label="Time"></div>
     <div class="dl"><button id="sunFullB">FULL SCREEN</button><a id="sunClip" download>⬇ CLIP · 48 H</a><a id="sunSave" target="_blank" rel="noopener">⬇ IMAGE</a></div>
     <div class="schips" id="sunChips"></div>
     <div class="help" id="sunHelp"></div>
@@ -695,6 +697,9 @@ function toast(m, ms) { const t = $('toast'); t.textContent = m; t.classList.add
    archives every hour — NASA allows no browser requests); the pictures themselves load straight from NASA. ── */
 const SUNF = [
   ['C3', 'LASCO C3', '#4A7BFF', T('<b>CMEs.</b> The Sun is hidden behind a disk so we can see what it throws into space. A cloud spreading out <b>all around the disk ("halo")</b> is heading our way — aurora chance in 1–4 days.'), 'https://soho.nascom.nasa.gov/data/realtime/c3/512/latest.jpg'],
+  ['CCOR1', 'CCOR-1', '#FF7AB6', T('<b>NOAA\'s new coronagraph (GOES-19), close to the Sun.</b> CMEs as they leave — every 15 minutes, the last 24 hours.')],
+  ['CCOR2', 'CCOR-2', '#C792FF', T('<b>NOAA\'s wide coronagraph.</b> Follows CMEs further out into space. A cloud all around the disk is coming towards us.')],
+  ['C2', 'LASCO C2', '#FF8A4A', T('<b>SOHO\'s inner coronagraph.</b> The first hours of a CME, close to the Sun.')],
   ['0171', 'AIA 171', '#FFB300', T('<b>Quiet corona, ~600,000 °C.</b> The glowing loops follow the Sun\'s magnetic field.')],
   ['0193', 'AIA 193', '#00AAFF', T('<b>Hot corona, ~1 million °C.</b> Dark patches are coronal holes: they blow fast solar wind that reaches Earth 2–4 days later.')],
   ['0304', 'AIA 304', '#FF4400', T('<b>Just above the surface, ~50,000 °C.</b> Dark threads (filaments) can lift off and become CMEs.')],
@@ -703,6 +708,7 @@ const SUNF = [
   ['1600', 'AIA 1600', '#FFDD00', T('<b>Upper surface.</b> Bright patches mark strong magnetism around sunspots.')],
   ['HMIIC', 'HMI IC', '#CCCCCC', T('<b>The Sun as your eye would see it.</b> Sunspots are where flares and CMEs come from.')],
   ['HMIB', 'HMI B', '#8888FF', T('<b>Magnetic map.</b> White and black are opposite magnetic poles; tangled, mixed spots flare the most.')],
+  ['HMIBC', 'HMI color', '#E8C34A', T('<b>Magnetic field strength, in colour.</b> Yellow / red and green / blue are opposite poles; the strongest knots (red, blue) sit in sunspots and are where big flares start.')],
 ];
 /* one time axis for every slider: the solar wind model run's span (the Sun's 5 days reach back further),
    or the Sun's own range until the model has loaded — so the same moment sits at the same spot on all three */
@@ -725,6 +731,10 @@ $('sunChips').innerHTML = SUNF.map((f, i) => `<button data-i="${i}" style="color
 $('sunChips').onclick = e => { const b = e.target.closest('button'); if (b) sunPick(+b.dataset.i); };
 async function loadSun() {
   try { sun.F = await j('sun/frames.json?t=' + Math.floor(Date.now() / 300000)); } catch (e) { sun.F = null; }
+  if (!sun.F) sun.F = { filters: {} };
+  const NO = 'https://services.swpc.noaa.gov', tOf = u => { const m = u.match(/(\d{8})_(\d{4})/); return m ? Date.parse(`${m[1].slice(0, 4)}-${m[1].slice(4, 6)}-${m[1].slice(6)}T${m[2].slice(0, 2)}:${m[2].slice(2)}:00Z`) : 0; };
+  await Promise.allSettled([['CCOR1', '/products/animations/ccor1/ccor1.json'], ['CCOR2', '/products/animations/ccor2/ccor2.json'], ['C2', '/products/animations/lasco-c2.json']].map(([id, u]) =>
+    j(NO + u + '?t=' + Math.floor(Date.now() / 600000)).then(a => { sun.F.filters[id] = a.map(f => [f.time_tag ? Date.parse(f.time_tag) : tOf(f.url), NO + f.url]).filter(f => f[0]).sort((x, y) => x[0] - y[0]); })));
   if (!sun.started) { sun.started = true; sunPick(0); } else sunStatus();   // starts on the CME tab (C3), like the app
 }
 function sunStatus() {
@@ -738,7 +748,8 @@ function sunPick(k) {
     if (on && b.parentNode.scrollWidth > b.parentNode.clientWidth) b.parentNode.scrollTo({ left: b.offsetLeft - 20, behavior: 'smooth' }); });
   $('sunLbl').textContent = f[1]; $('sunDot').style.background = f[2]; $('sunCount').textContent = (sun.k + 1) + ' / ' + SUNF.length;
   $('sunHelp').innerHTML = f[3]; $('sunClip').href = CLIPS + 'sun-' + f[0] + '.mp4'; $('sunClip').setAttribute('download', 'sun-' + f[0] + '.mp4');
-  sunStatus(); clearInterval(sun.timer); sun.imgs = [];
+  sunStatus(); clearInterval(sun.timer); sun.imgs = []; const wasVid = vidOn; vidStop();
+  if (wasVid) setTimeout(() => { if (seq === sun.seq) vidStart(); }, 0);   // switching filter keeps the movie going
   if (!fr.length) { const u = latestOf(f) + '?t=' + Math.floor(Date.now() / 600000); sunImgSrc(u); $('sunSave').href = u; $('sunTime').textContent = $('sunFTime').textContent = T('LATEST');
     $('sunSlide').max = $('sunFSlide').max = 0; $('sunLoad').textContent = ''; return; }
   $('sunSlide').max = $('sunFSlide').max = 1000; sun.i = fr.length - 1;
@@ -772,12 +783,28 @@ function sunShow(i) {
   $('sunTime').textContent = $('sunFTime').textContent = sunT(fr[sun.i][0]); $('sunSlide').value = $('sunFSlide').value = toPos(fr[sun.i][0]);
   const ax = axis(); $('sunLbl').textContent = SUNF[sun.k][1] + (sun.i === fr.length - 1 && ax && ax.b > fr[sun.i][0] + 3600e3 ? ' · ' + T('LATEST') : '');   // later times = only the forecast moves on
 }
+const VID = id => ({ CCOR1: 'https://services.swpc.noaa.gov/products/ccor1/mp4s/ccor1_last_24hrs.mp4', CCOR2: 'https://services.swpc.noaa.gov/products/ccor2/mp4s/ccor2_last_24hrs.mp4',
+  C2: 'https://soho.nascom.nasa.gov/data/LATEST/current_c2.mp4', C3: CLIPS + 'sun-C3.mp4' })[id] || 'https://sdo.gsfc.nasa.gov/assets/img/latest/mpeg/latest_512_' + id + '.mp4';
+const VSPAN = id => /^CCOR/.test(id) ? T('LAST 24 H') : T('LAST 48 H');
+let vidOn = false;
+function vidStart() {   // the filter's official movie, smooth (decoded video) — separate from the shared clock
+  const v = $('sunVid'), id = SUNF[sun.k][0], u = VID(id); if (!v) return false; vidOn = true; $('sunVidB').setAttribute('aria-pressed', 'true'); $('sunVidB').textContent = '■ VIDEO';
+  if (v.dataset.u !== u) { v.dataset.u = u; v.src = u; v.load(); }
+  v.onerror = () => { vidStop(); toast(T('This video is not available right now.')); };
+  v.ontimeupdate = () => { if (v.duration) { $('sunTime').textContent = VSPAN(id); $('sunSlide').value = Math.round(v.currentTime / v.duration * 1000); } };
+  v.onwaiting = () => { $('sunLoad').textContent = T('LOADING VIDEO…'); }; v.onplaying = () => { $('sunLoad').textContent = ''; };
+  $('sunBox').classList.add('vid'); $('sunLbl').textContent = SUNF[sun.k][1] + ' · ' + VSPAN(id);
+  v.play().catch(() => vidStop()); return true;
+}
+function vidStop() { const v = $('sunVid'); if (v) v.pause(); vidOn = false; $('sunBox').classList.remove('vid'); $('sunLoad').textContent = '';
+  const b = $('sunVidB'); if (b) { b.setAttribute('aria-pressed', 'false'); b.textContent = '▶ VIDEO'; } }
+$('sunVidB').onclick = () => { if (vidOn) { vidStop(); sunShow(sun.i); } else { if (typeof syStop === 'function') syStop(); vidStart(); } };
 function sunStart() { clearInterval(sun.timer); sun.play = true; $('sunPlay').textContent = $('sunFPlay').textContent = '⏸';
   sun.timer = setInterval(() => { const fr = sunFr(); if (!fr.length) return; let n = sun.i;
     const x = axis(), a0 = x ? x.a : 0;
     for (let k = 0; k < fr.length; k++) { n = (n + 1) % fr.length; if (fr[n][0] < a0 - 3600e3) continue; const im = sun.imgs[n]; if (im && im.complete && im.naturalWidth) break; }
     sunShow(n); }, 110); }
-function sunStop() { clearInterval(sun.timer); sun.play = false; $('sunPlay').textContent = $('sunFPlay').textContent = '▶'; sunShow(sun.i); }
+function sunStop() { clearInterval(sun.timer); vidStop(); sun.play = false; $('sunPlay').textContent = $('sunFPlay').textContent = '▶'; sunShow(sun.i); }
 $('sunPlay').onclick = $('sunFPlay').onclick = () => sun.play ? sunStop() : sunStart();
 $('sunSlide').oninput = $('sunFSlide').oninput = e => { sunStop(); const fr = sunFr(); if (!fr.length) return;
   const t = Math.min(toTime(+e.target.value), fr[fr.length - 1][0]); sunShow(nearestT(fr.length, k => fr[k][0], t)); };
@@ -785,7 +812,7 @@ $('sunPrev').onclick = () => sunPick(sun.k - 1); $('sunNext').onclick = () => su
 (() => { let x0 = null; const B = $('sunBox');
   B.addEventListener('pointerdown', e => { if (!e.target.closest('button')) x0 = e.clientX; });
   B.addEventListener('pointerup', e => { if (x0 == null) return; const d = e.clientX - x0; x0 = null; if (Math.abs(d) > 50) sunPick(sun.k + (d < 0 ? 1 : -1)); }); })();
-$('sunFullB').onclick = () => { $('sunFull').classList.add('on'); sunShow(sun.i); };
+$('sunFullB').onclick = () => { if ($('sunBox').classList.contains('vid')) sunStop(); $('sunFull').classList.add('on'); sunShow(sun.i); };
 $('sunFX').onclick = () => $('sunFull').classList.remove('on');
 $('sunClip').onclick = () => toast(T('Downloading the last 48 h of {f}…', { f: SUNF[sun.k][1] }));
 
@@ -1024,6 +1051,7 @@ document.addEventListener('click', e => { const svg = e.target.closest && e.targ
 const PLAYS = ['syPlay', 'sunPlay', 'sunFPlay', 'enlPlay', 'enlFPlay'], SLIDES = ['sySlide', 'sunSlide', 'sunFSlide', 'enlSlide', 'enlFSlide'];
 const playLabel = on => PLAYS.forEach(id => { const b = $(id); if (b) { b.textContent = on ? '⏸' : '▶'; b.setAttribute('aria-label', on ? T('Pause') : T('Play')); } });
 function syStop() { clearInterval(sy.timer); sy.timer = null; playLabel(false); }
+const syShowStill = syShow; syShow = t => { if (vidOn) vidStop(); syShowStill(t); };
 const done = im => !im || im.complete;   // loaded, or failed (don't wait forever)
 function syReady(t) {
   const fr = sunFr(); if (fr.length && t <= sy.sunEnd + 45 * 60000 && !done(sun.imgs[nearestIdx(fr.length, k => fr[k][0], t)])) return false;
@@ -1049,7 +1077,7 @@ $('sySpd').onclick = sySpeed; document.querySelectorAll('.spd').forEach(o => o.o
 SLIDES.forEach(id => { const el = $(id); if (el) el.oninput = e => { syStop(); sy.on = true; if (syRange()) syShow(toTime(+e.target.value)); }; });
 addEventListener('resize', () => miniEnl());
 // first picture: "now" once both have loaded
-let syInit = setInterval(() => { if (sunFr().length && enl.frames.length) { clearInterval(syInit); if (syRange()) { sy.on = true; syShow(Math.min(Date.now(), sy.b));
+let syInit = setInterval(() => { if (sunFr().length && enl.frames.length) { clearInterval(syInit); if (syRange()) { sy.on = true; if (!vidOn) syShow(Math.min(Date.now(), sy.b));
   } } }, 500);
 
 /* ── share card: verdict + the Sun and the solar wind at the same moment (Sun pictures via a CORS image proxy) ── */

@@ -604,5 +604,14 @@ window.I18N_DICT.ro = {
   "Example: strong CME": "Exemplu: CME puternic",
   "EXAMPLE": "EXEMPLU",
   "no update since {d}": "fără actualizare din {d}",
-  "▶ Open the 3D view": "▶ Deschide vederea 3D"
+  "▶ Open the 3D view": "▶ Deschide vederea 3D",
+  "<b>NOAA's new coronagraph (GOES-19), close to the Sun.</b> CMEs as they leave — every 15 minutes, the last 24 hours.": "<b>Noul coronograf NOAA (GOES-19), aproape de Soare.</b> CME-urile chiar când pleacă — la fiecare 15 minute, ultimele 24 de ore.",
+  "<b>NOAA's wide coronagraph.</b> Follows CMEs further out into space. A cloud all around the disk is coming towards us.": "<b>Coronograful larg NOAA.</b> Urmărește CME-urile mai departe în spațiu. Un nor de jur împrejurul discului vine spre noi.",
+  "<b>SOHO's inner coronagraph.</b> The first hours of a CME, close to the Sun.": "<b>Coronograful interior SOHO.</b> Primele ore ale unui CME, aproape de Soare.",
+  "<b>Magnetic field strength, in colour.</b> Yellow / red and green / blue are opposite poles; the strongest knots (red, blue) sit in sunspots and are where big flares start.": "<b>Câmpul magnetic, în culori.</b> Galben / roșu și verde / albastru sunt poli opuși; nodurile cele mai puternice (roșu, albastru) stau în petele solare și de acolo pornesc erupțiile mari.",
+  "LAST 24 H": "ULTIMELE 24 H",
+  "LAST 48 H": "ULTIMELE 48 H",
+  "VIDEO": "VIDEO",
+  "LOADING VIDEO…": "SE ÎNCARCĂ VIDEO…",
+  "This video is not available right now.": "Acest video nu e disponibil acum."
 };

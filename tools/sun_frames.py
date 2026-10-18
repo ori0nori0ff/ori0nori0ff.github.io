@@ -8,7 +8,7 @@ UTC = dt.timezone.utc
 NOW = dt.datetime.now(UTC)
 HIST = 5 * 86400
 UA = {'User-Agent': 'PowHau aurora page (https://ori0nori0ff.github.io/aurora/)'}
-SDO_IDS = ['0171', '0193', '0304', '0094', '0131', '1600']
+SDO_IDS = ['0171', '0193', '0304', '0094', '0131', '1600', 'HMIBC']
 
 
 def get(url, binary=False):
@@ -46,7 +46,7 @@ sdo = {i: {} for i in SDO_IDS}
 for d in days():
     path = d.strftime('%Y/%m/%d')
     html = get(f'https://sdo.gsfc.nasa.gov/assets/img/browse/{path}/?P=*_1024_*.jpg')
-    for m in re.finditer(r'(\d{8}_\d{6})_1024_(\w{4})\.jpg', html):
+    for m in re.finditer(r'(\d{8}_\d{6})_1024_(\w{4,5})\.jpg', html):
         fid = m.group(2)
         if fid in sdo:
             t = ts(m.group(1), '%Y%m%d_%H%M%S')

@@ -604,5 +604,14 @@ window.I18N_DICT.de = {
   "Example: strong CME": "Beispiel: starker CME",
   "EXAMPLE": "BEISPIEL",
   "no update since {d}": "keine Aktualisierung seit {d}",
-  "▶ Open the 3D view": "▶ 3D-Ansicht öffnen"
+  "▶ Open the 3D view": "▶ 3D-Ansicht öffnen",
+  "<b>NOAA's new coronagraph (GOES-19), close to the Sun.</b> CMEs as they leave — every 15 minutes, the last 24 hours.": "<b>Der neue Koronograf der NOAA (GOES-19), nah an der Sonne.</b> CMEs beim Start — alle 15 Minuten, die letzten 24 Stunden.",
+  "<b>NOAA's wide coronagraph.</b> Follows CMEs further out into space. A cloud all around the disk is coming towards us.": "<b>Der weite Koronograf der NOAA.</b> Verfolgt CMEs weiter hinaus. Eine Wolke rund um die Scheibe kommt auf uns zu.",
+  "<b>SOHO's inner coronagraph.</b> The first hours of a CME, close to the Sun.": "<b>Der innere Koronograf von SOHO.</b> Die ersten Stunden eines CME, nah an der Sonne.",
+  "<b>Magnetic field strength, in colour.</b> Yellow / red and green / blue are opposite poles; the strongest knots (red, blue) sit in sunspots and are where big flares start.": "<b>Magnetfeldstärke in Farbe.</b> Gelb / Rot und Grün / Blau sind entgegengesetzte Pole; die stärksten Knoten (Rot, Blau) liegen in Sonnenflecken — dort beginnen große Flares.",
+  "LAST 24 H": "LETZTE 24 H",
+  "LAST 48 H": "LETZTE 48 H",
+  "VIDEO": "VIDEO",
+  "LOADING VIDEO…": "VIDEO LÄDT…",
+  "This video is not available right now.": "Dieses Video ist gerade nicht verfügbar."
 };
