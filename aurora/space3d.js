@@ -75,7 +75,7 @@
 @media (max-width:640px){.s3d-tabs{top:52px;left:12px;transform:none}.s3d-tabs button{padding:7px 10px;font-size:11px}.s3d-info{right:56px;max-width:190px}}
 .s3d-leg{position:absolute;right:12px;bottom:14px;font:500 11px Inter,system-ui,sans-serif;color:#A3B0C2;pointer-events:none;text-shadow:0 1px 2px #000}
 .s3d-leg i{display:inline-block;width:9px;height:9px;border-radius:50%;margin:0 3px 0 8px;vertical-align:-1px}
-.s3d.s3d-fs{position:fixed!important;inset:0;z-index:200;border-radius:0;height:auto!important;aspect-ratio:auto!important}body.s3d-lock{overflow:hidden}
+.s3d.s3d-fs{position:fixed!important;inset:0;z-index:200;border-radius:0;height:auto!important;max-height:none!important;min-height:0!important;margin:0!important;aspect-ratio:auto!important}body.s3d-lock{overflow:hidden}
 @media (max-width:560px){.s3d-leg{display:none}}`;
   function create(el, opts) {
     opts = opts || {};

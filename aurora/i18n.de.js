@@ -603,5 +603,6 @@ window.I18N_DICT.de = {
   "304 Å · chromosphere": "304 Å · Chromosphäre",
   "Example: strong CME": "Beispiel: starker CME",
   "EXAMPLE": "BEISPIEL",
-  "no update since {d}": "keine Aktualisierung seit {d}"
+  "no update since {d}": "keine Aktualisierung seit {d}",
+  "▶ Open the 3D view": "▶ 3D-Ansicht öffnen"
 };

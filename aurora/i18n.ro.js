@@ -603,5 +603,6 @@ window.I18N_DICT.ro = {
   "304 Å · chromosphere": "304 Å · cromosfera",
   "Example: strong CME": "Exemplu: CME puternic",
   "EXAMPLE": "EXEMPLU",
-  "no update since {d}": "fără actualizare din {d}"
+  "no update since {d}": "fără actualizare din {d}",
+  "▶ Open the 3D view": "▶ Deschide vederea 3D"
 };

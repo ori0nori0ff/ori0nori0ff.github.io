@@ -75,7 +75,9 @@
    * on a sky that darkens with the night, the chance curve, and the Moon. The best window is a lit band through all.
    * fmt = hour formatter, need = Kp needed here, cur = time to mark (optional). Fonts inherit from the page.
    */
-  function render(el, p, fmt, kpColor, need, cur) {
+  // o.compact (phones): no summary tiles — the card above already shows those numbers
+  function render(el, p, fmt, kpColor, need, cur, o) {
+    o = o || {};
     const hs = p.hours, H = 3600e3; if (!hs.length) { el.innerHTML = ''; return; }
     const darkH = hs.filter(h => h.sun < -12), dk = darkH.length > 0;
     const cl = (dk ? darkH : hs).filter(h => h.cloud != null), avgC = cl.length ? Math.round(cl.reduce((a, h) => a + h.cloud, 0) / cl.length) : null;
@@ -95,11 +97,13 @@
       + `<div style="font-size:20px;font-weight:700;color:#F1F4F8;margin-top:2px;font-variant-numeric:tabular-nums">${v}</div>`
       + `<div style="font-size:11.5px;color:${ok ? '#A3B0C2' : '#FF9B9B'};margin-top:1px;line-height:1.3">${note}</div></div>`).join('');
     // ── the chart ──
-    const W = Math.max(300, el.clientWidth || 340), Lw = 54, Rw = 6, n = hs.length, cw = (W - Lw - Rw) / n;
+    const W = Math.max(280, el.clientWidth || 340), Lw = 30, Rw = 4, n = hs.length, cw = (W - Lw - Rw) / n;
     const X = i => Lw + (i + .5) * cw, xt = t => Lw + ((t - hs[0].t) / H + .5) * cw;
     const layers = hs.some(h => h.cl != null || h.cm != null || h.ch != null);
-    let y = 16; const yCl = y, rowH = 13, hCl = layers ? rowH * 3 : rowH * 2; y += hCl + 10;
-    const yKp = y, hKp = 92; y += hKp + 8; const yCh = y, hCh = 46; y += hCh + 6; const yMo = y, hMo = 14; y += hMo + 6; const yAx = y + 10, Hh = yAx + 4;
+    const TT = 15;   // a row's title sits above it
+    let y = TT; const yCl = y, rowH = 13, hCl = layers ? rowH * 3 : rowH * 2; y += hCl + 14 + TT;
+    const yKp = y, hKp = 92; y += hKp + 8 + TT; const yCh = y, hCh = 46; y += hCh + 8 + TT; const yMo = y, hMo = 14; y += hMo + 6; const yAx = y + 10, Hh = yAx + 4;
+    const title = (yy, s1, s2) => t(0, yy - 5, s1, '#C9D1DB', 10.5, 'start', 700) + (s2 ? t(0, yy - 5, '', '#8E9AAB', 9.5) : '');
     const t = (x, yy, s, col, sz, anc, w) => `<text x="${x}" y="${yy}" fill="${col}" font-size="${sz}" text-anchor="${anc || 'start'}" font-weight="${w || 500}">${s}</text>`;
     const smooth = pts => { if (!pts.length) return ''; let d = `M${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
       for (let i = 0; i < pts.length - 1; i++) { const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
@@ -111,11 +115,11 @@
       + `<linearGradient id="${uid}c" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#39FF9E" stop-opacity=".75"/><stop offset="1" stop-color="#39FF9E" stop-opacity=".05"/></linearGradient></defs>`;
     // best window: a lit band through every row
     if (good) { const x0 = xt(p.best.from) - cw / 2, x1 = xt(p.best.to) - cw / 2;
-      g += `<rect x="${x0}" y="${yCl - 4}" width="${x1 - x0}" height="${yMo + hMo - yCl + 6}" rx="6" fill="#FFE600" fill-opacity=".07" stroke="#FFE600" stroke-opacity=".45" stroke-dasharray="3 3"/>`
-        + t((x0 + x1) / 2, yCl - 6, tr('best {a}–{b}', { a: fmt(p.best.from), b: fmt(p.best.to) }), '#FFE600', 10, 'middle', 700); }
+      g += `<rect x="${x0}" y="${yCl - 2}" width="${x1 - x0}" height="${yMo + hMo - yCl + 4}" rx="6" fill="#FFE600" fill-opacity=".07" stroke="#FFE600" stroke-opacity=".45" stroke-dasharray="3 3"/>`
+        + t(Math.min(W - 40, Math.max(90, (x0 + x1) / 2)), yCl - 5, tr('best {a}–{b}', { a: fmt(p.best.from), b: fmt(p.best.to) }), '#FFE600', 10, 'middle', 700); }
     // clouds: high / mid / low (or total), grey = cover
     const rows = layers ? [[tr('High'), 'ch'], [tr('Mid'), 'cm'], [tr('Low'), 'cl']] : [[tr('Clouds'), 'cloud']];
-    g += t(0, yCl + 9, tr('Clouds'), '#C9D1DB', 10.5, 'start', 700);
+    g += title(yCl, tr('Clouds'));
     rows.forEach(([lab, k], r) => { const yy = yCl + (layers ? r * rowH : 0), hh = layers ? rowH - 2 : hCl - 2;
       if (layers) g += t(Lw - 5, yy + 9.5, lab, '#8E9AAB', 9, 'end');
       hs.forEach((h, i) => { const v = h[k]; if (v == null) return; g += `<rect x="${Lw + i * cw + .5}" y="${yy}" width="${cw - 1}" height="${hh}" fill="#D7DEE8" fill-opacity="${(.06 + .84 * v / 100).toFixed(2)}"><title>${lab} ${Math.round(v)}%</title></rect>`; }); });
@@ -124,7 +128,7 @@
     const kY = k => yKp + hKp - Math.min(9, k) / 9 * hKp;
     g += `<rect x="${Lw}" y="${yKp}" width="${W - Lw - Rw}" height="${hKp}" rx="6" fill="url(#${uid}s)"/>`;
     [3, 6, 9].forEach(k => { g += `<line x1="${Lw}" x2="${W - Rw}" y1="${kY(k)}" y2="${kY(k)}" stroke="#fff" stroke-opacity=".07"/>` + t(Lw - 5, kY(k) + 3, k, '#6B7788', 8.5, 'end'); });
-    g += t(0, yKp + 11, tr('Aurora'), '#C9D1DB', 10.5, 'start', 700) + t(0, yKp + 24, 'Kp', '#8E9AAB', 9.5);
+    g += title(yKp, tr('Aurora') + ' · Kp');
     const kp = hs.map((h, i) => h.kp == null ? null : [X(i), kY(h.kp)]).filter(Boolean);
     if (kp.length) { const d = smooth(kp);
       g += `<path d="${d} L${kp[kp.length - 1][0]} ${yKp + hKp} L${kp[0][0]} ${yKp + hKp} Z" fill="#7FB8FF" fill-opacity=".14"/><path d="${d}" fill="none" stroke="#CFE3FF" stroke-width="2"/>`;
@@ -133,22 +137,22 @@
       + t(W - Rw - 4, kY(need) - 4, tr('needed here: Kp {n}', { n: need }), '#FF9B9B', 9.5, 'end', 700);
     // chance curve 0–100 %
     const cY = v => yCh + hCh - v * (hCh - 4);
-    g += `<rect x="${Lw}" y="${yCh}" width="${W - Lw - Rw}" height="${hCh}" rx="6" fill="#0F1318"/>` + t(0, yCh + 11, tr('Chance'), '#C9D1DB', 10.5, 'start', 700);
+    g += `<rect x="${Lw}" y="${yCh}" width="${W - Lw - Rw}" height="${hCh}" rx="6" fill="#0F1318"/>` + title(yCh, tr('Chance'));
     const cp = hs.map((h, i) => [X(i), cY(Math.min(1, h.score / .5))]), any = hs.some(h => h.score / .5 >= .04);
     if (any) { const d = smooth(cp); g += `<path d="${d} L${cp[cp.length - 1][0]} ${yCh + hCh} L${cp[0][0]} ${yCh + hCh} Z" fill="url(#${uid}c)"/><path d="${d}" fill="none" stroke="#39FF9E" stroke-width="1.8"/>`;
       const top = hs.reduce((a, h, i) => h.score > hs[a].score ? i : a, 0), pc = Math.round(Math.min(1, hs[top].score / .5) * 100);
       g += t(X(top), Math.max(yCh + 10, cY(pc / 100) - 4), pc + '%', '#CFFFE6', 9.5, 'middle', 700); }
     else g += t(Lw + (W - Lw - Rw) / 2, yCh + hCh / 2 + 4, tr('no chance in any hour'), '#FF9B9B', 10.5, 'middle', 700);
     // Moon: band while it's up, brighter = fuller
-    g += t(0, yMo + 10, tr('Moon'), '#C9D1DB', 10.5, 'start', 700);
+
     let first = -1; hs.forEach((h, i) => { if (!h.moonUp) return; if (first < 0) first = i;
       g += `<rect x="${Lw + i * cw}" y="${yMo + 2}" width="${cw + .5}" height="${hMo - 4}" fill="#FFF3C4" fill-opacity="${(.12 + .55 * h.ill).toFixed(2)}"/>`; });
-    g += first >= 0 ? t(Lw + first * cw + 4, yMo + 10.5, tr('Moon up · {p}% lit', { p: ill }), '#0A0A0A', 9, 'start', 700) : t(Lw + 4, yMo + 10.5, tr('Moon down all night'), '#8E9AAB', 9);
+    g += title(yMo, first >= 0 ? tr('Moon up · {p}% lit', { p: ill }) : tr('Moon down all night'));
     // time axis + the clock's moment
     const every = cw >= 26 ? 1 : 2;
     hs.forEach((h, i) => { if (i % every === 0) g += t(X(i), yAx, fmt(h.t), '#A3B0C2', 9.5, 'middle'); });
     if (cur && cur >= hs[0].t && cur < hs[n - 1].t + H) { const xc = xt(cur - H / 2); g += `<line x1="${xc}" x2="${xc}" y1="${yCl - 2}" y2="${yMo + hMo}" stroke="#FFE600" stroke-width="1.5"/>`; }
-    el.innerHTML = head + `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px">${cells}</div>`
+    el.innerHTML = head + (o.compact ? '' : `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px">${cells}</div>`)
       + `<svg viewBox="0 0 ${W} ${Hh}" width="100%" style="display:block;margin-top:14px;height:auto;font-family:inherit" role="img" aria-label="${tr('Tonight hour by hour: darkness, clouds and aurora chance')}">${g}</svg>`;
   }
 

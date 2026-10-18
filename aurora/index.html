@@ -320,13 +320,22 @@
   .eqleg { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--dim); margin-top: 6px; } .eqleg i { display: inline-block; margin-right: 6px; vertical-align: -1px; }
   .eqleg .dot { width: 10px; height: 10px; border-radius: 50%; background: #FFB347; } .eqleg .tri { width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 10px solid #FF4D4D; }
   #eqMap { width: 100%; display: block; margin-top: 8px; border-radius: 12px; background: #0B1220; }
-  #space3d { width: 100%; aspect-ratio: 16 / 9; min-height: 340px; max-height: 78vh; margin-top: 10px; }
+  #s3dHost { width: 100%; aspect-ratio: 16 / 9; min-height: 340px; max-height: 78vh; margin-top: 10px; }
   #eqTime, #lgChart { width: 100%; display: block; margin-top: 10px; }
   .eqr, .vor { display: grid; grid-template-columns: 52px 1fr auto; gap: 10px; align-items: baseline; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
   .eqr b, .vor b { font-weight: 800; font-feature-settings: 'tnum'; } .eqr span, .vor span { color: var(--dim); font-size: 12px; white-space: nowrap; }
   .vol { margin-top: 6px; max-height: 520px; overflow: auto; } .vor b { color: #FF7A7A; }
   .corr { display: grid; gap: 8px; margin-top: 12px; } .corr > div { background: #0F1318; border-radius: 12px; padding: 10px 14px; font-size: 14px; line-height: 1.5; color: var(--dim); } .corr b { color: #E6EBF1; }
   @media (min-width: 900px) { .corr { grid-template-columns: 1fr 1fr; } }
+  /* phones: compact layout (kept last so it wins over the base rules above) */
+  .s3dgo { display: none; margin-top: 12px; width: 100%; padding: 14px; border-radius: 14px; border: 1px solid #39FF9E; background: rgba(57,255,158,.08); color: #CFFFE6; font: 700 15px Inter, system-ui, sans-serif; cursor: pointer; }
+  @media (max-width: 759px) {
+    .s3dgo { display: block; } #sec3d .help { display: none; }
+    .clock { padding: 8px 10px; } .clock .clockt .lbl, .clock #syDate { display: none; } .clockt { min-width: 0; flex: 1 1 auto; }
+    .clockrow { gap: 4px; } .clockrow .spbtn { width: 34px; height: 34px; min-width: 0; padding: 0; font-size: 13px; } .clockrow input[type=range] { flex: 1 1 100%; order: 9; height: 24px; }
+    .clockdl { order: 10; } .clockdl > * { padding: 6px 4px !important; font-size: 11px; }
+    .chap { margin: 24px 2px 0; gap: 10px; } .chap > span { width: 28px; height: 28px; font-size: 15px; line-height: 26px; } .chap h2 { font-size: 21px !important; } .chap p { font-size: 13px; }
+  }
 </style>
 </head>
 <body>
@@ -418,7 +427,8 @@
   </div>
   <section class="card" id="sec3d" aria-labelledby="h3d">
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><div><div class="lbl">3D model · planets, solar wind and CMEs on the same clock</div><h2 id="h3d" style="margin-top:4px">Fly through the solar wind</h2></div></div>
-    <div id="space3d" role="img" aria-label="3D model of the solar system with the solar wind streaming from the Sun and the CMEs in flight"></div>
+    <div id="s3dHost" role="img" aria-label="3D model of the solar system with the solar wind streaming from the Sun and the CMEs in flight"></div>
+    <button class="s3dgo" id="s3dGo">▶ Open the 3D view</button>
     <div class="help">A model, not a photo: the planets sit where they really are at the clock's time; the solar wind streams out of the turning Sun (speed and colour from NOAA's model at Earth); CMEs from NASA's DONKI catalogue grow at their measured speed and direction. Distances are real, sizes are not. Drag to turn, pinch or scroll to zoom, tap a planet to fly to it — the play button above moves everything together.</div>
   </section>
   <div class="chap xfull"><span aria-hidden="true">2</span><div><h2>Arrival</h2><p>A spacecraft 1.5 million km towards the Sun measures the wind 30–60 minutes before it hits us. Speed, density and above all Bz (the magnetic direction) decide what happens next.</p></div></div>
@@ -617,6 +627,7 @@ const hhmm = d => new Date(d).toLocaleTimeString(LOC, { timeZone: TZ, hour: '2-d
 const day = d => new Date(d).toLocaleDateString(LOC, { timeZone: TZ, weekday: 'short', day: 'numeric' });
 const kpColor = k => k >= 9 ? '#E879F9' : k >= 8 ? '#B98CFF' : k >= 7 ? '#FF4D4D' : k >= 6 ? '#FF9338' : k >= 5 ? '#FFE14D' : k >= 4 ? '#B8F25C' : '#3FD98A';   // quiet green · active lime · G1 yellow · G2 orange · G3 red · G4 violet · G5 fuchsia
 async function j(u) { const r = await fetch(u, { cache: 'no-store' }); if (!r.ok) throw new Error(r.status); return r.json(); }
+var PHONE = () => innerWidth < 760;   // phones get the compact layout (tonight without tiles, 3D behind a button)
 const S = {};
 
 /* ── verdict: tonight 20:00 → 05:00 local ── */
@@ -654,7 +665,7 @@ function verdict() {
   $('fDark').textContent = dark ? hhmm(dark) : '–';
   if (window.AuroraTonight && S.wx) {
     const pl = AuroraTonight.plan({ lat: TOWN.lat, lon: TOWN.lon, need: N, kpList: S.kpList, wx: S.wx });
-    S.tnPlan = pl; S.tnNeed = N; S.kpT = kp; S.clouds = clouds; AuroraTonight.render($('tonight'), pl, hhmm, kpColor, N, sy.on ? sy.t : 0); $('tnTxt').textContent = S.tonight = AuroraTonight.sentence(pl, N, hhmm);
+    S.tnPlan = pl; S.tnNeed = N; S.kpT = kp; S.clouds = clouds; AuroraTonight.render($('tonight'), pl, hhmm, kpColor, N, sy.on ? sy.t : 0, { compact: PHONE() }); $('tnTxt').textContent = S.tonight = AuroraTonight.sentence(pl, N, hhmm);
   }
   if (window.redrawDeep) redrawDeep();
  
@@ -1003,7 +1014,7 @@ function tcursor() {
     if (!ln) { ln = document.createElementNS('http://www.w3.org/2000/svg', 'line'); ln.setAttribute('class', 'tcur'); ln.setAttribute('stroke', '#FFE600'); ln.setAttribute('stroke-width', '1.5'); svg.appendChild(ln); }
     if (!t || t < a || t > b) { ln.style.display = 'none'; return; }
     const x = xa + (t - a) / (b - a) * (xb - xa); ln.setAttribute('x1', x); ln.setAttribute('x2', x); ln.setAttribute('y1', 0); ln.setAttribute('y2', h); ln.style.display = ''; });
-  if (S.tnPlan) AuroraTonight.render($('tonight'), S.tnPlan, hhmm, kpColor, S.tnNeed, t);
+  if (S.tnPlan) AuroraTonight.render($('tonight'), S.tnPlan, hhmm, kpColor, S.tnNeed, t, { compact: PHONE() });
 }
 window.tcursor = tcursor;
 // tap a chart → the shared clock jumps to that moment
@@ -1200,8 +1211,15 @@ $('repSave').onclick = async () => {
   b.classList.remove('busy'); b.textContent = keep;
 };
 /* ── 3D: planets + solar wind + CMEs (space3d.js), driven by the shared clock ── */
-window.space3d = window.Space3D ? Space3D.create($('space3d'), { wind: S.enl || [], time: Date.now(), tz: () => TZ, places: () => [{ name: TOWN.name, lat: TOWN.lat, lon: TOWN.lon }], aurora: () => S.ov }) : null;
-j('data/cme.json?t=' + Math.floor(Date.now() / 600000)).then(c => { if (window.space3d) space3d.setCmes(c.cmes); }).catch(() => {});
+// PC: in the page. Phone: a button opens it full screen (built on the first open; it hides again when you leave)
+function make3d() { if (window.space3d || !window.Space3D) return;
+  window.space3d = Space3D.create($('s3dHost'), { wind: S.enl || [], time: sy.on ? sy.t : Date.now(), tz: () => TZ, places: () => [{ name: TOWN.name, lat: TOWN.lat, lon: TOWN.lon }], aurora: () => S.ov });
+  j('data/cme.json?t=' + Math.floor(Date.now() / 600000)).then(c => { if (window.space3d) space3d.setCmes(c.cmes); }).catch(() => {}); }
+if (!PHONE()) make3d();
+else { const host = $('s3dHost'); host.style.display = 'none';
+  // full screen lives on <body> (a card's styles would trap position:fixed); back into its card when you leave
+  new MutationObserver(() => { if (PHONE() && !host.classList.contains('s3d-fs')) { host.style.display = 'none'; $('s3dGo').before(host); } }).observe(host, { attributes: true, attributeFilter: ['class'] }); }
+$('s3dGo').onclick = () => { const host = $('s3dHost'); document.body.appendChild(host); host.style.display = 'block'; make3d(); if (window.space3d) { if (!host.classList.contains('s3d-fs')) host.querySelector('.s3d-full').click(); space3d.setTime(sy.on ? sy.t : Date.now()); } };
 function drawGlobe() { if (window.AuroraGlobe) AuroraGlobe.draw($('globe'), { ov: S.ov, lat0: Math.min(75, Math.max(50, TOWN.lat + 13)), lon0: TOWN.lon - 7, viewLine: true, label: true, here: TOWN }); }
 addEventListener('resize', () => { drawGlobe(); });
 
