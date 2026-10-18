@@ -73,9 +73,9 @@
 .s3d.ea .s3d-gl,.s3d.ea .s3d-ov,.s3d.ea .s3d-btns,.s3d.ea .s3d-leg,.s3d.ea .s3d-top,.s3d.ea .s3d-info,.s3d.ea .s3d-help,.s3d.ea .s3d-ctl button:not(.s3d-full){display:none!important}.s3d.ea .s3d-tabs,.s3d.ea .s3d-ctl{z-index:5}
 .s3d-time{position:absolute;left:10px;bottom:54px;display:flex;gap:6px;align-items:center;flex-wrap:nowrap;max-width:calc(100% - 20px)}
 .s3d-time button{flex:none;border:1px solid rgba(255,255,255,.18);background:rgba(10,14,20,.75);color:#E6EBF1;border-radius:999px;min-width:36px;min-height:36px;padding:0 10px;font:600 12px Inter,system-ui,sans-serif;cursor:pointer}
-.s3d-time button[aria-pressed=true]{border-color:#39FF9E;color:#39FF9E}.s3d-rate{width:150px;accent-color:#39FF9E;flex:0 1 150px;min-width:70px}
+.s3d-time .s3d-hplay{min-width:44px;font-size:14px}
 .s3d-rl{font:700 11px Inter,system-ui,sans-serif;color:#E6EBF1;background:rgba(10,14,20,.75);border-radius:999px;padding:7px 10px;white-space:nowrap;min-width:96px;text-align:center}
-.s3d.ea .s3d-time{display:none!important}@media (max-width:640px){.s3d-rate{width:96px;flex-basis:96px}.s3d-rl{min-width:80px}}
+.s3d.ea .s3d-time{display:none!important}@media (max-width:640px){.s3d-rl{min-width:84px}}
 .s3d-hdate{background:rgba(10,14,20,.75);color:#E6EBF1;border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:6px 10px;min-height:36px;font:600 12px Inter,system-ui,sans-serif;color-scheme:dark}
 .s3d.gx .s3d-hx,.s3d.gx .s3d-sys,.s3d.gx .s3d-leg{display:none!important}.s3d .s3d-imp{display:none}.s3d.mag .s3d-imp{display:inline-block}
 .s3d:focus-visible{outline:3px solid #FFE600;outline-offset:2px}
@@ -92,15 +92,15 @@
       <div class="s3d-top"><b class="s3d-t">–</b><span class="s3d-sub"></span></div>
       <div class="s3d-tabs" role="tablist"><button data-m="sys" aria-pressed="true">${tr('Solar system')}</button><button data-m="helix" aria-pressed="false">${tr('Spiral through space')}</button><button data-m="galaxy" aria-pressed="false">${tr('Galaxy')}</button><button data-m="earth" aria-pressed="false">${tr('Earth')}</button></div>
       <div class="s3d-btns s3d-sys"><button data-v="inner">${tr('Inner planets')}</button><button data-v="all">${tr('Whole system')}</button><button data-v="earth">${tr('From Earth')}</button><button data-v="top">${tr('From above')}</button><button class="s3d-sunf" aria-label="${tr('Sun filter')}">☀ ${tr('visible light')}</button><button class="s3d-cmex" aria-pressed="false">${tr('Example: strong CME')}</button><button class="s3d-mag" aria-pressed="false">🧲 ${tr('Earth’s magnetic shield')}</button><button class="s3d-imp">💥 ${tr('CME impact')}</button></div>
-      <div class="s3d-time"><button class="s3d-hrev" aria-label="${tr('Play backwards')}" aria-pressed="false">◀</button><button class="s3d-hplay" aria-label="${tr('Pause')}">⏸</button><input type="range" class="s3d-rate" min="0" max="1000" aria-label="${tr('Speed')}"><span class="s3d-rl" aria-live="polite"></span><button class="s3d-now">${tr('Now')}</button></div>
+      <div class="s3d-time"><button class="s3d-back" aria-label="${tr('Slower / backwards')}">⏪</button><button class="s3d-hplay" aria-label="${tr('Pause')}">⏸</button><button class="s3d-fwd" aria-label="${tr('Faster forwards')}">⏩</button><span class="s3d-rl" aria-live="polite"></span><button class="s3d-now">${tr('Now')}</button></div>
       <div class="s3d-btns s3d-hx"><input type="date" class="s3d-hdate" aria-label="${tr('Date')}"><button data-f="lsr" aria-pressed="true">${tr('vs nearby stars · 20 km/s')}</button><button data-f="gal" aria-pressed="false">${tr('around the Milky Way · 230 km/s')}</button></div>
       <div class="s3d-ctl"><button class="s3d-full" aria-label="${tr('Full screen')}">⛶</button><button data-z="-1" aria-label="${tr('Zoom in')}">+</button><button data-z="1" aria-label="${tr('Zoom out')}">−</button><button class="s3d-reset" aria-label="${tr('Reset the view')}">⟲</button><button class="s3d-q" aria-label="${tr('How it works')}">?</button></div>
       <div class="s3d-info" hidden></div>
       <div class="s3d-help" hidden><button class="s3d-hx-x" aria-label="${tr('Close')}">✕</button>
         <b>${tr('Moving around')}</b><p>${tr('Drag to turn · pinch or scroll to zoom · two fingers or right-drag to move sideways · double-tap to reset · tap a planet to fly to it and see its numbers. Zoom out from Earth to reach the solar system, keep going for the galaxy; tap Earth and zoom in to land. Keys: arrows turn, + / − zoom, R reset, space play.')}</p>
-        <b>${tr('Time')}</b><p>${tr('Everything starts in real time, like the sky outside. The slider changes the speed: left of the middle is slow motion, right speeds time up (minutes, days, years or millions of years per second, depending on the view). ◀ runs time backwards, NOW returns to this moment at real speed.')}</p>
+        <b>${tr('Time')}</b><p>${tr('Everything starts in real time, like the sky outside. ⏩ speeds time up one step at a time (minutes, days, years or millions of years per second, depending on the view); ⏪ slows it down — through slow motion — and then runs it backwards, faster with each press. ⏸ pauses, NOW returns to this moment at real speed. Keys: space, J / L.')}</p>
         <b>${tr('Solar system')}</b><p>${tr('Planets at their real positions for the shown time (NASA JPL orbital elements). The solar wind leaves the Sun in all directions while the Sun turns once every ~25 days, so the streams wind up into a spiral (the Parker spiral) — like water from a turning garden sprinkler. Speed and colour come from NOAA’s model at Earth. CMEs grow from the Sun at their measured speed and direction (NASA DONKI, or estimated from NOAA’s model). Distances are real, sizes are not.')}</p>
-        <b>${tr('Earth’s magnetic shield')}</b><p>${tr('Earth’s magnetic field turns most of the solar wind aside: it piles up in a bow shock in front, flows around the magnetopause and stretches the field into a long tail at night. A CME squeezes the field from ~10 to ~6 Earth radii; far more particles get in, run down the field lines to the polar regions and light up the aurora ovals, which grow towards the equator. Drawn to show how it works — Earth and its field are enlarged.')}</p>
+        <b>${tr('Earth’s magnetic shield')}</b><p>${tr('Earth’s magnetic field turns most of the solar wind aside: it piles up in a bow shock in front, flows around the magnetopause and stretches the field into a long tail at night. A CME squeezes the field from ~10 to ~6 Earth radii; far more particles get in, run down the field lines to the polar regions and light up the aurora ovals, which grow towards the equator. Drawn to scale (the Moon sits at its true distance, ~60 Earth radii); only the particle flow is sped up so you can see it.')}</p>
         <b>${tr('Spiral through space')}</b><p>${tr('The Sun is not standing still: it moves ~20 km/s towards the constellation Hercules compared with nearby stars, and ~230 km/s around the centre of the Milky Way. The planets come along, so each one draws a spiral (a helix) around the Sun’s path. The orbits are tilted about 60° to that path, so the spirals are slanted — the planets are not dragged behind the Sun like a comet tail, as some popular videos show.')}</p></div>
       <div class="s3d-leg"><i style="background:rgb(70,120,255)"></i>300 <i style="background:rgb(60,220,160)"></i>420 <i style="background:rgb(255,225,80)"></i>550 <i style="background:rgb(255,130,50)"></i>700+ km/s <i style="background:#fff"></i>CME</div>`;
     const cv = el.querySelector('.s3d-gl'), ov = el.querySelector('.s3d-ov'), g2 = ov.getContext('2d');
@@ -135,8 +135,10 @@
     let mode = 'sys', frameK = 'lsr', hTime = Date.now(), hPlay = true, rate = 1, hDir = 1, hLast = 0, info = null, ph = 0, watch = 0, bAt = 0, tAt = 0, hbAt = 0;
     const REDUCED = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches, YEAR = 3.15576e7;
     // speed slider: log scale, simulated seconds per real second, from 0.1 (slow motion) to each view's maximum
-    const RANGE = { sys: [-1, Math.log10(30 * 86400)], helix: [-1, Math.log10(5 * YEAR)], galaxy: [-1, Math.log10(20e6 * YEAR)] };
-    const rng = () => RANGE[mode] || RANGE.sys, posOf = r => Math.round((Math.log10(r) - rng()[0]) / (rng()[1] - rng()[0]) * 1000);
+    // speed ladder (simulated seconds per real second): ⏩ one step more forward, ⏪ one step more backward — through slow motion into reverse
+    const STEPS = { sys: [.1, .25, .5, 1, 10, 60, 600, 3600, 21600, 86400, 604800, 2592000], helix: [.1, .25, .5, 1, 60, 3600, 86400, 604800, 2592000, YEAR / 4, YEAR, 5 * YEAR],
+      galaxy: [.1, .5, 1, 3600, 86400, YEAR, 1000 * YEAR, 1e5 * YEAR, 1e6 * YEAR, 5e6 * YEAR, 2e7 * YEAR] };
+    const ladder = () => { const a = STEPS[mode] || STEPS.sys, r = a.indexOf(1); return a.slice(r).reverse().map(x => -x).concat(a); };   // reverse never slower than real time
     const SUNB = 'https://raw.githubusercontent.com/ori0nori0ff/ori0nori0ff.github.io/enlil/sun/';
     // [file id, label, disc radius as a share of the image width] — HMI fills more of its frame than AIA
     const SUNF = [['HMIIC', 'visible light', .468], ['0171', '171 Å · corona', .393], ['0193', '193 Å · hot corona', .393], ['0304', '304 Å · chromosphere', .393]];
@@ -240,12 +242,43 @@
       cmeB.n = m; upload(cmeB); build.active = active;
     }
 
-    // ── Earth's magnetic shield (a schematic, Earth and its field enlarged ~70×): bow shock, magnetopause squeezed by CMEs
-    //    (Shue-like shape, stand-off 10 → ~6 Earth radii), dipole field lines r = L·cos²λ pushed in on the day side and
-    //    stretched into a tail at night, solar-wind particles flowing around it, a few guided down the field to the aurora ovals
-    let magOn = false, magF = 0, glow = 0, magPh = 0, magSub = ''; const MS = 0.003;   // AU per Earth radius in the schematic
+    // ── Earth's magnetic shield, to scale (1 Earth radius = 6371 km): bow shock ~13 R⊕, magnetopause squeezed by CMEs
+    //    (Shue-like shape, stand-off ~10 → ~6 R⊕), dipole field lines r = L·cos²λ around the real, tilted magnetic axis
+    //    (pole 80.7° N 72.7° W, turning with Earth), pushed in by day and stretched into a tail at night; the Moon at its true
+    //    distance for scale. The particles show the flow (sped up); a few run down the field to the aurora ovals.
+    let magOn = false, magF = 0, glow = 0, magPh = 0, magSub = ''; const MS = 6371 / AU_KM;   // AU per Earth radius
     const pxAU = q => H / 2 / Math.tan(22.5 * D2R) / q[2];
-    const MP = []; for (let i = 0; i < 380; i++) MP.push({ x: -32 + 58 * rnd(), r0: Math.sqrt(rnd()) * 16, a0: rnd() * 6.283, cap: 0 });
+    const MP = []; for (let i = 0; i < 420; i++) MP.push({ x: -40 + 70 * rnd(), r0: Math.sqrt(rnd()) * 20, a0: rnd() * 6.283, cap: 0 });
+    const OBL = 23.439 * D2R, gmst = t => (280.46061837 + 360.98564736629 * (t / DAY - 10957.5)) * D2R;
+    // geographic lat / lon (rad) at time t → scene direction, and back
+    const geoDir = (la, lo, t) => { const L = lo + gmst(t), x = Math.cos(la) * Math.cos(L), y = Math.cos(la) * Math.sin(L), z = Math.sin(la); return [x, -y * Math.sin(OBL) + z * Math.cos(OBL), -(y * Math.cos(OBL) + z * Math.sin(OBL))]; };
+    // the Moon (low-precision, ~0.3°): geocentric ecliptic → scene, AU
+    function moonPos(t) { const d = t / DAY - 10957.5, L = (218.316 + 13.176396 * d) * D2R, M = (134.963 + 13.064993 * d) * D2R, F = (93.272 + 13.229350 * d) * D2R;
+      const l = L + 6.289 * D2R * Math.sin(M), bb = 5.128 * D2R * Math.sin(F), r = (385001 - 20905 * Math.cos(M)) / AU_KM; return [r * Math.cos(bb) * Math.cos(l), r * Math.sin(bb), -r * Math.cos(bb) * Math.sin(l)]; }
+    // NASA GIBS whole-Earth images (Blue Marble by day, Black Marble city lights by night), 640×320 equirectangular
+    const ETX = {};
+    function earthTex() { if (ETX.go) return; ETX.go = 1;
+      const one = (layer, date, ext) => { const c = document.createElement('canvas'); c.width = 640; c.height = 320; const g = c.getContext('2d'), o = {}; let n = 0;
+        [0, 1].forEach(i => { const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => { g.drawImage(im, i * 512, 0); if (++n === 2) { try { o.px = g.getImageData(0, 0, 640, 320).data; dirty = true; } catch (e) {} } };
+          im.src = `https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/${layer}/default/${date}/500m/0/0/${i}.${ext}`; }); return o; };
+      ETX.day = one('BlueMarble_NextGeneration', '2004-08-01', 'jpeg'); ETX.night = one('VIIRS_Black_Marble', '2016-01-01', 'png'); }
+    // Earth as seen by the camera: orthographic disc, day / night (terminator from the Sun), city lights, a blue rim
+    const ED = document.createElement('canvas'), edg = ED.getContext('2d');
+    function earthDisc(E, t, rpx) {
+      const N = Math.max(24, Math.min(160, Math.round(rpx * 2))); if (ED.width !== N) { ED.width = ED.height = N; }
+      const id = edg.createImageData(N, N), o = id.data, eye = camEye(), z = [0, 1, 2].map(i => eye[i] - E[i]), zl = Math.hypot(...z), w = z.map(v => v / zl);
+      let rx = [w[2], 0, -w[0]]; const rl = Math.hypot(...rx) || 1; rx = rx.map(v => v / rl); const uy = [w[1] * rx[2] - w[2] * rx[1], w[2] * rx[0] - w[0] * rx[2], w[0] * rx[1] - w[1] * rx[0]];
+      const sun = E.map(v => -v / Math.hypot(...E)), G = gmst(t), sO = Math.sin(OBL), cO = Math.cos(OBL), day = ETX.day && ETX.day.px, nig = ETX.night && ETX.night.px;
+      for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const X = (i + .5) / N * 2 - 1, Y = 1 - (j + .5) / N * 2, q = X * X + Y * Y, k = (j * N + i) * 4; if (q > 1) { o[k + 3] = 0; continue; }
+        const Z = Math.sqrt(1 - q), P = [0, 1, 2].map(c => X * rx[c] + Y * uy[c] + Z * w[c]);
+        const ye = -P[2], ze = P[1], yq = ye * cO - ze * sO, zq = ye * sO + ze * cO, la = Math.asin(Math.max(-1, Math.min(1, zq))), lo = Math.atan2(yq, P[0]) - G;
+        const u = Math.floor(((lo / (2 * Math.PI) + .5) % 1 + 1) % 1 * 640) % 640, v = Math.min(319, Math.floor((.5 - la / Math.PI) * 320)), s = (v * 640 + u) * 4;
+        const dl = P[0] * sun[0] + P[1] * sun[1] + P[2] * sun[2], lit = Math.max(0, Math.min(1, (dl + .1) / .25)), sh = .25 + .75 * Math.max(0, dl);
+        let r = 30, g = 70, bl = 140; if (day) { r = day[s]; g = day[s + 1]; bl = day[s + 2]; }
+        let nr = r * .05, ng = g * .05, nb = bl * .08 + 6; if (nig) { const c = nig[s] * .9; nr += c; ng += c * .8; nb += c * .45; }
+        const rim = Math.pow(1 - Z, 3) * 120;   // the atmosphere at the edge
+        o[k] = Math.min(255, r * sh * lit + nr * (1 - lit) + rim * .35 * lit); o[k + 1] = Math.min(255, g * sh * lit + ng * (1 - lit) + rim * .6 * lit); o[k + 2] = Math.min(255, bl * sh * lit + nb * (1 - lit) + rim * lit); o[k + 3] = 255; }
+      edg.putImageData(id, 0, 0); return ED; }
     function cmeAtEarth() {   // f: how hard a CME is pressing on Earth now (0–1); eta: hours until the next one arrives
       const E = planet('Earth', time), rE = Math.hypot(...E), ue = E.map(x => x / rE); let f = 0, eta = null;
       (build.active || []).forEach(({ c, r, ax }) => { if (ax[0] * ue[0] + ax[1] * ue[1] + ax[2] * ue[2] < Math.cos(Math.max(5, c.half) * D2R)) return;
@@ -256,62 +289,87 @@
     const fieldX = (L, ca, R0) => ca > 0 ? 1 - ca * (1 - Math.min(1, R0 * .92 / L)) : 1 + (-ca) * Math.max(0, L - 3.5) * (.35 + .4 * magF);   // day squeeze / night stretch
     function magneto(E) {
       const st = cmeAtEarth(), dph = Math.min(.1, Math.max(0, ph - magPh)); magPh = ph; magF += (st.f - magF) * .05; glow *= .985;
-      const R0 = 10 - 3.8 * magF, Rbs = R0 * 1.33, rE = Math.hypot(...E), ex = E.map(v => -v / rE), ey = [0, 1, 0];
+      const R0 = 10.5 - 4 * magF, Rbs = R0 * 1.3, rE = Math.hypot(...E), ex = E.map(v => -v / rE);
+      const Mg = geoDir(80.7 * D2R, -72.7 * D2R, time), md = Mg[0] * ex[0] + Mg[1] * ex[1] + Mg[2] * ex[2];   // magnetic north (rotates with Earth)
+      let ey = Mg.map((v, i) => v - md * ex[i]); const el_ = Math.hypot(...ey); ey = ey.map(v => v / el_);
       const ez = [ex[1] * ey[2] - ex[2] * ey[1], ex[2] * ey[0] - ex[0] * ey[2], ex[0] * ey[1] - ex[1] * ey[0]];
       const P = (x, y, z) => proj([0, 1, 2].map(i => E[i] + (ex[i] * x + ey[i] * y + ez[i] * z) * MS)), qe = proj(E); if (!qe) return;
-      const re = Math.max(3, MS * pxAU(qe)), hidden = q => Math.hypot(q[0] - qe[0], q[1] - qe[1]) < re && q[2] > qe[2];   // behind the globe
-      const line = (pts, col, w, dash) => { g2.strokeStyle = col; g2.lineWidth = w; g2.setLineDash(dash || []); g2.beginPath(); let on = false;
-        pts.forEach(pt => { const q = P(pt[0], pt[1], pt[2]); if (!q || hidden(q)) { on = false; return; } if (on) g2.lineTo(q[0], q[1]); else { g2.moveTo(q[0], q[1]); on = true; } }); g2.stroke(); g2.setLineDash([]); };
-      const T = []; for (let th = 0; th < 2.7; th += .06) { const r = R0 * Math.pow(2 / (1 + Math.cos(th)), .58); T.push([r * Math.cos(th), r * Math.sin(th)]); }
+      const re = Math.max(2.5, MS * pxAU(qe)), hidden = q => Math.hypot(q[0] - qe[0], q[1] - qe[1]) < re * .98 && q[2] > qe[2];
+      const path = (pts, w) => { g2.beginPath(); let on = false, n = 0; pts.forEach(pt => { const q = P(pt[0], pt[1], pt[2]); if (!q || hidden(q)) { on = false; return; } if (on) g2.lineTo(q[0], q[1]); else { g2.moveTo(q[0], q[1]); on = true; } n++; }); return n; };
+      const glowLine = (pts, rgb, a, w) => { if (!path(pts)) return; g2.strokeStyle = `rgba(${rgb},${a * .25})`; g2.lineWidth = w * 4; g2.stroke(); g2.strokeStyle = `rgba(${rgb},${a})`; g2.lineWidth = w; g2.stroke(); };
+      g2.save(); g2.globalCompositeOperation = 'lighter'; g2.lineCap = g2.lineJoin = 'round';
+      const T = []; for (let th = 0; th < 2.75; th += .05) { const r = R0 * Math.pow(2 / (1 + Math.cos(th)), .58); T.push([r * Math.cos(th), r * Math.sin(th)]); }
       const rho = x => { if (x >= T[0][0]) return 0; for (let i = 1; i < T.length; i++) if (T[i][0] <= x) { const f = (T[i - 1][0] - x) / (T[i - 1][0] - T[i][0]); return T[i - 1][1] + (T[i][1] - T[i - 1][1]) * f; } return T[T.length - 1][1]; };
-      for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, ca = Math.cos(a), sa = Math.sin(a), bs = [];
-        for (let th = 0; th <= 2.0; th += .08) { const r = Rbs * Math.pow(2 / (1 + Math.cos(th)), .75); bs.push([r * Math.cos(th), r * Math.sin(th) * sa, r * Math.sin(th) * ca]); }
-        line(bs, 'rgba(255,255,255,.16)', 1, [4, 4]); line(T.map(([x, r]) => [x, r * sa, r * ca]), `rgba(110,200,255,${.12 + .18 * magF})`, 1); }
-      const shake = magF * .1 * Math.sin(ph * 9);
+      // bow shock + magnetopause as faint shells (many meridians, additive)
+      for (let k = 0; k < 16; k++) { const a = k * Math.PI / 8, ca = Math.cos(a), sa = Math.sin(a), bs = [];
+        for (let th = 0; th <= 2.0; th += .07) { const r = Rbs * Math.pow(2 / (1 + Math.cos(th)), .75); bs.push([r * Math.cos(th), r * Math.sin(th) * sa, r * Math.sin(th) * ca]); }
+        if (path(bs)) { g2.strokeStyle = `rgba(255,236,210,${.05 + .12 * magF})`; g2.lineWidth = 1.2; g2.stroke(); }
+        if (path(T.map(([x, r]) => [x, r * sa, r * ca]))) { g2.strokeStyle = `rgba(90,190,255,${.07 + .1 * magF})`; g2.lineWidth = 1.4; g2.stroke(); } }
+      // closed field lines
+      const shake = magF * .08 * Math.sin(ph * 9);
       for (let k = 0; k < 12; k++) { const a = k * Math.PI / 6, ca = Math.cos(a), sa = Math.sin(a);
-        [2.5, 4, 6, 8.5].forEach(L => { const lf = Math.acos(Math.sqrt(1 / L)), sx = fieldX(L, ca, R0), pts = [];
-          for (let i = 0; i <= 40; i++) { const la = -lf + 2 * lf * i / 40, r = L * Math.cos(la) ** 2 * (1 + shake * L / 8); pts.push([r * Math.cos(la) * ca * sx, r * Math.sin(la), r * Math.cos(la) * sa]); }
-          line(pts, `rgba(108,182,255,${L > 7 ? .22 : .32})`, 1); }); }
-      for (let k = -2; k <= 2; k++) [1, -1].forEach(hs => { const a = [.3, hs * .95, k * .15], b = [.6, hs * 5.5, k * .8], c = [-32, hs * (6 - 1.6 * magF), k * 3], pts = [];   // open field: polar cap → tail
-        for (let i = 0; i <= 24; i++) { const u = i / 24, w = [(1 - u) ** 2, 2 * u * (1 - u), u * u]; pts.push([0, 1, 2].map(j => w[0] * a[j] + w[1] * b[j] + w[2] * c[j])); } line(pts, 'rgba(108,182,255,.16)', 1); });
-      // particles: the wind (or CME) flows around the magnetopause; a few leak in at the cusps / from the tail and run down to the ovals
-      const cme = magF > .25 || (st.eta != null && st.eta < 3), spd = 6 + 10 * magF;
-      MP.forEach(m => {
-        if (m.cap) { m.s = Math.min(1, m.s + dph * .8); const la = m.hs * Math.acos(Math.sqrt(1 / m.L)) * m.s, r = m.L * Math.cos(la) ** 2, ca = Math.cos(m.a), sx = fieldX(m.L, ca, R0);
-          m.p = [r * Math.cos(la) * ca * sx, r * Math.sin(la), r * Math.cos(la) * Math.sin(m.a)]; if (m.s >= 1) { glow = Math.min(.45, glow + .015); m.cap = 0; m.x = 26; } }
-        else { m.x -= dph * spd; if (m.x < -32) { m.x = 26; m.r0 = Math.sqrt(rnd()) * 16; m.a0 = rnd() * 6.283; }
-          const rr = Math.sqrt(m.r0 * m.r0 + (rho(m.x) * 1.12) ** 2); m.p = [m.x, rr * Math.sin(m.a0), rr * Math.cos(m.a0)];
+        [2.2, 3.5, 5.2, 7.5, 9.5].forEach((L, li) => { const lf = Math.acos(Math.sqrt(1 / L)), sx = fieldX(L, ca, R0), pts = [];
+          for (let i = 0; i <= 48; i++) { const la = -lf + 2 * lf * i / 48, r = L * Math.cos(la) ** 2 * (1 + shake * L / 8); pts.push([r * Math.cos(la) * ca * sx, r * Math.sin(la), r * Math.cos(la) * sa]); }
+          glowLine(pts, li < 2 ? '120,200,255' : '90,150,255', li < 2 ? .32 : .2, .9); }); }
+      for (let k = -2; k <= 2; k++) [1, -1].forEach(hs => { const a = [.25, hs * .97, k * .15], b = [.8, hs * 6, k * .9], c = [-60, hs * (7 - 2 * magF), k * 4], pts = [];   // open field: polar caps → tail
+        for (let i = 0; i <= 30; i++) { const u = i / 30, w = [(1 - u) ** 2, 2 * u * (1 - u), u * u]; pts.push([0, 1, 2].map(j => w[0] * a[j] + w[1] * b[j] + w[2] * c[j])); } glowLine(pts, '90,150,255', .14, .9); });
+      // particles: flow around the magnetopause (speed follows the real wind / CME), trails, a few guided to the ovals
+      const vW = magF > .25 ? 1500 : Math.max(300, vtab[Math.round((((lonOf(E) - OMEGA * time / DAY) / D2R) % 360 + 360) % 360) % 360] || 400);
+      const cme = magF > .25 || (st.eta != null && st.eta < 3), spd = vW / 60;   // R⊕ per (shimmer) second ≈ 100× faster than real
+      MP.forEach(m => { const q0 = m.q;
+        if (m.cap) { m.s = Math.min(1, m.s + dph * .7); const la = m.hs * Math.acos(Math.sqrt(1 / m.L)) * m.s, r = m.L * Math.cos(la) ** 2, ca = Math.cos(m.a), sx = fieldX(m.L, ca, R0);
+          m.p = [r * Math.cos(la) * ca * sx, r * Math.sin(la), r * Math.cos(la) * Math.sin(m.a)]; if (m.s >= 1) { glow = Math.min(.45, glow + .015); m.cap = 0; m.x = 30; m.q = null; } }
+        else { m.x -= dph * spd; if (m.x < -40) { m.x = 30; m.r0 = Math.sqrt(rnd()) * 20; m.a0 = rnd() * 6.283; m.q = null; }
+          const rr = Math.sqrt(m.r0 * m.r0 + (rho(m.x) * 1.1) ** 2); m.p = [m.x, rr * Math.sin(m.a0), rr * Math.cos(m.a0)];
           const day = m.x < R0 + 1 && m.x > R0 - 1.5 && m.r0 < 3, tail = m.x < -12 && m.r0 < 4;
           if ((day || tail) && rnd() < (.01 + .14 * magF) * dph * 60) { m.cap = 1; m.s = 0; m.hs = rnd() < .5 ? 1 : -1;
             if (day) { m.L = 9; m.a = (rnd() - .5) * .8; } else { const kk = .35 + .4 * magF, B = 1 - 3.5 * kk; m.L = Math.max(4, Math.min(12, (-B + Math.sqrt(B * B + 4 * kk * -m.x)) / (2 * kk))); m.a = Math.PI + (rnd() - .5) * .8; } } }
-        const q = P(m.p[0], m.p[1], m.p[2]); if (!q || hidden(q)) return; const z = m.cap ? 2.6 : 1.8;
-        g2.fillStyle = m.cap ? '#7CFFB8' : cme ? 'rgba(255,214,170,.9)' : 'rgba(150,200,255,.75)'; g2.fillRect(q[0] - z / 2, q[1] - z / 2, z, z); });
-      // aurora ovals: ~67° magnetic latitude, a little lower on the night side, pushed towards the equator and brighter in storms
-      const lo = (67 - 8 * magF) * D2R, inten = Math.min(1, .18 + .7 * magF + glow);
-      [1, -1].forEach(hs => { const pts = []; for (let i = 0; i <= 72; i++) { const a = i / 72 * 2 * Math.PI, l = lo + 3 * D2R * Math.cos(a); pts.push([Math.cos(l) * Math.cos(a) * 1.02, hs * Math.sin(l) * 1.02, Math.cos(l) * Math.sin(a) * 1.02]); }
-        g2.shadowColor = '#39FF9E'; g2.shadowBlur = 10 * inten; line(pts, `rgba(57,255,158,${.3 + .65 * inten})`, 1.5 + 3 * inten); g2.shadowBlur = 0;
-        if (magF > .5) line(pts.map(pt => pt.map(v => v * 1.05)), `rgba(255,80,100,${Math.min(.8, (magF - .5) * 1.4)})`, 1.5); });
+        const q = P(m.p[0], m.p[1], m.p[2]); m.q = q && !hidden(q) ? q : null; if (!m.q) return;
+        const col = m.cap ? '124,255,184' : cme ? '255,206,150' : '140,195,255';
+        if (q0 && Math.hypot(q[0] - q0[0], q[1] - q0[1]) < 60) { g2.strokeStyle = `rgba(${col},.35)`; g2.lineWidth = m.cap ? 1.6 : 1.1; g2.beginPath(); g2.moveTo(q0[0], q0[1]); g2.lineTo(q[0], q[1]); g2.stroke(); }
+        g2.fillStyle = `rgba(${col},.95)`; g2.beginPath(); g2.arc(q[0], q[1], m.cap ? 1.6 : 1.1, 0, 7); g2.fill(); });
+      g2.restore();
+      // Earth: the real globe once it's big enough, then the aurora as glowing curtains around the magnetic poles
+      if (re > 6) { earthTex(); const gr = g2.createRadialGradient(qe[0], qe[1], re * .98, qe[0], qe[1], re * 1.16); gr.addColorStop(0, 'rgba(120,180,255,.4)'); gr.addColorStop(1, 'rgba(120,180,255,0)');
+        g2.fillStyle = gr; g2.beginPath(); g2.arc(qe[0], qe[1], re * 1.16, 0, 7); g2.fill();   // thin atmosphere halo, then the globe on top
+        const d = earthDisc(E, time, re); g2.save(); g2.beginPath(); g2.arc(qe[0], qe[1], re, 0, 7); g2.clip(); g2.drawImage(d, qe[0] - re, qe[1] - re, re * 2, re * 2); g2.restore(); }
+      const lo = (67 - 9 * magF) * D2R, inten = Math.min(1, .2 + .7 * magF + glow), Mn = Mg, s1 = ex.map((v, i) => v - md * Mg[i]), s1l = Math.hypot(...s1), A1 = s1.map(v => v / s1l), A2 = [Mn[1] * A1[2] - Mn[2] * A1[1], Mn[2] * A1[0] - Mn[0] * A1[2], Mn[0] * A1[1] - Mn[1] * A1[0]];
+      const W3 = v => proj([0, 1, 2].map(i => E[i] + v[i] * MS));
+      g2.save(); g2.globalCompositeOperation = 'lighter';
+      [1, -1].forEach(hs => { for (let i = 0; i < 90; i++) { const a = i / 90 * 2 * Math.PI, l = lo + 3.5 * D2R * Math.cos(a), co = Math.PI / 2 - l;
+          const n = [0, 1, 2].map(c => hs * Math.cos(co) * Mn[c] + Math.sin(co) * (Math.cos(a) * A1[c] + Math.sin(a) * A2[c])), q1 = W3(n), q2 = W3(n.map(v => v * (1.04 + .05 * inten)));
+          if (!q1 || !q2 || hidden(q1)) continue; const fl = .75 + .25 * Math.sin(ph * 3 + i * .7 + hs);
+          const g = g2.createLinearGradient(q1[0], q1[1], q2[0], q2[1]); g.addColorStop(0, `rgba(57,255,158,${(.25 + .6 * inten) * fl})`); g.addColorStop(.6, `rgba(57,255,158,${.15 * inten * fl})`); g.addColorStop(1, magF > .45 ? `rgba(255,70,110,${(magF - .45) * fl})` : 'rgba(57,255,158,0)');
+          g2.strokeStyle = g; g2.lineWidth = Math.max(1.5, re * .07); g2.beginPath(); g2.moveTo(q1[0], q1[1]); g2.lineTo(q2[0], q2[1]); g2.stroke(); } });
+      g2.restore();
+      // the Moon at its true distance (~60 R⊕)
+      const Mo = moonPos(time), qm = proj(E.map((v, i) => v + Mo[i]));
+      if (qm) { const rm = Math.max(2, re * .273); g2.fillStyle = '#BFC3C8'; g2.beginPath(); g2.arc(qm[0], qm[1], rm, 0, 7); g2.fill(); g2.font = '600 11px Inter, system-ui, sans-serif'; g2.textBaseline = 'middle';
+        const t = tr('Moon · {d} Earth radii', { d: Math.round(Math.hypot(...Mo) / MS) }), w = g2.measureText(t).width; g2.fillStyle = 'rgba(0,0,0,.55)'; g2.fillRect(qm[0] + rm + 4, qm[1] - 8, w + 8, 16); g2.fillStyle = '#DCE3EB'; g2.fillText(t, qm[0] + rm + 8, qm[1]); }
       g2.font = '700 11px Inter, system-ui, sans-serif'; g2.textBaseline = 'middle';
       const tag = (pt, t, c) => { const q = P(pt[0], pt[1], pt[2]); if (!q) return; const w = g2.measureText(t).width; g2.fillStyle = 'rgba(0,0,0,.62)'; g2.fillRect(q[0] + 6, q[1] - 9, w + 10, 18); g2.fillStyle = c; g2.fillText(t, q[0] + 11, q[1]); };
-      tag([Rbs, -1.5, 0], tr('Bow shock'), '#E6EBF1'); tag([R0 * .15, R0 * 1.3, 0], tr('Magnetopause · {r} Earth radii', { r: R0.toFixed(1) }), '#8FD3FF');
-      tag([-24, 6.5, 0], tr('Magnetic tail'), '#8FD3FF'); tag([.2, 1.4, 0], tr('Aurora oval'), '#7CFFB8'); tag([-6, -11, 0], tr('Earth and its field enlarged, not to scale'), '#8E9AAB'); tag([22, -8, 0], (cme ? 'CME' : tr('solar wind')) + ' ← ' + tr('from the Sun'), cme ? '#FFD6AA' : '#96C8FF');
-      const sub = (magF > .3 ? tr('CME hit: the field is squeezed to {r} Earth radii and particles pour in at the poles → strong aurora', { r: R0.toFixed(1) })
+      tag([Rbs, -2, 0], tr('Bow shock'), '#F3E6D2'); tag([R0 * .15, R0 * 1.3, 0], tr('Magnetopause · {r} Earth radii', { r: R0.toFixed(1) }), '#8FD3FF');
+      tag([-30, 7.5, 0], tr('Magnetic tail'), '#8FD3FF'); tag([24, -9, 0], (cme ? 'CME' : tr('solar wind') + ' ' + Math.round(vW) + ' km/s') + ' ← ' + tr('from the Sun'), cme ? '#FFD6AA' : '#96C8FF');
+      tag([-8, -13, 0], tr('to scale · particle flow sped up ~100×'), '#8E9AAB');
+      const sub = magF > .3 ? tr('CME hit: the field is squeezed to {r} Earth radii and particles pour in at the poles → strong aurora', { r: R0.toFixed(1) })
         : st.eta != null && st.eta < 96 ? tr('CME arrives in ~{h} h — press CME impact or speed up time', { h: Math.max(1, Math.round(st.eta)) })
-        : tr('Calm: the magnetic field turns the solar wind aside; a little leaks in → faint aurora near the poles'));
+        : tr('Calm: the magnetic field turns the solar wind aside; a little leaks in → faint aurora near the poles');
       if (sub !== magSub) { magSub = sub; el.querySelector('.s3d-sub').textContent = sub; }
     }
+    function magOn_() { magOn = true; el.classList.add('mag'); el.querySelector('.s3d-mag').setAttribute('aria-pressed', true); info = null; el.querySelector('.s3d-info').hidden = true;
+      const E = planet('Earth', time), a = Math.atan2(E[2], E[0]); cam.follow = null; cam.goal = { tgt: E, dist: 15 * MS / Math.tan(22.5 * D2R), pitch: .2, yaw: a + Math.PI / 2 - .3 }; setTimeout(() => { if (magOn) cam.follow = 'Earth'; }, 900); dirty = true; }
     function magOff() { if (!magOn) return; magOn = false; magSub = ''; el.classList.remove('mag'); el.querySelector('.s3d-mag').setAttribute('aria-pressed', false); title(); }
     function camEye() { const c = cam, cp = Math.cos(c.pitch); return [c.tgt[0] + c.dist * cp * Math.cos(c.yaw), c.tgt[1] + c.dist * Math.sin(c.pitch), c.tgt[2] + c.dist * cp * Math.sin(c.yaw)]; }
     const proj = p => { const x = M[0] * p[0] + M[4] * p[1] + M[8] * p[2] + M[12], y = M[1] * p[0] + M[5] * p[1] + M[9] * p[2] + M[13], w = M[3] * p[0] + M[7] * p[1] + M[11] * p[2] + M[15];
-      return w <= 0.01 ? null : [(x / w * .5 + .5) * W, (1 - (y / w * .5 + .5)) * H, w]; };
+      return w <= cam.dist * .01 ? null : [(x / w * .5 + .5) * W, (1 - (y / w * .5 + .5)) * H, w]; };
     let hits = [];
     function draw() {
       if (cam.goal) { const g = cam.goal; ['dist', 'yaw', 'pitch'].forEach(k => { if (g[k] != null) cam[k] += (g[k] - cam[k]) * .12; }); if (g.tgt) cam.tgt = cam.tgt.map((v, i) => v + (g.tgt[i] - v) * .12);
-        if (Math.abs(cam.dist - (g.dist ?? cam.dist)) < .002 && (!g.tgt || Math.hypot(...cam.tgt.map((v, i) => v - g.tgt[i])) < .002)) cam.goal = null; dirty = true; }
+        const tol = Math.min(.002, (g.dist ?? cam.dist) * .01); if (Math.abs(cam.dist - (g.dist ?? cam.dist)) < tol && (!g.tgt || Math.hypot(...cam.tgt.map((v, i) => v - g.tgt[i])) < tol)) cam.goal = null; dirty = true; }
       if (spin[0] || spin[1]) { cam.yaw += spin[0]; cam.pitch = Math.max(-1.5, Math.min(1.55, cam.pitch + spin[1])); spin = spin.map(v => Math.abs(v) < 1e-4 ? 0 : v * .92); dirty = true; }
       const now = mode === 'helix' ? hTime : time;
       if (cam.follow) { cam.tgt = toHx(planet(cam.follow, now)); }
-      const eye = camEye(); M = mul(persp(45 * D2R, W / H, 0.005, 4000), lookAt(eye, cam.tgt, [0, 1, 0])); if (mode === 'helix') M = mul(M, hxMat());
+      const eye = camEye(); M = mul(persp(45 * D2R, W / H, Math.min(.005, cam.dist * .02), 4000), lookAt(eye, cam.tgt, [0, 1, 0])); if (mode === 'helix') M = mul(M, hxMat());
       gl.viewport(0, 0, cv.width, cv.height); gl.clearColor(0.02, 0.03, 0.06, 1); gl.clear(gl.COLOR_BUFFER_BIT);
       gl.uniformMatrix4fv(U.m, false, new Float32Array(M)); gl.uniform1f(U.k, dpr * Math.min(W, H) / 900);
       gl.uniform1f(U.mx, 4 * dpr); gl.uniform1f(U.pt, 1); bind(stars); gl.drawArrays(gl.POINTS, 0, stars.n);
@@ -349,7 +407,7 @@
           g2.fillStyle = 'rgba(0,0,0,.6)'; g2.fillRect(a[0] + 8, a[1] - 9, g2.measureText(lab).width + 10, 18); g2.fillStyle = '#FFE08A'; g2.fillText(lab, a[0] + 13, a[1] + 4); } }
       g2.font = '600 12px Inter, system-ui, sans-serif'; g2.textBaseline = 'middle';
       ['Earth'].concat(ORB.filter(n => n !== 'Earth')).forEach(nm => { if (mode === 'helix' && !HX.includes(nm)) return; const p = planet(nm, now), q = proj(p); if (!q) return; let r = Math.max(2.5, EL[nm][3] * Math.min(cam.follow === nm ? 9 : 1.8, 1.6 / Math.sqrt(q[2])));   // a followed planet grows as you zoom in
-        if (magOn && nm === 'Earth') r = Math.max(3, MS * pxAU(q));   // the shield view: Earth at the schematic's scale
+        if (magOn && nm === 'Earth') { r = Math.max(2.5, MS * pxAU(q)); if (r > 6) return; }   // the shield view: true size (drawn as a real globe by magneto)
         ball(nm, p, q, r, s);
         if (nm === 'Earth') { g2.strokeStyle = 'rgba(90,169,255,.6)'; g2.lineWidth = 1.5; g2.beginPath(); g2.arc(q[0], q[1], r + 4, 0, 7); g2.stroke(); }
         const lab = tr(nm), tw = g2.measureText(lab).width, bx = [q[0] + r + 4, q[1] - 8, tw + 8, 16];
@@ -409,8 +467,10 @@
     function rateTxt(r) { const a = Math.abs(r); if (Math.abs(a - 1) < .03) return tr('REAL TIME'); if (a < 1) return tr('SLOW MO ×{n}', { n: a.toFixed(a < .3 ? 2 : 1) });
       for (const [d, k] of [[1e6 * YEAR, '{n} million years/s'], [YEAR, '{n} years/s'], [86400, '{n} days/s'], [3600, '{n} h/s'], [60, '{n} min/s']]) if (a >= d) return tr(k, { n: +(a / d).toPrecision(2) });
       return '×' + Math.round(a); }
-    function rateUI() { const sl = el.querySelector('.s3d-rate'); if (document.activeElement !== sl) sl.value = posOf(Math.max(.1, rate)); el.querySelector('.s3d-rl').textContent = (hDir < 0 ? '◀ ' : '') + rateTxt(rate);
-      const b = el.querySelector('.s3d-hplay'); b.textContent = hPlay ? '⏸' : '▶'; b.setAttribute('aria-label', hPlay ? tr('Pause') : tr('Play')); el.querySelector('.s3d-hrev').setAttribute('aria-pressed', hDir < 0); }
+    function rateUI() { el.querySelector('.s3d-rl').textContent = (hPlay ? (hDir < 0 ? '◀ ' : '▶ ') : '⏸ ') + rateTxt(rate);
+      const b = el.querySelector('.s3d-hplay'); b.textContent = hPlay ? '⏸' : '▶'; b.setAttribute('aria-label', hPlay ? tr('Pause') : tr('Play')); }
+    function step(d) { const L = ladder(), cur = hDir * rate; let i = L.findIndex(x => Math.abs(x - cur) < Math.abs(cur) * .01 + 1e-9); if (i < 0) i = L.indexOf(1);
+      i = Math.max(0, Math.min(L.length - 1, i + d)); hDir = L[i] < 0 ? -1 : 1; rate = Math.abs(L[i]); hPlay = true; hLast = 0; rateUI(); }
     function hDate() { const hd = el.querySelector('.s3d-hdate'); if (hd && document.activeElement !== hd && mode === 'helix') { try { hd.value = new Date(hTime).toISOString().slice(0, 10); } catch (e) {} }
       const moved = tr('{d} since you started watching', { d: kmTxt(watch * (mode === 'galaxy' ? 230 : TRAVEL[frameK].v)) });
       if (mode === 'galaxy') { const y = gT * 1e6; el.querySelector('.s3d-t').textContent = Math.abs(y) < 1 ? tr('Today') : Math.abs(gT) < 1 ? (y > 0 ? tr('In {n} years', { n: Math.round(y).toLocaleString(window.LOC || 'en-GB') }) : tr('{n} years ago', { n: Math.round(-y).toLocaleString(window.LOC || 'en-GB') })) : gT > 0 ? tr('In {n} million years', { n: Math.round(gT) }) : tr('{n} million years ago', { n: Math.round(-gT) });
@@ -426,7 +486,7 @@
       const E = planet('Earth', t), q = cmes.filter(c => { const r = 0.1 + kmsAU(c.v) * (t - c.t) / DAY; return r > 0 && r < 3.4; }).length;
       el.querySelector('.s3d-sub').textContent = tr('wind at Earth ≈ {v} km/s', { v: Math.round(vtab[Math.round((((lonOf(E) - OMEGA * t / DAY) / D2R) % 360 + 360) % 360) % 360]) }) + (q ? ' · ' + tr('{n} CME in flight', { n: q }) : ''); }
     const VIEWS = { hx: null, inner: { dist: 3.4, pitch: .55, tgt: [0, 0, 0] }, all: { dist: 62, pitch: .7, tgt: [0, 0, 0] }, top: { dist: 4.2, pitch: 1.5, tgt: [0, 0, 0] } };
-    function view(v) { cam.follow = null; spin = [0, 0];
+    function view(v) { cam.follow = null; spin = [0, 0]; if (magOn) magOff();
       if (v === 'gx' || (mode === 'galaxy' && v === 'inner')) { cam.goal = { tgt: [0, 0, 0], dist: 34, pitch: .85, yaw: -0.6 }; dirty = true; return; }
       if (v === 'hx' || (mode === 'helix' && v === 'inner')) {   // frame the inner planets' last ~2 years (lsr) / ~1 year (galaxy), seen from the side
         const T = TRAVEL[frameK], d = T.dir, V = d.map(x => x * kmsAU(T.v)), span = (frameK === 'lsr' ? 2.4 : 1.1) * 365.25, P = [[0, 0, 0]];
@@ -464,7 +524,7 @@
         if (mode === 'sys' && d > 400) return jump('galaxy');
         if (mode === 'galaxy' && d < .3) return jump('sys');
         if (mode === 'sys' && d < .08 && window.Earth3D && !magOn) { const E = planet('Earth', time); if (cam.follow === 'Earth' || Math.hypot(...cam.tgt.map((v, i) => v - E[i])) < .05) return jump('earth'); } }
-      cam.dist = Math.max(magOn ? .025 : .08, Math.min(mode === 'galaxy' ? 70 : 400, d)); }
+      cam.dist = Math.max(magOn ? 3 * MS : .08, Math.min(mode === 'galaxy' ? 70 : 400, d)); }
     function jump(m) {
       const from = mode; setMode(m, true);
       if (m === 'galaxy') { cam.tgt = sunGal(); cam.dist = .4; }                         // start at the Sun, fly out to the whole Milky Way
@@ -479,27 +539,25 @@
     el.tabIndex = 0;
     el.addEventListener('keydown', e => { const k = e.key; if (/^Arrow/.test(k)) { e.preventDefault(); if (k === 'ArrowLeft') cam.yaw -= .08; if (k === 'ArrowRight') cam.yaw += .08; if (k === 'ArrowUp') cam.pitch = Math.min(1.55, cam.pitch + .06); if (k === 'ArrowDown') cam.pitch = Math.max(-1.5, cam.pitch - .06); cam.goal = null; dirty = true; }
       else if (k === '+' || k === '=') zoom(1 / 1.2); else if (k === '-') zoom(1.2); else if (k === 'r' || k === 'R') view(mode === 'helix' ? 'hx' : mode === 'galaxy' ? 'gx' : 'inner');
-      else if (k === ' ' && mode !== 'earth') { e.preventDefault(); togglePlay(); } else if (k === 'Escape' && el.classList.contains('s3d-fs')) el.querySelector('.s3d-full').click(); });
+      else if (k === ' ' && mode !== 'earth') { e.preventDefault(); togglePlay(); } else if ((k === '.' || k === 'l' || k === 'L') && mode !== 'earth') step(1); else if ((k === ',' || k === 'j' || k === 'J') && mode !== 'earth') step(-1); else if (k === 'Escape' && el.classList.contains('s3d-fs')) el.querySelector('.s3d-full').click(); });
     // modes
     const togglePlay = () => { hPlay = !hPlay; hLast = 0; rateUI(); };
-    el.querySelector('.s3d-hplay').onclick = () => { if (hDir < 0) { hDir = 1; if (hPlay) { rateUI(); return; } } togglePlay(); };
-    el.querySelector('.s3d-hrev').onclick = () => { hDir = hDir > 0 ? -1 : 1; if (!hPlay) togglePlay(); else rateUI(); };
-    el.querySelector('.s3d-rate').oninput = e => { const r = rng(), p1 = posOf(1), v = +e.target.value, pv = Math.abs(v - p1) < 18 ? p1 : v;   // snaps to real time
-      rate = Math.abs(pv - p1) < 1 ? 1 : Math.pow(10, r[0] + pv / 1000 * (r[1] - r[0])); if (!hPlay) togglePlay(); else rateUI(); };
+    el.querySelector('.s3d-hplay').onclick = togglePlay;
+    el.querySelector('.s3d-fwd').onclick = () => step(1); el.querySelector('.s3d-back').onclick = () => step(-1);
     // NOW: back to this moment, real time, forwards
     el.querySelector('.s3d-now').onclick = () => { rate = 1; hDir = 1; hPlay = true; watch = 0; if (mode === 'galaxy') { gT = 0; hDate(); } else if (mode === 'helix') { hTime = Date.now(); buildHelix(); hDate(); } else setTime(Date.now()); rateUI(); dirty = true; };
     el.querySelector('.s3d-hdate').onchange = e => { const t = Date.parse(e.target.value + 'T12:00:00Z'); if (isFinite(t)) { hTime = t; buildHelix(); hDate(); dirty = true; } };
     el.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { frameK = b.dataset.f; el.querySelectorAll('[data-f]').forEach(o => o.setAttribute('aria-pressed', o === b)); buildHelix(); hDate(); view('hx'); });
     let earth = null;
     function setMode(m, far) { modeAt = performance.now();
-      if (m === 'earth') { if (!window.Earth3D) return; if (!earth) earth = Earth3D.create(el, { places: opts.places ? opts.places() : [], time: () => time, aurora: opts.aurora, onBack: () => setMode('sys'), onOut: () => { setMode('sys', true); cam.tgt = planet('Earth', time); cam.dist = .06; cam.goal = { dist: .4, pitch: .35 }; cam.follow = 'Earth'; dirty = true; } });   // fly out from Earth, still following it
+      if (m === 'earth') { if (!window.Earth3D) return; if (!earth) earth = Earth3D.create(el, { places: opts.places ? opts.places() : [], time: () => time, aurora: opts.aurora, onBack: () => setMode('sys'), onOut: () => { setMode('sys', true); cam.tgt = planet('Earth', time); cam.dist = 3 * MS; cam.follow = 'Earth'; dirty = true; } });   // flies out into the shield view   // fly out from Earth, still following it
         mode = 'earth'; magOff(); el.classList.add('ea'); el.classList.remove('hx'); el.querySelectorAll('[data-m]').forEach(o => o.setAttribute('aria-pressed', o.dataset.m === m)); info = null;
         const pl = opts.places ? opts.places()[0] : null; if (opts.places) earth.setPlaces(opts.places()); earth.show(pl ? pl.lat : 45.6, pl ? pl.lon : 25.6, far); return; }
       if (earth) earth.hide(); el.classList.remove('ea');
       mode = m; el.classList.toggle('hx', m === 'helix'); el.classList.toggle('gx', m === 'galaxy');
       rate = 1; hDir = 1; hPlay = true; watch = 0; rateUI(); if (m !== 'sys') magOff();   // every view starts in real time
       if (m === 'galaxy') { el.querySelectorAll('[data-m]').forEach(o => o.setAttribute('aria-pressed', o.dataset.m === m)); info = null; el.querySelector('.s3d-info').hidden = true; gT = 0; buildGalaxy(); hDate(); view('gx'); dirty = true; return; } el.querySelectorAll('[data-m]').forEach(o => o.setAttribute('aria-pressed', o.dataset.m === m)); info = null; el.querySelector('.s3d-info').hidden = true;
-      if (m === 'helix') { hTime = Date.now(); buildHelix(); hDate(); view('hx'); } else { build.orbT = null; setTime(time); view('inner'); } dirty = true; }
+      if (m === 'helix') { hTime = Date.now(); buildHelix(); hDate(); view('hx'); } else { build.orbT = null; setTime(time); magOn_(); } dirty = true; }
     el.querySelectorAll('[data-m]').forEach(b => b.onclick = () => setMode(b.dataset.m));
     el.querySelectorAll('[data-v]').forEach(b => b.onclick = () => view(b.dataset.v));
     // Sun filter: SDO's newest picture in visible light (sunspots) or one of three ultraviolet channels
@@ -507,9 +565,7 @@
     // example: a strong Earth-directed CME (1800 km/s, like May 2024) launched ~8 h before the clock, so it is on its way
     el.querySelector('.s3d-cmex').onclick = e => { cmeEx = !cmeEx; exT = time - 0.35 * DAY; e.currentTarget.setAttribute('aria-pressed', cmeEx); if (cmeEx && !magOn) view('inner'); build(); dirty = true; };
     // the shield: fly to Earth, seen from the side with the Sun to one side
-    el.querySelector('.s3d-mag').onclick = () => { if (magOn) { magOff(); view('inner'); return; }
-      magOn = true; el.classList.add('mag'); el.querySelector('.s3d-mag').setAttribute('aria-pressed', true); info = null; el.querySelector('.s3d-info').hidden = true;
-      const E = planet('Earth', time), a = Math.atan2(E[2], E[0]); cam.follow = null; cam.goal = { tgt: E, dist: .13, pitch: .16, yaw: a + Math.PI / 2 - .3 }; setTimeout(() => { if (magOn) cam.follow = 'Earth'; }, 900); dirty = true; };
+    el.querySelector('.s3d-mag').onclick = () => { if (magOn) { magOff(); view('inner'); return; } magOn_(); };
     // CME impact: the next Earth-bound CME about 2 h out (or the example one), then 15 min per second so the hit takes seconds
     el.querySelector('.s3d-imp').onclick = () => { const st = cmeAtEarth();
       if (st.eta == null && magF < .2) { cmeEx = true; el.querySelector('.s3d-cmex').setAttribute('aria-pressed', true); exT = time - (.9 - .1) / kmsAU(1800) * DAY; }
@@ -518,7 +574,7 @@
     el.querySelector('.s3d-full').onclick = () => { el.classList.toggle('s3d-fs'); document.body.classList.toggle('s3d-lock', el.classList.contains('s3d-fs')); setTimeout(resize, 60); };
     if (window.ResizeObserver) new ResizeObserver(resize).observe(el); else addEventListener('resize', resize);
     if (window.IntersectionObserver) new IntersectionObserver(es => { visible = es[0].isIntersecting; if (visible) dirty = true; }).observe(el);
-    rateUI(); resize(); setWind(opts.wind); setCmes(opts.cmes); setTime(opts.time || Date.now()); requestAnimationFrame(frame);
+    rateUI(); resize(); setWind(opts.wind); setCmes(opts.cmes); setTime(opts.time || Date.now()); magOn_(); requestAnimationFrame(frame);
     return { setTime, setWind: s => { setWind(s); setTime(time); }, setCmes: c => { setCmes(c); setTime(time); }, view, resize, canvas: () => { draw(); const c = document.createElement('canvas'); c.width = cv.width; c.height = cv.height; const g = c.getContext('2d'); g.drawImage(cv, 0, 0); g.drawImage(ov, 0, 0); return c; } };
   }
   window.Space3D = { create, planet };
