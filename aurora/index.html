@@ -285,7 +285,7 @@
     .grid > section, .grid > .stack > section { display: flex; flex-direction: column; }
     .grid > .stack > section:last-child { flex: 1 1 auto; }
     svg.fillc { flex: 1 0 auto; height: 0 !important; }
-    #kpchart.fillc { min-height: 150px; } #swChart.fillc { min-height: 190px; }
+    #kpchart.fillc { min-height: 150px; } #dstChart.fillc, #crChart.fillc { min-height: 200px; } #swChart.fillc { min-height: 190px; }
     .grid > section > .help:last-child, .grid > section > details:last-child, .sunc > .why:last-child, #globe + .help { margin-top: auto; }
     #globe { margin-bottom: 14px; }
     .steps { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: space-evenly; }
@@ -1604,9 +1604,14 @@ function drawLong() {
   const x = t => L + (t - from) / (to - from) * (W - L - R), bw = Math.max(1, (W - L - R) / nb - (bin > 1 ? .6 : .2)); let s = '';
   panels.forEach(([k, name], pi) => {
     const y0 = top + pi * (ph + gap); s += `<rect x="${L}" y="${y0}" width="${W - L - R}" height="${ph}" rx="6" fill="#0F1318"/>` + txt(L, y0 - 5, name, '#C9D1DB', 10.5, 'start', 700);
-    if (k === 'eru') { const m = Math.max(4, ...eru.map(e => e[1])); eru.forEach(([t, c]) => { const h = c / m * (ph - 4); s += `<rect x="${x(t)}" y="${y0 + ph - h}" width="${Math.max(1, x(t + 30 * 864e5) - x(t) - .6)}" height="${h}" fill="#FF6B6B" fill-opacity=".75"/>`; }); s += txt(L - 4, y0 + 9, m, '#6B7788', 8.5, 'end'); return; }
+    if (k === 'eru') { const asOf = D.earth.gvpAsOf ? Date.parse(D.earth.gvpAsOf + 'T00:00:00Z') : to, m = Math.max(4, ...eru.filter(e => e[0] < asOf).map(e => e[1]));
+      eru.forEach(([t, c]) => { if (t >= asOf) return; const wd = x(t + 30 * 864e5) - x(t), gp = Math.min(3, wd * .25), h = c / m * (ph - 4); s += `<rect x="${(x(t) + gp / 2).toFixed(1)}" y="${y0 + ph - h}" width="${Math.max(1, wd - gp).toFixed(1)}" height="${h}" rx="1.5" fill="#FF6B6B" fill-opacity=".75"/>`; });
+      // after the Smithsonian database's last update there is no data (not "no eruptions"): hatched + labelled
+      if (asOf < to) { const xa = Math.max(L, x(asOf)); s += `<defs><pattern id="nodata" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#3A4350" stroke-width="2"/></pattern></defs><rect x="${xa}" y="${y0}" width="${W - R - xa}" height="${ph}" fill="url(#nodata)" fill-opacity=".6"/>`
+        + txt(Math.min(xa + 6, W - R - 150), y0 + ph / 2 + 4, T_('no update since {d}', { d: new Date(asOf).toLocaleDateString(LOC, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) }), '#A3B0C2', 10); }
+      s += txt(L - 4, y0 + 9, m, '#6B7788', 8.5, 'end'); return; }
     const vals = B.map(b => b[k]).filter(v => v != null); if (!vals.length) { s += txt(L + 8, y0 + ph / 2 + 4, T_('collected from October 2026 on'), '#6B7788', 10); return; }
-    if (k === 'dst') { const lo = Math.min(-100, ...vals); B.forEach(b => { if (b.dst == null) return; const h = b.dst / lo * (ph - 4); s += `<rect x="${x(b.t)}" y="${y0}" width="${bw}" height="${h}" fill="#FF8A8A" fill-opacity=".7"/>`; }); s += txt(L - 4, y0 + ph, Math.round(lo), '#6B7788', 8.5, 'end'); return; }
+    if (k === 'dst') { const lo = Math.min(-100, ...vals); B.forEach(b => { if (b.dst == null) return; const h = b.dst / lo * (ph - 4); s += `<rect x="${x(b.t)}" y="${y0}" width="${bw}" height="${h}" fill="#FF8A8A" fill-opacity=".7"/>`; }); s += txt(L - 4, y0 + ph, Math.round(lo), '#6B7788', 8.5, 'end'); if (vals.length < 60) s += txt(L + 8, y0 + ph / 2 + 4, T_('collected from October 2026 on'), '#6B7788', 10); return; }
     const m = k === 'kp' ? 9 : Math.max(1, ...vals) * 1.1, yv = v => y0 + ph - v / m * (ph - 4);
     s += txt(L - 4, y0 + 9, Math.round(m), '#6B7788', 8.5, 'end') + txt(L - 4, y0 + ph, 0, '#6B7788', 8.5, 'end');
     if (k === 'ssn') { let d = ''; B.forEach((b, i) => { if (b.ssn != null) d += (d ? 'L' : 'M') + (x(b.t) + bw / 2).toFixed(1) + ' ' + yv(b.ssn).toFixed(1); }); s += `<path d="${d}" fill="none" stroke="#FFD24D" stroke-width="1.6"/>`; }

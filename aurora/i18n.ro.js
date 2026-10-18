@@ -595,5 +595,13 @@ window.I18N_DICT.ro = {
   "Map": "Hartă",
   "Names": "Nume",
   "Now": "Acum",
-  "{n} million years ago": "Acum {n} milioane de ani"
+  "{n} million years ago": "Acum {n} milioane de ani",
+  "Sun filter": "Filtru Soare",
+  "visible light": "lumină vizibilă",
+  "171 Å · corona": "171 Å · coroana",
+  "193 Å · hot corona": "193 Å · coroana fierbinte",
+  "304 Å · chromosphere": "304 Å · cromosfera",
+  "Example: strong CME": "Exemplu: CME puternic",
+  "EXAMPLE": "EXEMPLU",
+  "no update since {d}": "fără actualizare din {d}"
 };

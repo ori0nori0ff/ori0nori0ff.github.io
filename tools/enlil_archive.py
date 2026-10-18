@@ -78,3 +78,15 @@ for n in os.listdir(f'{root}/f'):
 out = {'updated': now, 'run': run, 'frames': sorted(frames.values()), 'ts': [p for p in series if p[0] >= keep]}
 json.dump(out, open(f'{root}/index.json', 'w'), separators=(',', ':'))
 print(f'run {run}: {got} new frames, {len(out["frames"])} kept, {len(out["ts"])} series points')
+
+# The Sun right now for the 3D view's Sun (NASA sends no CORS header, raw.githubusercontent.com does):
+# SDO's latest 512 px images — visible light with sunspots (HMI), 171 / 193 / 304 Å (AIA) — into sun/<id>.jpg
+os.makedirs(f'{root}/sun', exist_ok=True)
+sun = {}
+for fid in ('HMIIC', '0171', '0193', '0304'):
+    b = get(f'https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_{fid}.jpg', binary=True)
+    if b and len(b) > 10000:
+        open(f'{root}/sun/{fid}.jpg', 'wb').write(b); sun[fid] = now
+if sun:
+    json.dump({'updated': now, 'ids': sorted(sun)}, open(f'{root}/sun/now.json', 'w'))
+print(f'sun now: {len(sun)} images')

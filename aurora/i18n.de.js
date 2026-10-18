@@ -595,5 +595,13 @@ window.I18N_DICT.de = {
   "Map": "Karte",
   "Names": "Namen",
   "Now": "Jetzt",
-  "{n} million years ago": "Vor {n} Millionen Jahren"
+  "{n} million years ago": "Vor {n} Millionen Jahren",
+  "Sun filter": "Sonnenfilter",
+  "visible light": "sichtbares Licht",
+  "171 Å · corona": "171 Å · Korona",
+  "193 Å · hot corona": "193 Å · heiße Korona",
+  "304 Å · chromosphere": "304 Å · Chromosphäre",
+  "Example: strong CME": "Beispiel: starker CME",
+  "EXAMPLE": "BEISPIEL",
+  "no update since {d}": "keine Aktualisierung seit {d}"
 };

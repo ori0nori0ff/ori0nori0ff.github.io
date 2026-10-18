@@ -58,7 +58,7 @@
 .s3d canvas{position:absolute;left:0;top:0;display:block}.s3d-ov{cursor:grab}.s3d-ov:active{cursor:grabbing}
 .s3d-top{position:absolute;left:12px;top:10px;pointer-events:none;display:flex;flex-direction:column;gap:2px;text-shadow:0 1px 3px #000}
 .s3d-t{font:700 15px Inter,system-ui,sans-serif;color:#FFE600}.s3d-sub{font:500 12px Inter,system-ui,sans-serif;color:#C9D1DB}
-.s3d-btns{position:absolute;left:10px;bottom:10px;display:flex;gap:6px;flex-wrap:wrap;max-width:calc(100% - 70px)}
+.s3d-btns{position:absolute;left:10px;bottom:10px;display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;max-width:calc(100% - 20px)}.s3d-btns::-webkit-scrollbar{display:none}.s3d-btns button{flex:none;white-space:nowrap}
 .s3d-btns button,.s3d-ctl button{border:1px solid rgba(255,255,255,.18);background:rgba(10,14,20,.75);color:#E6EBF1;border-radius:999px;padding:7px 12px;min-height:36px;font:600 12px Inter,system-ui,sans-serif;cursor:pointer}
 .s3d-ctl{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:6px}.s3d-ctl button{width:40px;height:40px;padding:0;font-size:18px;line-height:1}
 .s3d-tabs{position:absolute;left:50%;top:10px;transform:translateX(-50%);display:flex;border:1px solid rgba(255,255,255,.18);border-radius:999px;overflow:hidden;background:rgba(10,14,20,.75)}
@@ -84,7 +84,7 @@
     el.innerHTML = `<canvas class="s3d-gl"></canvas><canvas class="s3d-ov"></canvas>
       <div class="s3d-top"><b class="s3d-t">–</b><span class="s3d-sub"></span></div>
       <div class="s3d-tabs" role="tablist"><button data-m="sys" aria-pressed="true">${tr('Solar system')}</button><button data-m="helix" aria-pressed="false">${tr('Spiral through space')}</button><button data-m="galaxy" aria-pressed="false">${tr('Galaxy')}</button><button data-m="earth" aria-pressed="false">${tr('Earth')}</button></div>
-      <div class="s3d-btns s3d-sys"><button data-v="inner">${tr('Inner planets')}</button><button data-v="all">${tr('Whole system')}</button><button data-v="earth">${tr('From Earth')}</button><button data-v="top">${tr('From above')}</button></div>
+      <div class="s3d-btns s3d-sys"><button data-v="inner">${tr('Inner planets')}</button><button data-v="all">${tr('Whole system')}</button><button data-v="earth">${tr('From Earth')}</button><button data-v="top">${tr('From above')}</button><button class="s3d-sunf" aria-label="${tr('Sun filter')}">☀ ${tr('visible light')}</button><button class="s3d-cmex" aria-pressed="false">${tr('Example: strong CME')}</button></div>
       <div class="s3d-btns s3d-hx"><button class="s3d-hrev" aria-label="${tr('Play backwards')}" aria-pressed="false">◀</button><button class="s3d-hplay" aria-label="${tr('Play')}">▶</button><button class="s3d-hspd">1×</button><input type="date" class="s3d-hdate" aria-label="${tr('Date')}"><button data-f="lsr" aria-pressed="true">${tr('vs nearby stars · 20 km/s')}</button><button data-f="gal" aria-pressed="false">${tr('around the Milky Way · 230 km/s')}</button></div>
       <div class="s3d-ctl"><button class="s3d-full" aria-label="${tr('Full screen')}">⛶</button><button data-z="-1" aria-label="${tr('Zoom in')}">+</button><button data-z="1" aria-label="${tr('Zoom out')}">−</button><button class="s3d-reset" aria-label="${tr('Reset the view')}">⟲</button><button class="s3d-q" aria-label="${tr('How it works')}">?</button></div>
       <div class="s3d-info" hidden></div>
@@ -111,10 +111,17 @@
     const ORB = Object.keys(EL), orbits = mk(ORB.length * 181);
     const JS = 64, KS = 340, DT = 1 / 24, wind = mk(JS * KS), lat = new Float32Array(JS * KS);   // 64 source longitudes × 340 emissions every hour (~14 days)
     for (let i = 0; i < JS * KS; i++) lat[i] = (rnd() - .5) * (rnd() < .2 ? 0.3 : 0.08);
-    const cmeB = mk(12 * 700);
+    const CP = 1600, cmeB = mk(13 * CP);
     const HX = ['Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune'], HXN = 900, trails = mk((HX.length + 1) * HXN);
     const galB = mk(52000), ring = mk(361); let gT = 0, galBuilt = false;
     let mode = 'sys', frameK = 'lsr', hTime = Date.now(), hPlay = false, hRate = 1, hDir = 1, hLast = 0, info = null;
+    const SUNB = 'https://raw.githubusercontent.com/ori0nori0ff/ori0nori0ff.github.io/enlil/sun/';
+    // [file id, label, disc radius as a share of the image width] — HMI fills more of its frame than AIA
+    const SUNF = [['HMIIC', 'visible light', .468], ['0171', '171 Å · corona', .393], ['0193', '193 Å · hot corona', .393], ['0304', '304 Å · chromosphere', .393]];
+    let sunI = 0, cmeEx = false, exT = 0; const sunImg = {};
+    function sunTex() { const f = SUNF[sunI]; let im = sunImg[f[0]];
+      if (!im) { im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => { dirty = true; }; im.src = SUNB + f[0] + '.jpg?h=' + Math.floor(Date.now() / 3600e3); sunImg[f[0]] = im; }
+      return im.complete && im.naturalWidth ? im : null; }
     let vtab = new Float32Array(360).fill(400), ntab = new Float32Array(360).fill(5), known = new Uint8Array(360), cmes = [], time = Date.now();
     // camera
     const cam = { yaw: -0.6, pitch: 0.55, dist: 3.4, tgt: [0, 0, 0], goal: null };
@@ -186,14 +193,20 @@
       wind.n = n; upload(wind);
       // CMEs: cone model — a cap at r(t) = 21.5 R☉ + v·(t − t21.5), direction = Earth's longitude at t21.5 + DONKI longitude
       let m = 0; const active = [];
-      cmes.forEach((c, ci) => { const va = kmsAU(c.v), r = 0.1 + va * (td - c.t / DAY); if (r < 0.02 || r > 3.4 || m > 12 * 700 - 700) return;
+      const list = cmeEx ? cmes.concat([{ t: exT, lat: 4, lon: 0, half: 48, v: 1800, ex: true }]) : cmes;
+      list.forEach((c, ci) => { const va = kmsAU(c.v), r = 0.1 + va * (td - c.t / DAY); if (r < 0.02 || r > 3.4 || m > 13 * CP - CP) return;
         const E = planet('Earth', c.t), lon = lonOf(E) + c.lon * D2R, la = c.lat * D2R, h = Math.max(5, c.half) * D2R;
         const ax = [Math.cos(la) * Math.cos(lon), Math.sin(la), -Math.cos(la) * Math.sin(lon)], up = Math.abs(ax[1]) > .9 ? [1, 0, 0] : [0, 1, 0];
         let u = [ax[1] * up[2] - ax[2] * up[1], ax[2] * up[0] - ax[0] * up[2], ax[0] * up[1] - ax[1] * up[0]]; const ul = Math.hypot(...u); u = u.map(x => x / ul);
         const w = [ax[1] * u[2] - ax[2] * u[1], ax[2] * u[0] - ax[0] * u[2], ax[0] * u[1] - ax[1] * u[0]], fade = Math.min(1, (3.4 - r) / .6);
-        for (let i = 0; i < 700; i++) { const q = (i + .5) / 700, th = Math.acos(1 - q * (1 - Math.cos(h))), ph = i * 2.39996, rr = r * (0.97 + 0.03 * ((i * 7) % 5) / 5);
-          const d = ax.map((x, k2) => x * Math.cos(th) + (u[k2] * Math.cos(ph) + w[k2] * Math.sin(ph)) * Math.sin(th)), edge = th / h;
-          cmeB.p.set(d.map(x => x * rr), m * 3); cmeB.c.set([1, .85 + .15 * (1 - edge), .7 + .3 * (1 - edge), (.25 + .5 * edge) * fade], m * 4); cmeB.s[m] = 13; m++; }
+        for (let i = 0; i < CP; i++) { const shell = i < 1100, q = shell ? (i + .5) / 1100 : rnd(), th = Math.acos(1 - q * (1 - Math.cos(h))), ph = shell ? i * 2.39996 : rnd() * 6.283, edge = th / h;
+          // front: slightly bent back at the flanks (a flux rope seen from outside); sheath: particles trailing behind it
+          const front = r * (1 - .1 * edge * edge + .04 * Math.cos(2 * ph) * edge), rr = shell ? front * (0.985 + 0.03 * rnd()) : front * (0.62 + 0.33 * Math.pow(rnd(), .6));
+          const d = ax.map((x, k2) => x * Math.cos(th) + (u[k2] * Math.cos(ph) + w[k2] * Math.sin(ph)) * Math.sin(th));
+          cmeB.p.set(d.map(x => x * rr), m * 3);
+          if (shell) cmeB.c.set([1, .82 + .18 * (1 - edge), .62 + .38 * (1 - edge), Math.min(1, .55 + .6 * edge) * fade], m * 4);
+          else cmeB.c.set([1, .6 + .25 * rr / front, .4 + .3 * rr / front, .3 * fade * rr / front], m * 4);
+          cmeB.s[m] = shell ? 16 : 20; m++; }
         active.push({ c, r, ax }); });
       cmeB.n = m; upload(cmeB); build.active = active;
     }
@@ -227,8 +240,13 @@
       if (s) { const R = Math.max(5, 0.05 * H / s[2] * 2.4); g2.globalCompositeOperation = 'lighter';
         let gr = g2.createRadialGradient(s[0], s[1], 0, s[0], s[1], R * 4); gr.addColorStop(0, 'rgba(255,200,90,.55)'); gr.addColorStop(.3, 'rgba(255,140,40,.18)'); gr.addColorStop(1, 'rgba(255,120,30,0)');
         g2.fillStyle = gr; g2.beginPath(); g2.arc(s[0], s[1], R * 4, 0, 7); g2.fill(); g2.globalCompositeOperation = 'source-over';
-        gr = g2.createRadialGradient(s[0] - R * .2, s[1] - R * .2, 0, s[0], s[1], R); gr.addColorStop(0, '#FFF6D8'); gr.addColorStop(.7, '#FFC24A'); gr.addColorStop(1, '#FF8A1E');
-        g2.fillStyle = gr; g2.beginPath(); g2.arc(s[0], s[1], R, 0, 7); g2.fill(); hits.push({ x: s[0], y: s[1], r: R + 6, name: 'Sun' }); }
+        const im = R > 7 ? sunTex() : null, sf = SUNF[sunI];
+        if (im) { const sz = R / sf[2], aia = sunI > 0; g2.save(); g2.beginPath(); g2.arc(s[0], s[1], aia ? R * 1.14 : R, 0, 7); g2.clip();
+          if (aia) g2.globalCompositeOperation = 'lighter';   // AIA: black sky adds nothing, the corona glows around the disc
+          g2.drawImage(im, s[0] - sz / 2, s[1] - sz / 2, sz, sz); g2.restore(); g2.globalCompositeOperation = 'source-over'; }
+        else { gr = g2.createRadialGradient(s[0] - R * .2, s[1] - R * .2, 0, s[0], s[1], R); gr.addColorStop(0, '#FFF6D8'); gr.addColorStop(.7, '#FFC24A'); gr.addColorStop(1, '#FF8A1E');
+          g2.fillStyle = gr; g2.beginPath(); g2.arc(s[0], s[1], R, 0, 7); g2.fill(); }
+        hits.push({ x: s[0], y: s[1], r: R + 6, name: 'Sun' }); }
       g2.font = '600 12px Inter, system-ui, sans-serif'; g2.textBaseline = 'middle'; const boxes = [];
       if (mode === 'helix') { const T = TRAVEL[frameK], a = proj(T.dir.map(x => x * 1.4 * Math.max(1, cam.dist / 8))), o = proj([0, 0, 0]);
         if (a && o) { g2.strokeStyle = '#FFE08A'; g2.lineWidth = 2; g2.beginPath(); g2.moveTo(o[0], o[1]); g2.lineTo(a[0], a[1]); g2.stroke(); const ang = Math.atan2(a[1] - o[1], a[0] - o[0]);
@@ -236,18 +254,44 @@
           g2.font = '700 12px Inter, system-ui, sans-serif'; const lab = (frameK === 'lsr' ? tr('towards Hercules') : tr('towards Cygnus · around the galaxy')) + ' · ' + T.v + ' km/s';
           g2.fillStyle = 'rgba(0,0,0,.6)'; g2.fillRect(a[0] + 8, a[1] - 9, g2.measureText(lab).width + 10, 18); g2.fillStyle = '#FFE08A'; g2.fillText(lab, a[0] + 13, a[1] + 4); } }
       g2.font = '600 12px Inter, system-ui, sans-serif'; g2.textBaseline = 'middle';
-      ['Earth'].concat(ORB.filter(n => n !== 'Earth')).forEach(nm => { if (mode === 'helix' && !HX.includes(nm)) return; const p = planet(nm, now), q = proj(p); if (!q) return; const r = Math.max(2.5, EL[nm][3] * Math.min(1.8, 1.6 / Math.sqrt(q[2])));
-        g2.fillStyle = EL[nm][2]; g2.beginPath(); g2.arc(q[0], q[1], r, 0, 7); g2.fill();
+      ['Earth'].concat(ORB.filter(n => n !== 'Earth')).forEach(nm => { if (mode === 'helix' && !HX.includes(nm)) return; const p = planet(nm, now), q = proj(p); if (!q) return; const r = Math.max(2.5, EL[nm][3] * Math.min(cam.follow === nm ? 9 : 1.8, 1.6 / Math.sqrt(q[2])));   // a followed planet grows as you zoom in
+        ball(nm, p, q, r, s);
         if (nm === 'Earth') { g2.strokeStyle = 'rgba(90,169,255,.6)'; g2.lineWidth = 1.5; g2.beginPath(); g2.arc(q[0], q[1], r + 4, 0, 7); g2.stroke(); }
         const lab = tr(nm), tw = g2.measureText(lab).width, bx = [q[0] + r + 4, q[1] - 8, tw + 8, 16];
         hits.push({ x: q[0], y: q[1], r: r + 14, name: nm, w: tw + 12 });
         if (boxes.some(b => bx[0] < b[0] + b[2] && bx[0] + bx[2] > b[0] && bx[1] < b[1] + b[3] && bx[1] + bx[3] > b[1]) && nm !== 'Earth') return; boxes.push(bx);
         g2.fillStyle = 'rgba(0,0,0,.55)'; g2.fillRect(...bx); g2.fillStyle = nm === 'Earth' ? '#9CCBFF' : '#DCE3EB'; g2.fillText(lab, q[0] + r + 8, q[1]); });
-      if (mode !== 'helix') (build.active || []).forEach(({ c, r, ax }) => { const q = proj(ax.map(x => x * r)); if (!q) return; const lab = 'CME ' + Math.round(c.v) + ' km/s' + (c.est ? ' · ' + tr('estimate') : '');
+      if (mode !== 'helix') (build.active || []).forEach(({ c, r, ax }) => { const q = proj(ax.map(x => x * r)); if (!q) return; const lab = 'CME ' + Math.round(c.v) + ' km/s' + (c.ex ? ' · ' + tr('EXAMPLE') : c.est ? ' · ' + tr('estimate') : '');
         g2.fillStyle = 'rgba(0,0,0,.6)'; const tw = g2.measureText(lab).width; g2.fillRect(q[0] + 6, q[1] - 8, tw + 8, 16); g2.fillStyle = '#FFE2C2'; g2.fillText(lab, q[0] + 10, q[1]); });
       if (info) showInfo(info);
       dirty = false;
     }
+    // a planet as a sphere lit from the Sun: dark side + lit part bounded by the terminator ellipse (its phase from the camera)
+    function ball(nm, p, q, r, s) {
+      const col = EL[nm][2], rgb = col.match(/\w\w/g).map(h => parseInt(h, 16)), dark = `rgb(${rgb.map(c => Math.round(c * .16)).join(',')})`;
+      let lit = 1, ang = 0;
+      if (s) { ang = Math.atan2(s[1] - q[1], s[0] - q[0]);
+        if (mode !== 'helix') { const e = camEye(), toS = p.map(x => -x), toE = p.map((x, i) => e[i] - x), ls = Math.hypot(...toS), le = Math.hypot(...toE);
+          lit = (1 + (toS[0] * toE[0] + toS[1] * toE[1] + toS[2] * toE[2]) / (ls * le)) / 2; } }
+      if (nm === 'Saturn') ringS(q, r, rgb, true);
+      if (r < 3.5) { g2.fillStyle = col; g2.beginPath(); g2.arc(q[0], q[1], r, 0, 7); g2.fill(); if (nm === 'Saturn') ringS(q, r, rgb, false); return; }
+      g2.save(); g2.translate(q[0], q[1]); g2.rotate(ang); g2.beginPath(); g2.arc(0, 0, r, 0, 7); g2.clip();
+      g2.fillStyle = dark; g2.fillRect(-r, -r, 2 * r, 2 * r);
+      const gr = g2.createRadialGradient(r * .45, 0, 0, 0, 0, r * 1.05); gr.addColorStop(0, `rgb(${rgb.map(c => Math.min(255, c * 1.25 + 30)).join(',')})`); gr.addColorStop(.6, col); gr.addColorStop(1, `rgb(${rgb.map(c => Math.round(c * .55)).join(',')})`);
+      g2.fillStyle = gr; g2.beginPath(); const e = r * Math.abs(2 * lit - 1);
+      g2.arc(0, 0, r, -Math.PI / 2, Math.PI / 2);   // the half facing the Sun, then the terminator back to the top
+      if (lit >= .5) g2.ellipse(0, 0, e, r, 0, Math.PI / 2, Math.PI * 1.5); else g2.ellipse(0, 0, e, r, 0, Math.PI / 2, -Math.PI / 2, true);
+      g2.fill();
+      if (nm === 'Jupiter' || nm === 'Saturn') { g2.rotate(-ang); g2.fillStyle = 'rgba(120,70,30,.28)'; [-.42, -.12, .2, .5].forEach((y, i) => g2.fillRect(-r, y * r, 2 * r, r * (i % 2 ? .1 : .14))); }
+      if (nm === 'Earth') { g2.rotate(-ang); g2.fillStyle = 'rgba(255,255,255,.35)'; g2.fillRect(-r, -r, 2 * r, r * .22); g2.fillRect(-r, r * .8, 2 * r, r * .2); }
+      g2.restore();
+      if (nm === 'Earth' || nm === 'Venus' || nm === 'Neptune' || nm === 'Uranus') { g2.strokeStyle = nm === 'Venus' ? 'rgba(255,230,180,.35)' : 'rgba(130,190,255,.45)'; g2.lineWidth = 1.2; g2.beginPath(); g2.arc(q[0], q[1], r + .8, ang - 1.4, ang + 1.4); g2.stroke(); }
+      if (nm === 'Saturn') ringS(q, r, rgb, false);
+    }
+    // Saturn's rings as a tilted ellipse: the back half before the planet, the front half after it
+    function ringS(q, r, rgb, back) { const R1 = r * 2.2, R0 = r * 1.35;
+      g2.save(); g2.translate(q[0], q[1]); g2.rotate(-.35); g2.strokeStyle = `rgba(${rgb.join(',')},.75)`; g2.lineWidth = Math.max(1, (R1 - R0) * .45);
+      g2.beginPath(); g2.ellipse(0, 0, (R0 + R1) / 2, (R0 + R1) / 2 * .32, 0, back ? Math.PI : 0, back ? 2 * Math.PI : Math.PI); g2.stroke(); g2.restore(); }
     // a planet's numbers: distance to the Sun, speed on its orbit (vis-viva), light time, distance from Earth
     function showInfo(nm) {
       const box = el.querySelector('.s3d-info'), t = mode === 'helix' ? hTime : time, p = planet(nm, t), r = Math.hypot(...p), a = EL[nm][0][0], v = 29.78 * Math.sqrt(2 / r - 1 / a), E = planet('Earth', t), de = Math.hypot(p[0] - E[0], p[1] - E[1], p[2] - E[2]);
@@ -342,6 +386,10 @@
       if (m === 'helix') { hTime = time; buildHelix(); hDate(); view('hx'); if (!hPlay) togglePlay(); } else { if (hPlay) togglePlay(); build.orbT = null; setTime(time); view('inner'); } dirty = true; }
     el.querySelectorAll('[data-m]').forEach(b => b.onclick = () => setMode(b.dataset.m));
     el.querySelectorAll('[data-v]').forEach(b => b.onclick = () => view(b.dataset.v));
+    // Sun filter: SDO's newest picture in visible light (sunspots) or one of three ultraviolet channels
+    el.querySelector('.s3d-sunf').onclick = e => { sunI = (sunI + 1) % SUNF.length; e.currentTarget.textContent = '☀ ' + tr(SUNF[sunI][1]); dirty = true; };
+    // example: a strong Earth-directed CME (1800 km/s, like May 2024) launched ~8 h before the clock, so it is on its way
+    el.querySelector('.s3d-cmex').onclick = e => { cmeEx = !cmeEx; exT = time - 0.35 * DAY; e.currentTarget.setAttribute('aria-pressed', cmeEx); if (cmeEx) view('inner'); build(); dirty = true; };
     el.querySelector('.s3d-full').onclick = () => { el.classList.toggle('s3d-fs'); document.body.classList.toggle('s3d-lock', el.classList.contains('s3d-fs')); setTimeout(resize, 60); };
     if (window.ResizeObserver) new ResizeObserver(resize).observe(el); else addEventListener('resize', resize);
     if (window.IntersectionObserver) new IntersectionObserver(es => { visible = es[0].isIntersecting; if (visible) dirty = true; }).observe(el);
