@@ -52,11 +52,13 @@
   const mul = (a, b) => { const o = new Array(16); for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { let s = 0; for (let k = 0; k < 4; k++) s += a[k * 4 + j] * b[i * 4 + k]; o[i * 4 + j] = s; } return o; };
 
   const VS = 'attribute vec3 p;attribute vec4 c;attribute float s;uniform mat4 m;uniform float k;uniform float mx;varying vec4 vc;void main(){gl_Position=m*vec4(p,1.);gl_PointSize=clamp(s*k/gl_Position.w,1.,mx);vc=c;}';
+  // wind: q = (distance AU, speed 0–1, seed) → brightness pulses running outwards (faster wind = faster pulses) + small wobble
+  const WVS = 'attribute vec3 p;attribute vec4 c;attribute float s;attribute vec3 q;uniform mat4 m;uniform float k;uniform float mx;uniform float ph;varying vec4 vc;void main(){float pu=.6+.4*sin(6.2832*(q.x*2.6-ph*(.3+.9*q.y)+q.z*.15));vec3 j=vec3(sin(q.z*12.9+ph*1.3),sin(q.z*78.2+ph*.9),cos(q.z*37.7+ph*1.1))*.006*q.x;gl_Position=m*vec4(p+j,1.);gl_PointSize=clamp(s*k/gl_Position.w,1.,mx);vc=vec4(c.rgb,c.a*pu);}';
   const FS = 'precision mediump float;varying vec4 vc;uniform float pt;void main(){float a=vc.a;if(pt>.5){float d=length(gl_PointCoord-.5);a*=smoothstep(.5,.0,d);}gl_FragColor=vec4(vc.rgb*a,a);}';
 
   const CSS = `.s3d{position:relative;overflow:hidden;background:#05070D;border-radius:16px;touch-action:none;user-select:none;-webkit-user-select:none}
 .s3d canvas{position:absolute;left:0;top:0;display:block}.s3d-ov{cursor:grab}.s3d-ov:active{cursor:grabbing}
-.s3d-top{position:absolute;left:12px;top:10px;pointer-events:none;display:flex;flex-direction:column;gap:2px;text-shadow:0 1px 3px #000}
+.s3d-top{position:absolute;left:12px;top:10px;pointer-events:none;display:flex;flex-direction:column;gap:2px;text-shadow:0 1px 3px #000;max-width:calc(50% - 200px)}
 .s3d-t{font:700 15px Inter,system-ui,sans-serif;color:#FFE600}.s3d-sub{font:500 12px Inter,system-ui,sans-serif;color:#C9D1DB}
 .s3d-btns{position:absolute;left:10px;bottom:10px;display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;max-width:calc(100% - 20px)}.s3d-btns::-webkit-scrollbar{display:none}.s3d-btns button{flex:none;white-space:nowrap}
 .s3d-btns button,.s3d-ctl button{border:1px solid rgba(255,255,255,.18);background:rgba(10,14,20,.75);color:#E6EBF1;border-radius:999px;padding:7px 12px;min-height:36px;font:600 12px Inter,system-ui,sans-serif;cursor:pointer}
@@ -69,10 +71,15 @@
 .s3d-help{position:absolute;inset:56px 60px 60px 10px;overflow:auto;background:rgba(8,11,17,.94);border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:14px 16px;font:500 13px/1.55 Inter,system-ui,sans-serif;color:#C9D1DB}
 .s3d-help b{color:#fff;font-size:14px}.s3d-help p{margin:2px 0 12px}.s3d-hx-x{float:right;border:0;background:none;color:#A3B0C2;font-size:16px;cursor:pointer}
 .s3d.ea .s3d-gl,.s3d.ea .s3d-ov,.s3d.ea .s3d-btns,.s3d.ea .s3d-leg,.s3d.ea .s3d-top,.s3d.ea .s3d-info,.s3d.ea .s3d-help,.s3d.ea .s3d-ctl button:not(.s3d-full){display:none!important}.s3d.ea .s3d-tabs,.s3d.ea .s3d-ctl{z-index:5}
+.s3d-time{position:absolute;left:10px;bottom:54px;display:flex;gap:6px;align-items:center;flex-wrap:nowrap;max-width:calc(100% - 20px)}
+.s3d-time button{flex:none;border:1px solid rgba(255,255,255,.18);background:rgba(10,14,20,.75);color:#E6EBF1;border-radius:999px;min-width:36px;min-height:36px;padding:0 10px;font:600 12px Inter,system-ui,sans-serif;cursor:pointer}
+.s3d-time button[aria-pressed=true]{border-color:#39FF9E;color:#39FF9E}.s3d-rate{width:150px;accent-color:#39FF9E;flex:0 1 150px;min-width:70px}
+.s3d-rl{font:700 11px Inter,system-ui,sans-serif;color:#E6EBF1;background:rgba(10,14,20,.75);border-radius:999px;padding:7px 10px;white-space:nowrap;min-width:96px;text-align:center}
+.s3d.ea .s3d-time{display:none!important}@media (max-width:640px){.s3d-rate{width:96px;flex-basis:96px}.s3d-rl{min-width:80px}}
 .s3d-hdate{background:rgba(10,14,20,.75);color:#E6EBF1;border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:6px 10px;min-height:36px;font:600 12px Inter,system-ui,sans-serif;color-scheme:dark}
-.s3d.gx .s3d-hx{display:flex}.s3d.gx .s3d-hdate,.s3d.gx [data-f],.s3d.gx .s3d-sys,.s3d.gx .s3d-leg{display:none!important}
+.s3d.gx .s3d-hx,.s3d.gx .s3d-sys,.s3d.gx .s3d-leg{display:none!important}.s3d .s3d-imp{display:none}.s3d.mag .s3d-imp{display:inline-block}
 .s3d:focus-visible{outline:3px solid #FFE600;outline-offset:2px}
-@media (max-width:640px){.s3d-tabs{top:52px;left:12px;transform:none}.s3d-tabs button{padding:7px 10px;font-size:11px}.s3d-info{right:56px;max-width:190px}}
+@media (max-width:900px){.s3d-top{max-width:calc(100% - 70px)}}@media (min-width:641px) and (max-width:900px){.s3d-top{top:54px}}@media (max-width:640px){.s3d-tabs{top:auto;bottom:98px;left:10px;transform:none}.s3d-tabs button{padding:7px 10px;font-size:11px}.s3d-info{right:56px;max-width:190px}}
 .s3d-leg{position:absolute;right:12px;bottom:14px;font:500 11px Inter,system-ui,sans-serif;color:#A3B0C2;pointer-events:none;text-shadow:0 1px 2px #000}
 .s3d-leg i{display:inline-block;width:9px;height:9px;border-radius:50%;margin:0 3px 0 8px;vertical-align:-1px}
 .s3d.s3d-fs{position:fixed!important;inset:0;z-index:200;border-radius:0;height:auto!important;max-height:none!important;min-height:0!important;margin:0!important;aspect-ratio:auto!important}body.s3d-lock{overflow:hidden}
@@ -84,13 +91,16 @@
     el.innerHTML = `<canvas class="s3d-gl"></canvas><canvas class="s3d-ov"></canvas>
       <div class="s3d-top"><b class="s3d-t">–</b><span class="s3d-sub"></span></div>
       <div class="s3d-tabs" role="tablist"><button data-m="sys" aria-pressed="true">${tr('Solar system')}</button><button data-m="helix" aria-pressed="false">${tr('Spiral through space')}</button><button data-m="galaxy" aria-pressed="false">${tr('Galaxy')}</button><button data-m="earth" aria-pressed="false">${tr('Earth')}</button></div>
-      <div class="s3d-btns s3d-sys"><button data-v="inner">${tr('Inner planets')}</button><button data-v="all">${tr('Whole system')}</button><button data-v="earth">${tr('From Earth')}</button><button data-v="top">${tr('From above')}</button><button class="s3d-sunf" aria-label="${tr('Sun filter')}">☀ ${tr('visible light')}</button><button class="s3d-cmex" aria-pressed="false">${tr('Example: strong CME')}</button></div>
-      <div class="s3d-btns s3d-hx"><button class="s3d-hrev" aria-label="${tr('Play backwards')}" aria-pressed="false">◀</button><button class="s3d-hplay" aria-label="${tr('Play')}">▶</button><button class="s3d-hspd">1×</button><input type="date" class="s3d-hdate" aria-label="${tr('Date')}"><button data-f="lsr" aria-pressed="true">${tr('vs nearby stars · 20 km/s')}</button><button data-f="gal" aria-pressed="false">${tr('around the Milky Way · 230 km/s')}</button></div>
+      <div class="s3d-btns s3d-sys"><button data-v="inner">${tr('Inner planets')}</button><button data-v="all">${tr('Whole system')}</button><button data-v="earth">${tr('From Earth')}</button><button data-v="top">${tr('From above')}</button><button class="s3d-sunf" aria-label="${tr('Sun filter')}">☀ ${tr('visible light')}</button><button class="s3d-cmex" aria-pressed="false">${tr('Example: strong CME')}</button><button class="s3d-mag" aria-pressed="false">🧲 ${tr('Earth’s magnetic shield')}</button><button class="s3d-imp">💥 ${tr('CME impact')}</button></div>
+      <div class="s3d-time"><button class="s3d-hrev" aria-label="${tr('Play backwards')}" aria-pressed="false">◀</button><button class="s3d-hplay" aria-label="${tr('Pause')}">⏸</button><input type="range" class="s3d-rate" min="0" max="1000" aria-label="${tr('Speed')}"><span class="s3d-rl" aria-live="polite"></span><button class="s3d-now">${tr('Now')}</button></div>
+      <div class="s3d-btns s3d-hx"><input type="date" class="s3d-hdate" aria-label="${tr('Date')}"><button data-f="lsr" aria-pressed="true">${tr('vs nearby stars · 20 km/s')}</button><button data-f="gal" aria-pressed="false">${tr('around the Milky Way · 230 km/s')}</button></div>
       <div class="s3d-ctl"><button class="s3d-full" aria-label="${tr('Full screen')}">⛶</button><button data-z="-1" aria-label="${tr('Zoom in')}">+</button><button data-z="1" aria-label="${tr('Zoom out')}">−</button><button class="s3d-reset" aria-label="${tr('Reset the view')}">⟲</button><button class="s3d-q" aria-label="${tr('How it works')}">?</button></div>
       <div class="s3d-info" hidden></div>
       <div class="s3d-help" hidden><button class="s3d-hx-x" aria-label="${tr('Close')}">✕</button>
         <b>${tr('Moving around')}</b><p>${tr('Drag to turn · pinch or scroll to zoom · two fingers or right-drag to move sideways · double-tap to reset · tap a planet to fly to it and see its numbers. Zoom out from Earth to reach the solar system, keep going for the galaxy; tap Earth and zoom in to land. Keys: arrows turn, + / − zoom, R reset, space play.')}</p>
+        <b>${tr('Time')}</b><p>${tr('Everything starts in real time, like the sky outside. The slider changes the speed: left of the middle is slow motion, right speeds time up (minutes, days, years or millions of years per second, depending on the view). ◀ runs time backwards, NOW returns to this moment at real speed.')}</p>
         <b>${tr('Solar system')}</b><p>${tr('Planets at their real positions for the shown time (NASA JPL orbital elements). The solar wind leaves the Sun in all directions while the Sun turns once every ~25 days, so the streams wind up into a spiral (the Parker spiral) — like water from a turning garden sprinkler. Speed and colour come from NOAA’s model at Earth. CMEs grow from the Sun at their measured speed and direction (NASA DONKI, or estimated from NOAA’s model). Distances are real, sizes are not.')}</p>
+        <b>${tr('Earth’s magnetic shield')}</b><p>${tr('Earth’s magnetic field turns most of the solar wind aside: it piles up in a bow shock in front, flows around the magnetopause and stretches the field into a long tail at night. A CME squeezes the field from ~10 to ~6 Earth radii; far more particles get in, run down the field lines to the polar regions and light up the aurora ovals, which grow towards the equator. Drawn to show how it works — Earth and its field are enlarged.')}</p>
         <b>${tr('Spiral through space')}</b><p>${tr('The Sun is not standing still: it moves ~20 km/s towards the constellation Hercules compared with nearby stars, and ~230 km/s around the centre of the Milky Way. The planets come along, so each one draws a spiral (a helix) around the Sun’s path. The orbits are tilted about 60° to that path, so the spirals are slanted — the planets are not dragged behind the Sun like a comet tail, as some popular videos show.')}</p></div>
       <div class="s3d-leg"><i style="background:rgb(70,120,255)"></i>300 <i style="background:rgb(60,220,160)"></i>420 <i style="background:rgb(255,225,80)"></i>550 <i style="background:rgb(255,130,50)"></i>700+ km/s <i style="background:#fff"></i>CME</div>`;
     const cv = el.querySelector('.s3d-gl'), ov = el.querySelector('.s3d-ov'), g2 = ov.getContext('2d');
@@ -110,11 +120,23 @@
       stars.p.set([r * q * Math.cos(th), r * u, r * q * Math.sin(th)], i * 3); stars.c.set([b, b, b * 1.05, b], i * 4); stars.s[i] = 1.6 * 400; } stars.n = 1600; upload(stars);
     const ORB = Object.keys(EL), orbits = mk(ORB.length * 181);
     const JS = 64, KS = 340, DT = 1 / 24, wind = mk(JS * KS), lat = new Float32Array(JS * KS);   // 64 source longitudes × 340 emissions every hour (~14 days)
+    const pw = gl.createProgram(); gl.attachShader(pw, sh(gl.VERTEX_SHADER, WVS)); gl.attachShader(pw, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(pw);
+    const AW = { p: gl.getAttribLocation(pw, 'p'), c: gl.getAttribLocation(pw, 'c'), s: gl.getAttribLocation(pw, 's'), q: gl.getAttribLocation(pw, 'q') }, UW = { m: gl.getUniformLocation(pw, 'm'), k: gl.getUniformLocation(pw, 'k'), pt: gl.getUniformLocation(pw, 'pt'), mx: gl.getUniformLocation(pw, 'mx'), ph: gl.getUniformLocation(pw, 'ph') };
+    const mkW = n => Object.assign(mk(n), { q: new Float32Array(n * 3), bq: gl.createBuffer() });
+    const windQ = new Float32Array(JS * KS * 3), wbq = gl.createBuffer(), streak = mkW(JS * KS * 2);
+    const wUp = (b, q) => { [['bp', 'p', 3, AW.p], ['bc', 'c', 4, AW.c], ['bs', 's', 1, AW.s]].forEach(([bk, k, sz, loc]) => { gl.bindBuffer(gl.ARRAY_BUFFER, b[bk]); gl.bufferData(gl.ARRAY_BUFFER, b[k].subarray(0, b.n * sz), gl.DYNAMIC_DRAW); });
+      gl.bindBuffer(gl.ARRAY_BUFFER, q.buf); gl.bufferData(gl.ARRAY_BUFFER, q.arr.subarray(0, b.n * 3), gl.DYNAMIC_DRAW); };
+    const wBind = (b, qb) => { [['bp', 3, AW.p], ['bc', 4, AW.c], ['bs', 1, AW.s]].forEach(([bk, sz, loc]) => { gl.bindBuffer(gl.ARRAY_BUFFER, b[bk]); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, sz, gl.FLOAT, false, 0, 0); });
+      gl.bindBuffer(gl.ARRAY_BUFFER, qb); gl.enableVertexAttribArray(AW.q); gl.vertexAttribPointer(AW.q, 3, gl.FLOAT, false, 0, 0); };
     for (let i = 0; i < JS * KS; i++) lat[i] = (rnd() - .5) * (rnd() < .2 ? 0.3 : 0.08);
     const CP = 1600, cmeB = mk(13 * CP);
     const HX = ['Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune'], HXN = 900, trails = mk((HX.length + 1) * HXN);
     const galB = mk(52000), ring = mk(361); let gT = 0, galBuilt = false;
-    let mode = 'sys', frameK = 'lsr', hTime = Date.now(), hPlay = false, hRate = 1, hDir = 1, hLast = 0, info = null;
+    let mode = 'sys', frameK = 'lsr', hTime = Date.now(), hPlay = true, rate = 1, hDir = 1, hLast = 0, info = null, ph = 0, watch = 0, bAt = 0, tAt = 0, hbAt = 0;
+    const REDUCED = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches, YEAR = 3.15576e7;
+    // speed slider: log scale, simulated seconds per real second, from 0.1 (slow motion) to each view's maximum
+    const RANGE = { sys: [-1, Math.log10(30 * 86400)], helix: [-1, Math.log10(5 * YEAR)], galaxy: [-1, Math.log10(20e6 * YEAR)] };
+    const rng = () => RANGE[mode] || RANGE.sys, posOf = r => Math.round((Math.log10(r) - rng()[0]) / (rng()[1] - rng()[0]) * 1000);
     const SUNB = 'https://raw.githubusercontent.com/ori0nori0ff/ori0nori0ff.github.io/enlil/sun/';
     // [file id, label, disc radius as a share of the image width] — HMI fills more of its frame than AIA
     const SUNF = [['HMIIC', 'visible light', .468], ['0171', '171 Å · corona', .393], ['0193', '193 Å · hot corona', .393], ['0304', '304 Å · chromosphere', .393]];
@@ -183,14 +205,21 @@
       if (Math.abs(time - (build.orbT || -1e15)) > 5 * DAY) { build.orbT = time; let o = 0; ORB.forEach(nm => { const per = Math.pow(EL[nm][0][0], 1.5) * 365.25 * DAY, col = nm === 'Earth' ? [.35, .6, 1, .55] : [.6, .7, .85, .22];
         for (let i = 0; i <= 180; i++) { const p = planet(nm, time + (i / 180) * per); orbits.p.set(p, o * 3); orbits.c.set(col, o * 4); orbits.s[o] = 1; o++; } }); orbits.n = o; upload(orbits); }
       // wind: particle (j, k) left co-rotating longitude psi_j at time te; it flies radially at that longitude's speed
-      const tq = Math.floor(td / DT) * DT; let n = 0;
+      const tq = Math.floor(td / DT) * DT; let n = 0, ns = 0;
       for (let j = 0; j < JS; j++) { const psi = j / JS * 2 * Math.PI, b = Math.round(j / JS * 360) % 360, v = vtab[b], va = kmsAU(v), col = speedCol(v), dens = Math.min(1.6, Math.max(.6, Math.sqrt(ntab[b] / 5))), kn = known[b] ? 1 : .55;
+        // fast wind leaving a little later from the same direction catches up with slower wind ahead → a compressed, brighter band
+        const cmp = Math.max(0, Math.min(1, (v - vtab[(b + 8) % 360] - 40) / 220)), vq = Math.max(0, Math.min(1, (v - 300) / 600)), sl = .02 + .05 * vq;
         for (let k = 0; k < KS; k++) { const te = tq - k * DT, r = 0.03 + va * (td - te); if (r > 3.2 || r < 0.03) continue;
           const lon = psi + OMEGA * te, la = lat[j * KS + k], fade = Math.min(1, (3.2 - r) / 0.8) * Math.min(1, r / 0.12);
           const a = 0.7 * fade * kn * dens * (0.8 + 0.2 * Math.cos(k * 1.7 + j));
           wind.p.set([r * Math.cos(lon) * Math.cos(la), r * Math.sin(la), -r * Math.sin(lon) * Math.cos(la)], n * 3);
-          wind.c.set([col[0] / 255, col[1] / 255, col[2] / 255, a], n * 4); wind.s[n] = 7 + 4 * dens; n++; } }
-      wind.n = n; upload(wind);
+          const cr = r > .25 ? cmp * Math.min(1, (r - .25) / .3) : 0, cc = col.map(x => (x + (255 - x) * cr * .55) / 255), aa = Math.min(1, a * (1 + cr * .8));
+          wind.c.set([cc[0], cc[1], cc[2], aa], n * 4); wind.s[n] = 7 + 4 * dens + 4 * cr; windQ.set([r, vq, (j * 131 + k * 17) % 97], n * 3);
+          // streak: a short tail pointing back to the Sun (the wind flies straight out), fading to nothing
+          const hx = wind.p[n * 3], hy = wind.p[n * 3 + 1], hz = wind.p[n * 3 + 2], tl = Math.max(.6, r - sl) / r;
+          streak.p.set([hx, hy, hz, hx * tl, hy * tl, hz * tl], ns * 3); streak.c.set([cc[0], cc[1], cc[2], aa * .55, cc[0], cc[1], cc[2], 0], ns * 4); streak.s[ns] = streak.s[ns + 1] = 1;
+          streak.q.set([r, vq, (j * 131 + k * 17) % 97, r, vq, (j * 131 + k * 17) % 97], ns * 3); ns += 2; n++; } }
+      wind.n = n; streak.n = ns; gl.useProgram(pw); wUp(wind, { buf: wbq, arr: windQ }); wUp(streak, { buf: streak.bq, arr: streak.q }); gl.useProgram(pr);
       // CMEs: cone model — a cap at r(t) = 21.5 R☉ + v·(t − t21.5), direction = Earth's longitude at t21.5 + DONKI longitude
       let m = 0; const active = [];
       const list = cmeEx ? cmes.concat([{ t: exT, lat: 4, lon: 0, half: 48, v: 1800, ex: true }]) : cmes;
@@ -210,6 +239,68 @@
         active.push({ c, r, ax }); });
       cmeB.n = m; upload(cmeB); build.active = active;
     }
+
+    // ── Earth's magnetic shield (a schematic, Earth and its field enlarged ~70×): bow shock, magnetopause squeezed by CMEs
+    //    (Shue-like shape, stand-off 10 → ~6 Earth radii), dipole field lines r = L·cos²λ pushed in on the day side and
+    //    stretched into a tail at night, solar-wind particles flowing around it, a few guided down the field to the aurora ovals
+    let magOn = false, magF = 0, glow = 0, magPh = 0, magSub = ''; const MS = 0.003;   // AU per Earth radius in the schematic
+    const pxAU = q => H / 2 / Math.tan(22.5 * D2R) / q[2];
+    const MP = []; for (let i = 0; i < 380; i++) MP.push({ x: -32 + 58 * rnd(), r0: Math.sqrt(rnd()) * 16, a0: rnd() * 6.283, cap: 0 });
+    function cmeAtEarth() {   // f: how hard a CME is pressing on Earth now (0–1); eta: hours until the next one arrives
+      const E = planet('Earth', time), rE = Math.hypot(...E), ue = E.map(x => x / rE); let f = 0, eta = null;
+      (build.active || []).forEach(({ c, r, ax }) => { if (ax[0] * ue[0] + ax[1] * ue[1] + ax[2] * ue[2] < Math.cos(Math.max(5, c.half) * D2R)) return;
+        const d = r - rE; if (d < 0) { const h = -d / kmsAU(c.v) * 24; if (eta == null || h < eta) eta = h; }
+        else if (rE > r * .62) f = Math.max(f, Math.min(1, d / .02) * Math.min(1, (rE - r * .62) / (r * .1))); });
+      return { f, eta };
+    }
+    const fieldX = (L, ca, R0) => ca > 0 ? 1 - ca * (1 - Math.min(1, R0 * .92 / L)) : 1 + (-ca) * Math.max(0, L - 3.5) * (.35 + .4 * magF);   // day squeeze / night stretch
+    function magneto(E) {
+      const st = cmeAtEarth(), dph = Math.min(.1, Math.max(0, ph - magPh)); magPh = ph; magF += (st.f - magF) * .05; glow *= .985;
+      const R0 = 10 - 3.8 * magF, Rbs = R0 * 1.33, rE = Math.hypot(...E), ex = E.map(v => -v / rE), ey = [0, 1, 0];
+      const ez = [ex[1] * ey[2] - ex[2] * ey[1], ex[2] * ey[0] - ex[0] * ey[2], ex[0] * ey[1] - ex[1] * ey[0]];
+      const P = (x, y, z) => proj([0, 1, 2].map(i => E[i] + (ex[i] * x + ey[i] * y + ez[i] * z) * MS)), qe = proj(E); if (!qe) return;
+      const re = Math.max(3, MS * pxAU(qe)), hidden = q => Math.hypot(q[0] - qe[0], q[1] - qe[1]) < re && q[2] > qe[2];   // behind the globe
+      const line = (pts, col, w, dash) => { g2.strokeStyle = col; g2.lineWidth = w; g2.setLineDash(dash || []); g2.beginPath(); let on = false;
+        pts.forEach(pt => { const q = P(pt[0], pt[1], pt[2]); if (!q || hidden(q)) { on = false; return; } if (on) g2.lineTo(q[0], q[1]); else { g2.moveTo(q[0], q[1]); on = true; } }); g2.stroke(); g2.setLineDash([]); };
+      const T = []; for (let th = 0; th < 2.7; th += .06) { const r = R0 * Math.pow(2 / (1 + Math.cos(th)), .58); T.push([r * Math.cos(th), r * Math.sin(th)]); }
+      const rho = x => { if (x >= T[0][0]) return 0; for (let i = 1; i < T.length; i++) if (T[i][0] <= x) { const f = (T[i - 1][0] - x) / (T[i - 1][0] - T[i][0]); return T[i - 1][1] + (T[i][1] - T[i - 1][1]) * f; } return T[T.length - 1][1]; };
+      for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, ca = Math.cos(a), sa = Math.sin(a), bs = [];
+        for (let th = 0; th <= 2.0; th += .08) { const r = Rbs * Math.pow(2 / (1 + Math.cos(th)), .75); bs.push([r * Math.cos(th), r * Math.sin(th) * sa, r * Math.sin(th) * ca]); }
+        line(bs, 'rgba(255,255,255,.16)', 1, [4, 4]); line(T.map(([x, r]) => [x, r * sa, r * ca]), `rgba(110,200,255,${.12 + .18 * magF})`, 1); }
+      const shake = magF * .1 * Math.sin(ph * 9);
+      for (let k = 0; k < 12; k++) { const a = k * Math.PI / 6, ca = Math.cos(a), sa = Math.sin(a);
+        [2.5, 4, 6, 8.5].forEach(L => { const lf = Math.acos(Math.sqrt(1 / L)), sx = fieldX(L, ca, R0), pts = [];
+          for (let i = 0; i <= 40; i++) { const la = -lf + 2 * lf * i / 40, r = L * Math.cos(la) ** 2 * (1 + shake * L / 8); pts.push([r * Math.cos(la) * ca * sx, r * Math.sin(la), r * Math.cos(la) * sa]); }
+          line(pts, `rgba(108,182,255,${L > 7 ? .22 : .32})`, 1); }); }
+      for (let k = -2; k <= 2; k++) [1, -1].forEach(hs => { const a = [.3, hs * .95, k * .15], b = [.6, hs * 5.5, k * .8], c = [-32, hs * (6 - 1.6 * magF), k * 3], pts = [];   // open field: polar cap → tail
+        for (let i = 0; i <= 24; i++) { const u = i / 24, w = [(1 - u) ** 2, 2 * u * (1 - u), u * u]; pts.push([0, 1, 2].map(j => w[0] * a[j] + w[1] * b[j] + w[2] * c[j])); } line(pts, 'rgba(108,182,255,.16)', 1); });
+      // particles: the wind (or CME) flows around the magnetopause; a few leak in at the cusps / from the tail and run down to the ovals
+      const cme = magF > .25 || (st.eta != null && st.eta < 3), spd = 6 + 10 * magF;
+      MP.forEach(m => {
+        if (m.cap) { m.s = Math.min(1, m.s + dph * .8); const la = m.hs * Math.acos(Math.sqrt(1 / m.L)) * m.s, r = m.L * Math.cos(la) ** 2, ca = Math.cos(m.a), sx = fieldX(m.L, ca, R0);
+          m.p = [r * Math.cos(la) * ca * sx, r * Math.sin(la), r * Math.cos(la) * Math.sin(m.a)]; if (m.s >= 1) { glow = Math.min(.45, glow + .015); m.cap = 0; m.x = 26; } }
+        else { m.x -= dph * spd; if (m.x < -32) { m.x = 26; m.r0 = Math.sqrt(rnd()) * 16; m.a0 = rnd() * 6.283; }
+          const rr = Math.sqrt(m.r0 * m.r0 + (rho(m.x) * 1.12) ** 2); m.p = [m.x, rr * Math.sin(m.a0), rr * Math.cos(m.a0)];
+          const day = m.x < R0 + 1 && m.x > R0 - 1.5 && m.r0 < 3, tail = m.x < -12 && m.r0 < 4;
+          if ((day || tail) && rnd() < (.01 + .14 * magF) * dph * 60) { m.cap = 1; m.s = 0; m.hs = rnd() < .5 ? 1 : -1;
+            if (day) { m.L = 9; m.a = (rnd() - .5) * .8; } else { const kk = .35 + .4 * magF, B = 1 - 3.5 * kk; m.L = Math.max(4, Math.min(12, (-B + Math.sqrt(B * B + 4 * kk * -m.x)) / (2 * kk))); m.a = Math.PI + (rnd() - .5) * .8; } } }
+        const q = P(m.p[0], m.p[1], m.p[2]); if (!q || hidden(q)) return; const z = m.cap ? 2.6 : 1.8;
+        g2.fillStyle = m.cap ? '#7CFFB8' : cme ? 'rgba(255,214,170,.9)' : 'rgba(150,200,255,.75)'; g2.fillRect(q[0] - z / 2, q[1] - z / 2, z, z); });
+      // aurora ovals: ~67° magnetic latitude, a little lower on the night side, pushed towards the equator and brighter in storms
+      const lo = (67 - 8 * magF) * D2R, inten = Math.min(1, .18 + .7 * magF + glow);
+      [1, -1].forEach(hs => { const pts = []; for (let i = 0; i <= 72; i++) { const a = i / 72 * 2 * Math.PI, l = lo + 3 * D2R * Math.cos(a); pts.push([Math.cos(l) * Math.cos(a) * 1.02, hs * Math.sin(l) * 1.02, Math.cos(l) * Math.sin(a) * 1.02]); }
+        g2.shadowColor = '#39FF9E'; g2.shadowBlur = 10 * inten; line(pts, `rgba(57,255,158,${.3 + .65 * inten})`, 1.5 + 3 * inten); g2.shadowBlur = 0;
+        if (magF > .5) line(pts.map(pt => pt.map(v => v * 1.05)), `rgba(255,80,100,${Math.min(.8, (magF - .5) * 1.4)})`, 1.5); });
+      g2.font = '700 11px Inter, system-ui, sans-serif'; g2.textBaseline = 'middle';
+      const tag = (pt, t, c) => { const q = P(pt[0], pt[1], pt[2]); if (!q) return; const w = g2.measureText(t).width; g2.fillStyle = 'rgba(0,0,0,.62)'; g2.fillRect(q[0] + 6, q[1] - 9, w + 10, 18); g2.fillStyle = c; g2.fillText(t, q[0] + 11, q[1]); };
+      tag([Rbs, -1.5, 0], tr('Bow shock'), '#E6EBF1'); tag([R0 * .15, R0 * 1.3, 0], tr('Magnetopause · {r} Earth radii', { r: R0.toFixed(1) }), '#8FD3FF');
+      tag([-24, 6.5, 0], tr('Magnetic tail'), '#8FD3FF'); tag([.2, 1.4, 0], tr('Aurora oval'), '#7CFFB8'); tag([-6, -11, 0], tr('Earth and its field enlarged, not to scale'), '#8E9AAB'); tag([22, -8, 0], (cme ? 'CME' : tr('solar wind')) + ' ← ' + tr('from the Sun'), cme ? '#FFD6AA' : '#96C8FF');
+      const sub = (magF > .3 ? tr('CME hit: the field is squeezed to {r} Earth radii and particles pour in at the poles → strong aurora', { r: R0.toFixed(1) })
+        : st.eta != null && st.eta < 96 ? tr('CME arrives in ~{h} h — press CME impact or speed up time', { h: Math.max(1, Math.round(st.eta)) })
+        : tr('Calm: the magnetic field turns the solar wind aside; a little leaks in → faint aurora near the poles'));
+      if (sub !== magSub) { magSub = sub; el.querySelector('.s3d-sub').textContent = sub; }
+    }
+    function magOff() { if (!magOn) return; magOn = false; magSub = ''; el.classList.remove('mag'); el.querySelector('.s3d-mag').setAttribute('aria-pressed', false); title(); }
     function camEye() { const c = cam, cp = Math.cos(c.pitch); return [c.tgt[0] + c.dist * cp * Math.cos(c.yaw), c.tgt[1] + c.dist * Math.sin(c.pitch), c.tgt[2] + c.dist * cp * Math.sin(c.yaw)]; }
     const proj = p => { const x = M[0] * p[0] + M[4] * p[1] + M[8] * p[2] + M[12], y = M[1] * p[0] + M[5] * p[1] + M[9] * p[2] + M[13], w = M[3] * p[0] + M[7] * p[1] + M[11] * p[2] + M[15];
       return w <= 0.01 ? null : [(x / w * .5 + .5) * W, (1 - (y / w * .5 + .5)) * H, w]; };
@@ -227,7 +318,10 @@
       if (mode === 'galaxy') { gl.uniform1f(U.pt, 1); gl.uniform1f(U.mx, 3 * dpr); bind(galB); gl.drawArrays(gl.POINTS, 0, galB.n); gl.uniform1f(U.pt, 0); bind(ring); gl.drawArrays(gl.LINE_STRIP, 0, ring.n); }
       else if (mode === 'helix') { gl.uniform1f(U.pt, 0); bind(trails); for (let i = 0; i <= HX.length; i++) gl.drawArrays(gl.LINE_STRIP, i * HXN, HXN); }
       else { gl.uniform1f(U.pt, 0); bind(orbits); for (let i = 0; i < ORB.length; i++) gl.drawArrays(gl.LINE_STRIP, i * 181, 181);
-        gl.uniform1f(U.pt, 1); gl.uniform1f(U.mx, 7 * dpr); bind(wind); gl.drawArrays(gl.POINTS, 0, wind.n); gl.uniform1f(U.mx, 6 * dpr); bind(cmeB); gl.drawArrays(gl.POINTS, 0, cmeB.n); }
+        gl.useProgram(pw); gl.uniformMatrix4fv(UW.m, false, new Float32Array(M)); gl.uniform1f(UW.k, dpr * Math.min(W, H) / 900); gl.uniform1f(UW.ph, ph);
+        gl.uniform1f(UW.pt, 0); gl.uniform1f(UW.mx, 1); wBind(streak, streak.bq); gl.drawArrays(gl.LINES, 0, streak.n);
+        gl.uniform1f(UW.pt, 1); gl.uniform1f(UW.mx, 7 * dpr); wBind(wind, wbq); gl.drawArrays(gl.POINTS, 0, wind.n); gl.disableVertexAttribArray(AW.q); gl.useProgram(pr);
+        gl.uniform1f(U.pt, 1); gl.uniform1f(U.mx, 6 * dpr); bind(cmeB); gl.drawArrays(gl.POINTS, 0, cmeB.n); }
       // overlay: Sun, planets, labels, CME tags
       g2.setTransform(dpr, 0, 0, dpr, 0, 0); g2.clearRect(0, 0, W, H); hits = [];
       if (mode === 'galaxy') { g2.font = '700 12px Inter, system-ui, sans-serif'; g2.textBaseline = 'middle';
@@ -254,7 +348,8 @@
           g2.font = '700 12px Inter, system-ui, sans-serif'; const lab = (frameK === 'lsr' ? tr('towards Hercules') : tr('towards Cygnus · around the galaxy')) + ' · ' + T.v + ' km/s';
           g2.fillStyle = 'rgba(0,0,0,.6)'; g2.fillRect(a[0] + 8, a[1] - 9, g2.measureText(lab).width + 10, 18); g2.fillStyle = '#FFE08A'; g2.fillText(lab, a[0] + 13, a[1] + 4); } }
       g2.font = '600 12px Inter, system-ui, sans-serif'; g2.textBaseline = 'middle';
-      ['Earth'].concat(ORB.filter(n => n !== 'Earth')).forEach(nm => { if (mode === 'helix' && !HX.includes(nm)) return; const p = planet(nm, now), q = proj(p); if (!q) return; const r = Math.max(2.5, EL[nm][3] * Math.min(cam.follow === nm ? 9 : 1.8, 1.6 / Math.sqrt(q[2])));   // a followed planet grows as you zoom in
+      ['Earth'].concat(ORB.filter(n => n !== 'Earth')).forEach(nm => { if (mode === 'helix' && !HX.includes(nm)) return; const p = planet(nm, now), q = proj(p); if (!q) return; let r = Math.max(2.5, EL[nm][3] * Math.min(cam.follow === nm ? 9 : 1.8, 1.6 / Math.sqrt(q[2])));   // a followed planet grows as you zoom in
+        if (magOn && nm === 'Earth') r = Math.max(3, MS * pxAU(q));   // the shield view: Earth at the schematic's scale
         ball(nm, p, q, r, s);
         if (nm === 'Earth') { g2.strokeStyle = 'rgba(90,169,255,.6)'; g2.lineWidth = 1.5; g2.beginPath(); g2.arc(q[0], q[1], r + 4, 0, 7); g2.stroke(); }
         const lab = tr(nm), tw = g2.measureText(lab).width, bx = [q[0] + r + 4, q[1] - 8, tw + 8, 16];
@@ -263,6 +358,7 @@
         g2.fillStyle = 'rgba(0,0,0,.55)'; g2.fillRect(...bx); g2.fillStyle = nm === 'Earth' ? '#9CCBFF' : '#DCE3EB'; g2.fillText(lab, q[0] + r + 8, q[1]); });
       if (mode !== 'helix') (build.active || []).forEach(({ c, r, ax }) => { const q = proj(ax.map(x => x * r)); if (!q) return; const lab = 'CME ' + Math.round(c.v) + ' km/s' + (c.ex ? ' · ' + tr('EXAMPLE') : c.est ? ' · ' + tr('estimate') : '');
         g2.fillStyle = 'rgba(0,0,0,.6)'; const tw = g2.measureText(lab).width; g2.fillRect(q[0] + 6, q[1] - 8, tw + 8, 16); g2.fillStyle = '#FFE2C2'; g2.fillText(lab, q[0] + 10, q[1]); });
+      if (magOn && mode === 'sys') magneto(planet('Earth', now));
       if (info) showInfo(info);
       dirty = false;
     }
@@ -301,18 +397,34 @@
       box.querySelector('button').onclick = () => { info = null; box.hidden = true; cam.follow = null; view(mode === 'helix' ? 'hx' : mode === 'galaxy' ? 'gx' : 'inner'); };
     }
     function frame(ts) {
-      if (mode === 'galaxy' && hPlay) { const dt = Math.min(100, ts - (hLast || ts)); gT += dt / 1000 * hRate * 4 * hDir; hDate(); dirty = true; }   // 1× = 4 million years per second
-      if (mode === 'helix' && hPlay) { const dt = Math.min(100, ts - (hLast || ts)); hTime += dt / 1000 * hRate * 0.25 * 365.25 * DAY * hDir; buildHelix(); hDate(); dirty = true; }   // 1× = a quarter year per second
-      hLast = ts; if (mode !== 'earth' && visible && (dirty || cam.goal || spin[0] || spin[1])) draw(); requestAnimationFrame(frame); }
-    function hDate() { const hd = el.querySelector('.s3d-hdate'); if (hd && document.activeElement !== hd && mode === 'helix') { try { hd.value = new Date(hTime).toISOString().slice(0, 10); } catch (e) {} } if (mode === 'galaxy') { el.querySelector('.s3d-t').textContent = Math.abs(gT) < 1 ? tr('Today') : gT > 0 ? tr('In {n} million years', { n: Math.round(gT) }) : tr('{n} million years ago', { n: Math.round(-gT) }); el.querySelector('.s3d-sub').textContent = tr('one lap around the galaxy ≈ 230 million years · up and down through the disc every ~70'); return; }
-      el.querySelector('.s3d-t').textContent = new Date(hTime).toLocaleDateString(window.LOC || 'en-GB', { month: 'long', year: 'numeric' });
-      el.querySelector('.s3d-sub').textContent = tr('the Sun moves {d} AU a year', { d: (kmsAU(TRAVEL[frameK].v) * 365.25).toFixed(1) }); }
+      const dt = Math.min(100, ts - (hLast || ts)) / 1000; hLast = ts;
+      if (!REDUCED) ph += dt * Math.min(1, rate);   // the wind's shimmer + the shield's particles (slow motion slows them too)
+      if (hPlay && mode !== 'earth' && dt > 0) { const sim = dt * rate * hDir; watch += Math.abs(sim);   // simulated seconds this frame
+        if (mode === 'galaxy') { gT += sim / (1e6 * YEAR); if (ts - tAt > 250 || rate > 1e9) { hDate(); tAt = ts; dirty = true; } }
+        else if (mode === 'helix') { hTime += sim * 1000; if (ts - hbAt > (rate > 3600 ? 40 : 1000)) { buildHelix(); hbAt = ts; dirty = true; } if (ts - tAt > 250) { hDate(); tAt = ts; } }
+        else { time += sim * 1000; if (ts - bAt > (rate > 600 ? 40 : 1000)) { build(); bAt = ts; } if (ts - tAt > 500) { title(); tAt = ts; } } }
+      if (mode === 'sys' && visible && (!REDUCED || magOn)) dirty = true;   // the wind and the shield are animated
+      if (mode !== 'earth' && visible && (dirty || cam.goal || spin[0] || spin[1])) draw(); requestAnimationFrame(frame); }
+    const kmTxt = km => km < 1e6 ? tr('{n} km', { n: Math.round(km).toLocaleString(window.LOC || 'en-GB') }) : km < 1.5e9 ? tr('{n} million km', { n: +(km / 1e6).toPrecision(3) }) : km < 9.46e12 ? tr('{n} AU', { n: +(km / AU_KM).toPrecision(3) }) : tr('{n} light years', { n: +(km / 9.4607e12).toPrecision(3) });
+    function rateTxt(r) { const a = Math.abs(r); if (Math.abs(a - 1) < .03) return tr('REAL TIME'); if (a < 1) return tr('SLOW MO ×{n}', { n: a.toFixed(a < .3 ? 2 : 1) });
+      for (const [d, k] of [[1e6 * YEAR, '{n} million years/s'], [YEAR, '{n} years/s'], [86400, '{n} days/s'], [3600, '{n} h/s'], [60, '{n} min/s']]) if (a >= d) return tr(k, { n: +(a / d).toPrecision(2) });
+      return '×' + Math.round(a); }
+    function rateUI() { const sl = el.querySelector('.s3d-rate'); if (document.activeElement !== sl) sl.value = posOf(Math.max(.1, rate)); el.querySelector('.s3d-rl').textContent = (hDir < 0 ? '◀ ' : '') + rateTxt(rate);
+      const b = el.querySelector('.s3d-hplay'); b.textContent = hPlay ? '⏸' : '▶'; b.setAttribute('aria-label', hPlay ? tr('Pause') : tr('Play')); el.querySelector('.s3d-hrev').setAttribute('aria-pressed', hDir < 0); }
+    function hDate() { const hd = el.querySelector('.s3d-hdate'); if (hd && document.activeElement !== hd && mode === 'helix') { try { hd.value = new Date(hTime).toISOString().slice(0, 10); } catch (e) {} }
+      const moved = tr('{d} since you started watching', { d: kmTxt(watch * (mode === 'galaxy' ? 230 : TRAVEL[frameK].v)) });
+      if (mode === 'galaxy') { const y = gT * 1e6; el.querySelector('.s3d-t').textContent = Math.abs(y) < 1 ? tr('Today') : Math.abs(gT) < 1 ? (y > 0 ? tr('In {n} years', { n: Math.round(y).toLocaleString(window.LOC || 'en-GB') }) : tr('{n} years ago', { n: Math.round(-y).toLocaleString(window.LOC || 'en-GB') })) : gT > 0 ? tr('In {n} million years', { n: Math.round(gT) }) : tr('{n} million years ago', { n: Math.round(-gT) });
+        el.querySelector('.s3d-sub').textContent = (Math.abs(gT) < .01 ? tr('the Sun circles the galaxy at 230 km/s') + ' · ' + moved : tr('one lap around the galaxy ≈ 230 million years · up and down through the disc every ~70')); return; }
+      el.querySelector('.s3d-t').textContent = rate > 86400 * 20 ? new Date(hTime).toLocaleDateString(window.LOC || 'en-GB', { month: 'long', year: 'numeric' }) : new Date(hTime).toLocaleString(window.LOC || 'en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: rate < 60 ? '2-digit' : undefined });
+      el.querySelector('.s3d-sub').textContent = tr('the Sun moves {d} AU a year', { d: (kmsAU(TRAVEL[frameK].v) * 365.25).toFixed(1) }) + ' · ' + moved; }
     function resize() { const r = el.getBoundingClientRect(); W = Math.max(200, r.width); H = Math.max(200, r.height); dpr = Math.min(2, devicePixelRatio || 1);
       [cv, ov].forEach(c => { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); c.style.width = W + 'px'; c.style.height = H + 'px'; }); dirty = true; }
-    function setTime(t) { if (!isFinite(t)) return; time = t; if (mode === 'helix') return; el.querySelector('.s3d-t').textContent = new Date(t).toLocaleString(window.LOC || 'en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: opts.tz ? opts.tz() : undefined });
+    function setTime(t) { if (!isFinite(t)) return; time = t; if (mode === 'helix') return; title(); build(); dirty = true; }
+    function title() { if (mode !== 'sys') return; const t = time;
+      el.querySelector('.s3d-t').textContent = new Date(t).toLocaleString(window.LOC || 'en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', second: hPlay && rate < 30 ? '2-digit' : undefined, timeZone: opts.tz ? opts.tz() : undefined });
+      if (magOn) return;   // the shield view writes its own status line
       const E = planet('Earth', t), q = cmes.filter(c => { const r = 0.1 + kmsAU(c.v) * (t - c.t) / DAY; return r > 0 && r < 3.4; }).length;
-      el.querySelector('.s3d-sub').textContent = tr('wind at Earth ≈ {v} km/s', { v: Math.round(vtab[Math.round((((lonOf(E) - OMEGA * t / DAY) / D2R) % 360 + 360) % 360) % 360]) }) + (q ? ' · ' + tr('{n} CME in flight', { n: q }) : '');
-      build(); dirty = true; }
+      el.querySelector('.s3d-sub').textContent = tr('wind at Earth ≈ {v} km/s', { v: Math.round(vtab[Math.round((((lonOf(E) - OMEGA * t / DAY) / D2R) % 360 + 360) % 360) % 360]) }) + (q ? ' · ' + tr('{n} CME in flight', { n: q }) : ''); }
     const VIEWS = { hx: null, inner: { dist: 3.4, pitch: .55, tgt: [0, 0, 0] }, all: { dist: 62, pitch: .7, tgt: [0, 0, 0] }, top: { dist: 4.2, pitch: 1.5, tgt: [0, 0, 0] } };
     function view(v) { cam.follow = null; spin = [0, 0];
       if (v === 'gx' || (mode === 'galaxy' && v === 'inner')) { cam.goal = { tgt: [0, 0, 0], dist: 34, pitch: .85, yaw: -0.6 }; dirty = true; return; }
@@ -351,8 +463,8 @@
       if (performance.now() - modeAt > 700) {
         if (mode === 'sys' && d > 400) return jump('galaxy');
         if (mode === 'galaxy' && d < .3) return jump('sys');
-        if (mode === 'sys' && d < .08 && window.Earth3D) { const E = planet('Earth', time); if (cam.follow === 'Earth' || Math.hypot(...cam.tgt.map((v, i) => v - E[i])) < .05) return jump('earth'); } }
-      cam.dist = Math.max(.08, Math.min(mode === 'galaxy' ? 70 : 400, d)); }
+        if (mode === 'sys' && d < .08 && window.Earth3D && !magOn) { const E = planet('Earth', time); if (cam.follow === 'Earth' || Math.hypot(...cam.tgt.map((v, i) => v - E[i])) < .05) return jump('earth'); } }
+      cam.dist = Math.max(magOn ? .025 : .08, Math.min(mode === 'galaxy' ? 70 : 400, d)); }
     function jump(m) {
       const from = mode; setMode(m, true);
       if (m === 'galaxy') { cam.tgt = sunGal(); cam.dist = .4; }                         // start at the Sun, fly out to the whole Milky Way
@@ -367,33 +479,46 @@
     el.tabIndex = 0;
     el.addEventListener('keydown', e => { const k = e.key; if (/^Arrow/.test(k)) { e.preventDefault(); if (k === 'ArrowLeft') cam.yaw -= .08; if (k === 'ArrowRight') cam.yaw += .08; if (k === 'ArrowUp') cam.pitch = Math.min(1.55, cam.pitch + .06); if (k === 'ArrowDown') cam.pitch = Math.max(-1.5, cam.pitch - .06); cam.goal = null; dirty = true; }
       else if (k === '+' || k === '=') zoom(1 / 1.2); else if (k === '-') zoom(1.2); else if (k === 'r' || k === 'R') view(mode === 'helix' ? 'hx' : mode === 'galaxy' ? 'gx' : 'inner');
-      else if (k === ' ' && mode === 'helix') { e.preventDefault(); togglePlay(); } else if (k === 'Escape' && el.classList.contains('s3d-fs')) el.querySelector('.s3d-full').click(); });
+      else if (k === ' ' && mode !== 'earth') { e.preventDefault(); togglePlay(); } else if (k === 'Escape' && el.classList.contains('s3d-fs')) el.querySelector('.s3d-full').click(); });
     // modes
-    const togglePlay = () => { hPlay = !hPlay; const b = el.querySelector('.s3d-hplay'); b.textContent = hPlay ? '⏸' : '▶'; b.setAttribute('aria-label', hPlay ? tr('Pause') : tr('Play')); hLast = 0; };
-    el.querySelector('.s3d-hplay').onclick = () => { if (hDir < 0) { hDir = 1; el.querySelector('.s3d-hrev').setAttribute('aria-pressed', false); if (hPlay) return; } togglePlay(); };
-    el.querySelector('.s3d-hrev').onclick = () => { hDir = hDir > 0 ? -1 : 1; el.querySelector('.s3d-hrev').setAttribute('aria-pressed', hDir < 0); if (!hPlay) togglePlay(); };
+    const togglePlay = () => { hPlay = !hPlay; hLast = 0; rateUI(); };
+    el.querySelector('.s3d-hplay').onclick = () => { if (hDir < 0) { hDir = 1; if (hPlay) { rateUI(); return; } } togglePlay(); };
+    el.querySelector('.s3d-hrev').onclick = () => { hDir = hDir > 0 ? -1 : 1; if (!hPlay) togglePlay(); else rateUI(); };
+    el.querySelector('.s3d-rate').oninput = e => { const r = rng(), p1 = posOf(1), v = +e.target.value, pv = Math.abs(v - p1) < 18 ? p1 : v;   // snaps to real time
+      rate = Math.abs(pv - p1) < 1 ? 1 : Math.pow(10, r[0] + pv / 1000 * (r[1] - r[0])); if (!hPlay) togglePlay(); else rateUI(); };
+    // NOW: back to this moment, real time, forwards
+    el.querySelector('.s3d-now').onclick = () => { rate = 1; hDir = 1; hPlay = true; watch = 0; if (mode === 'galaxy') { gT = 0; hDate(); } else if (mode === 'helix') { hTime = Date.now(); buildHelix(); hDate(); } else setTime(Date.now()); rateUI(); dirty = true; };
     el.querySelector('.s3d-hdate').onchange = e => { const t = Date.parse(e.target.value + 'T12:00:00Z'); if (isFinite(t)) { hTime = t; buildHelix(); hDate(); dirty = true; } };
-    el.querySelector('.s3d-hspd').onclick = e => { hRate = hRate === 1 ? 4 : hRate === 4 ? 16 : 1; e.target.textContent = hRate + '×'; };
     el.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { frameK = b.dataset.f; el.querySelectorAll('[data-f]').forEach(o => o.setAttribute('aria-pressed', o === b)); buildHelix(); hDate(); view('hx'); });
     let earth = null;
     function setMode(m, far) { modeAt = performance.now();
       if (m === 'earth') { if (!window.Earth3D) return; if (!earth) earth = Earth3D.create(el, { places: opts.places ? opts.places() : [], time: () => time, aurora: opts.aurora, onBack: () => setMode('sys'), onOut: () => { setMode('sys', true); cam.tgt = planet('Earth', time); cam.dist = .06; cam.goal = { dist: .4, pitch: .35 }; cam.follow = 'Earth'; dirty = true; } });   // fly out from Earth, still following it
-        if (hPlay) togglePlay(); mode = 'earth'; el.classList.add('ea'); el.classList.remove('hx'); el.querySelectorAll('[data-m]').forEach(o => o.setAttribute('aria-pressed', o.dataset.m === m)); info = null;
+        mode = 'earth'; magOff(); el.classList.add('ea'); el.classList.remove('hx'); el.querySelectorAll('[data-m]').forEach(o => o.setAttribute('aria-pressed', o.dataset.m === m)); info = null;
         const pl = opts.places ? opts.places()[0] : null; if (opts.places) earth.setPlaces(opts.places()); earth.show(pl ? pl.lat : 45.6, pl ? pl.lon : 25.6, far); return; }
       if (earth) earth.hide(); el.classList.remove('ea');
       mode = m; el.classList.toggle('hx', m === 'helix'); el.classList.toggle('gx', m === 'galaxy');
-      if (m === 'galaxy') { el.querySelectorAll('[data-m]').forEach(o => o.setAttribute('aria-pressed', o.dataset.m === m)); info = null; el.querySelector('.s3d-info').hidden = true; buildGalaxy(); hDate(); view('gx'); if (!hPlay) togglePlay(); dirty = true; return; } el.querySelectorAll('[data-m]').forEach(o => o.setAttribute('aria-pressed', o.dataset.m === m)); info = null; el.querySelector('.s3d-info').hidden = true;
-      if (m === 'helix') { hTime = time; buildHelix(); hDate(); view('hx'); if (!hPlay) togglePlay(); } else { if (hPlay) togglePlay(); build.orbT = null; setTime(time); view('inner'); } dirty = true; }
+      rate = 1; hDir = 1; hPlay = true; watch = 0; rateUI(); if (m !== 'sys') magOff();   // every view starts in real time
+      if (m === 'galaxy') { el.querySelectorAll('[data-m]').forEach(o => o.setAttribute('aria-pressed', o.dataset.m === m)); info = null; el.querySelector('.s3d-info').hidden = true; gT = 0; buildGalaxy(); hDate(); view('gx'); dirty = true; return; } el.querySelectorAll('[data-m]').forEach(o => o.setAttribute('aria-pressed', o.dataset.m === m)); info = null; el.querySelector('.s3d-info').hidden = true;
+      if (m === 'helix') { hTime = Date.now(); buildHelix(); hDate(); view('hx'); } else { build.orbT = null; setTime(time); view('inner'); } dirty = true; }
     el.querySelectorAll('[data-m]').forEach(b => b.onclick = () => setMode(b.dataset.m));
     el.querySelectorAll('[data-v]').forEach(b => b.onclick = () => view(b.dataset.v));
     // Sun filter: SDO's newest picture in visible light (sunspots) or one of three ultraviolet channels
     el.querySelector('.s3d-sunf').onclick = e => { sunI = (sunI + 1) % SUNF.length; e.currentTarget.textContent = '☀ ' + tr(SUNF[sunI][1]); dirty = true; };
     // example: a strong Earth-directed CME (1800 km/s, like May 2024) launched ~8 h before the clock, so it is on its way
-    el.querySelector('.s3d-cmex').onclick = e => { cmeEx = !cmeEx; exT = time - 0.35 * DAY; e.currentTarget.setAttribute('aria-pressed', cmeEx); if (cmeEx) view('inner'); build(); dirty = true; };
+    el.querySelector('.s3d-cmex').onclick = e => { cmeEx = !cmeEx; exT = time - 0.35 * DAY; e.currentTarget.setAttribute('aria-pressed', cmeEx); if (cmeEx && !magOn) view('inner'); build(); dirty = true; };
+    // the shield: fly to Earth, seen from the side with the Sun to one side
+    el.querySelector('.s3d-mag').onclick = () => { if (magOn) { magOff(); view('inner'); return; }
+      magOn = true; el.classList.add('mag'); el.querySelector('.s3d-mag').setAttribute('aria-pressed', true); info = null; el.querySelector('.s3d-info').hidden = true;
+      const E = planet('Earth', time), a = Math.atan2(E[2], E[0]); cam.follow = null; cam.goal = { tgt: E, dist: .13, pitch: .16, yaw: a + Math.PI / 2 - .3 }; setTimeout(() => { if (magOn) cam.follow = 'Earth'; }, 900); dirty = true; };
+    // CME impact: the next Earth-bound CME about 2 h out (or the example one), then 15 min per second so the hit takes seconds
+    el.querySelector('.s3d-imp').onclick = () => { const st = cmeAtEarth();
+      if (st.eta == null && magF < .2) { cmeEx = true; el.querySelector('.s3d-cmex').setAttribute('aria-pressed', true); exT = time - (.9 - .1) / kmsAU(1800) * DAY; }
+      else if (st.eta != null) time += Math.max(0, st.eta - 2) * 3600e3;
+      rate = 900; hDir = 1; hPlay = true; rateUI(); build(); title(); dirty = true; };
     el.querySelector('.s3d-full').onclick = () => { el.classList.toggle('s3d-fs'); document.body.classList.toggle('s3d-lock', el.classList.contains('s3d-fs')); setTimeout(resize, 60); };
     if (window.ResizeObserver) new ResizeObserver(resize).observe(el); else addEventListener('resize', resize);
     if (window.IntersectionObserver) new IntersectionObserver(es => { visible = es[0].isIntersecting; if (visible) dirty = true; }).observe(el);
-    resize(); setWind(opts.wind); setCmes(opts.cmes); setTime(opts.time || Date.now()); requestAnimationFrame(frame);
+    rateUI(); resize(); setWind(opts.wind); setCmes(opts.cmes); setTime(opts.time || Date.now()); requestAnimationFrame(frame);
     return { setTime, setWind: s => { setWind(s); setTime(time); }, setCmes: c => { setCmes(c); setTime(time); }, view, resize, canvas: () => { draw(); const c = document.createElement('canvas'); c.width = cv.width; c.height = cv.height; const g = c.getContext('2d'); g.drawImage(cv, 0, 0); g.drawImage(ov, 0, 0); return c; } };
   }
   window.Space3D = { create, planet };
