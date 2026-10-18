@@ -794,7 +794,7 @@ function sunShow(i) {
 const VID = id => ({ CCOR1: 'https://services.swpc.noaa.gov/products/ccor1/mp4s/ccor1_last_24hrs.mp4', CCOR2: 'https://services.swpc.noaa.gov/products/ccor2/mp4s/ccor2_last_24hrs.mp4',
   C2: 'https://soho.nascom.nasa.gov/data/LATEST/current_c2.mp4', C3: CLIPS + 'sun-C3.mp4' })[id] || 'https://sdo.gsfc.nasa.gov/assets/img/latest/mpeg/latest_512_' + id + '.mp4';
 const VSPAN = id => /^CCOR/.test(id) ? T('LAST 24 H') : T('LAST 48 H');
-const HASVID = id => !['C3', 'C2', 'CCOR1', 'CCOR2'].includes(id);   // coronagraph movies have the loop's own cadence
+const HASVID = id => id === 'CCOR1' || id === 'CCOR2';   // NOAA's own CCOR movies
 let vidOn = false;
 function vidStart() {   // the filter's official movie, smooth (decoded video) — separate from the shared clock
   const v = $('sunVid'), id = SUNF[sun.k][0], u = VID(id); if (!v) return false; vidOn = true; $('sunVidB').setAttribute('aria-pressed', 'true'); $('sunVidB').textContent = '■ VIDEO';
