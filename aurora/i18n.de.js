@@ -661,5 +661,9 @@ window.I18N_DICT.de = {
   "its fast wind has already passed": "sein schneller Wind ist schon vorbei",
   "fast wind at Earth around <b>{a} – {b}</b>": "schneller Wind an der Erde etwa <b>{a} – {b}</b>",
   "{p}% of the disc": "{p} % der Scheibe",
-  "polar hole": "Polarloch"
+  "polar hole": "Polarloch",
+  "X-RAYS · GOES · LAST 3 DAYS": "RÖNTGEN · GOES · LETZTE 3 TAGE",
+  "X-ray flux of the last 3 days": "Röntgenfluss der letzten 3 Tage",
+  "GOES data unavailable right now.": "GOES-Daten gerade nicht verfügbar.",
+  "↑ X-RAY CHART, FLARES AND WHERE ON THE SUN THEY CAME FROM": "↑ RÖNTGENKURVE, FLARES UND WO AUF DER SONNE SIE ENTSTANDEN"
 };

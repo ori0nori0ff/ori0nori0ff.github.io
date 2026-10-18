@@ -146,11 +146,12 @@
 .flr { display: flex; justify-content: space-between; border-top: 1px solid #1A1D23; padding: 7px 0; font-size: 10px; }
 .flr:first-child { border-top: 0; }
 .flr b { font: 600 15px 'Barlow Condensed', sans-serif; }
+.swjump { margin-top: 12px; font: 700 10.5px 'JetBrains Mono', monospace; letter-spacing: .06em; color: #7BE0FF; background: none; border: 1px solid #7BE0FF66; border-radius: 99px; padding: 9px 12px; cursor: pointer; text-align: left; }
 .flr .flw { flex: 1; margin: 0 10px; color: #A3B0C2; font: 600 10.5px 'JetBrains Mono', monospace; align-self: center; } .flr .flw b { font: inherit; color: #7BE0FF; }
-#srHost { display: grid; grid-template-columns: minmax(0, 560px) minmax(0, 1fr); column-gap: 24px; align-items: start; }
-#srHost > .sr-bar, #srHost > .sr-box, #srHost > .sr-meta, #srHost > .sr-lg { grid-column: 1; }
-#srHost > .sr-sum { grid-column: 2; grid-row: 1; margin-top: 0; } #srHost > .sr-list { grid-column: 2; grid-row: 2 / span 4; }
-@media (max-width: 899px) { #srHost { display: block; } }
+#srHost { display: grid; grid-template-columns: minmax(0, 560px) minmax(0, 1fr); column-gap: 28px; align-items: start; }
+#srHost .sr-r > .sr-sum { margin-top: 0; } #srHost .sr-l { position: sticky; top: 120px; }
+#srXChart { width: 100%; display: block; margin-top: 8px; }
+@media (max-width: 899px) { #srHost { display: block; } #srHost .sr-l { position: static; } #srHost .sr-r { margin-top: 6px; } }
 .scale { background: #0F1216; border-radius: 12px; padding: 10px; text-align: center; }
 .scale b { display: block; font: 600 26px/1 'Barlow Condensed', sans-serif; }
 .scale small { display: block; color: var(--t3); font-size: 8px; letter-spacing: 1px; margin-top: 4px; text-transform: uppercase; }
@@ -742,7 +743,7 @@ $('sunChips').innerHTML = SUNF.map((f, i) => `<button data-i="${i}" style="color
 $('sunChips').onclick = e => { const b = e.target.closest('button'); if (b) sunPick(+b.dataset.i); };
 const flWhere = (RI, f) => { const i = RI && window.SunRegions && SunRegions.flareInfo(RI, f.begin_time); if (!i || !i.region) return '';
   return `<span class="flw">${i.region}${i.lat != null ? ' · ' + SunRegions.where(i) : ''}${i.earth ? ' · <b>↯ ' + T('faced Earth') + '</b>' : ''}</span>`; };
-(function () { const h = document.getElementById('srHost'); if (!h) return; let done = false; const go = () => { if (!done && window.SunRegions) { done = true; SunRegions.mount(h, { limit: 6 }); } };
+(function () { const h = document.getElementById('srHost'); if (!h) return; let done = false; const go = () => { if (!done && window.SunRegions) { done = true; SunRegions.mount(h, { limit: 6 }); (function x() { window.srXray ? srXray() : setTimeout(x, 800); })(); } };
   if (window.IntersectionObserver) new IntersectionObserver((e, o) => { if (e.some(x => x.isIntersecting)) { o.disconnect(); go(); } }, { rootMargin: '600px' }).observe(h); else go(); })();
 async function loadSun() {
   try { sun.F = await j('sun/frames.json?t=' + Math.floor(Date.now() / 300000)); } catch (e) { sun.F = null; }
@@ -1452,8 +1453,8 @@ async function goes(k, force) {   // loaded only when its tab is opened (X-rays 
 const xClass = f => { const c = f >= 1e-4 ? ['X', 1e-4] : f >= 1e-5 ? ['M', 1e-5] : f >= 1e-6 ? ['C', 1e-6] : f >= 1e-7 ? ['B', 1e-7] : ['A', 1e-8]; return c[0] + (f / c[1]).toFixed(1); };
 const sciT = v => { const e = Math.round(Math.log10(v)); return e === 0 ? '1' : e === 1 ? '10' : '10' + String(e).replace('-', '⁻').replace(/\d/g, d => '⁰¹²³⁴⁵⁶⁷⁸⁹'[d]); };
 // log-scale chart over the last 3 days: series [{pts, col, w}], threshold lines [{v, label, col}], right-side band labels
-function logChart(series, lo, hi, lines, bands) {
-  const svg = $('swChart'), W = svg.clientWidth || 340, H = Math.max(190, svg.clientHeight || 0), L = 34, R = bands ? 16 : 6, T = 8, B = 18, now = Date.now(), from = now - 3 * 864e5;
+function logChart(series, lo, hi, lines, bands, svg) {
+  svg = svg || $('swChart'); const W = svg.clientWidth || 340, H = Math.max(190, svg.clientHeight || 0), L = 34, R = bands ? 16 : 6, T = 8, B = 18, now = Date.now(), from = now - 3 * 864e5;
   const x = t => L + (t - from) / (now - from) * (W - L - R), y = v => T + (Math.log10(hi) - Math.log10(Math.max(lo, Math.min(hi, v)))) / (Math.log10(hi) - Math.log10(lo)) * (H - T - B);
   let s = `<rect x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" rx="6" fill="#0F1216"/>`;
   for (let e = Math.ceil(Math.log10(lo)); e <= Math.floor(Math.log10(hi)); e++) { const v = 10 ** e;
@@ -1467,6 +1468,20 @@ function logChart(series, lo, hi, lines, bands) {
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.style.height = H + 'px'; svg.innerHTML = s; svg.dataset.tx = JSON.stringify([from, now, x(from), x(now), H]); window.tcursor && tcursor();
 }
 const legend = items => `<div class="enlleg" style="margin-top:6px">${items.map(([c, t]) => `<span><i style="background:${c}"></i>${t}</span>`).join('')}</div>`;
+async function srXray() {   // X-rays (GOES, last 3 days) + the biggest flares of 7 days, under the region lists
+  const box = document.querySelector('#srHost .sr-x'); if (!box) return;
+  if (!box.firstChild) box.innerHTML = `<div class="sr-h">${T('X-RAYS · GOES · LAST 3 DAYS')}</div><div class="swnow" id="srXNow">${T('Loading GOES data…')}</div><svg id="srXChart" role="img" aria-label="${T('X-ray flux of the last 3 days')}"></svg><div id="srXList"></div>`;
+  try { const D = await goes('r'), lg = D.ser['0.1-0.8nm'] || [], sh = D.ser['0.05-0.4nm'] || [], cur = lg.length ? lg[lg.length - 1][1] : 0, mx = lg.reduce((a, p) => p[1] > a[1] ? p : a, [0, 0]);
+    logChart([{ pts: sh, col: '#5AA9FF', w: 1 }, { pts: lg, col: '#FF5A5A', w: 1.4 }], 1e-9, 1e-2, [{ v: 1e-5, label: 'R1 · M-CLASS', col: '#FFA040' }, { v: 1e-4, label: 'R3 · X-CLASS', col: '#FF4444' }], [[1e-8, 'A'], [1e-7, 'B'], [1e-6, 'C'], [1e-5, 'M'], [1e-4, 'X']], $('srXChart'));
+    $('srXNow').innerHTML = T('X-rays now <b>{a}</b> · strongest in 3 days <b style="color:{c}">{b}</b> {t}.', { a: xClass(cur), c: mx[1] >= 1e-5 ? '#FFA040' : '#E0E0E0', b: xClass(mx[1]), t: dayHm(mx[0]) });
+    const fl = await j(API + 'json/goes/primary/xray-flares-7-day.json').catch(() => []), RI = await SunRegions.load().catch(() => null);
+    const big = fl.filter(f => /^[MX]/.test(f.max_class)), show = (big.length ? big : fl.filter(f => /^C/.test(f.max_class)).sort((a, b) => b.max_xrlong - a.max_xrlong).slice(0, 3)).sort((a, b) => Date.parse(b.max_time) - Date.parse(a.max_time)).slice(0, 6);
+    $('srXList').innerHTML = legend([['#FF5A5A', T('0.1–0.8 NM · SETS THE CLASS')], ['#5AA9FF', '0.05–0.4 NM']])
+      + `<div class="lbl" style="margin-top:12px">${big.length ? T('M / X flares') : T('Biggest flares')} · ${T('last 7 days')}</div>`
+      + (show.length ? show.map(f => `<div class="flr"><b style="color:${/^X/.test(f.max_class) ? '#FF4444' : /^M/.test(f.max_class) ? '#FFA040' : '#E0E0E0'}">${f.max_class}</b>${flWhere(RI, f)}<span>${dayHm(Date.parse(f.max_time))}</span></div>`).join('') : '<div class="loading">' + T('NO FLARES') + '</div>');
+  } catch (e) { $('srXNow').textContent = T('GOES data unavailable right now.'); }
+}
+window.srXray = srXray;
 const HOW = {
   g: T(`<p><b>G = geomagnetic storms</b>: the solar wind shaking Earth's magnetic field (the measured solar wind and Kp above show it building). G1 = Kp 5 … G5 = Kp 9.</p>
     <p><b>What it affects:</b> G1–G2: weak power-grid fluctuations, satellite orientation, aurora in the far north. G3: GPS / HF radio problems, satellite drag, aurora into central Europe. G4–G5: power grids at risk, GPS degraded for hours, aurora overhead in Romania (May 2024 was G5).</p>
@@ -1498,14 +1513,11 @@ async function drawSw() {
   $('swNow').textContent = T('Loading GOES data…');
   try { const D = await goes(swTab); if (swTab !== (D === S.gr ? 'r' : D === S.gs ? 's' : 'e')) return;
     if (swTab === 'r') {
-      const lg = D.ser['0.1-0.8nm'] || [], sh = D.ser['0.05-0.4nm'] || [], cur = lg.length ? lg[lg.length - 1][1] : 0, mx = lg.reduce((a, p) => p[1] > a[1] ? p : a, [0, 0]);
-      logChart([{ pts: sh, col: '#5AA9FF', w: 1 }, { pts: lg, col: '#FF5A5A', w: 1.4 }], 1e-9, 1e-2, [{ v: 1e-5, label: 'R1 · M-CLASS', col: '#FFA040' }, { v: 1e-4, label: 'R3 · X-CLASS', col: '#FF4444' }], [[1e-8, 'A'], [1e-7, 'B'], [1e-6, 'C'], [1e-5, 'M'], [1e-4, 'X']]);
+      const lg = D.ser['0.1-0.8nm'] || [], cur = lg.length ? lg[lg.length - 1][1] : 0, mx = lg.reduce((a, p) => p[1] > a[1] ? p : a, [0, 0]);
+      $('swChart').style.display = 'none'; $('swChart').innerHTML = ''; delete $('swChart').dataset.tx;
       $('swNow').innerHTML = T('X-rays now <b>{a}</b> · strongest in 3 days <b style="color:{c}">{b}</b> {t}.', { a: xClass(cur), c: mx[1] >= 1e-5 ? '#FFA040' : '#E0E0E0', b: xClass(mx[1]), t: dayHm(mx[0]) });
-      const fl = await j(API + 'json/goes/primary/xray-flares-7-day.json').catch(() => []), RI = window.SunRegions ? await SunRegions.load().catch(() => null) : null;
-      const big = fl.filter(f => /^[MX]/.test(f.max_class)), show = (big.length ? big : fl.filter(f => /^C/.test(f.max_class)).sort((a, b) => b.max_xrlong - a.max_xrlong).slice(0, 3)).sort((a, b) => Date.parse(b.max_time) - Date.parse(a.max_time)).slice(0, 6);
-      $('swList').innerHTML = legend([['#FF5A5A', T('0.1–0.8 NM · SETS THE CLASS')], ['#5AA9FF', '0.05–0.4 NM']])
-        + `<div class="lbl" style="margin-top:12px">${big.length ? T('M / X flares') : T('Biggest flares')} · ${T('last 7 days')}</div>`
-        + (show.length ? show.map(f => `<div class="flr"><b style="color:${/^X/.test(f.max_class) ? '#FF4444' : /^M/.test(f.max_class) ? '#FFA040' : '#E0E0E0'}">${f.max_class}</b>${flWhere(RI, f)}<span>${dayHm(Date.parse(f.max_time))}</span></div>`).join('') : '<div class="loading">' + T('NO FLARES') + '</div>');
+      $('swList').innerHTML = `<button class="swjump" id="swJump">${T('↑ X-RAY CHART, FLARES AND WHERE ON THE SUN THEY CAME FROM')}</button>`;
+      $('swJump').onclick = () => $('secReg').scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'start' });
     } else if (swTab === 's') {
       const p10 = D.ser['>=10 MeV'] || [], cur = p10.length ? p10[p10.length - 1][1] : 0, lvl = cur >= 1e5 ? 5 : cur >= 1e4 ? 4 : cur >= 1e3 ? 3 : cur >= 100 ? 2 : cur >= 10 ? 1 : 0;
       logChart([{ pts: D.ser['>=100 MeV'] || [], col: '#5AA9FF', w: 1 }, { pts: D.ser['>=50 MeV'] || [], col: '#B388FF', w: 1 }, { pts: p10, col: '#E8C766', w: 1.5 }], 1e-2, 1e5,
@@ -1581,7 +1593,8 @@ async function loadDeep(force) {
 }
 if (window.ResizeObserver) { const seen = new WeakMap(); const ro = new ResizeObserver(es => es.forEach(e => { const h = Math.round(e.contentRect.height), w = Math.round(e.contentRect.width), k = w + 'x' + h;
     if (seen.get(e.target) === k) return; seen.set(e.target, k);
-    if (e.target.id === 'kpchart' && S.kpList) drawKpChart(S.kpList); if (e.target.id === 'swChart' && swTab !== 'g') drawSw(); })); ['kpchart', 'swChart'].forEach(id => ro.observe($(id))); }
+    if (e.target.id === 'kpchart' && S.kpList) drawKpChart(S.kpList); if (e.target.id === 'swChart' && swTab !== 'g') drawSw(); if (e.target.id === 'srXChart' && S.gr) srXray(); })); ['kpchart', 'swChart'].forEach(id => ro.observe($(id)));
+  const sx = () => { const c = $('srXChart'); if (c) ro.observe(c); else setTimeout(sx, 1500); }; sx(); }
 addEventListener('resize', () => { if (S.kpList) drawKpChart(S.kpList); if (S.cyc) drawCycles(); if (S.wind) drawWind(); if (swTab !== 'g') drawSw(); });
 window.redrawDeep = () => { if (S.kpNow != null) drawKpNow(S.kpNow); if (S.kpList) drawKpChart(S.kpList); };
 loadDeep(); setInterval(loadDeep, 10 * 60000);

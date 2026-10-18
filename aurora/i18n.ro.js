@@ -661,5 +661,9 @@ window.I18N_DICT.ro = {
   "its fast wind has already passed": "vântul ei rapid a trecut deja",
   "fast wind at Earth around <b>{a} – {b}</b>": "vânt rapid la Pământ în jur de <b>{a} – {b}</b>",
   "{p}% of the disc": "{p}% din disc",
-  "polar hole": "gaură polară"
+  "polar hole": "gaură polară",
+  "X-RAYS · GOES · LAST 3 DAYS": "RAZE X · GOES · ULTIMELE 3 ZILE",
+  "X-ray flux of the last 3 days": "Fluxul de raze X din ultimele 3 zile",
+  "GOES data unavailable right now.": "Datele GOES nu sunt disponibile acum.",
+  "↑ X-RAY CHART, FLARES AND WHERE ON THE SUN THEY CAME FROM": "↑ GRAFICUL RAZELOR X, ERUPȚIILE ȘI DE UNDE DE PE SOARE AU VENIT"
 };

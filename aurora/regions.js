@@ -99,7 +99,7 @@
   function flareInfo(D, begin) { const t = utc(begin); let b = null; D.flares.forEach(f => { if (Math.abs(f.t - t) <= 4 * 60e3 && (!b || Math.abs(f.t - t) < Math.abs(b.t - t))) b = f; }); return b; }
   const where = f => f.lat == null ? '' : `${f.lat < 0 ? 'S' : 'N'}${String(Math.abs(Math.round(f.lat))).padStart(2, '0')}${f.lon < 0 ? 'E' : 'W'}${Math.abs(f.lon) >= 89 ? ' ' + tr('LIMB') : String(Math.abs(Math.round(f.lon))).padStart(2, '0')}`;   // just behind the edge: X-rays still reach us
 
-  const CSS = `.sr-bar{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 0 8px}.sr-bar::-webkit-scrollbar{display:none}
+  const CSS = `.sr-bar{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}.sr-sep{flex:0 0 6px}.sr-bar::-webkit-scrollbar{display:none}
 .sr-b{flex:none;font:700 10.5px/1 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.05em;color:#C9D1DB;background:none;border:1px solid #3A414D;border-radius:99px;padding:8px 10px;cursor:pointer}
 .sr-b[aria-pressed=true]{background:#FFE600;color:#0A0A0A;border-color:#FFE600}.sr-b:focus-visible{outline:2px solid #FFE600;outline-offset:2px}
 .sr-box{position:relative;width:100%;aspect-ratio:1;background:#000;border-radius:10px;overflow:hidden;max-width:560px;margin:0 auto}.sr-box img,.sr-box canvas{position:absolute;inset:0;width:100%;height:100%}
@@ -117,12 +117,12 @@
     o = o || {};
     if (!document.getElementById('srCss')) { const s = document.createElement('style'); s.id = 'srCss'; s.textContent = CSS; document.head.appendChild(s); }
     let F = 0, D = null, HO = null, sel = null, selH = null, mk = true, ch = true, zone = true, all = false;
-    el.innerHTML = `<div class="sr-bar">${FILT.map((f, i) => `<button class="sr-b" data-f="${i}" aria-pressed="${i === F}">${tr(f[1])}</button>`).join('')}
-      <span style="flex:1"></span><button class="sr-b" data-k="mk" aria-pressed="true">◎ ${tr('REGIONS')}</button><button class="sr-b" data-k="ch" aria-pressed="true">◐ ${tr('CORONAL HOLES')}</button><button class="sr-b" data-k="zone" aria-pressed="true">↯ ${tr('EARTH-FACING')}</button></div>
+    el.innerHTML = `<div class="sr-l"><div class="sr-bar">${FILT.map((f, i) => `<button class="sr-b" data-f="${i}" aria-pressed="${i === F}">${tr(f[1])}</button>`).join('')}
+      <span class="sr-sep"></span><button class="sr-b" data-k="mk" aria-pressed="true">◎ ${tr('REGIONS')}</button><button class="sr-b" data-k="ch" aria-pressed="true">◐ ${tr('CORONAL HOLES')}</button><button class="sr-b" data-k="zone" aria-pressed="true">↯ ${tr('EARTH-FACING')}</button></div>
       <div class="sr-box"><img alt="${tr('The Sun now with its active regions')}"><canvas role="img" aria-label="${tr('Active regions and flares of the last 24 hours on the Sun')}"></canvas></div>
       <div class="sr-meta">${tr('LOADING…')}</div>
-      <div class="sr-lg"><span><i style="background:#FFE600"></i>${tr('C flare')}</span><span><i style="background:#FFA040"></i>${tr('M flare')}</span><span><i style="background:#FF4444"></i>${tr('X flare')}</span><span><i style="background:#3EE08F"></i>${tr('coronal hole')}</span><span><i style="background:#7BE0FF;opacity:.6"></i>${tr('faces Earth')}</span></div>
-      <div class="sr-sum"></div><div class="sr-list"></div><div class="sr-h">${tr('CORONAL HOLES · FAST SOLAR WIND')}</div><div class="sr-holes"><div class="sr-s">${tr('LOADING…')}</div></div>`;
+      <div class="sr-lg"><span><i style="background:#FFE600"></i>${tr('C flare')}</span><span><i style="background:#FFA040"></i>${tr('M flare')}</span><span><i style="background:#FF4444"></i>${tr('X flare')}</span><span><i style="background:#3EE08F"></i>${tr('coronal hole')}</span><span><i style="background:#7BE0FF;opacity:.6"></i>${tr('faces Earth')}</span></div></div><div class="sr-r">
+      <div class="sr-sum"></div><div class="sr-list"></div><div class="sr-h">${tr('CORONAL HOLES · FAST SOLAR WIND')}</div><div class="sr-holes"><div class="sr-s">${tr('LOADING…')}</div></div><div class="sr-x"></div></div>`;
     const q = s => el.querySelector(s), im = q('img'), cv = q('canvas'), g = cv.getContext('2d');
     el.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { F = +b.dataset.f; el.querySelectorAll('[data-f]').forEach(x => x.setAttribute('aria-pressed', +x.dataset.f === F)); im.src = imgUrl(FILT[F][0]); });
     el.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { const kk = b.dataset.k; if (kk === 'mk') mk = !mk; else if (kk === 'ch') ch = !ch; else zone = !zone; b.setAttribute('aria-pressed', kk === 'mk' ? mk : kk === 'ch' ? ch : zone); draw(); });
