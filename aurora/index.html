@@ -747,45 +747,54 @@ function sunPick(k) {
   document.querySelectorAll('#sunChips button').forEach((b, i) => { const on = i === sun.k; b.style.background = on ? SUNF[i][2] : 'none'; b.style.color = on ? '#0A0A0A' : SUNF[i][2];
     if (on && b.parentNode.scrollWidth > b.parentNode.clientWidth) b.parentNode.scrollTo({ left: b.offsetLeft - 20, behavior: 'smooth' }); });
   $('sunLbl').textContent = f[1]; $('sunDot').style.background = f[2]; $('sunCount').textContent = (sun.k + 1) + ' / ' + SUNF.length;
-  $('sunHelp').innerHTML = f[3]; $('sunClip').href = CLIPS + 'sun-' + f[0] + '.mp4'; $('sunClip').setAttribute('download', 'sun-' + f[0] + '.mp4');
+  const ownClip = !['CCOR1', 'CCOR2', 'C2', 'HMIBC'].includes(f[0]);   // the bot renders clips for its own lists only
+  $('sunHelp').innerHTML = f[3]; $('sunClip').href = ownClip ? CLIPS + 'sun-' + f[0] + '.mp4' : VID(f[0]); $('sunClip').setAttribute('download', 'sun-' + f[0] + '.mp4');
+  $('sunVidB').style.display = HASVID(f[0]) ? '' : 'none';
   sunStatus(); clearInterval(sun.timer); sun.imgs = []; const wasVid = vidOn; vidStop();
   if (wasVid) setTimeout(() => { if (seq === sun.seq) vidStart(); }, 0);   // switching filter keeps the movie going
   if (!fr.length) { const u = latestOf(f) + '?t=' + Math.floor(Date.now() / 600000); sunImgSrc(u); $('sunSave').href = u; $('sunTime').textContent = $('sunFTime').textContent = T('LATEST');
     $('sunSlide').max = $('sunFSlide').max = 0; $('sunLoad').textContent = ''; return; }
   $('sunSlide').max = $('sunFSlide').max = 1000; sun.i = fr.length - 1;
-  // preload newest first; the loop starts once most of it is in
+  // preload light (512 px) frames, starting where the clock is and going the way it plays — so a switch while playing catches up fast
   let done = 0; sun.imgs = fr.map(() => null);
-  fr.map((_, i) => fr.length - 1 - i).forEach((i, n) => setTimeout(() => { if (seq !== sun.seq) return;
+  const st = typeof sy !== 'undefined' && sy.on ? nearestT(fr.length, k => fr[k][0], Math.min(sy.t, fr[fr.length - 1][0])) : fr.length - 1, dirn = typeof sy !== 'undefined' && sy.dir < 0 ? -1 : 1;
+  const order = st === fr.length - 1 && !(typeof sy !== 'undefined' && sy.timer) ? fr.map((_, i) => fr.length - 1 - i) : fr.map((_, n) => ((st + dirn * n) % fr.length + fr.length) % fr.length);
+  order.forEach((i, n) => setTimeout(() => { if (seq !== sun.seq) return;
     const im = new Image(); im.onload = im.onerror = () => { if (seq !== sun.seq) return; done++;
       $('sunLoad').textContent = done < fr.length ? T('LOADING {p}%', { p: Math.round(done / fr.length * 100) }) : '';
       if (done === Math.ceil(fr.length * .6) && sy.on) syShow(sy.t); };
-    im.src = small(fr[i][1]); sun.imgs[i] = im; }, n * 15));
+    im.src = lo(fr[i][1]); sun.imgs[i] = im; }, n * 15));
   sunShow(sun.i); if (typeof sy !== 'undefined' && sy.on) syShow(sy.t);
 }
 // two stacked pictures: the next frame is decoded off-screen, then swapped in at once (no half-loaded frames)
 // 512 px frames only where they're enough (small phone boxes); 1024 px elsewhere so the loop stays sharp
 const small = u => ($('sunBox').clientWidth || 400) * (devicePixelRatio || 1) > 720 ? u : u.replace('_1024_', '_512_');
-let sunTop = 0, sunSeq = 0;
+const lo = u => u.replace('_1024_', '_512_');   // what plays (and is preloaded); a paused frame is shown sharp
+let sunTop = 0, sunSeq = 0, sunSwapAt = 0;
 function sunImgSrc(u, fade) {
   $('sunFImg').src = u; const A = [$('sunImg'), $('sunImg2')], cur = A[sunTop], nxt = A[1 - sunTop], seq = ++sunSeq;
   if (cur.getAttribute('src') === u) return;
   if (!fade || REDUCED) { cur.src = u; cur.style.opacity = 1; nxt.style.opacity = 0; return; }
+  const swap = () => { nxt.src = u; nxt.style.opacity = 1; nxt.style.zIndex = 2; cur.style.zIndex = 1; cur.style.opacity = 0; sunTop = 1 - sunTop; sunSwapAt = performance.now(); };
+  // already preloaded → show it now (the clock asks for a new frame every 80 ms, faster than a decode round-trip)
+  if (sun.imgs.some(im => im && im.complete && im.naturalWidth && im.src === new URL(u, location.href).href)) { swap(); return; }
   const im = new Image(); im.src = u;
   (im.decode ? im.decode() : new Promise(r => { im.onload = im.onerror = r; })).catch(() => {}).then(() => {
-    if (seq !== sunSeq) return;
-    nxt.src = u; nxt.style.opacity = 1; nxt.style.zIndex = 2; cur.style.zIndex = 1; cur.style.opacity = 0; sunTop = 1 - sunTop;
+    if (seq !== sunSeq && performance.now() - sunSwapAt < 250) return;   // a newer frame was asked for — unless nothing changed for a while
+    swap();
   });
 }
 function sunShow(i) {
   const fr = sunFr(); if (!fr.length) return; sun.i = (i + fr.length) % fr.length;
   const u = fr[sun.i][1];
-  const playing = sun.play || !!sy.timer; sunImgSrc(playing ? small(u) : u, playing); $('sunSave').href = hiRes(u);   // playing → light 512 px frames, faded; paused → the sharp one
+  const playing = sun.play || !!sy.timer; sunImgSrc(playing ? lo(u) : u, playing); $('sunSave').href = hiRes(u);   // playing → light 512 px frames, faded; paused → the sharp one
   $('sunTime').textContent = $('sunFTime').textContent = sunT(fr[sun.i][0]); $('sunSlide').value = $('sunFSlide').value = toPos(fr[sun.i][0]);
   const ax = axis(); $('sunLbl').textContent = SUNF[sun.k][1] + (sun.i === fr.length - 1 && ax && ax.b > fr[sun.i][0] + 3600e3 ? ' · ' + T('LATEST') : '');   // later times = only the forecast moves on
 }
 const VID = id => ({ CCOR1: 'https://services.swpc.noaa.gov/products/ccor1/mp4s/ccor1_last_24hrs.mp4', CCOR2: 'https://services.swpc.noaa.gov/products/ccor2/mp4s/ccor2_last_24hrs.mp4',
   C2: 'https://soho.nascom.nasa.gov/data/LATEST/current_c2.mp4', C3: CLIPS + 'sun-C3.mp4' })[id] || 'https://sdo.gsfc.nasa.gov/assets/img/latest/mpeg/latest_512_' + id + '.mp4';
 const VSPAN = id => /^CCOR/.test(id) ? T('LAST 24 H') : T('LAST 48 H');
+const HASVID = id => !['C3', 'C2', 'CCOR1', 'CCOR2'].includes(id);   // coronagraph movies have the loop's own cadence
 let vidOn = false;
 function vidStart() {   // the filter's official movie, smooth (decoded video) — separate from the shared clock
   const v = $('sunVid'), id = SUNF[sun.k][0], u = VID(id); if (!v) return false; vidOn = true; $('sunVidB').setAttribute('aria-pressed', 'true'); $('sunVidB').textContent = '■ VIDEO';
@@ -1061,7 +1070,7 @@ function syReady(t) {
 function syStart() {
   if (!syRange()) { toast(T('Still loading the pictures…')); return; }
   sy.on = true; playLabel(true); if (sy.dir > 0 && (!sy.t || sy.t >= sy.b)) sy.t = sy.a; if (sy.dir < 0 && (!sy.t || sy.t <= sy.a)) sy.t = sy.b;
-  clearInterval(sy.timer); let wait = 0; sy.timer = setInterval(() => { let t = sy.t + sy.dir * 60 * 60000 * sy.spd; if (t > sy.b) t = sy.a; if (t < sy.a) t = sy.b; if (!syReady(t) && wait++ < 3) return; wait = 0; syShow(t); }, 80);
+  clearInterval(sy.timer); let wait = 0; sy.timer = setInterval(() => { let t = sy.t + sy.dir * 60 * 60000 * sy.spd; if (t > sy.b) t = sy.a; if (t < sy.a) t = sy.b; if (!syReady(t) && wait++ < 40) { if (wait === 4) $('sunLoad').textContent = T('LOADING…'); return; } if (wait >= 4) $('sunLoad').textContent = ''; wait = 0; syShow(t); }, 80);
 }
 // one control for everything: any play button plays the shared clock, any slider moves every view
 const revLabel = () => $('syRev').setAttribute('aria-pressed', sy.dir < 0);
