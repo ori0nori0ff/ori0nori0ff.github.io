@@ -146,6 +146,11 @@
 .flr { display: flex; justify-content: space-between; border-top: 1px solid #1A1D23; padding: 7px 0; font-size: 10px; }
 .flr:first-child { border-top: 0; }
 .flr b { font: 600 15px 'Barlow Condensed', sans-serif; }
+.flr .flw { flex: 1; margin: 0 10px; color: #A3B0C2; font: 600 10.5px 'JetBrains Mono', monospace; align-self: center; } .flr .flw b { font: inherit; color: #7BE0FF; }
+#srHost { display: grid; grid-template-columns: minmax(0, 560px) minmax(0, 1fr); column-gap: 24px; align-items: start; }
+#srHost > .sr-bar, #srHost > .sr-box, #srHost > .sr-meta, #srHost > .sr-lg { grid-column: 1; }
+#srHost > .sr-sum { grid-column: 2; grid-row: 1; margin-top: 0; } #srHost > .sr-list { grid-column: 2; grid-row: 2 / span 4; }
+@media (max-width: 899px) { #srHost { display: block; } }
 .scale { background: #0F1216; border-radius: 12px; padding: 10px; text-align: center; }
 .scale b { display: block; font: 600 26px/1 'Barlow Condensed', sans-serif; }
 .scale small { display: block; color: var(--t3); font-size: 8px; letter-spacing: 1px; margin-top: 4px; text-transform: uppercase; }
@@ -426,6 +431,11 @@
     <div class="dl"><button id="enlSave">⬇ SAVE PICTURE</button><button id="enlClipB">⬇ SAVE CLIP</button></div>
     <div class="two"><div class="why" style="margin-top:10px;font-size:13px;color:var(--dim)">NOAA's computer model of the solar wind, seen from above the Sun: the spiral arms are streams of solar wind rotating with the Sun. A CME shows up as a bright bulge (yellow → red → white) racing outward; when it reaches the green Earth dot, density and speed jump — that's when storms (and aurora) can start. The yellow line in each chart = the moment shown. Tap a picture for full screen (turn the phone sideways). New runs every few hours; arrival times are ±7 h or so.</div><div class="help" id="enlHelp">The wind is a stream of particles from the Sun. <b>Faster</b> (over ~500 km/s) and with the magnet pointing <b>south</b> (Bz negative) = the aurora switches on. A <b>bright bulge</b> racing out from the Sun is a CME — when it reaches the green Earth dot, that's the best chance for a big show.</div></div>
   </section>
+  <section class="card span-all" id="secReg" aria-labelledby="hReg">
+    <div class="lbl">Active regions · flares · NOAA SWPC + NASA SDO</div><h2 id="hReg" style="margin-top:4px">Where on the Sun the flares come from</h2>
+    <div class="why" style="margin:6px 0 12px;font-size:13px;color:var(--dim)">Each circle is a sunspot group numbered by NOAA. <b>βγ / βγδ</b> = a tangled magnetic field, where big flares start. The percentage is NOAA's chance of an <b>M</b> flare in 24 h; stars are the flares of the last 24 h. A flare in the blue band (the side facing us) can send its CME <b>towards Earth</b>; flares near the edge usually miss.</div>
+    <div id="srHost"></div>
+  </section>
   </div>
   <section class="card" id="sec3d" aria-labelledby="h3d">
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><div><div class="lbl">3D model · planets, solar wind and CMEs on the same clock</div><h2 id="h3d" style="margin-top:4px">Fly through the solar wind</h2></div></div>
@@ -575,6 +585,7 @@
 <script src="land.js"></script>
 <script src="globe.js"></script>
 <script src="tonight.js"></script>
+<script src="regions.js"></script>
 <script src="space3d.js"></script>
 <script src="earth3d.js"></script>
 <script>
@@ -729,6 +740,10 @@ const sunFr = () => (sun.F && sun.F.filters[SUNF[sun.k][0]]) || [];
 const sunT = t => new Date(t).toLocaleString(LOC, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: TZ }).replace(',', '');
 $('sunChips').innerHTML = SUNF.map((f, i) => `<button data-i="${i}" style="color:${f[2]};border-color:${f[2]}66">${f[1]}</button>`).join('');
 $('sunChips').onclick = e => { const b = e.target.closest('button'); if (b) sunPick(+b.dataset.i); };
+const flWhere = (RI, f) => { const i = RI && window.SunRegions && SunRegions.flareInfo(RI, f.begin_time); if (!i || !i.region) return '';
+  return `<span class="flw">${i.region}${i.lat != null ? ' · ' + SunRegions.where(i) : ''}${i.earth ? ' · <b>↯ ' + T('faced Earth') + '</b>' : ''}</span>`; };
+(function () { const h = document.getElementById('srHost'); if (!h) return; let done = false; const go = () => { if (!done && window.SunRegions) { done = true; SunRegions.mount(h, { limit: 6 }); } };
+  if (window.IntersectionObserver) new IntersectionObserver((e, o) => { if (e.some(x => x.isIntersecting)) { o.disconnect(); go(); } }, { rootMargin: '600px' }).observe(h); else go(); })();
 async function loadSun() {
   try { sun.F = await j('sun/frames.json?t=' + Math.floor(Date.now() / 300000)); } catch (e) { sun.F = null; }
   if (!sun.F) sun.F = { filters: {} };
@@ -1486,11 +1501,11 @@ async function drawSw() {
       const lg = D.ser['0.1-0.8nm'] || [], sh = D.ser['0.05-0.4nm'] || [], cur = lg.length ? lg[lg.length - 1][1] : 0, mx = lg.reduce((a, p) => p[1] > a[1] ? p : a, [0, 0]);
       logChart([{ pts: sh, col: '#5AA9FF', w: 1 }, { pts: lg, col: '#FF5A5A', w: 1.4 }], 1e-9, 1e-2, [{ v: 1e-5, label: 'R1 · M-CLASS', col: '#FFA040' }, { v: 1e-4, label: 'R3 · X-CLASS', col: '#FF4444' }], [[1e-8, 'A'], [1e-7, 'B'], [1e-6, 'C'], [1e-5, 'M'], [1e-4, 'X']]);
       $('swNow').innerHTML = T('X-rays now <b>{a}</b> · strongest in 3 days <b style="color:{c}">{b}</b> {t}.', { a: xClass(cur), c: mx[1] >= 1e-5 ? '#FFA040' : '#E0E0E0', b: xClass(mx[1]), t: dayHm(mx[0]) });
-      const fl = await j(API + 'json/goes/primary/xray-flares-7-day.json').catch(() => []);
+      const fl = await j(API + 'json/goes/primary/xray-flares-7-day.json').catch(() => []), RI = window.SunRegions ? await SunRegions.load().catch(() => null) : null;
       const big = fl.filter(f => /^[MX]/.test(f.max_class)), show = (big.length ? big : fl.filter(f => /^C/.test(f.max_class)).sort((a, b) => b.max_xrlong - a.max_xrlong).slice(0, 3)).sort((a, b) => Date.parse(b.max_time) - Date.parse(a.max_time)).slice(0, 6);
       $('swList').innerHTML = legend([['#FF5A5A', T('0.1–0.8 NM · SETS THE CLASS')], ['#5AA9FF', '0.05–0.4 NM']])
         + `<div class="lbl" style="margin-top:12px">${big.length ? T('M / X flares') : T('Biggest flares')} · ${T('last 7 days')}</div>`
-        + (show.length ? show.map(f => `<div class="flr"><b style="color:${/^X/.test(f.max_class) ? '#FF4444' : /^M/.test(f.max_class) ? '#FFA040' : '#E0E0E0'}">${f.max_class}</b><span>${dayHm(Date.parse(f.max_time))}</span></div>`).join('') : '<div class="loading">' + T('NO FLARES') + '</div>');
+        + (show.length ? show.map(f => `<div class="flr"><b style="color:${/^X/.test(f.max_class) ? '#FF4444' : /^M/.test(f.max_class) ? '#FFA040' : '#E0E0E0'}">${f.max_class}</b>${flWhere(RI, f)}<span>${dayHm(Date.parse(f.max_time))}</span></div>`).join('') : '<div class="loading">' + T('NO FLARES') + '</div>');
     } else if (swTab === 's') {
       const p10 = D.ser['>=10 MeV'] || [], cur = p10.length ? p10[p10.length - 1][1] : 0, lvl = cur >= 1e5 ? 5 : cur >= 1e4 ? 4 : cur >= 1e3 ? 3 : cur >= 100 ? 2 : cur >= 10 ? 1 : 0;
       logChart([{ pts: D.ser['>=100 MeV'] || [], col: '#5AA9FF', w: 1 }, { pts: D.ser['>=50 MeV'] || [], col: '#B388FF', w: 1 }, { pts: p10, col: '#E8C766', w: 1.5 }], 1e-2, 1e5,
