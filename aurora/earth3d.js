@@ -2,7 +2,7 @@
    A globe built from Web-Mercator tiles (quadtree, more detail as you zoom): NASA GIBS Blue Marble or today's VIIRS
    true colour (with today's clouds) up to z 8–9, then Sentinel-2 cloudless (EOX, ~10 m) up to z 15; NASA Black
    Marble city lights on the night side; day / night from the real Sun position; a thin atmosphere; pins.
-   Earth3D.create(el, { places: [{name, lat, lon}], time: () => ms, onBack }) → { show(), hide(), setTime(t), flyTo(lat, lon, km) } */
+   Earth3D.create(el, { places: [{name, lat, lon}], time: () => ms, onBack, onOut }) → { show(), hide(), setTime(t), flyTo(lat, lon, km) } */
 (function () {
   'use strict';
   const tr = (s, o) => window.T ? window.T(s, o) : String(s).replace(/\{(\w+)\}/g, (m, k) => o && o[k] != null ? o[k] : m);
@@ -181,10 +181,11 @@
     // controls: drag = move over the globe (slower near the ground), pinch / wheel = altitude, double-tap = zoom in there
     let spin = [0, 0]; const pts = new Map(); let d0 = 0, a0 = 0, moved = 0, lastTap = 0;
     function move(dx, dy) { const k = (cam.alt / R_KM) / (H / 2) * 50; cam.lon -= dx * k / Math.max(.2, Math.cos(cam.lat * D2R)); cam.lat = Math.max(-85, Math.min(85, cam.lat + dy * k)); cam.goal = null; dirty = true; }
-    const zoom = f => { cam.alt = Math.max(.3, Math.min(60000, cam.alt * f)); cam.goal = null; dirty = true; };
+    let shownAt = 0; const out = () => { if (visible && opts.onOut && performance.now() - shownAt > 700) opts.onOut(); };   // zoomed out past the globe → solar system
+    const zoom = f => { if (performance.now() - shownAt < 900) return; if (f > 1 && cam.alt * f > 60000) return out(); cam.alt = Math.max(.3, Math.min(60000, cam.alt * f)); cam.goal = null; dirty = true; };
     ov.addEventListener('pointerdown', e => { ov.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]); moved = 0; spin = [0, 0]; if (pts.size === 2) { const [a, b] = [...pts.values()]; d0 = Math.hypot(a[0] - b[0], a[1] - b[1]); a0 = cam.alt; } });
     ov.addEventListener('pointermove', e => { const p = pts.get(e.pointerId); if (!p) return; const dx = e.clientX - p[0], dy = e.clientY - p[1]; pts.set(e.pointerId, [e.clientX, e.clientY]);
-      if (pts.size === 1) { move(dx, dy); spin = [dx, dy]; moved += Math.abs(dx) + Math.abs(dy); } else if (pts.size === 2) { const [a, b] = [...pts.values()]; cam.alt = Math.max(.3, Math.min(60000, a0 * d0 / Math.max(10, Math.hypot(a[0] - b[0], a[1] - b[1])))); moved = 99; dirty = true; } });
+      if (pts.size === 1) { move(dx, dy); spin = [dx, dy]; moved += Math.abs(dx) + Math.abs(dy); } else if (pts.size === 2) { const [a, b] = [...pts.values()]; const v = a0 * d0 / Math.max(10, Math.hypot(a[0] - b[0], a[1] - b[1])); if (v > 60000) out(); cam.alt = Math.max(.3, Math.min(60000, v)); moved = 99; dirty = true; } });
     const up = e => { pts.delete(e.pointerId); if (moved > 6 && pts.size === 0) return; spin = [0, 0];
       if (moved < 6 && e.type === 'pointerup') { const t = performance.now(); if (t - lastTap < 320) { const r = ov.getBoundingClientRect(); move(-(e.clientX - r.left - W / 2), -(e.clientY - r.top - H / 2)); zoom(.4); lastTap = 0; } else lastTap = t; } };
     ov.addEventListener('pointerup', up); ov.addEventListener('pointercancel', up);
@@ -199,7 +200,7 @@
     el.querySelector('[data-b=home]').onclick = () => { const p = (opts.places || [])[0]; if (p) cam.goal = { lat: p.lat, lon: p.lon, alt: 60 }; dirty = true; };
     if (window.ResizeObserver) new ResizeObserver(resize).observe(host);
     resize(); requestAnimationFrame(frame);
-    api.show = (lat, lon) => { el.querySelector('.e3d-date').value = localStr(now()); el.classList.add('on'); visible = true; resize(); if (lat != null) { cam.lat = lat; cam.lon = lon; } cam.alt = 30000; cam.goal = { lat: cam.lat, lon: cam.lon, alt: 12000 }; dirty = true; };
+    api.show = (lat, lon, far) => { shownAt = performance.now(); el.querySelector('.e3d-date').value = localStr(now()); el.classList.add('on'); visible = true; resize(); if (lat != null) { cam.lat = lat; cam.lon = lon; } cam.alt = far ? 59000 : 30000; cam.goal = { lat: cam.lat, lon: cam.lon, alt: far ? 16000 : 12000 }; dirty = true; };
     api.hide = () => { el.classList.remove('on'); visible = false; };
     api.setTime = () => { dirty = true; };
     api.flyTo = (lat, lon, km) => { cam.goal = { lat, lon, alt: km || 50 }; dirty = true; };

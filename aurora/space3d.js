@@ -89,7 +89,7 @@
       <div class="s3d-ctl"><button class="s3d-full" aria-label="${tr('Full screen')}">⛶</button><button data-z="-1" aria-label="${tr('Zoom in')}">+</button><button data-z="1" aria-label="${tr('Zoom out')}">−</button><button class="s3d-reset" aria-label="${tr('Reset the view')}">⟲</button><button class="s3d-q" aria-label="${tr('How it works')}">?</button></div>
       <div class="s3d-info" hidden></div>
       <div class="s3d-help" hidden><button class="s3d-hx-x" aria-label="${tr('Close')}">✕</button>
-        <b>${tr('Moving around')}</b><p>${tr('Drag to turn · pinch or scroll to zoom · two fingers or right-drag to move sideways · double-tap to reset · tap a planet to fly to it and see its numbers. Keys: arrows turn, + / − zoom, R reset, space play.')}</p>
+        <b>${tr('Moving around')}</b><p>${tr('Drag to turn · pinch or scroll to zoom · two fingers or right-drag to move sideways · double-tap to reset · tap a planet to fly to it and see its numbers. Zoom out from Earth to reach the solar system, keep going for the galaxy; tap Earth and zoom in to land. Keys: arrows turn, + / − zoom, R reset, space play.')}</p>
         <b>${tr('Solar system')}</b><p>${tr('Planets at their real positions for the shown time (NASA JPL orbital elements). The solar wind leaves the Sun in all directions while the Sun turns once every ~25 days, so the streams wind up into a spiral (the Parker spiral) — like water from a turning garden sprinkler. Speed and colour come from NOAA’s model at Earth. CMEs grow from the Sun at their measured speed and direction (NASA DONKI, or estimated from NOAA’s model). Distances are real, sizes are not.')}</p>
         <b>${tr('Spiral through space')}</b><p>${tr('The Sun is not standing still: it moves ~20 km/s towards the constellation Hercules compared with nearby stars, and ~230 km/s around the centre of the Milky Way. The planets come along, so each one draws a spiral (a helix) around the Sun’s path. The orbits are tilted about 60° to that path, so the spirals are slanted — the planets are not dragged behind the Sun like a comet tail, as some popular videos show.')}</p></div>
       <div class="s3d-leg"><i style="background:rgb(70,120,255)"></i>300 <i style="background:rgb(60,220,160)"></i>420 <i style="background:rgb(255,225,80)"></i>550 <i style="background:rgb(255,130,50)"></i>700+ km/s <i style="background:#fff"></i>CME</div>`;
@@ -291,7 +291,7 @@
       if (pts.size === 1) { moved += Math.abs(dx) + Math.abs(dy); cam.goal = null;
         if (panBtn) pan(dx, dy); else { cam.yaw += dx * .006; cam.pitch = Math.max(-1.5, Math.min(1.55, cam.pitch + dy * .006)); spin = [dx * .006, dy * .006]; } dirty = true; }
       else if (pts.size === 2) { const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-        cam.dist = Math.max(.08, Math.min(400, z0 * d0 / Math.max(10, d))); if (mid0) { pan(mid[0] - mid0[0], mid[1] - mid0[1]); mid0 = mid; } moved = 99; cam.goal = null; dirty = true; } });
+        setDist(z0 * d0 / Math.max(10, d)); if (mid0) { pan(mid[0] - mid0[0], mid[1] - mid0[1]); mid0 = mid; } moved = 99; cam.goal = null; dirty = true; } });
     const up = e => { pts.delete(e.pointerId); if (pts.size < 2) mid0 = null; if (pts.size === 0 && moved > 6) { /* keep the spin going */ } else spin = [0, 0];
       if (moved < 6 && e.type === 'pointerup') { const r = ov.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top, now = performance.now();
         if (now - lastTap < 320) { lastTap = 0; info = null; el.querySelector('.s3d-info').hidden = true; view(mode === 'helix' ? 'hx' : mode === 'galaxy' ? 'gx' : 'inner'); return; } lastTap = now;
@@ -299,7 +299,22 @@
         if (h && h.name !== 'Sun') { cam.follow = null; const p = planet(h.name, mode === 'helix' ? hTime : time); cam.goal = { tgt: toHx(p), dist: Math.max(.25, Math.hypot(...p) * .25) }; info = h.name; setTimeout(() => { if (info === h.name) cam.follow = h.name; }, 900); dirty = true; }
         else if (h) { info = null; el.querySelector('.s3d-info').hidden = true; view(mode === 'helix' ? 'hx' : mode === 'galaxy' ? 'gx' : 'inner'); } } };
     ov.addEventListener('pointerup', up); ov.addEventListener('pointercancel', up);
-    const zoom = f => { cam.dist = Math.max(.08, Math.min(400, cam.dist * f)); cam.goal = null; dirty = true; };
+    const zoom = f => { if (performance.now() - modeAt < 900) return;   // let the hand-over flight finish (wheel momentum would carry on)
+      cam.goal = null; setDist(cam.dist * f); dirty = true; };
+    // one zoom from the ground to the galaxy: Earth ⇄ solar system (zoom in on Earth) ⇄ galaxy (past 400 AU / below 0.3 kpc)
+    let modeAt = 0;
+    function setDist(d) {
+      if (performance.now() - modeAt > 700) {
+        if (mode === 'sys' && d > 400) return jump('galaxy');
+        if (mode === 'galaxy' && d < .3) return jump('sys');
+        if (mode === 'sys' && d < .08 && window.Earth3D) { const E = planet('Earth', time); if (cam.follow === 'Earth' || Math.hypot(...cam.tgt.map((v, i) => v - E[i])) < .05) return jump('earth'); } }
+      cam.dist = Math.max(.08, Math.min(mode === 'galaxy' ? 70 : 400, d)); }
+    function jump(m) {
+      const from = mode; setMode(m, true);
+      if (m === 'galaxy') { cam.tgt = sunGal(); cam.dist = .4; }                         // start at the Sun, fly out to the whole Milky Way
+      else if (m === 'sys' && from === 'galaxy') { cam.tgt = [0, 0, 0]; cam.dist = 380; }  // start at the edge, fly in to the planets
+      if (pts.size === 2) { const [a, b] = [...pts.values()]; d0 = Math.hypot(a[0] - b[0], a[1] - b[1]); z0 = cam.dist; }
+      dirty = true; }
     ov.addEventListener('wheel', e => { e.preventDefault(); zoom(Math.exp(e.deltaY * .0012)); }, { passive: false });
     el.querySelectorAll('[data-z]').forEach(b => b.onclick = () => zoom(+b.dataset.z > 0 ? 1.35 : 1 / 1.35));
     el.querySelector('.s3d-reset').onclick = () => { info = null; el.querySelector('.s3d-info').hidden = true; view(mode === 'helix' ? 'hx' : mode === 'galaxy' ? 'gx' : 'inner'); };
@@ -317,10 +332,10 @@
     el.querySelector('.s3d-hspd').onclick = e => { hRate = hRate === 1 ? 4 : hRate === 4 ? 16 : 1; e.target.textContent = hRate + '×'; };
     el.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { frameK = b.dataset.f; el.querySelectorAll('[data-f]').forEach(o => o.setAttribute('aria-pressed', o === b)); buildHelix(); hDate(); view('hx'); });
     let earth = null;
-    function setMode(m) {
-      if (m === 'earth') { if (!window.Earth3D) return; if (!earth) earth = Earth3D.create(el, { places: opts.places ? opts.places() : [], time: () => time, aurora: opts.aurora, onBack: () => setMode('sys') });
+    function setMode(m, far) { modeAt = performance.now();
+      if (m === 'earth') { if (!window.Earth3D) return; if (!earth) earth = Earth3D.create(el, { places: opts.places ? opts.places() : [], time: () => time, aurora: opts.aurora, onBack: () => setMode('sys'), onOut: () => { setMode('sys', true); cam.tgt = planet('Earth', time); cam.dist = .06; cam.goal = { dist: .4, pitch: .35 }; cam.follow = 'Earth'; dirty = true; } });   // fly out from Earth, still following it
         if (hPlay) togglePlay(); mode = 'earth'; el.classList.add('ea'); el.classList.remove('hx'); el.querySelectorAll('[data-m]').forEach(o => o.setAttribute('aria-pressed', o.dataset.m === m)); info = null;
-        const pl = opts.places ? opts.places()[0] : null; if (opts.places) earth.setPlaces(opts.places()); earth.show(pl ? pl.lat : 45.6, pl ? pl.lon : 25.6); return; }
+        const pl = opts.places ? opts.places()[0] : null; if (opts.places) earth.setPlaces(opts.places()); earth.show(pl ? pl.lat : 45.6, pl ? pl.lon : 25.6, far); return; }
       if (earth) earth.hide(); el.classList.remove('ea');
       mode = m; el.classList.toggle('hx', m === 'helix'); el.classList.toggle('gx', m === 'galaxy');
       if (m === 'galaxy') { el.querySelectorAll('[data-m]').forEach(o => o.setAttribute('aria-pressed', o.dataset.m === m)); info = null; el.querySelector('.s3d-info').hidden = true; buildGalaxy(); hDate(); view('gx'); if (!hPlay) togglePlay(); dirty = true; return; } el.querySelectorAll('[data-m]').forEach(o => o.setAttribute('aria-pressed', o.dataset.m === m)); info = null; el.querySelector('.s3d-info').hidden = true;
