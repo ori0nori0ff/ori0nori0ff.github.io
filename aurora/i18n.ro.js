@@ -586,5 +586,14 @@ window.I18N_DICT.ro = {
   "10,000 light years": "10.000 de ani-lumină",
   "Today": "Azi",
   "In {n} million years": "Peste {n} milioane de ani",
-  "one lap around the galaxy ≈ 230 million years · up and down through the disc every ~70": "o tură în jurul galaxiei ≈ 230 milioane de ani · sus-jos prin disc la ~70"
+  "one lap around the galaxy ≈ 230 million years · up and down through the disc every ~70": "o tură în jurul galaxiei ≈ 230 milioane de ani · sus-jos prin disc la ~70",
+  "One hour back": "O oră înapoi",
+  "One hour forward": "O oră înainte",
+  "Play backwards": "Redă înapoi",
+  "Date and time": "Data și ora",
+  "Date": "Data",
+  "Map": "Hartă",
+  "Names": "Nume",
+  "Now": "Acum",
+  "{n} million years ago": "Acum {n} milioane de ani"
 };

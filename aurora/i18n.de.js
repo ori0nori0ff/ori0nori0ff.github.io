@@ -586,5 +586,14 @@ window.I18N_DICT.de = {
   "10,000 light years": "10.000 Lichtjahre",
   "Today": "Heute",
   "In {n} million years": "In {n} Millionen Jahren",
-  "one lap around the galaxy ≈ 230 million years · up and down through the disc every ~70": "eine Runde um die Galaxis ≈ 230 Millionen Jahre · auf und ab durch die Scheibe alle ~70"
+  "one lap around the galaxy ≈ 230 million years · up and down through the disc every ~70": "eine Runde um die Galaxis ≈ 230 Millionen Jahre · auf und ab durch die Scheibe alle ~70",
+  "One hour back": "Eine Stunde zurück",
+  "One hour forward": "Eine Stunde vor",
+  "Play backwards": "Rückwärts abspielen",
+  "Date and time": "Datum und Uhrzeit",
+  "Date": "Datum",
+  "Map": "Karte",
+  "Names": "Namen",
+  "Now": "Jetzt",
+  "{n} million years ago": "Vor {n} Millionen Jahren"
 };

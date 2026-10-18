@@ -69,7 +69,8 @@
 .s3d-help{position:absolute;inset:56px 60px 60px 10px;overflow:auto;background:rgba(8,11,17,.94);border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:14px 16px;font:500 13px/1.55 Inter,system-ui,sans-serif;color:#C9D1DB}
 .s3d-help b{color:#fff;font-size:14px}.s3d-help p{margin:2px 0 12px}.s3d-hx-x{float:right;border:0;background:none;color:#A3B0C2;font-size:16px;cursor:pointer}
 .s3d.ea .s3d-gl,.s3d.ea .s3d-ov,.s3d.ea .s3d-btns,.s3d.ea .s3d-leg,.s3d.ea .s3d-top,.s3d.ea .s3d-info,.s3d.ea .s3d-help,.s3d.ea .s3d-ctl button:not(.s3d-full){display:none!important}.s3d.ea .s3d-tabs,.s3d.ea .s3d-ctl{z-index:5}
-.s3d.gx .s3d-hx{display:flex}.s3d.gx [data-f],.s3d.gx .s3d-sys,.s3d.gx .s3d-leg{display:none!important}
+.s3d-hdate{background:rgba(10,14,20,.75);color:#E6EBF1;border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:6px 10px;min-height:36px;font:600 12px Inter,system-ui,sans-serif;color-scheme:dark}
+.s3d.gx .s3d-hx{display:flex}.s3d.gx .s3d-hdate,.s3d.gx [data-f],.s3d.gx .s3d-sys,.s3d.gx .s3d-leg{display:none!important}
 .s3d:focus-visible{outline:3px solid #FFE600;outline-offset:2px}
 @media (max-width:640px){.s3d-tabs{top:52px;left:12px;transform:none}.s3d-tabs button{padding:7px 10px;font-size:11px}.s3d-info{right:56px;max-width:190px}}
 .s3d-leg{position:absolute;right:12px;bottom:14px;font:500 11px Inter,system-ui,sans-serif;color:#A3B0C2;pointer-events:none;text-shadow:0 1px 2px #000}
@@ -84,7 +85,7 @@
       <div class="s3d-top"><b class="s3d-t">–</b><span class="s3d-sub"></span></div>
       <div class="s3d-tabs" role="tablist"><button data-m="sys" aria-pressed="true">${tr('Solar system')}</button><button data-m="helix" aria-pressed="false">${tr('Spiral through space')}</button><button data-m="galaxy" aria-pressed="false">${tr('Galaxy')}</button><button data-m="earth" aria-pressed="false">${tr('Earth')}</button></div>
       <div class="s3d-btns s3d-sys"><button data-v="inner">${tr('Inner planets')}</button><button data-v="all">${tr('Whole system')}</button><button data-v="earth">${tr('From Earth')}</button><button data-v="top">${tr('From above')}</button></div>
-      <div class="s3d-btns s3d-hx"><button class="s3d-hplay" aria-label="${tr('Play')}">▶</button><button class="s3d-hspd">1×</button><button data-f="lsr" aria-pressed="true">${tr('vs nearby stars · 20 km/s')}</button><button data-f="gal" aria-pressed="false">${tr('around the Milky Way · 230 km/s')}</button></div>
+      <div class="s3d-btns s3d-hx"><button class="s3d-hrev" aria-label="${tr('Play backwards')}" aria-pressed="false">◀</button><button class="s3d-hplay" aria-label="${tr('Play')}">▶</button><button class="s3d-hspd">1×</button><input type="date" class="s3d-hdate" aria-label="${tr('Date')}"><button data-f="lsr" aria-pressed="true">${tr('vs nearby stars · 20 km/s')}</button><button data-f="gal" aria-pressed="false">${tr('around the Milky Way · 230 km/s')}</button></div>
       <div class="s3d-ctl"><button class="s3d-full" aria-label="${tr('Full screen')}">⛶</button><button data-z="-1" aria-label="${tr('Zoom in')}">+</button><button data-z="1" aria-label="${tr('Zoom out')}">−</button><button class="s3d-reset" aria-label="${tr('Reset the view')}">⟲</button><button class="s3d-q" aria-label="${tr('How it works')}">?</button></div>
       <div class="s3d-info" hidden></div>
       <div class="s3d-help" hidden><button class="s3d-hx-x" aria-label="${tr('Close')}">✕</button>
@@ -113,7 +114,7 @@
     const cmeB = mk(12 * 700);
     const HX = ['Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune'], HXN = 900, trails = mk((HX.length + 1) * HXN);
     const galB = mk(52000), ring = mk(361); let gT = 0, galBuilt = false;
-    let mode = 'sys', frameK = 'lsr', hTime = Date.now(), hPlay = false, hRate = 1, hLast = 0, info = null;
+    let mode = 'sys', frameK = 'lsr', hTime = Date.now(), hPlay = false, hRate = 1, hDir = 1, hLast = 0, info = null;
     let vtab = new Float32Array(360).fill(400), ntab = new Float32Array(360).fill(5), known = new Uint8Array(360), cmes = [], time = Date.now();
     // camera
     const cam = { yaw: -0.6, pitch: 0.55, dist: 3.4, tgt: [0, 0, 0], goal: null };
@@ -256,10 +257,10 @@
       box.querySelector('button').onclick = () => { info = null; box.hidden = true; cam.follow = null; view(mode === 'helix' ? 'hx' : mode === 'galaxy' ? 'gx' : 'inner'); };
     }
     function frame(ts) {
-      if (mode === 'galaxy' && hPlay) { const dt = Math.min(100, ts - (hLast || ts)); gT += dt / 1000 * hRate * 4; hDate(); dirty = true; }   // 1× = 4 million years per second
-      if (mode === 'helix' && hPlay) { const dt = Math.min(100, ts - (hLast || ts)); hTime += dt / 1000 * hRate * 0.25 * 365.25 * DAY; buildHelix(); hDate(); dirty = true; }   // 1× = a quarter year per second
+      if (mode === 'galaxy' && hPlay) { const dt = Math.min(100, ts - (hLast || ts)); gT += dt / 1000 * hRate * 4 * hDir; hDate(); dirty = true; }   // 1× = 4 million years per second
+      if (mode === 'helix' && hPlay) { const dt = Math.min(100, ts - (hLast || ts)); hTime += dt / 1000 * hRate * 0.25 * 365.25 * DAY * hDir; buildHelix(); hDate(); dirty = true; }   // 1× = a quarter year per second
       hLast = ts; if (mode !== 'earth' && visible && (dirty || cam.goal || spin[0] || spin[1])) draw(); requestAnimationFrame(frame); }
-    function hDate() { if (mode === 'galaxy') { el.querySelector('.s3d-t').textContent = gT < 1 ? tr('Today') : tr('In {n} million years', { n: Math.round(gT) }); el.querySelector('.s3d-sub').textContent = tr('one lap around the galaxy ≈ 230 million years · up and down through the disc every ~70'); return; }
+    function hDate() { const hd = el.querySelector('.s3d-hdate'); if (hd && document.activeElement !== hd && mode === 'helix') { try { hd.value = new Date(hTime).toISOString().slice(0, 10); } catch (e) {} } if (mode === 'galaxy') { el.querySelector('.s3d-t').textContent = Math.abs(gT) < 1 ? tr('Today') : gT > 0 ? tr('In {n} million years', { n: Math.round(gT) }) : tr('{n} million years ago', { n: Math.round(-gT) }); el.querySelector('.s3d-sub').textContent = tr('one lap around the galaxy ≈ 230 million years · up and down through the disc every ~70'); return; }
       el.querySelector('.s3d-t').textContent = new Date(hTime).toLocaleDateString(window.LOC || 'en-GB', { month: 'long', year: 'numeric' });
       el.querySelector('.s3d-sub').textContent = tr('the Sun moves {d} AU a year', { d: (kmsAU(TRAVEL[frameK].v) * 365.25).toFixed(1) }); }
     function resize() { const r = el.getBoundingClientRect(); W = Math.max(200, r.width); H = Math.max(200, r.height); dpr = Math.min(2, devicePixelRatio || 1);
@@ -310,7 +311,9 @@
       else if (k === ' ' && mode === 'helix') { e.preventDefault(); togglePlay(); } else if (k === 'Escape' && el.classList.contains('s3d-fs')) el.querySelector('.s3d-full').click(); });
     // modes
     const togglePlay = () => { hPlay = !hPlay; const b = el.querySelector('.s3d-hplay'); b.textContent = hPlay ? '⏸' : '▶'; b.setAttribute('aria-label', hPlay ? tr('Pause') : tr('Play')); hLast = 0; };
-    el.querySelector('.s3d-hplay').onclick = togglePlay;
+    el.querySelector('.s3d-hplay').onclick = () => { if (hDir < 0) { hDir = 1; el.querySelector('.s3d-hrev').setAttribute('aria-pressed', false); if (hPlay) return; } togglePlay(); };
+    el.querySelector('.s3d-hrev').onclick = () => { hDir = hDir > 0 ? -1 : 1; el.querySelector('.s3d-hrev').setAttribute('aria-pressed', hDir < 0); if (!hPlay) togglePlay(); };
+    el.querySelector('.s3d-hdate').onchange = e => { const t = Date.parse(e.target.value + 'T12:00:00Z'); if (isFinite(t)) { hTime = t; buildHelix(); hDate(); dirty = true; } };
     el.querySelector('.s3d-hspd').onclick = e => { hRate = hRate === 1 ? 4 : hRate === 4 ? 16 : 1; e.target.textContent = hRate + '×'; };
     el.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { frameK = b.dataset.f; el.querySelectorAll('[data-f]').forEach(o => o.setAttribute('aria-pressed', o === b)); buildHelix(); hDate(); view('hx'); });
     let earth = null;

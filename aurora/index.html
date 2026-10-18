@@ -256,6 +256,8 @@
   .clock { position: sticky; top: 0; z-index: 30; padding: 10px 14px; box-shadow: 0 10px 28px rgba(0,0,0,.7); }
   .clockrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .clockt { min-width: 150px; } .clockt .stime { font-size: 13px; min-width: 0; }
+  #syDate { flex: 0 0 auto; background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 6px 8px; font: 600 12px Inter, sans-serif; color-scheme: dark; accent-color: auto; height: auto; }
+  #syRev[aria-pressed="true"] { color: #39FF9E; border-color: #39FF9E; }
   .clockrow input { flex: 1 1 220px; accent-color: #FFE600; height: 28px; }
   .clockdl { margin-top: 0; flex: 1 1 100%; } .clockdl > * { padding: 8px 6px; }
   .enlc canvas { width: 100%; display: block; margin-top: 6px; cursor: zoom-in; }
@@ -381,8 +383,8 @@
   <div class="chap xfull"><span aria-hidden="true">1</span><div><h2>From the Sun to Earth</h2><p>Everything starts at the Sun: flares, CMEs (clouds of solar plasma) and coronal holes that blow fast wind. It takes 1–4 days to cross 150 million km. Play the Sun and NOAA's solar wind model on one clock.</p></div></div>
   <section class="card clock xfull" id="syncCard" aria-label="One clock for the Sun and the solar wind">
     <div class="clockrow"><div class="clockt"><div class="lbl">One clock · Sun + solar wind</div><div class="stime" id="syT" aria-live="polite">–</div></div>
-      <button class="spbtn" id="syPlay" aria-label="Play the Sun and the solar wind together">▶</button><button class="spbtn" id="sySpd" aria-label="Playback speed">1×</button>
-      <input type="range" id="sySlide" min="0" max="1000" value="1000" aria-label="Date and time shown in every chart">
+      <button class="spbtn" id="syPrev" aria-label="One hour back">⏮</button><button class="spbtn" id="syRev" aria-label="Play backwards" aria-pressed="false">◀</button><button class="spbtn" id="syPlay" aria-label="Play the Sun and the solar wind together">▶</button><button class="spbtn" id="syNext" aria-label="One hour forward">⏭</button><button class="spbtn" id="sySpd" aria-label="Playback speed">1×</button>
+      <input type="range" id="sySlide" min="0" max="1000" value="1000" aria-label="Date and time shown in every chart"><input type="datetime-local" id="syDate" aria-label="Date and time">
       <div class="dl clockdl"><button id="cardSave">⬇ SHARE CARD</button><button id="linkShare">↗ SHARE LINK</button></div></div>
   </section>
   <div class="grid stage xfull">
@@ -970,7 +972,7 @@ $('enlClipB').onclick = async () => {
 };
 
 /* ── Sun → Earth together: one clock drives the Sun viewer and the ENLIL card ── */
-const sy = { on: false, t: 0, a: 0, b: 0, timer: null, spd: 1 };
+const sy = { on: false, t: 0, a: 0, b: 0, timer: null, spd: 1, dir: 1 };
 function syRange() {
   const x = axis(); if (!x) return false; const fr = sunFr();
   sy.a = x.a; sy.b = x.b; sy.sunEnd = fr.length ? fr[fr.length - 1][0] : 0;
@@ -989,6 +991,7 @@ function syShow(t) {
   if (enl.frames.length) { const k = nearestIdx(enl.frames.length, m => enl.frames[m].t, sy.t); if (k !== enl.i) { clearInterval(enl.play); enl.play = null; enlShow(k); } }
   if (sy.timer) playLabel(true);
   if (window.space3d) space3d.setTime(sy.t);
+  const di = $('syDate'); if (di && document.activeElement !== di) { di.min = locStr(sy.a); di.max = locStr(sy.b); di.value = locStr(sy.t); }
   const pos = Math.round((sy.t - sy.a) / (sy.b - sy.a) * 1000); SLIDES.forEach(id => { const el = $(id); if (el) { el.max = 1000; el.value = pos; } });
   tcursor();
 }
@@ -1018,11 +1021,17 @@ function syReady(t) {
 }
 function syStart() {
   if (!syRange()) { toast(T('Still loading the pictures…')); return; }
-  sy.on = true; playLabel(true); if (!sy.t || sy.t >= sy.b) sy.t = sy.a;
-  clearInterval(sy.timer); let wait = 0; sy.timer = setInterval(() => { let t = sy.t + 60 * 60000 * sy.spd; if (t > sy.b) t = sy.a; if (!syReady(t) && wait++ < 3) return; wait = 0; syShow(t); }, 80);
+  sy.on = true; playLabel(true); if (sy.dir > 0 && (!sy.t || sy.t >= sy.b)) sy.t = sy.a; if (sy.dir < 0 && (!sy.t || sy.t <= sy.a)) sy.t = sy.b;
+  clearInterval(sy.timer); let wait = 0; sy.timer = setInterval(() => { let t = sy.t + sy.dir * 60 * 60000 * sy.spd; if (t > sy.b) t = sy.a; if (t < sy.a) t = sy.b; if (!syReady(t) && wait++ < 3) return; wait = 0; syShow(t); }, 80);
 }
 // one control for everything: any play button plays the shared clock, any slider moves every view
-const syToggle = () => sy.timer ? syStop() : syStart();
+const revLabel = () => $('syRev').setAttribute('aria-pressed', sy.dir < 0);
+const syToggle = () => { if (sy.timer && sy.dir < 0) { sy.dir = 1; revLabel(); return; } sy.dir = 1; revLabel(); sy.timer ? syStop() : syStart(); };
+$('syRev').onclick = () => { sy.dir = sy.dir < 0 && sy.timer ? 1 : -1; revLabel(); if (!sy.timer) syStart(); };
+const syStep = d => { syStop(); sy.on = true; if (syRange()) syShow((sy.t || Date.now()) + d); };
+$('syPrev').onclick = () => syStep(-3600e3); $('syNext').onclick = () => syStep(3600e3);
+const pad2 = v => String(v).padStart(2, '0'), locStr = t => { const d = new Date(t); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`; };
+$('syDate').onchange = e => { const t = Date.parse(e.target.value); if (isFinite(t)) { syStop(); sy.on = true; if (syRange()) syShow(t); } };
 PLAYS.forEach(id => { const b = $(id); if (b) b.onclick = syToggle; });
 const sySpeed = () => { sy.spd = sy.spd === 1 ? 2 : sy.spd === 2 ? 4 : 1; document.querySelectorAll('#sySpd, .spd').forEach(o => o.textContent = sy.spd + '×'); };
 $('sySpd').onclick = sySpeed; document.querySelectorAll('.spd').forEach(o => o.onclick = sySpeed);

@@ -7,14 +7,16 @@
   'use strict';
   const tr = (s, o) => window.T ? window.T(s, o) : String(s).replace(/\{(\w+)\}/g, (m, k) => o && o[k] != null ? o[k] : m);
   const D2R = Math.PI / 180, R_KM = 6371, MAXLAT = 85.05113;
-  const day = t => new Date(t - 864e5).toISOString().slice(0, 10);   // yesterday: today's VIIRS mosaic fills during the day
+  const day = t => new Date(Date.now() - t < 2 * 864e5 ? t - 864e5 : t).toISOString().slice(0, 10);   // recent → yesterday (today's VIIRS mosaic fills during the day); a chosen past date → that day
   const SRC = {
     clear: (z, x, y) => z <= 8 ? `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/2004-08/GoogleMapsCompatible_Level8/${z}/${y}/${x}.jpeg` : null,
     today: (z, x, y, t) => z <= 9 ? `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/${day(t)}/GoogleMapsCompatible_Level9/${z}/${y}/${x}.jpg` : null,
     detail: (z, x, y) => `https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2021_3857/default/GoogleMapsCompatible/${z}/${y}/${x}.jpg`,
+    map: (z, x, y) => `https://${'abcd'[(x + y) % 4]}.basemaps.cartocdn.com/rastertiles/voyager/${z}/${x}/${y}.png`,
+    lab: (z, x, y) => `https://${'abcd'[(x + y) % 4]}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/${z}/${x}/${y}.png`,
     night: (z, x, y) => `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/${z}/${y}/${x}.png`,
   };
-  const DETAIL_FROM = { clear: 9, today: 10 }, MAXZ = 15;
+  const DETAIL_FROM = { clear: 9, today: 10 }, SATZ = 15, MAXZ = 18;
   const lat2y = (lat, z) => (1 - Math.log(Math.tan(Math.PI / 4 + lat * D2R / 2)) / Math.PI) / 2 * (1 << z);
   const y2lat = (y, z) => Math.atan(Math.sinh(Math.PI * (1 - 2 * y / (1 << z)))) / D2R;
   const xyz = (lat, lon, r) => { const a = lat * D2R, b = lon * D2R; return [r * Math.cos(a) * Math.cos(b), r * Math.sin(a), -r * Math.cos(a) * Math.sin(b)]; };
@@ -23,8 +25,8 @@
     const B = 2 * Math.PI * (doy - 81) / 364, eot = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B), hrs = d.getUTCHours() + d.getUTCMinutes() / 60 + eot / 60;
     return xyz(dec, (12 - hrs) * 15, 1); }
 
-  const VS = 'attribute vec3 p;attribute vec2 uv;uniform mat4 m;uniform vec4 ud;uniform vec4 un;varying vec2 vd;varying vec2 vn;varying vec3 vp;void main(){gl_Position=m*vec4(p,1.);vd=uv*ud.xy+ud.zw;vn=uv*un.xy+un.zw;vp=p;}';
-  const FS = 'precision mediump float;uniform sampler2D td;uniform sampler2D tn;uniform vec3 sun;uniform float hn;varying vec2 vd;varying vec2 vn;varying vec3 vp;void main(){vec3 n=normalize(vp);float d=dot(n,sun);float dl=smoothstep(-.12,.18,d);vec3 c=texture2D(td,vd).rgb;vec3 l=texture2D(tn,vn).rgb*hn;vec3 night=c*.06+l*vec3(1.,.82,.55)*1.5;gl_FragColor=vec4(mix(night,c*(.75+.35*max(d,0.)),dl),1.);}';
+  const VS = 'attribute vec3 p;attribute vec2 uv;uniform mat4 m;uniform vec4 ud;uniform vec4 un;varying vec2 vd;varying vec2 vn;varying vec3 vp;varying vec2 vu;void main(){gl_Position=m*vec4(p,1.);vd=uv*ud.xy+ud.zw;vn=uv*un.xy+un.zw;vp=p;vu=uv;}';
+  const FS = 'precision mediump float;uniform sampler2D td;uniform sampler2D tn;uniform sampler2D tl;uniform vec3 sun;uniform float hn;uniform float hl;uniform float nk;uniform vec4 ul;varying vec2 vd;varying vec2 vn;varying vec3 vp;varying vec2 vu;void main(){vec3 n=normalize(vp);float d=dot(n,sun);float dl=max(smoothstep(-.12,.18,d),1.-nk);vec3 c=texture2D(td,vd).rgb;vec4 lb=texture2D(tl,vu*ul.xy+ul.zw);c=mix(c,lb.rgb,lb.a*hl);vec3 l=texture2D(tn,vn).rgb*hn*nk;vec3 night=c*.06+l*vec3(1.,.82,.55)*1.5;gl_FragColor=vec4(mix(night,c*(.75+.35*max(d,0.)*nk+.25*(1.-nk)),dl),1.);}';
   const persp = (fov, asp, n, f) => { const t = 1 / Math.tan(fov / 2); return [t / asp, 0, 0, 0, 0, t, 0, 0, 0, 0, (f + n) / (n - f), -1, 0, 0, 2 * f * n / (n - f), 0]; };
   const lookAt = (e, c, u) => { let z = [e[0] - c[0], e[1] - c[1], e[2] - c[2]], l = Math.hypot(...z); z = z.map(v => v / l);
     let x = [u[1] * z[2] - u[2] * z[1], u[2] * z[0] - u[0] * z[2], u[0] * z[1] - u[1] * z[0]]; l = Math.hypot(...x); x = x.map(v => v / l);
@@ -35,6 +37,7 @@
   const CSS = `.e3d{position:absolute;inset:0;display:none;background:#000}.e3d.on{display:block}.e3d canvas{position:absolute;left:0;top:0;touch-action:none}
 .e3d-ui{position:absolute;left:10px;bottom:10px;display:flex;gap:6px;flex-wrap:wrap;max-width:calc(100% - 70px)}
 .e3d-ui button{border:1px solid rgba(255,255,255,.18);background:rgba(10,14,20,.78);color:#E6EBF1;border-radius:999px;padding:7px 12px;min-height:36px;font:600 12px Inter,system-ui,sans-serif;cursor:pointer}
+.e3d-date{background:rgba(10,14,20,.78);color:#E6EBF1;border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:6px 10px;min-height:36px;font:600 12px Inter,system-ui,sans-serif;color-scheme:dark}
 .e3d-ui button[aria-pressed=true]{border-color:#39FF9E;color:#39FF9E}
 .e3d-alt{position:absolute;left:12px;top:10px;font:700 15px Inter,system-ui,sans-serif;color:#FFE600;text-shadow:0 1px 3px #000;pointer-events:none}
 .e3d-alt small{display:block;font:500 12px Inter,system-ui,sans-serif;color:#C9D1DB}
@@ -45,7 +48,8 @@
     if (!document.getElementById('e3d-css')) { const st = document.createElement('style'); st.id = 'e3d-css'; st.textContent = CSS; document.head.appendChild(st); }
     const el = document.createElement('div'); el.className = 'e3d'; host.appendChild(el);
     el.innerHTML = `<canvas class="e3d-gl"></canvas><canvas class="e3d-ov"></canvas><div class="e3d-alt">–</div>
-      <div class="e3d-ui"><button data-b="back">‹ ${tr('Solar system')}</button><button data-b="home">${tr('My place')}</button><button data-s="today" aria-pressed="true">${tr('Today (clouds)')}</button><button data-s="clear" aria-pressed="false">${tr('Clear view')}</button></div>
+      <div class="e3d-ui"><button data-b="back">‹ ${tr('Solar system')}</button><button data-b="home">${tr('My place')}</button><button data-s="today" aria-pressed="true">${tr('Today (clouds)')}</button><button data-s="clear" aria-pressed="false">${tr('Clear view')}</button><button data-s="map" aria-pressed="false">${tr('Map')}</button><button data-l aria-pressed="true">${tr('Names')}</button>
+        <input type="datetime-local" class="e3d-date" aria-label="${tr('Date and time')}"><button data-b="now">${tr('Now')}</button></div>
       <div class="e3d-attr">NASA GIBS · Blue Marble · Black Marble · VIIRS · Sentinel-2 cloudless 2021 by EOX</div>`;
     const cv = el.querySelector('.e3d-gl'), ov = el.querySelector('.e3d-ov'), g2 = ov.getContext('2d');
     const gl = cv.getContext('webgl', { antialias: true, preserveDrawingBuffer: true });
@@ -53,8 +57,8 @@
     if (!gl) return api;
     const sh = (t, s) => { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); return o; };
     const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(pr); gl.useProgram(pr);
-    const L = { p: gl.getAttribLocation(pr, 'p'), uv: gl.getAttribLocation(pr, 'uv') }, U = {}; ['m', 'ud', 'un', 'td', 'tn', 'sun', 'hn'].forEach(k => U[k] = gl.getUniformLocation(pr, k));
-    gl.uniform1i(U.td, 0); gl.uniform1i(U.tn, 1); gl.enable(gl.DEPTH_TEST); gl.enable(gl.CULL_FACE);
+    const L = { p: gl.getAttribLocation(pr, 'p'), uv: gl.getAttribLocation(pr, 'uv') }, U = {}; ['m', 'ud', 'un', 'td', 'tn', 'tl', 'sun', 'hn', 'hl', 'nk', 'ul'].forEach(k => U[k] = gl.getUniformLocation(pr, k));
+    gl.uniform1i(U.td, 0); gl.uniform1i(U.tn, 1); gl.uniform1i(U.tl, 2); gl.enable(gl.DEPTH_TEST); gl.enable(gl.CULL_FACE);
     // one shared index buffer for an N×N tile grid
     const N = 16, idx = []; for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const a = j * (N + 1) + i; idx.push(a, a + N + 1, a + 1, a + 1, a + N + 1, a + N + 2); }
     const ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(idx), gl.STATIC_DRAW);
@@ -88,20 +92,21 @@
     function texture(url) { if (!url) return null; let t = tex.get(url); if (t) { t.used = frameNo; return t.ok ? t : null; }
       t = { used: frameNo, ok: false }; tex.set(url, t); if (loading > 24) { tex.delete(url); return null; }
       const im = new Image(); im.crossOrigin = 'anonymous'; loading++;
-      im.onload = () => { loading--; const g = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, g); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, im);
+      im.onload = () => { loading--; const g = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, g); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, im);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); t.g = g; t.ok = true; dirty = true; };
       im.onerror = () => { loading--; t.bad = true; }; im.src = url;
       if (tex.size > 420) { let old = null; tex.forEach((v, k) => { if (v.ok && (!old || v.used < old[1].used)) old = [k, v]; }); if (old) { gl.deleteTexture(old[1].g); tex.delete(old[0]); } }
       return null; }
-    const url = (z, x, y, kind) => kind === 'night' ? (z <= 8 ? SRC.night(z, x, y) : null) : (z >= DETAIL_FROM[src] ? (z <= MAXZ ? SRC.detail(z, x, y) : null) : SRC[src](z, x, y, now()));
+    const url = (z, x, y, kind) => kind === 'night' ? (z <= 8 ? SRC.night(z, x, y) : null) : kind === 'lab' ? (z >= 2 && z <= MAXZ ? SRC.lab(z, x, y) : null)
+      : src === 'map' ? (z <= MAXZ ? SRC.map(z, x, y) : null) : (z >= DETAIL_FROM[src] ? (z <= SATZ ? SRC.detail(z, x, y) : null) : SRC[src](z, x, y, now()));
     // the nearest loaded texture for a tile: itself or an ancestor (uv scaled into the ancestor's square)
     function bestTex(z, x, y, kind) { for (let zz = z, xx = x, yy = y; zz >= 0; zz--, xx >>= 1, yy >>= 1) { const u = url(zz, xx, yy, kind); const t = u && texture(u);
         if (t) { const s = 1 / (1 << (z - zz)); return { g: t.g, tf: [s, s, (x - (xx << (z - zz))) * s, (y - (yy << (z - zz))) * s] }; } } return null; }
 
-    let W = 0, H = 0, dpr = 1, M = null, dirty = true, visible = false, src = 'today', sunV = [1, 0, 0];
+    let W = 0, H = 0, dpr = 1, M = null, dirty = true, visible = false, src = 'today', labels = true, sunV = [1, 0, 0];
     const cam = { lat: 45.6, lon: 25.6, alt: 18000, goal: null };   // alt in km above the surface
-    const now = () => (opts.time ? opts.time() : Date.now());
+    let tOver = null; const now = () => tOver != null ? tOver : (opts.time ? opts.time() : Date.now());
     const lonlatTile = (lat, lon, z) => { const t = 1 << z, xf = (lon + 180) / 360 * t, yf = lat2y(lat, z); return [z, Math.floor(xf), Math.floor(yf), xf % 1, yf % 1]; };
     function eyePos() { const r = 1 + cam.alt / R_KM; return xyz(cam.lat, cam.lon, r); }
     const proj = p => { const x = M[0] * p[0] + M[4] * p[1] + M[8] * p[2] + M[12], y = M[1] * p[0] + M[5] * p[1] + M[9] * p[2] + M[13], w = M[3] * p[0] + M[7] * p[1] + M[11] * p[2] + M[15];
@@ -111,9 +116,10 @@
       const g = tileGeo(z, x, y), toEye = [eye[0] - g.c[0], eye[1] - g.c[1], eye[2] - g.c[2]];
       if (z >= 3 && g.corners.every(q => q[0] * (eye[0] - q[0]) + q[1] * (eye[1] - q[1]) + q[2] * (eye[2] - q[2]) < 0)) return;   // every corner on the far side
       const ps = g.corners.concat([g.c]).map(proj);
-      if (z >= 2) { if (ps.some(q => !q)) { if (z > 6) return; } else { const xs = ps.map(q => q[0]), ys = ps.map(q => q[1]); if (Math.max(...xs) < 0 || Math.min(...xs) > W || Math.max(...ys) < 0 || Math.min(...ys) > H) return; } }
-      const ok = ps.filter(Boolean), size = ok.length < 2 ? 1e9 : Math.hypot(Math.max(...ok.map(q => q[0])) - Math.min(...ok.map(q => q[0])), Math.max(...ok.map(q => q[1])) - Math.min(...ok.map(q => q[1])));
-      if (z < MAXZ && (z < 2 || size > 360 * dpr / Math.max(1, dpr) ) && list.length < 220) { for (let k = 0; k < 4; k++) select(z + 1, x * 2 + (k & 1), y * 2 + (k >> 1), eye); return; }
+      const straddle = ps.some(q => !q);   // part of the tile is behind the camera: keep it and split it
+      if (z >= 2) { if (straddle) { if (z > 6) { list.push([z, x, y]); return; } } else { const xs = ps.map(q => q[0]), ys = ps.map(q => q[1]); if (Math.max(...xs) < 0 || Math.min(...xs) > W || Math.max(...ys) < 0 || Math.min(...ys) > H) return; } }
+      const ok = ps.filter(Boolean), size = straddle || ok.length < 2 ? 1e9 : Math.hypot(Math.max(...ok.map(q => q[0])) - Math.min(...ok.map(q => q[0])), Math.max(...ok.map(q => q[1])) - Math.min(...ok.map(q => q[1])));
+      if (z < (src === 'map' || labels ? MAXZ : SATZ + 1) && (z < 2 || size > 360 * dpr / Math.max(1, dpr) ) && list.length < 220) { for (let k = 0; k < 4; k++) select(z + 1, x * 2 + (k & 1), y * 2 + (k >> 1), eye); return; }
       list.push([z, x, y]);
     }
     function draw() {
@@ -125,7 +131,7 @@
       const eye = tgt.map((v, i) => v + n[i] * h * Math.cos(tilt) - north[i] * h * Math.sin(tilt)), near = Math.max(h * .05, 2e-7);
       M = mul(persp(45 * D2R, W / H, near, 1 + h + 2), lookAt(eye, tgt, north));
       gl.viewport(0, 0, cv.width, cv.height); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-      gl.useProgram(pr); gl.uniformMatrix4fv(U.m, false, new Float32Array(M)); sunV = sunDir(now()); gl.uniform3fv(U.sun, sunV);
+      gl.useProgram(pr); gl.uniformMatrix4fv(U.m, false, new Float32Array(M)); sunV = sunDir(now()); gl.uniform3fv(U.sun, sunV); gl.uniform1f(U.nk, cam.alt > 2500 ? 1 : cam.alt < 800 ? .12 : .12 + .88 * (cam.alt - 800) / 1700);   // near the ground: the picture in daylight, like Google Earth
       list.length = 0; select(0, 0, 0, eye); list.sort((a, b) => a[0] - b[0]);
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); let pending = false;
       list.forEach(([z, x, y]) => { const g = tileGeo(z, x, y), d = bestTex(z, x, y, 'day'), n = bestTex(Math.min(z, 8), x >> Math.max(0, z - 8), y >> Math.max(0, z - 8), 'night');
@@ -134,6 +140,7 @@
         gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, d ? d.g : blank); gl.uniform4fv(U.ud, d ? d.tf : [1, 1, 0, 0]);
         let ntf = [1, 1, 0, 0]; if (n) { const s = z > 8 ? 1 / (1 << (z - 8)) : 1, ox = z > 8 ? (x - ((x >> (z - 8)) << (z - 8))) * s : 0, oy = z > 8 ? (y - ((y >> (z - 8)) << (z - 8))) * s : 0; ntf = [n.tf[0] * s, n.tf[1] * s, n.tf[2] + ox * n.tf[0], n.tf[3] + oy * n.tf[1]]; }
         gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, n ? n.g : black); gl.uniform4fv(U.un, ntf); gl.uniform1f(U.hn, n ? 1 : 0);
+        const lt = labels && src !== 'map' ? bestTex(z, x, y, 'lab') : null; gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, lt ? lt.g : black); gl.uniform4fv(U.ul, lt ? lt.tf : [1, 1, 0, 0]); gl.uniform1f(U.hl, lt ? 1 : 0);
         gl.drawElements(gl.TRIANGLES, N * N * 6, gl.UNSIGNED_SHORT, 0); });
       gl.disable(gl.CULL_FACE); caps.forEach(c => { gl.bindBuffer(gl.ARRAY_BUFFER, c.b); gl.vertexAttribPointer(L.p, 3, gl.FLOAT, false, 20, 0); gl.vertexAttribPointer(L.uv, 2, gl.FLOAT, false, 20, 12);
         gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, c.t); gl.uniform4fv(U.ud, [1, 1, 0, 0]); gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, black); gl.uniform1f(U.hn, 0);
@@ -173,11 +180,16 @@
     ov.addEventListener('pointerup', up); ov.addEventListener('pointercancel', up);
     ov.addEventListener('wheel', e => { e.preventDefault(); zoom(Math.exp(e.deltaY * .0015)); }, { passive: false });
     el.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { src = b.dataset.s; el.querySelectorAll('[data-s]').forEach(o => o.setAttribute('aria-pressed', o === b)); dirty = true; });
+    el.querySelector('[data-l]').onclick = e => { labels = !labels; e.target.setAttribute('aria-pressed', labels); dirty = true; };
+    const pad = v => String(v).padStart(2, '0'), localStr = t => { const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+    const di = el.querySelector('.e3d-date'); di.max = localStr(Date.now()); di.min = '2012-05-08T00:00';
+    di.onchange = () => { const t = Date.parse(di.value); if (isFinite(t)) { tOver = Math.min(Date.now(), t); dirty = true; } };
+    el.querySelector('[data-b=now]').onclick = () => { tOver = null; di.value = localStr(now()); dirty = true; };
     el.querySelector('[data-b=back]').onclick = () => opts.onBack && opts.onBack();
     el.querySelector('[data-b=home]').onclick = () => { const p = (opts.places || [])[0]; if (p) cam.goal = { lat: p.lat, lon: p.lon, alt: 60 }; dirty = true; };
     if (window.ResizeObserver) new ResizeObserver(resize).observe(host);
     resize(); requestAnimationFrame(frame);
-    api.show = (lat, lon) => { el.classList.add('on'); visible = true; resize(); if (lat != null) { cam.lat = lat; cam.lon = lon; } cam.alt = 30000; cam.goal = { lat: cam.lat, lon: cam.lon, alt: 12000 }; dirty = true; };
+    api.show = (lat, lon) => { el.querySelector('.e3d-date').value = localStr(now()); el.classList.add('on'); visible = true; resize(); if (lat != null) { cam.lat = lat; cam.lon = lon; } cam.alt = 30000; cam.goal = { lat: cam.lat, lon: cam.lon, alt: 12000 }; dirty = true; };
     api.hide = () => { el.classList.remove('on'); visible = false; };
     api.setTime = () => { dirty = true; };
     api.flyTo = (lat, lon, km) => { cam.goal = { lat, lon, alt: km || 50 }; dirty = true; };
