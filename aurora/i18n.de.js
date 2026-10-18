@@ -798,5 +798,11 @@ window.I18N_DICT.de = {
   "Ursa Major": "Großer Bär",
   "Ursa Minor": "Kleiner Bär",
   "Vela": "Segel des Schiffs",
-  "Virgo": "Jungfrau"
+  "Virgo": "Jungfrau",
+  "seen from here above this line · Kp {n}": "von hier sichtbar über dieser Linie · Kp {n}",
+  "aurora forecast (Kp) each hour": "Polarlicht-Prognose (Kp) pro Stunde",
+  "cloud cover": "Bewölkung",
+  "stars = dark and clear": "Sterne = dunkel und klar",
+  "chance": "Chance",
+  "Big Dipper": "Großer Wagen"
 };

@@ -798,5 +798,11 @@ window.I18N_DICT.ro = {
   "Ursa Major": "Ursa Mare",
   "Ursa Minor": "Ursa Mică",
   "Vela": "Velele",
-  "Virgo": "Fecioara"
+  "Virgo": "Fecioara",
+  "seen from here above this line · Kp {n}": "vizibilă de aici peste linia asta · Kp {n}",
+  "aurora forecast (Kp) each hour": "prognoza aurorei (Kp) pe ore",
+  "cloud cover": "nori",
+  "stars = dark and clear": "stele = întuneric și senin",
+  "chance": "șansă",
+  "Big Dipper": "Carul Mare"
 };
