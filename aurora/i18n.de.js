@@ -38,6 +38,8 @@ window.I18N_DICT.de = {
   "{n} H AGO": "VOR {n} STD",
   "LATEST": "AKTUELL",
   "LOADING {p}%": "LADE {p}%",
+  "Downloading the last 7 days of {f}…": "Lade die letzten 7 Tage von {f}…",
+  "⬇ CLIP · 7 DAYS": "⬇ CLIP · 7 TAGE",
   "Downloading the last 48 h of {f}…": "Lade die letzten 48 h von {f}…",
   "This model run has no forecast left — waiting for the next one.": "Dieser Modelllauf hat keine Vorhersage mehr — warte auf den nächsten.",
   "<b style=\"color:#E05BFF\">CME impact predicted ≈ {t}</b> (±7 h).": "<b style=\"color:#E05BFF\">CME-Einschlag erwartet ≈ {t}</b> (±7 h).",

@@ -733,8 +733,10 @@ async function loadSun() {
   try { sun.F = await j('sun/frames.json?t=' + Math.floor(Date.now() / 300000)); } catch (e) { sun.F = null; }
   if (!sun.F) sun.F = { filters: {} };
   const NO = 'https://services.swpc.noaa.gov', tOf = u => { const m = u.match(/(\d{8})_(\d{4})/); return m ? Date.parse(`${m[1].slice(0, 4)}-${m[1].slice(4, 6)}-${m[1].slice(6)}T${m[2].slice(0, 2)}:${m[2].slice(2)}:00Z`) : 0; };
-  await Promise.allSettled([['CCOR1', '/products/animations/ccor1/ccor1.json'], ['CCOR2', '/products/animations/ccor2/ccor2.json'], ['C2', '/products/animations/lasco-c2.json']].map(([id, u]) =>
-    j(NO + u + '?t=' + Math.floor(Date.now() / 600000)).then(a => { sun.F.filters[id] = a.map(f => [f.time_tag ? Date.parse(f.time_tag) : tOf(f.url), NO + f.url]).filter(f => f[0]).sort((x, y) => x[0] - y[0]); })));
+  await Promise.allSettled([['CCOR1', '/products/ccor1/jpegs.json'], ['CCOR2', '/products/ccor2/jpegs.json'], ['C2', '/products/animations/lasco-c2.json']].map(([id, u]) =>
+    j(NO + u + '?t=' + Math.floor(Date.now() / 600000)).then(a => { sun.F.filters[id] = a.map(f => [f.time_tag ? Date.parse(f.time_tag) : tOf(f.url), NO + f.url]).filter(f => f[0]).sort((x, y) => x[0] - y[0]);
+      if (/^CCOR/.test(id)) { const L = sun.F.filters[id], t0 = L.length ? L[L.length - 1][0] - 5 * 864e5 : 0;   // NOAA keeps ~a month: the last 5 days every 30 min, like the other filters
+        sun.F.filters[id] = L.filter((f, i) => f[0] >= t0 && (L.length - 1 - i) % 2 === 0); } })));
   if (!sun.started) { sun.started = true; sunPick(0); } else sunStatus();   // starts on the CME tab (C3), like the app
 }
 function sunStatus() {
@@ -749,6 +751,8 @@ function sunPick(k) {
   $('sunLbl').textContent = f[1]; $('sunDot').style.background = f[2]; $('sunCount').textContent = (sun.k + 1) + ' / ' + SUNF.length;
   const ownClip = !['CCOR1', 'CCOR2', 'C2', 'HMIBC'].includes(f[0]);   // the bot renders clips for its own lists only
   $('sunHelp').innerHTML = f[3]; $('sunClip').href = ownClip ? CLIPS + 'sun-' + f[0] + '.mp4' : VID(f[0]); $('sunClip').setAttribute('download', 'sun-' + f[0] + '.mp4');
+  $('sunClip').textContent = /^CCOR/.test(f[0]) ? T('⬇ CLIP · 7 DAYS') : T('⬇ CLIP · 48 H');
+  if (/^CCOR/.test(f[0])) $('sunClip').href = VID(f[0]).replace('last_24hrs', 'last_7_days');   // NOAA's 7-day movie covers the whole loop
   $('sunVidB').style.display = HASVID(f[0]) ? '' : 'none';
   sunStatus(); clearInterval(sun.timer); sun.imgs = []; const wasVid = vidOn; vidStop();
   if (wasVid) setTimeout(() => { if (seq === sun.seq) vidStart(); }, 0);   // switching filter keeps the movie going
@@ -823,7 +827,7 @@ $('sunPrev').onclick = () => sunPick(sun.k - 1); $('sunNext').onclick = () => su
   B.addEventListener('pointerup', e => { if (x0 == null) return; const d = e.clientX - x0; x0 = null; if (Math.abs(d) > 50) sunPick(sun.k + (d < 0 ? 1 : -1)); }); })();
 $('sunFullB').onclick = () => { if ($('sunBox').classList.contains('vid')) sunStop(); $('sunFull').classList.add('on'); sunShow(sun.i); };
 $('sunFX').onclick = () => $('sunFull').classList.remove('on');
-$('sunClip').onclick = () => toast(T('Downloading the last 48 h of {f}…', { f: SUNF[sun.k][1] }));
+$('sunClip').onclick = () => toast(T(/^CCOR/.test(SUNF[sun.k][0]) ? 'Downloading the last 7 days of {f}…' : 'Downloading the last 48 h of {f}…', { f: SUNF[sun.k][1] }));
 
 /* ── Solar wind forecast: the app's WSA-ENLIL card (NOAA allows browser requests, so frames and clips can be saved) ── */
 const enl = { frames: [], i: 0, play: null, cache: {} };

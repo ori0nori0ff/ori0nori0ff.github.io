@@ -38,6 +38,8 @@ window.I18N_DICT.ro = {
   "{n} H AGO": "ACUM {n} H",
   "LATEST": "ULTIMA",
   "LOADING {p}%": "SE ÎNCARCĂ {p}%",
+  "Downloading the last 7 days of {f}…": "Se descarcă ultimele 7 zile din {f}…",
+  "⬇ CLIP · 7 DAYS": "⬇ CLIP · 7 ZILE",
   "Downloading the last 48 h of {f}…": "Se descarcă ultimele 48 h din {f}…",
   "This model run has no forecast left — waiting for the next one.": "Această rulare a modelului nu mai are prognoză — așteptăm următoarea.",
   "<b style=\"color:#E05BFF\">CME impact predicted ≈ {t}</b> (±7 h).": "<b style=\"color:#E05BFF\">Impact CME estimat ≈ {t}</b> (±7 h).",
