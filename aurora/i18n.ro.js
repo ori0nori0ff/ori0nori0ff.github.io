@@ -804,5 +804,8 @@ window.I18N_DICT.ro = {
   "cloud cover": "nori",
   "stars = dark and clear": "stele = întuneric și senin",
   "chance": "șansă",
-  "Big Dipper": "Carul Mare"
+  "Big Dipper": "Carul Mare",
+  "No aurora tonight": "Diseară nu se vede aurora",
+  "missing": "lipsesc",
+  "Kp {n} here": "Kp {n} aici"
 };

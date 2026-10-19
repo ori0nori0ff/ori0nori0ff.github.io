@@ -804,5 +804,8 @@ window.I18N_DICT.de = {
   "cloud cover": "Bewölkung",
   "stars = dark and clear": "Sterne = dunkel und klar",
   "chance": "Chance",
-  "Big Dipper": "Großer Wagen"
+  "Big Dipper": "Großer Wagen",
+  "No aurora tonight": "Heute Nacht kein Polarlicht",
+  "missing": "es fehlt",
+  "Kp {n} here": "Kp {n} hier"
 };
