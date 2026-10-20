@@ -807,5 +807,19 @@ window.I18N_DICT.ro = {
   "Big Dipper": "Carul Mare",
   "No aurora tonight": "Diseară nu se vede aurora",
   "missing": "lipsesc",
-  "Kp {n} here": "Kp {n} aici"
+  "Kp {n} here": "Kp {n} aici",
+  "Sun’s magnetic field": "Câmpul magnetic al Soarelui",
+  "Without the solar wind": "Fără vânt solar (tor uriaș)",
+  "termination shock · 94 AU": "șocul de terminare · 94 UA",
+  "heliopause · 121 AU (Voyager 1, 2012)": "heliopauza · 121 UA (Voyager 1, 2012)",
+  "Latest pictures": "Cele mai noi poze",
+  "loading…": "se încarcă…",
+  "Earth from DSCOVR, 1.5 million km away": "Pământul văzut de DSCOVR, de la 1,5 milioane km",
+  "Sections": "Secțiuni",
+  "Tonight": "Diseară",
+  "Kp and the aurora oval": "Kp și ovalul aurorei",
+  "Flares and coronal holes": "Erupții și găuri coronale",
+  "3D model": "Modelul 3D",
+  "Your sky": "Cerul tău",
+  "Journal since 2008": "Jurnal din 2008"
 };

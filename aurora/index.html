@@ -23,7 +23,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-title" content="Orion's Space Observer">
 <meta name="application-name" content="Orion's Space Observer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://services.swpc.noaa.gov https://api.open-meteo.com https://geocoding-api.open-meteo.com https://raw.githubusercontent.com https://earthquake.usgs.gov; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://services.swpc.noaa.gov https://api.open-meteo.com https://geocoding-api.open-meteo.com https://raw.githubusercontent.com https://earthquake.usgs.gov https://images-api.nasa.gov https://epic.gsfc.nasa.gov; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
   /* one clean font everywhere: Inter (OFL, self-hosted). The old family names (used in CSS and on the canvases) map to it too. */
@@ -367,9 +367,21 @@
   .card.sgb::after { right: auto; left: -54px; top: auto; bottom: -54px; }
   @media (max-width: 640px) { .card::after { width: 170px; height: 170px; } }
   /* sacred:end */
+  /* PC only: a side bar to jump between the sections (the page itself stays as it is; phones don't get it) */
+  .sidenav { display: none; }
+  @media (min-width: 1280px) {
+    body { padding-left: 196px; }
+    .sidenav { display: flex; flex-direction: column; gap: 2px; position: fixed; left: 14px; top: 50%; transform: translateY(-50%); width: 170px; padding: 10px 8px; border-radius: 16px; background: rgba(12,15,20,.82); border: 1px solid #1E2530; backdrop-filter: blur(8px); z-index: 30; }
+    .sidenav a { display: block; padding: 6px 10px; border-radius: 9px; color: #A3B0C2; font: 600 12.5px Inter, system-ui, sans-serif; text-decoration: none; line-height: 1.3; }
+    .sidenav a.sn2 { padding-left: 20px; font-weight: 500; font-size: 12px; }
+    .sidenav a:hover { background: #1A2029; color: #F1F4F8; }
+    .sidenav a.on { background: rgba(57,255,158,.12); color: #39FF9E; }
+    .sidenav a:focus-visible { outline: 2px solid #39FF9E; outline-offset: 1px; }
+  }
 </style>
 </head>
 <body>
+<nav class="sidenav" aria-label="Sections"><a href="#vcard">Tonight</a><a href="#kpcard">Kp and the aurora oval</a><a href="#chap1">From the Sun to Earth</a><a href="#syncCard" class=sn2>The Sun now</a><a href="#secDen" class=sn2>Solar wind forecast</a><a href="#secReg" class=sn2>Flares and coronal holes</a><a href="#sec3d" class=sn2>3D model</a><a href="#chap2">Arrival</a><a href="#chap3">Your sky</a><a href="#chap4">Earth</a><a href="#secLong" class=sn2>Journal since 2008</a><a href="#safe">Safe and private</a></nav>
 <main>
   <div class="sub" id="upd">Loading live data…</div>
   <h1 data-noi18n>Orion's Space Observer</h1>
@@ -599,18 +611,27 @@
   <footer>Live data: <a href="https://www.swpc.noaa.gov/" rel="noopener">NOAA SWPC</a> · <a href="https://sdo.gsfc.nasa.gov/" rel="noopener">NASA SDO</a> · <a href="https://soho.nascom.nasa.gov/" rel="noopener">SOHO (ESA/NASA)</a> · <a href="https://open-meteo.com/" rel="noopener">Open-Meteo</a><br>
     Forecasts are estimates. Made with PowHau.</footer>
 </main>
+<script>/* side nav: ids for the chapter rows, smooth jumps, highlight the section on screen */
+(() => { const ch = [...document.querySelectorAll('.chap')]; ch.forEach((c, i) => { if (!c.id) c.id = 'chap' + (i + 1); });
+  const links = [...document.querySelectorAll('.sidenav a')], tg = links.map(a => document.getElementById(a.hash.slice(1))).filter(Boolean);
+  const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  links.forEach(a => a.onclick = e => { const t = document.getElementById(a.hash.slice(1)); if (!t) return; e.preventDefault(); t.scrollIntoView({ behavior: RM ? 'auto' : 'smooth', block: 'start' }); history.replaceState(null, '', location.search + a.hash); });
+  const upd = () => { let best = null, bd = 1e9; tg.forEach(t => { const r = t.getBoundingClientRect(), d = Math.abs(r.top - innerHeight * .25); if (r.bottom > 80 && d < bd) { bd = d; best = t; } });
+    links.forEach(a => a.classList.toggle('on', !!best && a.hash === '#' + best.id)); };
+  let q = 0; addEventListener('scroll', () => { if (!q) q = requestAnimationFrame(() => { q = 0; upd(); }); }, { passive: true }); upd(); })();</script>
+
 
 <div id="enlFull"><div id="enlStage"><div id="enlView"><canvas id="enlFCv"></canvas></div>
   <div class="fctl"><div class="pbtn" id="enlFPlay">▶</div><div class="pbtn spd" style="font:700 10px 'JetBrains Mono',monospace">1×</div><input type="range" id="enlFSlide" min="0" max="0" value="0"><span class="lbl" id="enlFT" style="min-width:150px;text-align:right">–</span><span class="lbl">PINCH · DRAG</span><div class="x" id="enlX">✕</div></div></div></div>
 <div id="toast"></div>
 <script src="i18n.js?v=b936034a"></script>
-<script src="i18n.ro.js?v=26b43533"></script>
-<script src="i18n.de.js?v=c040ef8f"></script>
+<script src="i18n.ro.js?v=92217751"></script>
+<script src="i18n.de.js?v=56bd81ed"></script>
 <script src="land.js?v=a8b7e715"></script>
 <script src="globe.js?v=2485e592"></script>
 <script src="tonight.js?v=a141a68c"></script>
 <script src="regions.js?v=376054ba"></script>
-<script src="space3d.js?v=52f2abc5"></script>
+<script src="space3d.js?v=ad89bd13"></script>
 <script src="earth3d.js?v=5a75a550"></script>
 <script>
 'use strict';

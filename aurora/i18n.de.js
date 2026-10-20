@@ -807,5 +807,19 @@ window.I18N_DICT.de = {
   "Big Dipper": "Großer Wagen",
   "No aurora tonight": "Heute Nacht kein Polarlicht",
   "missing": "es fehlt",
-  "Kp {n} here": "Kp {n} hier"
+  "Kp {n} here": "Kp {n} hier",
+  "Sun’s magnetic field": "Magnetfeld der Sonne",
+  "Without the solar wind": "Ohne Sonnenwind (riesiger Torus)",
+  "termination shock · 94 AU": "Terminationsschock · 94 AE",
+  "heliopause · 121 AU (Voyager 1, 2012)": "Heliopause · 121 AE (Voyager 1, 2012)",
+  "Latest pictures": "Neueste Bilder",
+  "loading…": "lädt…",
+  "Earth from DSCOVR, 1.5 million km away": "Die Erde von DSCOVR aus, 1,5 Millionen km entfernt",
+  "Sections": "Abschnitte",
+  "Tonight": "Heute Nacht",
+  "Kp and the aurora oval": "Kp und das Polarlichtoval",
+  "Flares and coronal holes": "Flares und koronale Löcher",
+  "3D model": "3D-Modell",
+  "Your sky": "Dein Himmel",
+  "Journal since 2008": "Tagebuch seit 2008"
 };
