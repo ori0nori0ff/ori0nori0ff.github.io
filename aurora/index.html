@@ -374,6 +374,7 @@
   .sidenav { display: none; }
   @media (min-width: 1280px) {
     body { padding-left: 196px; }
+    html:not(.navpin) body { padding-left: 22px; }   /* the side menu is hidden (a › tab): the page takes its room */
     .sidenav { display: flex; flex-direction: column; gap: 2px; position: fixed; left: 14px; top: 50%; transform: translateY(-50%); width: 170px; padding: 10px 8px; border-radius: 16px; background: rgba(12,15,20,.82); border: 1px solid #1E2530; backdrop-filter: blur(8px); z-index: 30; }
     .sidenav a { display: block; padding: 6px 10px; border-radius: 9px; color: #A3B0C2; font: 600 12.5px Inter, system-ui, sans-serif; text-decoration: none; line-height: 1.3; }
     .sidenav a.sn2 { padding-left: 20px; font-weight: 500; font-size: 12px; }
@@ -575,7 +576,7 @@
   /* storm mode (storm.js, ?storm=may2024): the page at the peak of the May 2024 G5 storm */
   .stormseg button[aria-pressed="true"] { background: #39FF9E; color: #0A0A0A; }
   @media (max-width: 999px) { .stormseg { display: none; } }   /* phones: the storm link + banner only (phone layout unchanged) */
-  html.storm .stormseg button[aria-pressed="true"] { background: #FF5A5A; color: #0A0A0A; }
+  html.storm .stormseg button[aria-pressed="true"], html.storm .sntools [data-m="may2024"][aria-pressed="true"], html.storm #setPane [data-m="may2024"][aria-pressed="true"] { background: #FF5A5A; color: #0A0A0A; }
   .stormbar { position: sticky; top: 0; z-index: 45; display: flex; align-items: center; justify-content: center; gap: 13px; flex-wrap: wrap; padding: 9px 16px; text-align: center;
     background: linear-gradient(90deg, #3A0D0D, #5A1414 50%, #3A0D0D); border-bottom: 1px solid #FF5A5A; color: #FFE1E1; font: 500 13px/1.45 Inter, sans-serif; }
   .stormbar b { color: #FFFFFF; } .stormbar button { border: 1px solid #FFB3B3; background: none; color: #FFE1E1; border-radius: 999px; padding: 0 14px; min-height: 30px; font: 600 11px 'JetBrains Mono', monospace; cursor: pointer; }
@@ -615,19 +616,62 @@
     #setPane label.sw input:checked { background: #39FF9E; } #setPane label.sw input:checked::after { transform: translateX(16px); background: #0A0A0A; }
   }
   @media (min-width: 1280px) {
-    html.snt:not(.nonav) .topbar { display: none; }   /* side menu switched off → the top row (with ⚙) comes back */
     .sntools { display: flex; flex-direction: column; gap: 6px; padding: 2px 0 8px; margin-bottom: 4px; border-bottom: 1px solid #1A2029; }
     .sntools .seg { width: 100%; } .sntools .seg button { flex: 1; padding: 7px 4px; min-height: 32px; font-size: 11px; }
     .sntools .row { display: flex; gap: 6px; }
     .sntools button.tb { flex: 1; border: 1px solid #2C3542; background: #131820; color: #7BE0FF; border-radius: 999px; min-height: 32px; font: 600 11px Inter, sans-serif; cursor: pointer; }
     .sntools button.tb[aria-pressed="true"] { background: #7BE0FF; color: #0A0A0A; border-color: #7BE0FF; }
     .sntools button.gear { flex: none; width: 32px; color: #C9D3DF; font-size: 14px; }
-    html.nonav .sidenav { display: none !important; }
+    /* auto-hide: the side menu waits as a thin tab on the left edge and slides out on hover / focus (pin it open in ⚙ Settings) */
+    html:not(.navpin) .sidenav { transform: translate(calc(-100% + 4px), -50%); transition: transform .35s cubic-bezier(.2,.7,.2,1) .35s, box-shadow .35s; }
+    html:not(.navpin) .sidenav:hover, html:not(.navpin) .sidenav:focus-within { transform: translate(0, -50%); transition-delay: 0s; box-shadow: 13px 0 34px rgba(0,0,0,.5); }
+    html:not(.navpin) .sidenav::after { content: "›"; position: absolute; top: 50%; right: -22px; width: 22px; height: 89px; transform: translateY(-50%); display: flex; align-items: center; justify-content: center;
+      border-radius: 0 13px 13px 0; background: rgba(12,15,20,.86); border: 1px solid #1E2530; border-left: 0; color: #7BE0FF; font: 600 15px Inter, sans-serif; transition: opacity .25s; }
+    html:not(.navpin) .sidenav:hover::after, html:not(.navpin) .sidenav:focus-within::after { opacity: 0; }
+    html:not(.navpin) .sidenav.shut { transform: translate(calc(-100% + 4px), -50%) !important; } html:not(.navpin) .sidenav.shut::after { opacity: 1 !important; }
+    html.snt .topbar { display: none; }   /* the tools live at the top of the side menu */
+    html:not(.navpin) .sidenav { left: 0; border-radius: 0 16px 16px 0; }
+  }
+  /* PC: the answer card a little tighter so the Kp chart fits on the first screen */
+  @media (min-width: 1000px) {
+    #vcard .big { font-size: 48px; margin: 0 0 4px; }
+    #vcard #vtext { margin-bottom: 0; }
+    #vcard #tonight { margin-top: 10px !important; }
+    #vcard #tnTxt { margin-top: 6px !important; }
+    #vcard #kpChartCard { margin-top: 13px !important; }
+    #vcard #kpChartCard #kpchart { height: 180px; }
+  }
+  /* PC: the answer card's three doors to the chapters (replace the 4 tonight tiles; phones keep the tiles) */
+  .portals { display: none; }
+  @media (min-width: 1000px) {
+    .portals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 21px; margin: 13px 0 21px; }
+    .pt { position: relative; display: flex; align-items: flex-end; gap: 10px; min-height: 121px; padding: 13px 16px; border-radius: 13px; overflow: hidden; text-decoration: none; color: #E6EDF5;
+      border: 1px solid #1F2630; background: #0A0D11; isolation: isolate; transition: border-color .25s, transform .25s; }
+    .pt:hover { border-color: var(--c); transform: translateY(-2px); } .pt:focus-visible { outline: 2px solid var(--c); outline-offset: 2px; }
+    .ptbg { position: absolute; inset: 0; z-index: -2; background: #000 center / cover no-repeat; transition: transform .6s ease; }
+    .pt:hover .ptbg { transform: scale(1.05); }
+    #ptSunImg { background-size: 125% auto; background-position: 50% 4%; }   /* AIA 171: the upper limb of the disc with its glowing loops */
+    #ptEarthImg { background-size: auto 150%; background-position: 72% 46%; background-color: #000; }   /* the owner's night Earth: the whole globe, on the right of the door */
+    .pt::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, rgba(6,8,11,0) 25%, rgba(6,8,11,.88) 82%); }
+    .pt > b { flex: none; width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--c); color: var(--c); font: 600 13px/22px 'Barlow Condensed', sans-serif; text-align: center; background: rgba(6,8,11,.6); }
+    .ptt { flex: 1; min-width: 0; display: flex; flex-direction: column; } .ptt strong { font: 700 15px Inter, sans-serif; color: #F1F4F8; } .ptt em { font: 400 11.5px/1.35 Inter, sans-serif; font-style: normal; color: #C9D3DF; }
+    .pt > i { flex: none; font-style: normal; color: var(--c); font-size: 15px; transition: transform .25s; } .pt:hover > i { transform: translateX(3px); }
+  }
+  /* PC: two tiny switches above the word "Observer" (no text — the tooltip names them): calm / storm and the explanations on hover */
+  .hdwrap { display: inline-block; position: relative; } .hdtools { display: none; }
+  @media (min-width: 1000px) {
+    .hdtools { display: flex; gap: 8px; position: absolute; right: 2px; bottom: calc(100% + 3px); }
+    .hdtools button { position: relative; width: 30px; height: 16px; padding: 0; border-radius: 8px; border: 1px solid var(--k); background: color-mix(in srgb, var(--k) 14%, #0D1116); cursor: pointer; transition: background .25s, border-color .25s; }
+    .hdtools button::after { content: ""; position: absolute; top: 2px; left: 2px; width: 10px; height: 10px; border-radius: 50%; background: var(--k); transition: transform .25s, background .25s; }
+    .hdtools button[aria-pressed="true"]::after { transform: translateX(14px); }
+    .hdtools .hs { --k: #39FF9E; } .hdtools .hs[aria-pressed="true"] { --k: #FF5A5A; }
+    .hdtools .hx { --k: #5C6878; } .hdtools .hx[aria-pressed="true"] { --k: #7BE0FF; }
+    .hdtools button:hover { filter: brightness(1.25); } .hdtools button:focus-visible { outline: 2px solid #7BE0FF; outline-offset: 2px; }
   }
 </style>
 </head>
 <body>
-<nav class="sidenav" aria-label="Sections"><div class="sng" style="--snc:#7CFFB2"><a href="#vcard" class="sn1"><i></i>NOAA Aurora Forecast</a><a href="#kpcard" class="sn2">Kp and the aurora oval</a></div><div class="sng" style="--snc:#FFE600"><a href="#chap1" class="sn1"><b>1</b>The Sun</a><a href="#sunEarth" class="sn2">The Sun Now</a><a href="#secReg" class="sn2">Flares and coronal holes</a><a href="#secCyc" class="sn2">Solar cycle</a></div><div class="sng" style="--snc:#7BE0FF"><a href="#chap2" class="sn1"><b>2</b>The Earth</a><a href="#frWind" class="sn2" title="L1 = the point 1.5 million km towards the Sun where probes watch the solar wind">Solar wind and storm levels</a><a href="#frShield" class="sn2">Magnetic shield and cosmic rays</a><a href="#secLong" class="sn2">Sun–Earth record since 2008</a><a href="#secEq" class="sn2">Earthquakes & volcanoes</a></div><div class="sng" style="--snc:#B9A7FF"><a href="#chap3" class="sn1"><b>3</b>Explore in 3D</a><a href="#sec3d" class="sn2">3D model</a></div><div class="sng" style="--snc:#8E9AAB"><a href="#safe" class="sn1"><i></i>Safe and private</a></div></nav>
+<nav class="sidenav" aria-label="Sections"><div class="sng" style="--snc:#7CFFB2"><a href="#vcard" class="sn1"><i></i>NOAA Aurora Forecast</a></div><div class="sng" style="--snc:#FFE600"><a href="#chap1" class="sn1"><b>1</b>The Sun</a><a href="#sunEarth" class="sn2">The Sun Now</a><a href="#secReg" class="sn2">Flares and coronal holes</a><a href="#secCyc" class="sn2">Solar cycle</a></div><div class="sng" style="--snc:#7BE0FF"><a href="#chap2" class="sn1"><b>2</b>The Earth</a><a href="#frWind" class="sn2" title="L1 = the point 1.5 million km towards the Sun where probes watch the solar wind">Solar wind and storm levels</a><a href="#frShield" class="sn2">Magnetic shield and cosmic rays</a><a href="#secLong" class="sn2">Sun–Earth record since 2008</a><a href="#secEq" class="sn2">Earthquakes & volcanoes</a></div><div class="sng" style="--snc:#B9A7FF"><a href="#chap3" class="sn1"><b>3</b>Explore in 3D</a><a href="#sec3d" class="sn2">3D model</a></div><div class="sng" style="--snc:#8E9AAB"><a href="#safe" class="sn1"><i></i>Safe and private</a></div></nav>
 <main>
 
   <div class="sub" id="upd">Loading live data…</div>
@@ -638,10 +682,14 @@
     <div class="seg stormseg" role="group" aria-label="Calm or storm"><button type="button" data-storm="">CALM</button><button type="button" data-storm="may2024">⚡ STORM</button></div>
     <div class="seg" role="group" aria-label="Language" data-noi18n><button data-lang="en" lang="en">EN</button><button data-lang="ro" lang="ro">RO</button><button data-lang="de" lang="de">DE</button></div>
   </div>
+<nav class="portals xfull" id="portals" aria-label="The chapters">
+    <a href="#sunEarth" class="pt" style="--c:#FFE600"><span class="ptbg" id="ptSunImg" style="background-image:url(og.png)"></span><b>1</b><span class="ptt"><strong>The Sun now</strong><em id="ptSun">Flares, CMEs and the solar wind</em></span><i>→</i></a>
+    <a href="#chap2" class="pt" style="--c:#7BE0FF"><span class="ptbg" id="ptEarthImg" style="background-image:url(img/earth-night.jpg)"></span><b>2</b><span class="ptt"><strong>The Earth</strong><em id="ptEarth">The wind at L1 and Earth's shield</em></span><i>→</i></a>
+    <a href="#sec3d" class="pt" style="--c:#B9A7FF"><span class="ptbg" style="background-image:url(img/harmony-spheres.jpg);background-position:32% 50%"></span><b>3</b><span class="ptt"><strong>Explore in 3D</strong><em>Planets, wind and CMEs on one clock</em></span><i>→</i></a>
+  </nav>
 <section class="card frame xfull" id="frForecast" aria-label="Aurora forecast · tonight from your place"><div class="lbl ulbl">Aurora forecast · tonight from your place</div>
 <div class="grid top">
   <section class="card verdict" id="vcard">
-    <div class="lbl">Can we see it? · the answer first, then follow it from the Sun ↓</div>
     <div class="big" id="vword">…</div>
     <p class="why" id="vtext">Checking NOAA's forecast…</p>
     <div class="facts" style="display:none">
@@ -649,8 +697,7 @@
       <div class="fact"><div class="lbl">Clouds</div><b id="fCloud">–</b></div>
       <div class="fact"><div class="lbl">Dark from</div><b id="fDark">–</b></div>
     </div>
-    <div class="lbl" style="margin-top:14px">Tonight hour by hour</div>
-    <div id="tonight"><div class="why" style="font-size:12px;color:var(--faint)">Loading…</div></div>
+    <div id="tonight" style="margin-top:13px"><div class="why" style="font-size:12px;color:var(--faint)">Loading…</div></div>
     <p class="why" id="tnTxt" style="margin-top:8px"></p>
     <div class="help"><b>Kp</b> is the aurora strength scale, 0 to 9. From <span id="needWhere">here</span> you need about <b>Kp <span id="needKp">7</span> or more</b>, a clear sky and a dark place facing north.</div>
   </section>
@@ -877,11 +924,11 @@
   <div class="fctl"><div class="pbtn" id="enlFPlay">▶</div><div class="pbtn spd" style="font:700 10px 'JetBrains Mono',monospace">1×</div><input type="range" id="enlFSlide" min="0" max="0" value="0"><span class="lbl" id="enlFT" style="min-width:150px;text-align:right">–</span><span class="lbl">PINCH · DRAG</span><div class="x" id="enlX">✕</div></div></div></div>
 <div id="toast"></div>
 <script src="i18n.js?v=b936034a"></script>
-<script src="i18n.ro.js?v=5943f432"></script>
-<script src="i18n.de.js?v=4126a34b"></script>
+<script src="i18n.ro.js?v=ae85b0d8"></script>
+<script src="i18n.de.js?v=8d0dbeb6"></script>
 <script src="land.js?v=a8b7e715"></script>
 <script src="globe.js?v=fa6d06d5"></script>
-<script src="tonight.js?v=a141a68c"></script>
+<script src="tonight.js?v=8f552af5"></script>
 <script src="regions.js?v=9dbae666"></script>
 <script src="space3d.js?v=ad89bd13"></script>
 <script src="earth3d.js?v=5a75a550"></script>
@@ -976,7 +1023,7 @@ function verdict() {
   $('fDark').textContent = dark ? hhmm(dark) : '–';
   if (window.AuroraTonight && S.wx) {
     const pl = AuroraTonight.plan({ lat: TOWN.lat, lon: TOWN.lon, need: N, kpList: S.kpList, wx: S.wx });
-    S.tnPlan = pl; S.tnNeed = N; S.kpT = kp; S.clouds = clouds; AuroraTonight.render($('tonight'), pl, hhmm, kpColor, N, sy.on ? sy.t : 0, { compact: PHONE() }); $('tnTxt').textContent = S.tonight = AuroraTonight.sentence(pl, N, hhmm);
+    S.tnPlan = pl; S.tnNeed = N; S.kpT = kp; S.clouds = clouds; AuroraTonight.render($('tonight'), pl, hhmm, kpColor, N, sy.on ? sy.t : 0, { compact: PHONE(), head: false, ...(innerWidth >= 1000 ? { tiles: false, hor: 128 } : {}) }); $('tnTxt').textContent = S.tonight = AuroraTonight.sentence(pl, N, hhmm);
   }
   if (window.redrawDeep) redrawDeep();
  
@@ -1371,7 +1418,7 @@ function tcursor() {
     if (!ln) { ln = document.createElementNS('http://www.w3.org/2000/svg', 'line'); ln.setAttribute('class', 'tcur'); ln.setAttribute('stroke', '#FFE600'); ln.setAttribute('stroke-width', '1.5'); svg.appendChild(ln); }
     if (!t || t < a || t > b) { ln.style.display = 'none'; return; }
     const x = xa + (t - a) / (b - a) * (xb - xa); ln.setAttribute('x1', x); ln.setAttribute('x2', x); ln.setAttribute('y1', 0); ln.setAttribute('y2', h); ln.style.display = ''; });
-  if (S.tnPlan) AuroraTonight.render($('tonight'), S.tnPlan, hhmm, kpColor, S.tnNeed, t, { compact: PHONE() });
+  if (S.tnPlan) AuroraTonight.render($('tonight'), S.tnPlan, hhmm, kpColor, S.tnNeed, t, { compact: PHONE(), head: false, ...(innerWidth >= 1000 ? { tiles: false, hor: 128 } : {}) });
 }
 window.tcursor = tcursor;
 // tap a chart → the shared clock jumps to that moment
@@ -1598,7 +1645,7 @@ async function load() {
     loadSun(),
   ]);
   verdict(); if (!S.kpList) { $('vword').textContent = T('No data'); $('vtext').textContent = T('NOAA could not be reached. Try again in a minute.'); }
-  $('upd').textContent = window.STORM ? T('Storm mode · 10 May 2024 · {t} local time', { t: hhmm(Date.now()) }) : T('Live · updated {t} local time', { t: hhmm(Date.now()) });
+  $('upd').textContent = window.STORM ? T('Storm mode · 10 May 2024 · {t}', { t: hhmm(Date.now()) }) : T('Live · updated {t} local time', { t: hhmm(Date.now()) });
 }
 load(); setInterval(load, 10 * 60000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
@@ -2138,7 +2185,10 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-repl
   const $q = q => document.querySelector(q), get = k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, put = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} };
   const storm = !!window.STORM, lang = document.documentElement.lang || 'en';
   const goStorm = v => { const b = $q(`.stormseg [data-storm="${v}"]`); if (b) b.click(); };
-  if (get('aurora.nav') === 'off') document.documentElement.classList.add('nonav');
+  if (get('aurora.nav') === 'pin') document.documentElement.classList.add('navpin');
+  // the hidden side menu (≥ 1280 px) folds back after a pick, even while the mouse is still over it
+  { const n = document.querySelector('.sidenav'); if (n) n.addEventListener('click', e => { if (!e.target.closest('a') || document.documentElement.classList.contains('navpin')) return;
+      n.classList.add('shut'); const off = () => { n.classList.remove('shut'); n.removeEventListener('mouseleave', off); }; n.addEventListener('mouseleave', off); setTimeout(off, 2500); }); }
   // the drawer
   const sh = document.createElement('div'); sh.id = 'setShade';
   const pn = document.createElement('aside'); pn.id = 'setPane'; pn.setAttribute('aria-label', T('Settings')); pn.setAttribute('aria-hidden', 'true');
@@ -2151,7 +2201,7 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-repl
       <button type="button" class="sb storm" data-a="replay">▶ ${T('Storm replay · May 2024')}</button></div>
     <div class="sg"><div class="lbl">${T('Help')}</div><label class="sw">${T('Explain on hover (? How to read)')}<input type="checkbox" data-t="xp"></label><button type="button" class="sb" data-a="guide">${T('How it all works')}</button></div>
     <div class="sg"><div class="lbl">${T('Display')}</div><label class="sw">${T('Animations')}<input type="checkbox" data-t="mo" ${get('aurora.motion') === 'off' ? '' : 'checked'}></label>
-      <label class="sw">${T('Side menu')}<input type="checkbox" data-t="nav" ${get('aurora.nav') === 'off' ? '' : 'checked'}></label></div>
+      <label class="sw">${T('Keep the side menu open')}<input type="checkbox" data-t="nav" ${get('aurora.nav') === 'pin' ? 'checked' : ''}></label></div>
     <div class="sg"><div class="lbl">${T('Report')}</div><button type="button" class="sb rep" data-a="rep">⬇ ${T('Save the full report (image)')}</button>
       <a href="#safe" class="note" data-a="safe">${T('No cookies, no tracking, nothing about you is stored')} ›</a></div>`;
   document.body.append(sh, pn);
@@ -2171,7 +2221,7 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-repl
   pn.addEventListener('change', e => { const c = e.target.closest('[data-t]'); if (!c) return;
     if (c.dataset.t === 'xp') { const xb = $q('#xpBtn'); if (xb && (xb.getAttribute('aria-pressed') === 'true') !== c.checked) xb.click(); }
     if (c.dataset.t === 'mo') { put('aurora.motion', c.checked ? null : 'off'); location.reload(); }
-    if (c.dataset.t === 'nav') { put('aurora.nav', c.checked ? null : 'off'); document.documentElement.classList.toggle('nonav', !c.checked); } });
+    if (c.dataset.t === 'nav') { put('aurora.nav', c.checked ? 'pin' : null); document.documentElement.classList.toggle('navpin', c.checked); } });
   // ⚙ in the top row (1000–1279 px) …
   const g1 = document.createElement('button'); g1.id = 'setBtn'; g1.type = 'button'; g1.setAttribute('aria-label', T('Settings')); g1.textContent = '⚙'; g1.onclick = open;
   const top = $q('.topbar'); if (top) top.appendChild(g1);
@@ -2188,5 +2238,25 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-repl
   // keep the side-bar button in step when explain mode is closed from its own bar / Esc
   new MutationObserver(() => { const xb = $q('#xpBtn'), x = tl.querySelector('[data-a="xp"]'); if (xb && x) x.setAttribute('aria-pressed', xb.getAttribute('aria-pressed') || 'false'); }).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 })();</script>
+<script>/* the three doors: live picture of the Sun (CCOR-1; LASCO C3 in storm mode) + a live line each */
+(() => { if (innerWidth < 1000) return; const NO = 'https://services.swpc.noaa.gov/', g = id => document.getElementById(id);
+  const setImg = u => { const im = new Image(); im.onload = () => { g('ptSunImg').style.backgroundImage = `url("${im.src}")`; }; im.src = u; };
+  // the newest SDO AIA 171 picture at 1024 px from our hourly frame list (AIA 193 in storm mode — what was archived for that day)
+  fetch('sun/frames.json?t=' + Math.floor(Date.now() / 3e5)).then(r => r.json()).then(F => { const L = (F.filters || {})['0171'] || (F.filters || {})['0193'] || []; const f = L[L.length - 1]; if (f) setImg(f[1]); }).catch(() => {});
+  fetch(NO + 'json/goes/primary/xray-flares-7-day.json').then(r => r.json()).then(fl => { const now = Date.now(), d = fl.filter(f => now - Date.parse(f.max_time) < 864e5);
+    const b = d.reduce((a, f) => !a || f.max_xrlong > a.max_xrlong ? f : a, null); if (b) g('ptSun').textContent = T('Biggest flare in 24 h: {c}', { c: b.max_class }); }).catch(() => {});
+  Promise.all([fetch(NO + 'products/summary/solar-wind-speed.json').then(r => r.json()), fetch(NO + 'products/summary/solar-wind-mag-field.json').then(r => r.json())])
+    .then(([v, m]) => { g('ptEarth').textContent = T('Wind {v} km/s · Bz {b} nT', { v: Math.round(+v[0].proton_speed), b: +m[0].bz_gsm }); }).catch(() => {}); })();</script>
+<script>/* tiny header switches (PC): CALM | STORM and HOVER HELP OFF | ON, driving the page's own buttons */
+(() => { if (innerWidth < 1000) return; const h = document.querySelector('main h1'); if (!h) return;
+  const w = document.createElement('span'); w.className = 'hdwrap'; h.parentNode.insertBefore(w, h); w.appendChild(h); h.style.display = 'inline-block';
+  const storm = !!window.STORM, t = document.createElement('div'); t.className = 'hdtools';
+  const lS = T('Calm or storm') + ' — ' + (storm ? T('STORM MODE') : 'CALM'), lX = T('Explain on hover (? How to read)');
+  t.innerHTML = `<button type="button" class="hs" aria-pressed="${storm}" title="${lS}" aria-label="${lS}"></button><button type="button" class="hx" aria-pressed="false" title="${lX}" aria-label="${lX}"></button>`;
+  w.appendChild(t);
+  t.querySelector('.hs').onclick = () => { const b = document.querySelector(`.stormseg [data-storm="${storm ? '' : 'may2024'}"]`); if (b) b.click(); };
+  const hx = t.querySelector('.hx'), sync = () => hx.setAttribute('aria-pressed', String(document.documentElement.classList.contains('xp')));
+  hx.onclick = () => { const b = document.getElementById('xpBtn'); if (b) b.click(); sync(); };
+  new MutationObserver(sync).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] }); sync(); })();</script>
 </body>
 </html>

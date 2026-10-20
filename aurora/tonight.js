@@ -101,7 +101,7 @@
       : `<div style="font-weight:600;font-size:15px;color:#F1F4F8;margin:2px 0 10px">${tr('No aurora tonight')} <span style="color:#8E9AAB;font-weight:400">· ${tr('missing')}: ${C.filter(c => !c[1]).map(c => c[4]).join(', ') || tr('better timing')}</span></div>`;
     // condition tiles: a small drawn scene from tonight's own hours (sky darkening, clouds, the aurora vs the line
     // needed here — rays in each hour's Kp colour, gently moving — and the Moon on its arc), then label, value, note
-    const SW = 200, SH = 92, sid = 'tc' + Math.random().toString(36).slice(2, 7), sn = hs.length, sX = i => (i + .5) / sn * SW;
+    const SW = 200, SH = (o && o.tileH) || 92, sid = 'tc' + Math.random().toString(36).slice(2, 7), sn = hs.length, sX = i => (i + .5) / sn * SW;
     const skyS = s => s > -6 ? '#3A4E78' : s > -12 ? '#22304F' : s > -18 ? '#141C33' : '#0A0F1E';
     const ridge = `<path d="M0 ${SH} L0 ${SH - 9} L20 ${SH - 14} L42 ${SH - 8} L66 ${SH - 16} L90 ${SH - 9} L118 ${SH - 15} L146 ${SH - 8} L170 ${SH - 13} L200 ${SH - 9} L200 ${SH} Z" fill="#06080C"/>`;
     let sr = 5; const srnd = () => (sr = (sr * 9301 + 49297) % 233280) / 233280;
@@ -141,7 +141,7 @@
     // a thin line per hour = Kp forecast (colour = strength, number on top) inside a green aurora glow
     // that has to reach the red line to be seen from here; chance ribbon + cloud % + hours under the horizon
     const W = Math.max(280, el.clientWidth || 340), n = hs.length, cw = W / n, sm = W < 520;
-    const hor = sm ? 150 : 180, X = i => (i + .5) * cw, xt = tt => ((tt - hs[0].t) / H + .5) * cw;
+    const hor = (o && o.hor) || (sm ? 150 : 180), X = i => (i + .5) * cw, xt = tt => ((tt - hs[0].t) / H + .5) * cw;
     const kY = k => hor - Math.min(9, Math.max(0, k)) / 9 * (hor - 34);
     const t = (x, yy, s, col, sz, anc, w) => `<text x="${x}" y="${yy}" fill="${col}" font-size="${sz}" text-anchor="${anc || 'start'}" font-weight="${w || 500}">${s}</text>`;
     const sky = s => s > -6 ? '#2C3C5E' : s > -12 ? '#18223A' : s > -18 ? '#0D1326' : '#05080F';
@@ -222,7 +222,7 @@
     if (cur && cur >= hs[0].t && cur < hs[n - 1].t + H) { const xc = xt(cur - H / 2); g += `<line x1="${xc.toFixed(1)}" x2="${xc.toFixed(1)}" y1="0" y2="${yCh + 10}" stroke="#FFE600" stroke-width="1.5"/>`; }
     const leg = `<div style="display:flex;gap:6px 14px;flex-wrap:wrap;font-size:11.5px;color:#A3B0C2;margin-top:6px"><span><b style="color:${OK}">│</b> ${tr('aurora forecast (Kp) each hour')}</span><span>☁ ${tr('cloud cover')}</span><span>${tr('stars = dark and clear')}</span><span><b style="color:${OK}">▬</b> ${tr('chance')}</span></div>`;
     // tiles always shown (they replace the old Kp / clouds / dark facts): 4 in a row when there's room, else 2 × 2 — never 3 + 1
-    el.innerHTML = head + `<div style="display:grid;grid-template-columns:repeat(${W >= 600 ? 4 : 2},minmax(0,1fr));gap:8px">${cells}</div>`
+    el.innerHTML = (o && o.head === false ? '' : head) + (o && o.tiles === false ? '' : `<div style="display:grid;grid-template-columns:repeat(${W >= 600 ? 4 : 2},minmax(0,1fr));gap:8px">${cells}</div>`)
       + `<svg viewBox="0 0 ${W} ${Hh}" width="100%" style="display:block;margin-top:14px;height:auto;font-family:inherit" role="img" aria-label="${tr('Tonight hour by hour: darkness, clouds and aurora chance')}">${g}</svg>` + leg;
   }
 

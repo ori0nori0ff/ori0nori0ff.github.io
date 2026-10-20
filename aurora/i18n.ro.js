@@ -1077,5 +1077,15 @@ window.I18N_DICT.ro = {
   "Animations": "Animații",
   "Side menu": "Meniul din stânga",
   "Report": "Raport",
-  "HOW TO READ": "CUM SE CITEȘTE"
+  "HOW TO READ": "CUM SE CITEȘTE",
+  "The chapters": "Capitolele",
+  "Flares, CMEs and the solar wind": "Erupții, CME-uri și vântul solar",
+  "The wind at L1 and Earth's shield": "Vântul la L1 și scutul Pământului",
+  "Planets, wind and CMEs on one clock": "Planete, vânt și CME-uri pe un ceas",
+  "Biggest flare in 24 h: {c}": "Cea mai mare erupție în 24 h: {c}",
+  "Wind {v} km/s · Bz {b} nT": "Vânt {v} km/s · Bz {b} nT",
+  "Keep the side menu open": "Ține meniul din stânga deschis",
+  "HOVER HELP": "AJUTOR LA HOVER",
+  "HELP": "AJUTOR",
+  "Storm mode · 10 May 2024 · {t}": "Modul furtună · 10 mai 2024 · {t}"
 };

@@ -1077,5 +1077,15 @@ window.I18N_DICT.de = {
   "Animations": "Animationen",
   "Side menu": "Seitenmenü",
   "Report": "Bericht",
-  "HOW TO READ": "SO LIEST DU ES"
+  "HOW TO READ": "SO LIEST DU ES",
+  "The chapters": "Die Kapitel",
+  "Flares, CMEs and the solar wind": "Flares, CMEs und der Sonnenwind",
+  "The wind at L1 and Earth's shield": "Der Wind bei L1 und der Erdschild",
+  "Planets, wind and CMEs on one clock": "Planeten, Wind und CMEs auf einer Uhr",
+  "Biggest flare in 24 h: {c}": "Größter Flare in 24 h: {c}",
+  "Wind {v} km/s · Bz {b} nT": "Wind {v} km/s · Bz {b} nT",
+  "Keep the side menu open": "Seitenmenü offen lassen",
+  "HOVER HELP": "HILFE BEIM ZEIGEN",
+  "HELP": "HILFE",
+  "Storm mode · 10 May 2024 · {t}": "Sturm-Modus · 10. Mai 2024 · {t}"
 };
