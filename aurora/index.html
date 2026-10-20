@@ -4,6 +4,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script src="storm.js?v=4357fdff"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Orion's Space Observer</title>
 <meta name="description" content="Can we see the northern lights tonight? Live aurora forecast, the Sun right now, the solar wind and Kp — hour by hour.">
@@ -23,7 +24,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-title" content="Orion's Space Observer">
 <meta name="application-name" content="Orion's Space Observer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://services.swpc.noaa.gov https://api.open-meteo.com https://geocoding-api.open-meteo.com https://raw.githubusercontent.com https://earthquake.usgs.gov https://images-api.nasa.gov https://epic.gsfc.nasa.gov; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://services.swpc.noaa.gov https://api.open-meteo.com https://historical-forecast-api.open-meteo.com https://geocoding-api.open-meteo.com https://raw.githubusercontent.com https://earthquake.usgs.gov https://images-api.nasa.gov https://epic.gsfc.nasa.gov; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
   /* one clean font everywhere: Inter (OFL, self-hosted). The old family names (used in CSS and on the canvases) map to it too. */
@@ -145,7 +146,7 @@
 .mini { background: var(--card); border-radius: 18px; padding: 12px 14px; }
 .mini b { display: block; font: 500 30px/1 'Barlow Condensed', sans-serif; margin-top: 6px; }
 .mini small { display: block; color: var(--t2); font-size: 9px; letter-spacing: .5px; margin-top: 4px; line-height: 1.4; }
-.scales { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 10px; }
+.scales { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
 .scale { cursor: pointer; border: 1px solid transparent; }
 .scale.on { border-color: #7FB8FF; background: #121A26; }
 #swChart { width: 100%; display: block; margin-top: 10px; }
@@ -251,6 +252,8 @@
   .stime { font: 500 10px 'JetBrains Mono', monospace; color: #C8A84B; min-width: 92px; }
   .schips { display: flex; gap: 8px; overflow-x: auto; margin-top: 14px; padding-bottom: 4px; scrollbar-width: none; }
   .schips::-webkit-scrollbar { display: none; }
+  .srow { display: flex; align-items: center; gap: 8px; margin-top: 14px; } .srow .schips { flex: 1; min-width: 0; margin-top: 0; }
+  .srow .snav { position: static; flex: none; width: 34px; height: 34px; font-size: 18px; background: #161B22; border: 1px solid #2A3340; }
   .schips button { flex: none; height: 34px; padding: 0 14px; border-radius: 17px; background: none; border: 1px solid; font: 500 11px 'JetBrains Mono', monospace; cursor: pointer; }
   #sunFull { position: fixed; inset: 0; z-index: 60; background: #000; display: none; flex-direction: column; }
   #sunFull.on { display: flex; } #sunFull .fimg { flex: 1; position: relative; } #sunFull img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
@@ -378,20 +381,265 @@
     .sidenav a.on { background: rgba(57,255,158,.12); color: #39FF9E; }
     .sidenav a:focus-visible { outline: 2px solid #39FF9E; outline-offset: 1px; }
   }
+  /* redesign (PC ≥ 1000 px): chapter openings with the owner's art / NASA pictures, quick links, a Fibonacci ruler,
+     the chapter's Platonic solid; the side nav grouped by chapter; seed of life in the answer card; φ in the footer */
+  @media (min-width: 1000px) {
+    .chx { position: relative; overflow: hidden; isolation: isolate; min-height: 233px; margin: 55px 0 21px; padding: 34px 40px 30px; border-radius: 22px; border: 1px solid #1E2530;
+      background: linear-gradient(90deg, rgba(8,10,14,.97) 0%, rgba(8,10,14,.92) 40%, rgba(8,10,14,.4) 68%, rgba(8,10,14,.1) 100%), var(--chimg) right center / cover no-repeat, #0A0C10; gap: 21px; }
+    .chx > span { width: 55px; height: 55px; border-color: var(--chc); color: var(--chc); font-size: 30px; line-height: 53px; box-shadow: 0 0 34px color-mix(in srgb, var(--chc) 25%, transparent); }
+    .chx h2 { font-size: 34px !important; letter-spacing: -.01em; } .chx p { font-size: 15px; line-height: 1.6; max-width: 560px; color: #C9D1DB; }
+    .chlinks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 13px; }
+    .chlinks a { padding: 6px 13px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--chc) 45%, transparent); color: #F1F4F8; font: 600 12.5px Inter, system-ui, sans-serif; text-decoration: none; background: rgba(8,10,14,.55); }
+    .chlinks a:hover { background: color-mix(in srgb, var(--chc) 18%, rgba(8,10,14,.6)); }
+    .chfib { display: block; width: 377px; max-width: 60%; height: 12px; margin-top: 21px; } .chfib line { stroke: var(--chc); stroke-opacity: .45; stroke-width: 1; }
+    .chx::after { content: ""; position: absolute; z-index: -1; right: 34px; top: 21px; width: 144px; height: 144px; opacity: .16; pointer-events: none; background: var(--sg) center / contain no-repeat; }
+    .chx.sg4 { --sg: var(--sg4); } .chx.sg5 { --sg: var(--sg5); } .chx.sg1 { --sg: var(--sg1); } .chx.sg2 { --sg: var(--sg2); }
+    #vcard::after { background-image: var(--sg3) !important; opacity: .1; }
+  }
+  @media (min-width: 1280px) {
+    .sidenav { gap: 0; padding: 8px; }
+    .sidenav .sng { padding: 5px 0; border-bottom: 1px solid #1A2029; } .sidenav .sng:last-child { border-bottom: 0; }
+    .sidenav a.sn1 { display: flex; align-items: center; gap: 8px; color: #E0E0E0; font-weight: 700; }
+    .sidenav a.sn1 b { flex: none; width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--snc); color: var(--snc); font: 600 12px/18px 'Barlow Condensed', sans-serif; text-align: center; }
+    .sidenav a.sn1 i { flex: none; width: 7px; height: 7px; margin: 0 6px 0 7px; border-radius: 50%; background: var(--snc); }
+    .sidenav a.sn2 { padding: 4px 10px 4px 38px; font-weight: 500; font-size: 12px; }
+    .sidenav a.on { background: color-mix(in srgb, var(--snc) 14%, transparent); color: var(--snc); }
+  }
+  .phi { display: block; margin-top: 10px; font: 500 11px 'JetBrains Mono', monospace; color: #5D6878; letter-spacing: .04em; }
+  /* top row (PC): the answer | Kp now + the NOAA oval (φ columns), then the Kp chart full width and low */
+  @media (min-width: 760px) {
+    .grid.top > .stack { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; } .grid.top > .stack > section { flex: none; }
+    #kpChartCard { margin-top: 16px; } #kpchart { height: 233px; }
+  }
+  @media (min-width: 1200px) {
+    .grid.top { grid-template-columns: 1.618fr 1fr !important; }
+    .grid.top > .stack { display: flex; flex-direction: column; gap: 21px; } .grid.top > .stack > .ovalc { flex: 1 1 auto; }
+    .ovalc #globe { max-width: 440px; margin: 8px auto 0; }
+    #kpChartCard { margin-top: 21px; } #kpchart { height: 233px; }
+  }
+  /* card frames (PC): Fibonacci padding / radius / gaps, a soft top light and depth, the same anatomy everywhere */
+  @media (min-width: 1000px) {
+    .card { border-radius: 21px; padding: 21px 24px; border-color: #1C232D;
+      background-image: linear-gradient(180deg, rgba(255,255,255,.028) 0%, rgba(255,255,255,0) 89px);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.045), 0 13px 34px rgba(0,0,0,.28); }
+    .grid { gap: 21px; } .stack { gap: 21px; }
+    .card > .lbl:first-child, .card > div:first-child > .lbl:first-child { letter-spacing: .1em; color: #9AA7B8; }
+    .card h2 { letter-spacing: -.005em; }
+  }
+  /* motion (PC, only when the visitor hasn't asked for reduced motion): cards rise in, chapter openings come alive,
+     numbers count to their value, charts draw themselves, the geometry drifts very slowly */
+  @media (min-width: 1000px) and (prefers-reduced-motion: no-preference) {
+    html.mo .card:not(.clock), html.mo .chx { opacity: 0; transform: translateY(13px); transition: opacity .8s ease, transform .8s cubic-bezier(.2,.7,.2,1); }
+    html.mo .card.in:not(.clock), html.mo .chx.in { opacity: 1; transform: none; }
+    .chx { background-position: 0 0, right calc(50% + var(--py, 0px)) !important; }
+    .chx .chfib { transform: scaleX(0); transform-origin: left center; transition: transform 1.6s cubic-bezier(.2,.7,.2,1) .35s; } .chx.in .chfib { transform: none; }
+    .chx.in > span { animation: chGlow 2.4s ease-out .2s 1; }
+    @keyframes chGlow { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--chc) 60%, transparent); } 40% { box-shadow: 0 0 34px 8px color-mix(in srgb, var(--chc) 45%, transparent); } 100% { box-shadow: 0 0 34px color-mix(in srgb, var(--chc) 25%, transparent); } }
+    .chx::after { animation: solidTurn 89s linear infinite; } @keyframes solidTurn { to { transform: rotate(360deg); } }
+    #upd::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: #39FF9E; vertical-align: 1px; animation: livePulse 2.6s ease-in-out infinite; }
+    @keyframes livePulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(57,255,158,.55); } 50% { box-shadow: 0 0 0 6px rgba(57,255,158,0); } }
+    .tick { animation: tick 1.2s ease-out 1; } @keyframes tick { 0% { color: #FFFFFF; text-shadow: 0 0 13px rgba(255,255,255,.7); } 100% { text-shadow: none; } }
+    svg.draw path[fill="none"], svg.draw polyline { stroke-dasharray: 3000; stroke-dashoffset: 3000; animation: drawIn 1.8s cubic-bezier(.3,.6,.2,1) forwards; }
+    @keyframes drawIn { to { stroke-dashoffset: 0; } }
+    #kpchart.draw rect { transform-box: fill-box; transform-origin: 50% 100%; animation: growUp .9s cubic-bezier(.2,.7,.2,1) both; } @keyframes growUp { from { transform: scaleY(0); } }
+    .gauge span { transition: background-color .5s ease; } .gauge span:nth-child(2) { transition-delay: .06s } .gauge span:nth-child(3) { transition-delay: .12s } .gauge span:nth-child(4) { transition-delay: .18s } .gauge span:nth-child(5) { transition-delay: .24s } .gauge span:nth-child(6) { transition-delay: .3s } .gauge span:nth-child(7) { transition-delay: .36s } .gauge span:nth-child(8) { transition-delay: .42s } .gauge span:nth-child(9) { transition-delay: .48s } .gauge span:nth-child(10) { transition-delay: .54s }
+    .card:not(#sec3d):not(.clock) { transition: opacity .8s ease, transform .8s cubic-bezier(.2,.7,.2,1), box-shadow .3s ease, border-color .3s ease; }
+    html.mo .card.in:not(#sec3d):not(.clock):hover { transform: translateY(-3px); box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 21px 55px rgba(0,0,0,.4); border-color: #2A3340; }
+    .flash { animation: flash 1.6s ease-out 1; } @keyframes flash { 0% { box-shadow: 0 0 0 2px rgba(57,255,158,.7), 0 0 34px rgba(57,255,158,.35); } 100% { box-shadow: 0 0 0 2px rgba(57,255,158,0); } }
+    button, .chlinks a, .sidenav a, .scale, .seg button { transition: background-color .25s ease, color .25s ease, border-color .25s ease, transform .15s ease; }
+    button:active, .chlinks a:active { transform: scale(.97); }
+  }
+  /* one frame for the Sun viewer + ENLIL + the shared clock (PC): inner cards become panels, the clock sits at the
+     frame's foot and sticks to the bottom of the screen while you scroll through it; the Sun's / ENLIL's own play +
+     slider are hidden (the clock moves them all). Phones: no extra frame, the clock stays on top as before. */
+  .unify { display: flex; flex-direction: column; }
+  .unify > .clock { order: -1; }
+  @media (max-width: 999px) { .unify { background: none !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; } .unify > .ulbl { display: none; } }
+  @media (min-width: 1000px) {
+    .unify { padding: 21px; gap: 21px; border-color: #232B36; overflow: visible; } .unify::after { display: none; }
+    .unify > .ulbl { order: -2; margin: 0 2px -8px; }
+    .unify > .grid { margin-top: 0; }
+    .unify > .clock { order: 2; position: sticky; top: auto; bottom: 13px; margin: 0; z-index: 30; background-color: rgba(14,18,24,.94); backdrop-filter: blur(10px); box-shadow: 0 -8px 34px rgba(0,0,0,.55), 0 0 0 1px #2C3542; }
+    .unify .grid > .card { background-color: #0F1318; box-shadow: none; border-color: #1A2029; }
+    html.mo .unify .card.in:hover { transform: none !important; }
+    .unify #sunPlay, .unify #sunSlide, .unify .enlctl { display: none !important; }
+  }
+  /* frames (PC): related panels share one frame, like the Sun + ENLIL + clock frame; phones: no extra frame */
+  @media (max-width: 999px) { .frame { background: none !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; } .frame > .ulbl { display: none; } }
+  @media (min-width: 1000px) {
+    .frame { display: flex; flex-direction: column; gap: 21px; padding: 21px; border-color: #232B36; overflow: visible; } .frame::after { display: none; }
+    .frame > .ulbl { margin: 0 2px -8px; }
+    .frame > .grid, .frame > .card, .frame > .grid > .card, .frame > .grid > .stack > .card { margin-top: 0 !important; }
+    .frame > .card, .frame .grid > .card, .frame .grid > .stack > .card { background-color: #0F1318; box-shadow: none; border-color: #1A2029; }
+    html.mo .frame .card.in:hover { transform: none !important; }
+  }
+  /* explain mode (PC): point at anything to learn what it is and how to read it; How it all works = the Sun → sky story */
+  #xpBtn, #xpBar, #xpTip, #xpOv { display: none; }
+  @media (min-width: 1000px) {
+    #xpBtn { display: inline-flex; align-items: center; border: 1px solid rgba(123,224,255,.55); background: rgba(123,224,255,.08); color: #7BE0FF; border-radius: 999px; padding: 0 16px; min-height: 40px; font: 600 13px Inter, sans-serif; cursor: pointer; }
+    #xpBtn[aria-pressed="true"] { background: #7BE0FF; color: #0A0A0A; }
+    html.xp #xpBar { display: flex; position: fixed; top: 13px; left: 50%; transform: translateX(-50%); z-index: 70; align-items: center; gap: 13px; padding: 8px 8px 8px 18px; border-radius: 999px;
+      background: rgba(14,18,24,.94); border: 1px solid #2C3542; box-shadow: 0 13px 34px rgba(0,0,0,.5); backdrop-filter: blur(10px); font: 500 12px Inter, sans-serif; color: #C9D3DF; max-width: calc(100vw - 32px); }
+    #xpBar button { border: 1px solid #2C3542; background: #161B22; color: #E6EDF5; border-radius: 999px; padding: 0 14px; min-height: 32px; font: 600 11px 'JetBrains Mono', monospace; cursor: pointer; white-space: nowrap; }
+    #xpBar button.go { border-color: #7BE0FF; color: #7BE0FF; }
+    html.xp [data-xp], html.xp #sunChips button { cursor: help; }
+    .xpon { outline: 1px dashed var(--xpc, #7BE0FF) !important; outline-offset: 4px; }
+    #xpTip { position: fixed; z-index: 71; width: 377px; max-width: calc(100vw - 32px); padding: 16px 18px; border-radius: 13px; pointer-events: none; background: rgba(12,15,20,.97); border: 1px solid #2C3542;
+      border-top: 3px solid var(--xpc, #7BE0FF); box-shadow: 0 21px 55px rgba(0,0,0,.6); font: 400 13px/1.55 Inter, sans-serif; color: #C9D3DF; }
+    html.xp #xpTip.on { display: block; }
+    #xpTip h3 { margin: 0 0 8px; font: 600 15px Inter, sans-serif; color: var(--xpc, #7BE0FF); }
+    #xpTip .k { font: 600 10.5px 'JetBrains Mono', monospace; letter-spacing: .1em; color: #8E9AAB; margin: 10px 0 3px; text-transform: uppercase; }
+    #xpTip p { margin: 0; } #xpTip b { color: #E6EDF5; }
+    #xpOv.on { display: flex; position: fixed; inset: 0; z-index: 80; background: rgba(4,6,9,.82); backdrop-filter: blur(6px); align-items: center; justify-content: center; padding: 34px; }
+    #xpOv .box { width: min(1180px, 100%); max-height: 100%; overflow: auto; background: #0F1318; border: 1px solid #2C3542; border-radius: 21px; padding: 34px; box-shadow: 0 34px 89px rgba(0,0,0,.6); }
+    #xpOv h2 { margin: 0 0 6px; } #xpOv .lead { color: #9AA7B8; font-size: 13px; margin: 0 0 21px; }
+    #xpOv .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 21px; counter-reset: st; }
+    #xpOv .st { position: relative; padding: 21px; border-radius: 13px; background: #131820; border: 1px solid #1F2630; border-top: 3px solid var(--c); }
+    #xpOv .st::before { counter-increment: st; content: counter(st); position: absolute; top: 16px; right: 18px; font: 600 34px 'Barlow Condensed', sans-serif; color: var(--c); opacity: .35; }
+    #xpOv .st h3 { margin: 0 0 8px; color: var(--c); font: 600 16px Inter, sans-serif; } #xpOv .st p { margin: 0 0 13px; font-size: 13px; line-height: 1.55; color: #C9D3DF; }
+    #xpOv .st button { border: 1px solid var(--c); background: none; color: var(--c); border-radius: 999px; padding: 0 13px; min-height: 30px; font: 600 11px 'JetBrains Mono', monospace; cursor: pointer; }
+    #xpOv .st:not(:nth-child(3n))::after { content: "→"; position: absolute; right: -17px; top: 50%; transform: translateY(-50%); color: #4A5565; font-size: 15px; }
+    #xpOv .xtabs { display: flex; gap: 8px; margin: 13px 0 21px; flex-wrap: wrap; }
+    #xpOv .xtabs button { border: 1px solid #2C3542; background: #131820; color: #C9D3DF; border-radius: 999px; padding: 0 16px; min-height: 34px; font: 600 12px Inter, sans-serif; cursor: pointer; }
+    #xpOv .xtabs button[aria-selected="true"] { background: #7BE0FF; border-color: #7BE0FF; color: #0A0A0A; }
+    #xpOv .xpane { min-height: 377px; }
+    #xpOv .steps:not(.num) .st::before, #xpOv .steps:not(.num) .st::after { content: none; }
+    #xpOv .steps.five { grid-template-columns: repeat(5, 1fr); } #xpOv .steps.five .st:last-child::after { content: none; } #xpOv .steps.five .st:not(:last-child)::after { content: "→"; position: absolute; right: -17px; top: 50%; transform: translateY(-50%); color: #4A5565; font-size: 15px; }
+    #xpOv .wh { display: inline-block; font: 600 10.5px 'JetBrains Mono', monospace; letter-spacing: .08em; text-transform: uppercase; color: var(--c); border: 1px solid color-mix(in srgb, var(--c) 45%, transparent); border-radius: 999px; padding: 3px 9px; margin-bottom: 10px; }
+    #xpOv .note { margin: 21px 0 0; font-size: 13px; color: #9AA7B8; } #xpOv .note.tip { padding: 13px 16px; border-radius: 13px; background: rgba(123,224,255,.06); border: 1px solid rgba(123,224,255,.25); color: #C9D3DF; }
+    #xpOv .st.ex svg { display: block; width: 100%; height: auto; border-radius: 8px; margin-bottom: 13px; font-family: 'JetBrains Mono', monospace; }
+    #xpOv .st.ex::before, #xpOv .st.ex::after { content: none; }
+    #xpOv .xrb { margin-left: 10px; border: 1px solid #FFB347; background: rgba(255,179,71,.08); border-radius: 999px; padding: 0 14px; min-height: 30px; font: 600 11px 'JetBrains Mono', monospace; cursor: pointer; }
+    #xpOv .foot { display: flex; justify-content: space-between; align-items: center; gap: 21px; margin-top: 21px; color: #8E9AAB; font-size: 12px; }
+    #xpOv .foot button { border: 1px solid #2C3542; background: #161B22; color: #E6EDF5; border-radius: 999px; padding: 0 18px; min-height: 36px; font: 600 12px Inter, sans-serif; cursor: pointer; }
+  }
+  /* storm replay (replay.js): the real May 2024 G5 storm, step by step */
+  html.rpon, html.rpon body { overflow: hidden; }
+  #rpLoad { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; background: rgba(4,6,9,.86); color: #C9D3DF; font: 600 14px Inter, sans-serif; }
+  #rp { display: none; position: fixed; inset: 0; z-index: 90; background: #07090C; color: #C9D3DF; font: 400 13px/1.5 Inter, sans-serif; flex-direction: column; }
+  #rp.on { display: flex; }
+  #rp button { font: 600 11px 'JetBrains Mono', monospace; cursor: pointer; }
+  .rpbar { display: flex; align-items: center; gap: 16px; padding: 10px 16px; border-bottom: 1px solid #1C232D; }
+  .rpbar h2 { margin: 0; font: 600 17px Inter, sans-serif; color: #E6EDF5; flex: 1; min-width: 0; }
+  .rptag { flex: none; font: 700 10.5px 'JetBrains Mono', monospace; letter-spacing: .08em; color: #0A0A0A; background: #FFB347; border-radius: 6px; padding: 5px 9px; }
+  .rpx { flex: none; width: 36px; height: 36px; border-radius: 18px; border: 1px solid #2C3542; background: #131820; color: #E6EDF5; font-size: 15px !important; }
+  .rpgrid { flex: 1; min-height: 0; display: grid; grid-template-columns: 1.618fr 1fr; gap: 16px; padding: 13px 16px; overflow: auto; }
+  .rpleft { display: flex; flex-direction: column; gap: 13px; min-width: 0; }
+  .rpmedia { display: grid; grid-template-columns: repeat(3, 1fr); gap: 13px; }
+  .rpmedia figure { margin: 0; padding: 10px; border-radius: 13px; background: #0F1318; border: 1px solid #1A2029; transition: border-color .3s, box-shadow .3s; min-width: 0; }
+  #rp .hi { border-color: #FFE600 !important; box-shadow: 0 0 0 1px rgba(255,230,0,.35), 0 0 21px rgba(255,230,0,.18); }
+  .rpsq { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; background: #000; }
+  .rpsq img, .rpsq canvas, #rpEnl { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  #rpEnl { background: #000 no-repeat; background-size: 234.1% auto; background-position: 6.2% 59.4%; }
+  #rpEnl.wait { opacity: .35; }
+  .rpmedia figcaption { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; font-size: 11.5px; } .rpmedia figcaption b { color: #E6EDF5; } .rpmedia figcaption span { color: #8E9AAB; font: 500 10.5px 'JetBrains Mono', monospace; text-align: right; }
+  .rpcap { margin: 4px 0 0; font-size: 11px; color: #8E9AAB; line-height: 1.45; }
+  .rpsf { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+  .rpsf button { border: 1px solid color-mix(in srgb, var(--c) 50%, transparent); background: none; color: var(--c); border-radius: 999px; padding: 4px 8px; font-size: 10.5px !important; }
+  .rpsf button.on { background: var(--c); color: #0A0A0A; }
+  .rpcharts { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 10px 12px 22px; border-radius: 13px; background: #0F1318; border: 1px solid #1A2029; cursor: crosshair; touch-action: none; }
+  .rpst { display: grid; grid-template-columns: 150px 1fr; align-items: center; gap: 10px; border: 1px solid transparent; border-radius: 8px; padding: 1px 4px; transition: border-color .3s, box-shadow .3s; }
+  .rpst svg { width: 100%; height: 50px; display: block; font-family: 'JetBrains Mono', monospace; }
+  .rpsl { display: flex; flex-direction: column; font-size: 11px; line-height: 1.3; } .rpsl span { font: 600 13px 'JetBrains Mono', monospace; color: #E6EDF5; }
+  .rpdays { position: absolute; left: 176px; right: 16px; bottom: 4px; height: 14px; } .rpdays span { position: absolute; transform: translateX(-50%); font: 500 10.5px 'JetBrains Mono', monospace; color: #6B7788; white-space: nowrap; }
+  .rpxw { position: relative; } .rpxw svg { height: 160px !important; }
+  .rpb { position: absolute; right: -14px; transform: translateY(-50%); font: 600 9.5px 'JetBrains Mono', monospace; font-style: normal; color: #6B7788; }
+  .rpr { position: absolute; right: 6px; transform: translateY(-50%); padding: 1px 5px; border-radius: 4px; background: rgba(15,19,24,.88); font: 600 9px 'JetBrains Mono', monospace; font-style: normal; letter-spacing: .05em; }
+  .rpxf { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 2px 0 8px 160px; font-size: 11px; color: #9AA7B8; }
+  .rpxf .lg { display: inline-flex; align-items: center; gap: 6px; } .rpxf .lg i { width: 8px; height: 8px; border-radius: 50%; }
+  .rpxf .lbl { margin-left: 8px; }
+  .rpxf button { border: 1px solid #2C3542; background: #131820; color: #C9D3DF; border-radius: 999px; padding: 3px 9px; font-size: 10.5px !important; cursor: pointer; } .rpxf button b { color: #FFB347; } .rpxf button.x b { color: #FF5A5A; }
+  .rpxf button:hover { border-color: #FFE600; }
+  @media (max-width: 999px) { .rpxf { margin-left: 0; } }
+  .rpright { display: flex; flex-direction: column; gap: 13px; min-width: 0; }
+  .rpstep { padding: 21px 24px; border-radius: 13px; background: #0F1318; border: 1px solid #1A2029; border-top: 3px solid var(--c, #FFE600); }
+  .rpn { font: 600 10.5px 'JetBrains Mono', monospace; letter-spacing: .08em; color: #8E9AAB; text-transform: uppercase; }
+  .rpstep h3 { margin: 8px 0 10px; font: 600 21px/1.25 Inter, sans-serif; color: var(--c, #FFE600); } .rpstep p { margin: 0; font-size: 14px; line-height: 1.6; color: #D5DDE7; }
+  .rpfx { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 13px; } .rpfx span { font: 600 10.5px 'JetBrains Mono', monospace; color: #FFB347; border: 1px solid rgba(255,179,71,.45); border-radius: 999px; padding: 4px 9px; }
+  .rpli { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+  .rpli button { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; border: 0; background: none; color: #9AA7B8; padding: 6px 8px; border-radius: 8px; font: 500 12.5px Inter, sans-serif !important; }
+  .rpli button i { flex: none; width: 8px; height: 8px; border-radius: 50%; border: 2px solid var(--c); } .rpli button.on { background: #131820; color: #E6EDF5; } .rpli button.on i { background: var(--c); }
+  .rpli button:hover { background: #10151C; color: #E6EDF5; }
+  .rpsrc { margin: auto 0 0; font-size: 10.5px; color: #6B7788; line-height: 1.5; }
+  .rpctl { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-top: 1px solid #1C232D; background: #0B0E12; }
+  .rpctl > button { width: 40px; height: 40px; border-radius: 20px; border: 1px solid #2C3542; background: #131820; color: #E6EDF5; font-size: 15px !important; flex: none; }
+  .rpctl > button.pl { width: 48px; height: 48px; border-radius: 24px; background: #FFE600; color: #0A0A0A; border-color: #FFE600; font-size: 17px !important; }
+  .rpsp { display: inline-flex; border: 1px solid #2C3542; border-radius: 999px; overflow: hidden; flex: none; } .rpsp button { border: 0; background: none; color: #9AA7B8; padding: 0 11px; min-height: 32px; } .rpsp button.on { background: #2C3542; color: #E6EDF5; }
+  #rpSlide { flex: 1; min-width: 80px; accent-color: #FFE600; }
+  .rpclock { flex: none; display: flex; flex-direction: column; align-items: flex-end; font: 500 11px 'JetBrains Mono', monospace; color: #8E9AAB; } .rpclock b { color: #FFE600; font-size: 14px; }
+  @media (max-width: 999px) {
+    .rpgrid { grid-template-columns: 1fr; } .rpright { order: -1; } .rpmedia { grid-template-columns: 1fr 1fr; } .rpmedia figure:last-child { grid-column: span 2; }
+    .rpst { grid-template-columns: 96px 1fr; } .rpdays { left: 122px; } .rpbar h2 { font-size: 14px; } .rptag { display: none; } .rpclock span { display: none; }
+  }
+  .rpgo { border: 1px solid #FFB347 !important; color: #FFB347 !important; }
+  /* storm mode (storm.js, ?storm=may2024): the page at the peak of the May 2024 G5 storm */
+  .stormseg button[aria-pressed="true"] { background: #39FF9E; color: #0A0A0A; }
+  @media (max-width: 999px) { .stormseg { display: none; } }   /* phones: the storm link + banner only (phone layout unchanged) */
+  html.storm .stormseg button[aria-pressed="true"] { background: #FF5A5A; color: #0A0A0A; }
+  .stormbar { position: sticky; top: 0; z-index: 45; display: flex; align-items: center; justify-content: center; gap: 13px; flex-wrap: wrap; padding: 9px 16px; text-align: center;
+    background: linear-gradient(90deg, #3A0D0D, #5A1414 50%, #3A0D0D); border-bottom: 1px solid #FF5A5A; color: #FFE1E1; font: 500 13px/1.45 Inter, sans-serif; }
+  .stormbar b { color: #FFFFFF; } .stormbar button { border: 1px solid #FFB3B3; background: none; color: #FFE1E1; border-radius: 999px; padding: 0 14px; min-height: 30px; font: 600 11px 'JetBrains Mono', monospace; cursor: pointer; }
+  html.storm body { background-color: #0C0708; }
+  html.storm #upd::before { background: #FF4D4D !important; animation-name: stormPulse !important; }
+  @keyframes stormPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,77,77,.6); } 50% { box-shadow: 0 0 0 6px rgba(255,77,77,0); } }
+  html.storm #upd { color: #FF9A9A; }
+  /* PC: the Kp chart sits inside the answer card, under tonight's hours (fills its empty space); phones keep it below */
+  #vcard #kpChartCard { background: none !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; margin: 21px 0 0 !important; border-radius: 0; }
+  #vcard #kpChartCard #kpchart { height: 233px; }
+  #vcard #kpChartCard::after { display: none; }
+  #vcard.haskp { display: flex; flex-direction: column; } #vcard.haskp > .help { margin-top: 16px; }
+  @media (min-width: 1200px) { #vcard.haskp ~ .stack .ovalc { display: flex; flex-direction: column; } #vcard.haskp ~ .stack .ovalc #globe { margin: auto !important; } }
+  /* "Likely" in aurora colours: green curtain base → red / pink top */
+  #vword.aur { display: block; width: fit-content !important; padding-right: .04em; background-image: linear-gradient(100deg, #39FF9E 0%, #FF3B3B 55%, #C8102E 100%) !important; background-size: 100% 100%; -webkit-background-clip: text; background-clip: text; color: transparent !important; -webkit-text-fill-color: transparent; text-shadow: none; filter: drop-shadow(0 0 21px rgba(220,30,50,.4)); }
+  /* PC tools in the side bar + the settings drawer (⚙) */
+  .sntools, #setBtn, #setPane, #setShade { display: none; }
+  @media (min-width: 1000px) {
+    #setBtn { display: inline-flex; align-items: center; justify-content: center; width: 40px; min-height: 40px; border-radius: 999px; border: 1px solid #2C3542; background: #131820; color: #C9D3DF; font-size: 17px; cursor: pointer; }
+    #setBtn:hover, .sntools button:hover { border-color: #7BE0FF; color: #E6EDF5; }
+    #setShade.on { display: block; position: fixed; inset: 0; z-index: 74; background: rgba(4,6,9,.55); backdrop-filter: blur(2px); }
+    #setPane { display: flex; flex-direction: column; gap: 18px; position: fixed; top: 0; bottom: 0; left: 0; z-index: 75; width: 340px; max-width: calc(100vw - 32px); padding: 21px 21px 34px; overflow: auto;
+      background: #0D1116; border-right: 1px solid #232B36; box-shadow: 21px 0 55px rgba(0,0,0,.55); transform: translateX(-105%); transition: transform .35s cubic-bezier(.2,.7,.2,1); visibility: hidden; }
+    #setPane.on { transform: none; visibility: visible; }
+    #setPane h2 { margin: 0; font: 600 19px Inter, sans-serif; color: #E6EDF5; display: flex; justify-content: space-between; align-items: center; }
+    #setPane h2 button { width: 34px; height: 34px; border-radius: 17px; border: 1px solid #2C3542; background: #131820; color: #E6EDF5; cursor: pointer; font-size: 14px; }
+    #setPane .sg { display: flex; flex-direction: column; gap: 8px; padding-top: 16px; border-top: 1px solid #1A2029; }
+    #setPane .sg > .lbl { margin: 0; }
+    #setPane .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    #setPane .seg { width: 100%; } #setPane .seg button { flex: 1; }
+    #setPane .sb { flex: 1; border: 1px solid #2C3542; background: #131820; color: #E6EDF5; border-radius: 999px; padding: 0 14px; min-height: 36px; font: 600 12px Inter, sans-serif; cursor: pointer; text-align: center; }
+    #setPane .sb:hover { border-color: #7BE0FF; } #setPane .sb.storm { border-color: rgba(255,90,90,.6); color: #FFB3B3; } #setPane .sb.rep { border-color: rgba(57,255,158,.55); color: #39FF9E; }
+    #setPane .place { color: #FFD84D; font: 600 14px Inter, sans-serif; } #setPane .note { font-size: 11.5px; color: #8E9AAB; line-height: 1.5; }
+    #setPane label.sw { display: flex; justify-content: space-between; align-items: center; gap: 13px; font-size: 13px; color: #C9D3DF; cursor: pointer; }
+    #setPane label.sw input { width: 38px; height: 22px; appearance: none; border-radius: 11px; background: #2C3542; position: relative; cursor: pointer; flex: none; transition: background .2s; }
+    #setPane label.sw input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #E6EDF5; transition: transform .2s; }
+    #setPane label.sw input:checked { background: #39FF9E; } #setPane label.sw input:checked::after { transform: translateX(16px); background: #0A0A0A; }
+  }
+  @media (min-width: 1280px) {
+    html.snt:not(.nonav) .topbar { display: none; }   /* side menu switched off → the top row (with ⚙) comes back */
+    .sntools { display: flex; flex-direction: column; gap: 6px; padding: 2px 0 8px; margin-bottom: 4px; border-bottom: 1px solid #1A2029; }
+    .sntools .seg { width: 100%; } .sntools .seg button { flex: 1; padding: 7px 4px; min-height: 32px; font-size: 11px; }
+    .sntools .row { display: flex; gap: 6px; }
+    .sntools button.tb { flex: 1; border: 1px solid #2C3542; background: #131820; color: #7BE0FF; border-radius: 999px; min-height: 32px; font: 600 11px Inter, sans-serif; cursor: pointer; }
+    .sntools button.tb[aria-pressed="true"] { background: #7BE0FF; color: #0A0A0A; border-color: #7BE0FF; }
+    .sntools button.gear { flex: none; width: 32px; color: #C9D3DF; font-size: 14px; }
+    html.nonav .sidenav { display: none !important; }
+  }
 </style>
 </head>
 <body>
-<nav class="sidenav" aria-label="Sections"><a href="#vcard">Tonight</a><a href="#kpcard">Kp and the aurora oval</a><a href="#chap1">From the Sun to Earth</a><a href="#syncCard" class=sn2>The Sun now</a><a href="#secDen" class=sn2>Solar wind forecast</a><a href="#secReg" class=sn2>Flares and coronal holes</a><a href="#sec3d" class=sn2>3D model</a><a href="#chap2">Arrival</a><a href="#chap3">Your sky</a><a href="#chap4">Earth</a><a href="#secLong" class=sn2>Journal since 2008</a><a href="#safe">Safe and private</a></nav>
+<nav class="sidenav" aria-label="Sections"><div class="sng" style="--snc:#7CFFB2"><a href="#vcard" class="sn1"><i></i>NOAA Aurora Forecast</a><a href="#kpcard" class="sn2">Kp and the aurora oval</a></div><div class="sng" style="--snc:#FFE600"><a href="#chap1" class="sn1"><b>1</b>The Sun</a><a href="#sunEarth" class="sn2">The Sun Now</a><a href="#secReg" class="sn2">Flares and coronal holes</a><a href="#secCyc" class="sn2">Solar cycle</a></div><div class="sng" style="--snc:#7BE0FF"><a href="#chap2" class="sn1"><b>2</b>The Earth</a><a href="#frWind" class="sn2" title="L1 = the point 1.5 million km towards the Sun where probes watch the solar wind">Solar wind and storm levels</a><a href="#frShield" class="sn2">Magnetic shield and cosmic rays</a><a href="#secLong" class="sn2">Sun–Earth record since 2008</a><a href="#secEq" class="sn2">Earthquakes & volcanoes</a></div><div class="sng" style="--snc:#B9A7FF"><a href="#chap3" class="sn1"><b>3</b>Explore in 3D</a><a href="#sec3d" class="sn2">3D model</a></div><div class="sng" style="--snc:#8E9AAB"><a href="#safe" class="sn1"><i></i>Safe and private</a></div></nav>
 <main>
+
   <div class="sub" id="upd">Loading live data…</div>
   <h1 data-noi18n>Orion's Space Observer</h1>
   <div class="sub"><span id="place">from Brașov, Romania</span> · <a href="#safe" class="safelink">No cookies, no tracking, nothing about you is stored</a></div>
   <div class="topbar">
     <button class="savebtn" id="repSave">⬇ Save the full report (image)</button>
+    <div class="seg stormseg" role="group" aria-label="Calm or storm"><button type="button" data-storm="">CALM</button><button type="button" data-storm="may2024">⚡ STORM</button></div>
     <div class="seg" role="group" aria-label="Language" data-noi18n><button data-lang="en" lang="en">EN</button><button data-lang="ro" lang="ro">RO</button><button data-lang="de" lang="de">DE</button></div>
   </div>
-
-      <div class="grid top">
+<section class="card frame xfull" id="frForecast" aria-label="Aurora forecast · tonight from your place"><div class="lbl ulbl">Aurora forecast · tonight from your place</div>
+<div class="grid top">
   <section class="card verdict" id="vcard">
     <div class="lbl">Can we see it? · the answer first, then follow it from the Sun ↓</div>
     <div class="big" id="vword">…</div>
@@ -416,13 +664,7 @@
   </div>
   <div class="gauge" id="gauge"></div>
   <div class="gscale"><span>0</span><span>QUIET</span><span>5 · G1</span><span>7</span><span>9</span></div>
-</section><section class="card app">
-  <div style="display:flex;justify-content:space-between;align-items:baseline">
-    <div class="lbl">Kp · past 2 days + 3-day forecast</div><div class="lbl">3 H BLOCKS</div>
-  </div>
-  <svg id="kpchart" class="fillc"></svg>
-</section></div>
-  <section class="card">
+</section><section class="card ovalc">
     <div class="lbl">Where the aurora is right now · OVATION model</div>
     <h2>NOAA aurora forecast</h2>
     <div class="locrow"><span class="lbl">Your place</span><b id="gPlace">Brașov</b><button class="locbtn" id="locBtn">CHANGE PLACE</button></div>
@@ -430,25 +672,27 @@
       <div id="locRes"></div><button class="locbtn" id="locGps">USE MY LOCATION</button></div>
     <canvas id="globe" role="img" aria-label="Globe with the NOAA live aurora forecast around the North Pole and your place marked"></canvas>
     <div class="help">The <b style="color:var(--green)">green glow</b> is NOAA's live aurora map around the North Pole. The yellow dot is you. The further south the green reaches towards it, the better our chances. <span id="ovTime"></span></div>
-  </section>
+  </section></div>
   </div>
-  <div class="chap xfull"><span aria-hidden="true">1</span><div><h2>From the Sun to Earth</h2><p>Everything starts at the Sun: flares, CMEs (clouds of solar plasma) and coronal holes that blow fast wind. It takes 1–4 days to cross 150 million km. Play the Sun and NOAA's solar wind model on one clock.</p></div></div>
-  <section class="card clock xfull" id="syncCard" aria-label="One clock for the Sun and the solar wind">
-    <div class="clockrow"><div class="clockt"><div class="lbl">One clock · Sun + solar wind</div><div class="stime" id="syT" aria-live="polite">–</div></div>
-      <button class="spbtn" id="syPrev" aria-label="One hour back">⏮</button><button class="spbtn" id="syRev" aria-label="Play backwards" aria-pressed="false">◀</button><button class="spbtn" id="syPlay" aria-label="Play the Sun and the solar wind together">▶</button><button class="spbtn" id="syNext" aria-label="One hour forward">⏭</button><button class="spbtn" id="sySpd" aria-label="Playback speed">1×</button>
-      <input type="range" id="sySlide" min="0" max="1000" value="1000" aria-label="Date and time shown in every chart"><input type="datetime-local" id="syDate" aria-label="Date and time">
-      <div class="dl clockdl"><button id="cardSave">⬇ SHARE CARD</button><button id="linkShare">↗ SHARE LINK</button></div></div>
-  </section>
-  <div class="grid stage xfull">
+  <section class="card app kpwide" id="kpChartCard">
+  <div style="display:flex;justify-content:space-between;align-items:baseline">
+    <div class="lbl">Kp · past 2 days + 3-day forecast</div><div class="lbl">3 H BLOCKS</div>
+  </div>
+  <svg id="kpchart"></svg>
+</section>
+</section>
+<div class="chap xfull chx sg4" style="--chimg:url(img/ch1-sun-earth.jpg);--chc:#FFE600"><span aria-hidden="true">1</span><div><h2>The Sun</h2><p>Everything starts at the Sun: active regions flare, CMEs (clouds of solar plasma) leave and coronal holes blow fast wind. The wind then takes 1–4 days to cross 150 million km — play the Sun and NOAA's solar wind model on one clock.</p><nav class="chlinks" aria-label="In this chapter"><a href="#sunEarth">The Sun now</a><a href="#secReg">Flares and coronal holes</a><a href="#secDen">Solar wind forecast</a><a href="#secCyc">Solar cycle</a></nav><svg class="chfib" viewBox="0 0 377 12" preserveAspectRatio="xMinYMid meet" aria-hidden="true"><line x1="0" y1="6" x2="377" y2="6"/><line x1="0" x2="0" y1="3" y2="9"/><line x1="8" x2="8" y1="3" y2="9"/><line x1="13" x2="13" y1="3" y2="9"/><line x1="21" x2="21" y1="3" y2="9"/><line x1="34" x2="34" y1="3" y2="9"/><line x1="55" x2="55" y1="1" y2="11"/><line x1="89" x2="89" y1="3" y2="9"/><line x1="144" x2="144" y1="1" y2="11"/><line x1="233" x2="233" y1="3" y2="9"/><line x1="377" x2="377" y1="1" y2="11"/></svg></div></div>
+<section class="card unify xfull" id="sunEarth" aria-label="The Sun and the solar wind on one clock"><div class="lbl ulbl">The Sun and the solar wind · one clock</div>
+<div class="grid stage xfull">
   <section class="card sunc" aria-label="The Sun now">
     <div class="lbl">The Sun · NASA SDO / SOHO</div>
     <div class="sunhead"><div><h2>The Sun now</h2><div class="sstat" id="sunStat">LOADING NASA FRAMES…</div></div><span class="scount" id="sunCount"></span></div>
     <div id="sunBox"><video id="sunVid" muted playsinline loop preload="none" aria-hidden="true"></video><img id="sunImg" alt=""><img id="sunImg2" alt="" aria-hidden="true" style="opacity:0"><div class="stag"><i id="sunDot"></i><span id="sunLbl">LASCO C3</span></div>
       <div class="sload" id="sunLoad"></div>
-      <button class="snav" id="sunPrev" style="left:10px" aria-label="Previous picture type">‹</button><button class="snav" id="sunNext" style="right:10px" aria-label="Next picture type">›</button></div>
+</div>
     <div class="sctl"><button class="spbtn" id="sunPlay" aria-label="Play / pause">⏸</button><button class="vidbtn" id="sunVidB" aria-pressed="false">▶ VIDEO</button><span class="stime" id="sunTime">–</span><input type="range" id="sunSlide" min="0" max="0" value="0" aria-label="Time"></div>
     <div class="dl"><button id="sunFullB">FULL SCREEN</button><a id="sunClip" download>⬇ CLIP · 48 H</a><a id="sunSave" target="_blank" rel="noopener">⬇ IMAGE</a></div>
-    <div class="schips" id="sunChips"></div>
+    <div class="srow"><button class="snav" id="sunPrev" aria-label="Previous picture type">‹</button><div class="schips" id="sunChips"></div><button class="snav" id="sunNext" aria-label="Next picture type">›</button></div>
     <div class="help" id="sunHelp"></div>
     <div class="why" style="font-size:12px;color:var(--faint);margin-top:8px">Last 5 days, one frame every ~40 min. Swipe the picture for the next filter. ⬇ IMAGE opens the full-size picture (long-press it to save); clips are refreshed every 3 hours.</div>
   </section>
@@ -467,22 +711,39 @@
     <div class="dl"><button id="enlSave">⬇ SAVE PICTURE</button><button id="enlClipB">⬇ SAVE CLIP</button></div>
     <div class="two"><div class="why" style="margin-top:10px;font-size:13px;color:var(--dim)">NOAA's computer model of the solar wind, seen from above the Sun: the spiral arms are streams of solar wind rotating with the Sun. A CME shows up as a bright bulge (yellow → red → white) racing outward; when it reaches the green Earth dot, density and speed jump — that's when storms (and aurora) can start. The yellow line in each chart = the moment shown. Tap a picture for full screen (turn the phone sideways). New runs every few hours; arrival times are ±7 h or so.</div><div class="help" id="enlHelp">The wind is a stream of particles from the Sun. <b>Faster</b> (over ~500 km/s) and with the magnet pointing <b>south</b> (Bz negative) = the aurora switches on. A <b>bright bulge</b> racing out from the Sun is a CME — when it reaches the green Earth dot, that's the best chance for a big show.</div></div>
   </section>
-  <section class="card span-all" id="secReg" aria-labelledby="hReg">
+  
+  </div>
+<section class="card clock xfull" id="syncCard" aria-label="One clock for the Sun and the solar wind">
+    <div class="clockrow"><div class="clockt"><div class="lbl">One clock · Sun + solar wind</div><div class="stime" id="syT" aria-live="polite">–</div></div>
+      <button class="spbtn" id="syPrev" aria-label="One hour back">⏮</button><button class="spbtn" id="syRev" aria-label="Play backwards" aria-pressed="false">◀</button><button class="spbtn" id="syPlay" aria-label="Play the Sun and the solar wind together">▶</button><button class="spbtn" id="syNext" aria-label="One hour forward">⏭</button><button class="spbtn" id="sySpd" aria-label="Playback speed">1×</button>
+      <input type="range" id="sySlide" min="0" max="1000" value="1000" aria-label="Date and time shown in every chart"><input type="datetime-local" id="syDate" aria-label="Date and time">
+      <div class="dl clockdl"><button id="cardSave">⬇ SHARE CARD</button><button id="linkShare">↗ SHARE LINK</button></div></div>
+  </section>
+</section>
+<section class="card frame xfull" id="frSun" aria-label="The active Sun · regions, flares and coronal holes"><div class="lbl ulbl">The active Sun · regions, flares and coronal holes</div>
+<section class="card xfull span-all" id="secReg" aria-labelledby="hReg">
     <div class="lbl">Active regions · flares · coronal holes · NOAA SWPC + GOES-19 + NASA SDO</div><h2 id="hReg" style="margin-top:4px">Where flares and fast wind leave the Sun</h2>
     <div class="why" style="margin:6px 0 12px;font-size:13px;color:var(--dim)">Each circle is a sunspot group numbered by NOAA. <b>βγ / βγδ</b> = a tangled magnetic field, where big flares start; the percentage is NOAA's chance of an <b>M</b> flare in 24 h, stars are the flares of the last 24 h. Green outlines are <b>coronal holes</b>: dark in ultraviolet, they blow <b>fast solar wind</b> that reaches us 2–4 days after a hole crosses the middle and can bring Kp 4–6 without any CME. Whatever sits in the blue band (the side facing us) aims at <b>Earth</b>.</div>
     <div id="srHost"></div>
   </section>
+
+</section>
+<section class="card xfull app" id="secCyc">
+  <div style="display:flex;justify-content:space-between;align-items:baseline">
+    <div class="lbl">Solar cycle · sunspots</div><div class="lbl">SILSO / NOAA</div>
   </div>
-  <section class="card" id="sec3d" aria-labelledby="h3d">
-    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><div><div class="lbl">3D model · planets, solar wind and CMEs on the same clock</div><h2 id="h3d" style="margin-top:4px">Fly through the solar wind</h2></div></div>
-    <div id="s3dHost" role="img" aria-label="3D model of the solar system with the solar wind streaming from the Sun and the CMEs in flight"></div>
-    <button class="s3dgo" id="s3dGo">▶ Open the 3D view</button>
-    <div class="help">A model, not a photo: the planets sit where they really are at the clock's time; the solar wind streams out of the turning Sun (speed and colour from NOAA's model at Earth); CMEs from NASA's DONKI catalogue grow at their measured speed and direction. Distances are real, sizes are not. Drag to turn, pinch or scroll to zoom, tap a planet to fly to it — the play button above moves everything together.</div>
-  </section>
-  <div class="chap xfull"><span aria-hidden="true">2</span><div><h2>Arrival</h2><p>A spacecraft 1.5 million km towards the Sun measures the wind 30–60 minutes before it hits us. Speed, density and above all Bz (the magnetic direction) decide what happens next.</p></div></div>
-  <div class="grid two-col xfull">
-  <section class="card app">
+  <div class="enlsum" id="cycSum">Loading…</div>
+  <svg id="cycchart"></svg>
+  <div class="cleg" id="cycLeg"></div>
+  <div class="sub" style="margin-top:8px;line-height:1.5">Monthly sunspot number (13-month smoothed) since each cycle began, so the five cycles line up. More sunspots → more flares and CMEs → more storms; the years after the peak often bring the biggest ones. Dots = this cycle's monthly values, dashed = NOAA's prediction.</div>
+</section>
+
+<div class="chap xfull chx sg5" style="--chimg:url(img/ch3-aurora-iss.jpg);--chc:#7BE0FF"><span aria-hidden="true">2</span><div><h2>The Earth</h2><p>A spacecraft 1.5 million km towards the Sun measures the wind 30–60 minutes before it hits. Then, in the order things arrive: particles in hours (radiation storms), the wind and CMEs in days (geomagnetic storms and auroras) — while Earth's field is squeezed and shields us from cosmic rays. Plus Earth's own story: every day since 2008 next to the Sun, and this week's earthquakes and volcanoes.</p><nav class="chlinks" aria-label="In this chapter"><a href="#secL1">Measured at L1</a><a href="#secSW">Space weather at Earth</a><a href="#secDst">Earth's field</a><a href="#secCr">Cosmic rays</a><a href="#secLong">Journal since 2008</a><a href="#secEq">Earthquakes and volcanoes</a></nav><svg class="chfib" viewBox="0 0 377 12" preserveAspectRatio="xMinYMid meet" aria-hidden="true"><line x1="0" y1="6" x2="377" y2="6"/><line x1="0" x2="0" y1="3" y2="9"/><line x1="8" x2="8" y1="3" y2="9"/><line x1="13" x2="13" y1="3" y2="9"/><line x1="21" x2="21" y1="3" y2="9"/><line x1="34" x2="34" y1="3" y2="9"/><line x1="55" x2="55" y1="1" y2="11"/><line x1="89" x2="89" y1="3" y2="9"/><line x1="144" x2="144" y1="1" y2="11"/><line x1="233" x2="233" y1="3" y2="9"/><line x1="377" x2="377" y1="1" y2="11"/></svg></div></div>
+<section class="card frame xfull" id="frWind" aria-label="The solar wind reaching Earth"><div class="lbl ulbl">The solar wind reaching Earth</div>
+<div class="grid two-col xfull">
+  <section class="card app" id="secL1">
     <div class="lbl" style="font-size:10px">Right now, 1.5 million km towards the Sun</div>
+    <div class="help l1x" style="margin:4px 0 12px"><b>What is L1?</b> The first Lagrange point: a spot 1.5 million km from Earth, straight towards the Sun, where the pull of the Sun and Earth balance so a spacecraft can stay put. NASA / NOAA probes there (DSCOVR, ACE, IMAP, SOHO) taste the solar wind 30–60 minutes before it reaches us — our early warning.</div>
     <div class="now" style="margin-bottom:12px">
       <div class="fact"><div class="lbl">Speed now</div><b id="swV">–</b><small id="swVt">&nbsp;</small></div>
       <div class="fact"><div class="lbl">Magnet (Bz) now</div><b id="swBz">–</b><small id="swBzt">&nbsp;</small></div>
@@ -505,12 +766,12 @@
     <p>For aurora from Romania you want all of it at once: <b>speed 600+, Bt 20+, Bz −15 or lower for hours</b> — then check the Kp and the sky.</p>
   </details>
 </section>
-  <section class="card app">
+  <section class="card app" id="secSW">
   <div class="lbl">Space weather at Earth · NOAA scales now · tap one</div>
   <div class="scales">
-    <div class="scale on" data-sw="g"><b id="scG">G0</b><small id="scGt">Geomagnetic</small></div>
+    <div class="scale" data-sw="r" hidden style="display:none"><b id="scR">R0</b><small>Radio · flares</small></div>
     <div class="scale" data-sw="s"><b id="scS">S0</b><small>Radiation</small></div>
-    <div class="scale" data-sw="r"><b id="scR">R0</b><small>Radio · flares</small></div>
+    <div class="scale on" data-sw="g"><b id="scG">G0</b><small id="scGt">Geomagnetic</small></div>
     <div class="scale" data-sw="e"><b id="scE">–</b><small>Satellites</small></div>
   </div>
   <div class="swnow" id="swNow"></div>
@@ -525,35 +786,10 @@
   <details class="howto" id="swHow"><summary>HOW TO READ IT ›</summary><div id="swHowTxt"></div></details>
 </section>
   </div>
-  <div class="chap xfull"><span aria-hidden="true">3</span><div><h2>Your sky — and the bigger picture</h2><p>The last step is local: dark, clear, the Moon out of the way and a view to the north. Storms come more often around the peak of the Sun's 11-year cycle.</p></div></div>
-  <div class="grid two-col xfull">
-  <section class="card">
-    <div class="lbl">How to read all this</div>
-    <h2>A good aurora night needs</h2>
-    <ol class="steps">
-      <li><b>Kp <span class="needK">7</span>+</b> forecast for tonight where you are (the answer card says it for you).</li>
-      <li><b>Bz negative</b> (south) for an hour or more — that's the "on" switch.</li>
-      <li><b>Fast wind</b>, over 500 km/s, or a CME arriving (red band).</li>
-      <li><b>Clear sky</b> and <b>real dark</b>: away from city lights, facing <b>north</b>, low horizon.</li>
-      <li><b>Use your phone's night mode</b> (3–10 s exposure). From Romania the aurora often looks like a faint grey-pink glow to the eye but shows red / green on camera.</li>
-    </ol>
-    <details><summary>WHY IS IT SO RARE IN THE SOUTH?</summary>
-      <p class="why">The aurora lives in a ring around the North Pole (the oval above). Romania and southern Europe are far south of it. Only big solar storms push the ring far enough south — a few nights per year, more around solar maximum (now, 2024–2027).</p></details>
-  </section>
-  <section class="card app">
-  <div style="display:flex;justify-content:space-between;align-items:baseline">
-    <div class="lbl">Solar cycle · sunspots</div><div class="lbl">SILSO / NOAA</div>
-  </div>
-  <div class="enlsum" id="cycSum">Loading…</div>
-  <svg id="cycchart"></svg>
-  <div class="cleg" id="cycLeg"></div>
-  <div class="sub" style="margin-top:8px;line-height:1.5">Monthly sunspot number (13-month smoothed) since each cycle began, so the five cycles line up. More sunspots → more flares and CMEs → more storms; the years after the peak often bring the biggest ones. Dots = this cycle's monthly values, dashed = NOAA's prediction.</div>
 </section>
-  </div>
-  <div id="sunFull"><div class="fimg"><img id="sunFImg" alt=""></div>
-    <div class="sfctl"><button class="spbtn" id="sunFPlay">⏸</button><span class="stime" id="sunFTime">–</span><input type="range" id="sunFSlide" min="0" max="0" value="0"><button class="spbtn" id="sunFX">✕</button></div></div>
-  <div class="chap"><span aria-hidden="true">4</span><div><h2>Earth — while the Sun is busy</h2><p>Cosmic rays, Earth's magnetic field, earthquakes and volcanoes on the same clock as the Sun. A curiosity corner: some people link solar storms to earthquakes and eruptions, but science has not shown such a link. Here are the numbers, so you can look for yourself.</p></div></div>
-  <div class="grid two-col">
+
+<section class="card frame xfull" id="frShield" aria-label="Earth's magnetic shield"><div class="lbl ulbl">Earth's magnetic shield</div>
+<div class="grid two-col">
   <section class="card app" id="secDst">
     <div class="lbl">Earth's magnetic field · Dst index · Kyoto / NOAA</div>
     <h2>How hard storms squeeze Earth's field</h2>
@@ -569,7 +805,19 @@
     <div class="help">Particles from deep space hit the air and make neutrons that a monitor counts. When a CME passes Earth, its magnetic cloud sweeps some of them away: the count drops by a few percent within hours — a <b>Forbush decrease</b>, a real fingerprint of the Sun at the ground.</div>
   </section>
   </div>
-  <div class="grid two-col">
+</section>
+<section class="card frame xfull" id="frEarth" aria-label="Earth itself">
+<section class="card app" id="secLong">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <div><div class="lbl">Our journal · every day since 2008 · it grows by itself</div><h2 style="margin-top:4px">Sun and Earth, side by side</h2></div>
+      <div class="chips" id="lgRange"><div class="chip" data-lr="90">90 D</div><div class="chip on" data-lr="365">1 Y</div><div class="chip" data-lr="1825">5 Y</div><div class="chip" data-lr="0">ALL</div></div>
+    </div>
+    <svg id="lgChart"></svg>
+    <div class="corr" id="lgCorr"></div>
+    <div class="help">Every day the page's robot writes down the strongest Kp (GFZ Potsdam), the sunspot number (SILSO), the M5+ earthquakes (USGS) and eruptions that started (Smithsonian); the strongest storm (Dst), fastest wind and biggest flare (NOAA) are kept from October 2026 on. The test compares storm days with quiet days: if solar storms triggered earthquakes, storm days would clearly have more.</div>
+  </section>
+
+<div class="grid two-col">
   <section class="card app" id="secEq">
     <div class="lbl">Earthquakes M4.5+ · last 7 days · USGS</div>
     <h2>Earthquakes and volcanoes this week</h2>
@@ -587,16 +835,17 @@
     <div class="help">Eruptions still active at the Smithsonian database's latest update (it is updated every few months, so the newest ones can be missing); many are long, slow eruptions. VEI = how explosive (0 gentle … 8 colossal).</div>
   </section>
   </div>
-  <section class="card app" id="secLong">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-      <div><div class="lbl">Our journal · every day since 2008 · it grows by itself</div><h2 style="margin-top:4px">Sun and Earth, side by side</h2></div>
-      <div class="chips" id="lgRange"><div class="chip" data-lr="90">90 D</div><div class="chip on" data-lr="365">1 Y</div><div class="chip" data-lr="1825">5 Y</div><div class="chip" data-lr="0">ALL</div></div>
-    </div>
-    <svg id="lgChart"></svg>
-    <div class="corr" id="lgCorr"></div>
-    <div class="help">Every day the page's robot writes down the strongest Kp (GFZ Potsdam), the sunspot number (SILSO), the M5+ earthquakes (USGS) and eruptions that started (Smithsonian); the strongest storm (Dst), fastest wind and biggest flare (NOAA) are kept from October 2026 on. The test compares storm days with quiet days: if solar storms triggered earthquakes, storm days would clearly have more.</div>
+</section>
+<div class="chap xfull chx sg1" style="--chimg:url(img/sec3d-earth-milky-way.jpg);--chc:#B9A7FF"><span aria-hidden="true">3</span><div><h2>Explore in 3D</h2><p>The planets, the Sun's magnetic field, the solar wind and the CMEs in flight — where they really are right now. Zoom out to the nearby stars and the Milky Way, or down to Earth.</p><nav class="chlinks" aria-label="In this chapter"><a href="#sec3d">3D model</a></nav><svg class="chfib" viewBox="0 0 377 12" preserveAspectRatio="xMinYMid meet" aria-hidden="true"><line x1="0" y1="6" x2="377" y2="6"/><line x1="0" x2="0" y1="3" y2="9"/><line x1="8" x2="8" y1="3" y2="9"/><line x1="13" x2="13" y1="3" y2="9"/><line x1="21" x2="21" y1="3" y2="9"/><line x1="34" x2="34" y1="3" y2="9"/><line x1="55" x2="55" y1="1" y2="11"/><line x1="89" x2="89" y1="3" y2="9"/><line x1="144" x2="144" y1="1" y2="11"/><line x1="233" x2="233" y1="3" y2="9"/><line x1="377" x2="377" y1="1" y2="11"/></svg></div></div>
+<section class="card" id="sec3d" aria-label="3D model of the solar system">
+    <div id="s3dHost" role="img" aria-label="3D model of the solar system with the solar wind streaming from the Sun and the CMEs in flight"></div>
+    <button class="s3dgo" id="s3dGo">▶ Open the 3D view</button>
+    <div class="help">A model, not a photo: the planets sit where they really are at the clock's time; the solar wind streams out of the turning Sun (speed and colour from NOAA's model at Earth); CMEs from NASA's DONKI catalogue grow at their measured speed and direction. Distances are real, sizes are not. Drag to turn, pinch or scroll to zoom, tap a planet to fly to it — the play button above moves everything together.</div>
   </section>
-  <section class="card safe" id="safe" aria-labelledby="hSafe">
+
+
+
+<section class="card safe" id="safe" aria-labelledby="hSafe">
     <div class="lbl">Safe for you · safe for us</div>
     <h2 id="hSafe">Safe and private</h2>
     <div class="safegrid">
@@ -608,8 +857,11 @@
       <div><b>Safe for us too.</b> No server, no database of visitors, no passwords or keys in the page. The code is public on GitHub, anyone can check it.</div>
     </div>
   </section>
+<div id="sunFull"><div class="fimg"><img id="sunFImg" alt=""></div>
+    <div class="sfctl"><button class="spbtn" id="sunFPlay">⏸</button><span class="stime" id="sunFTime">–</span><input type="range" id="sunFSlide" min="0" max="0" value="0"><button class="spbtn" id="sunFX">✕</button></div></div>
+
   <footer>Live data: <a href="https://www.swpc.noaa.gov/" rel="noopener">NOAA SWPC</a> · <a href="https://sdo.gsfc.nasa.gov/" rel="noopener">NASA SDO</a> · <a href="https://soho.nascom.nasa.gov/" rel="noopener">SOHO (ESA/NASA)</a> · <a href="https://open-meteo.com/" rel="noopener">Open-Meteo</a><br>
-    Forecasts are estimates. Made with PowHau.</footer>
+    Forecasts are estimates. Made with PowHau.<span class="phi" aria-hidden="true">φ = (1+√5)/2 ≈ 1.618 · r = L·cos²λ · 1 · 1 · 2 · 3 · 5 · 8 · 13 · 21 · 34 · 55</span></footer>
 </main>
 <script>/* side nav: ids for the chapter rows, smooth jumps, highlight the section on screen */
 (() => { const ch = [...document.querySelectorAll('.chap')]; ch.forEach((c, i) => { if (!c.id) c.id = 'chap' + (i + 1); });
@@ -625,12 +877,12 @@
   <div class="fctl"><div class="pbtn" id="enlFPlay">▶</div><div class="pbtn spd" style="font:700 10px 'JetBrains Mono',monospace">1×</div><input type="range" id="enlFSlide" min="0" max="0" value="0"><span class="lbl" id="enlFT" style="min-width:150px;text-align:right">–</span><span class="lbl">PINCH · DRAG</span><div class="x" id="enlX">✕</div></div></div></div>
 <div id="toast"></div>
 <script src="i18n.js?v=b936034a"></script>
-<script src="i18n.ro.js?v=92217751"></script>
-<script src="i18n.de.js?v=56bd81ed"></script>
+<script src="i18n.ro.js?v=5943f432"></script>
+<script src="i18n.de.js?v=4126a34b"></script>
 <script src="land.js?v=a8b7e715"></script>
-<script src="globe.js?v=2485e592"></script>
+<script src="globe.js?v=fa6d06d5"></script>
 <script src="tonight.js?v=a141a68c"></script>
-<script src="regions.js?v=376054ba"></script>
+<script src="regions.js?v=9dbae666"></script>
 <script src="space3d.js?v=ad89bd13"></script>
 <script src="earth3d.js?v=5a75a550"></script>
 <script>
@@ -683,7 +935,7 @@ $('locGps').onclick = () => {
 };
 const hhmm = d => new Date(d).toLocaleTimeString(LOC, { timeZone: TZ, hour: '2-digit', minute: '2-digit' });
 const day = d => new Date(d).toLocaleDateString(LOC, { timeZone: TZ, weekday: 'short', day: 'numeric' });
-const kpColor = k => k >= 9 ? '#E879F9' : k >= 8 ? '#B98CFF' : k >= 7 ? '#FF4D4D' : k >= 6 ? '#FF9338' : k >= 5 ? '#FFE14D' : k >= 4 ? '#B8F25C' : '#3FD98A';   // quiet green · active lime · G1 yellow · G2 orange · G3 red · G4 violet · G5 fuchsia
+const kpColor = k => k >= 9 ? '#8C7CFF' : k >= 8 ? '#D61F3A' : k >= 7 ? '#FF4D4D' : k >= 6 ? '#FF9338' : k >= 5 ? '#FFE14D' : k >= 4 ? '#B8F25C' : '#3FD98A';   // our own spectrum (NOAA uses green / yellow / red): quiet green · active lime · G1 yellow · G2 orange · G3 red · G4 dark red · G5 indigo
 async function j(u) { const r = await fetch(u, { cache: 'no-store' }); if (!r.ok) throw new Error(r.status); return r.json(); }
 var PHONE = () => innerWidth < 760;   // phones get the compact layout (tonight without tiles, 3D behind a button)
 const S = {};
@@ -708,9 +960,10 @@ function verdict() {
     const ss = S.wx.daily.sunset[0]; if (ss) dark = Date.parse(ss + 'Z') - S.wx.utc_offset_seconds * 1000 + 75 * 60000;
   }
   const N = need();   // Kp needed here (from the geomagnetic latitude)
-  const lv = kp >= N + 1 ? [T('Likely'), '#39FF9E', 'rgba(57,255,158,.22)'] : kp >= N ? [T('Possible'), '#FFD84D', 'rgba(255,216,77,.16)']
+  const lv = kp >= N + 1 ? [T('Likely'), '#E8283C', 'rgba(220,30,50,.24)'] : kp >= N ? [T('Possible'), '#FFD84D', 'rgba(255,216,77,.16)']
     : kp >= N - 1 ? [T('Unlikely'), '#FFA040', 'rgba(255,160,64,.16)'] : [T('No chance'), '#A3B0C2', 'rgba(163,176,194,.08)'];
   $('vword').textContent = lv[0]; $('vword').style.color = lv[1]; $('vcard').style.setProperty('--glow', lv[2]);
+  $('vword').classList.toggle('aur', kp >= N + 1);   // likely: written in aurora colours
   const P = { p: TOWN.name, n: N };
   let t = kp >= N + 1 ? T('A solar storm strong enough for {p} is forecast — the aurora may be visible to the eye low in the north from dark places.', P)
     : kp >= N ? T('Forecast right at the limit for {p} — a glow on the northern horizon is possible, best caught with a phone\'s night mode.', P)
@@ -765,7 +1018,7 @@ const SUNF = [
   ['HMIIC', 'HMI IC', '#CCCCCC', T('<b>The Sun as your eye would see it.</b> Sunspots are where flares and CMEs come from.')],
   ['HMIB', 'HMI B', '#8888FF', T('<b>Magnetic map.</b> White and black are opposite magnetic poles; tangled, mixed spots flare the most.')],
   ['HMIBC', 'HMI color', '#E8C34A', T('<b>Magnetic field strength, in colour.</b> Yellow / red and green / blue are opposite poles; the strongest knots (red, blue) sit in sunspots and are where big flares start.')],
-];
+].filter(f => !window.STORM || STORM.sun.includes(f[0]));
 /* one time axis for every slider: the solar wind model run's span (the Sun's 5 days reach back further),
    or the Sun's own range until the model has loaded — so the same moment sits at the same spot on all three */
 function axis() {
@@ -801,7 +1054,7 @@ async function loadSun() {
     j(NO + u + '?t=' + Math.floor(Date.now() / 600000)).then(a => { sun.F.filters[id] = a.map(f => [f.time_tag ? Date.parse(f.time_tag) : tOf(f.url), NO + f.url]).filter(f => f[0]).sort((x, y) => x[0] - y[0]);
       if (/^CCOR/.test(id)) { const L = sun.F.filters[id], t0 = L.length ? L[L.length - 1][0] - 5 * 864e5 : 0;   // NOAA keeps ~a month: the last 5 days every 30 min, like the other filters
         sun.F.filters[id] = L.filter((f, i) => f[0] >= t0 && (L.length - 1 - i) % 2 === 0); } })));
-  if (!sun.started) { sun.started = true; sunPick(0); } else sunStatus();   // starts on the CME tab (C3), like the app
+  if (!sun.started) { sun.started = true; sunPick(Math.max(0, SUNF.findIndex(f => f[0] === 'CCOR1'))); } else sunStatus();   // starts on CCOR-1 (CMEs as they leave the Sun)
 }
 function sunStatus() {
   const fr = sunFr(), last = fr.length ? fr[fr.length - 1][0] : 0, age = last ? (Date.now() - last) / 60000 : 0;
@@ -811,7 +1064,7 @@ function sunStatus() {
 function sunPick(k) {
   sun.k = (k + SUNF.length) % SUNF.length; const f = SUNF[sun.k], fr = sunFr(), seq = ++sun.seq;
   document.querySelectorAll('#sunChips button').forEach((b, i) => { const on = i === sun.k; b.style.background = on ? SUNF[i][2] : 'none'; b.style.color = on ? '#0A0A0A' : SUNF[i][2];
-    if (on && b.parentNode.scrollWidth > b.parentNode.clientWidth) b.parentNode.scrollTo({ left: b.offsetLeft - 20, behavior: 'smooth' }); });
+    if (on && b.parentNode.scrollWidth > b.parentNode.clientWidth) { const P = b.parentNode, l = b.offsetLeft - P.offsetLeft, r = l + b.offsetWidth; if (l < P.scrollLeft) P.scrollTo({ left: l - 8, behavior: 'smooth' }); else if (r > P.scrollLeft + P.clientWidth) P.scrollTo({ left: r - P.clientWidth + 8, behavior: 'smooth' }); } });
   $('sunLbl').textContent = f[1]; $('sunDot').style.background = f[2]; $('sunCount').textContent = (sun.k + 1) + ' / ' + SUNF.length;
   const ownClip = !['CCOR1', 'CCOR2', 'C2', 'HMIBC'].includes(f[0]);   // the bot renders clips for its own lists only
   $('sunHelp').innerHTML = f[3]; $('sunClip').href = ownClip ? CLIPS + 'sun-' + f[0] + '.mp4' : VID(f[0]); $('sunClip').setAttribute('download', 'sun-' + f[0] + '.mp4');
@@ -1345,7 +1598,7 @@ async function load() {
     loadSun(),
   ]);
   verdict(); if (!S.kpList) { $('vword').textContent = T('No data'); $('vtext').textContent = T('NOAA could not be reached. Try again in a minute.'); }
-  $('upd').textContent = T('Live · updated {t} local time', { t: hhmm(Date.now()) });
+  $('upd').textContent = window.STORM ? T('Storm mode · 10 May 2024 · {t} local time', { t: hhmm(Date.now()) }) : T('Live · updated {t} local time', { t: hhmm(Date.now()) });
 }
 load(); setInterval(load, 10 * 60000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
@@ -1362,7 +1615,7 @@ const esc = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&a
 const BV = { get name() { return TOWN.name; }, get lat() { return TOWN.lat; }, get lon() { return TOWN.lon; } };
 const need = () => AuroraGlobe.kpNeed(TOWN.lat, TOWN.lon);
 const hhmm = d => d.toLocaleTimeString(LOC, { hour: '2-digit', minute: '2-digit', timeZone: TZ });
-const kpColor = k => k >= 9 ? '#E879F9' : k >= 8 ? '#B98CFF' : k >= 7 ? '#FF4D4D' : k >= 6 ? '#FF9338' : k >= 5 ? '#FFE14D' : k >= 4 ? '#B8F25C' : '#3FD98A';   // quiet green · active lime · G1 yellow · G2 orange · G3 red · G4 violet · G5 fuchsia
+const kpColor = k => k >= 9 ? '#8C7CFF' : k >= 8 ? '#D61F3A' : k >= 7 ? '#FF4D4D' : k >= 6 ? '#FF9338' : k >= 5 ? '#FFE14D' : k >= 4 ? '#B8F25C' : '#3FD98A';   // our own spectrum (NOAA uses green / yellow / red): quiet green · active lime · G1 yellow · G2 orange · G3 red · G4 dark red · G5 indigo
 const gScale = k => k >= 9 ? 5 : k >= 8 ? 4 : k >= 7 ? 3 : k >= 6 ? 2 : k >= 5 ? 1 : 0;
 const G_TXT = ['QUIET', 'MINOR STORM', 'MODERATE STORM', 'STRONG STORM', 'SEVERE STORM', 'EXTREME STORM'].map(x => T(x));
 async function j(url) { const r = await fetch(url, { cache: 'no-store' }); if (!r.ok) throw new Error(r.status); return r.json(); }
@@ -1395,18 +1648,21 @@ function drawKpChart(list) {
   pts.forEach(p => {
     const x0 = Math.max(L, x(p.t)), h = Math.max(1.5, H - B - y(p.k));
     const pred = p.kind === 'predicted';
-    s += `<rect x="${x0 + .75}" y="${H - B - h}" width="${Math.max(1, bw)}" height="${h}" rx="1.5" fill="${kpColor(p.k)}" fill-opacity="${pred ? .45 : .9}"/>`;
+    const hm = t => new Date(t).toLocaleString(LOC, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: TZ });
+    s += `<rect x="${x0 + .75}" y="${H - B - h}" width="${Math.max(1, bw)}" height="${h}" rx="1.5" fill="${kpColor(p.k)}" fill-opacity="${pred ? .45 : .9}"><title>${hm(p.t)} – ${new Date(p.t + 3 * 3.6e6).toLocaleTimeString(LOC, { hour: '2-digit', minute: '2-digit', timeZone: TZ })} · Kp ${p.k.toFixed(1)}${pred ? ' · ' + window.T('forecast') : ''}</title></rect>`;
   });
   // day ticks (local midnight)
   const d = new Date(from); d.setHours(24, 0, 0, 0);
   for (; d.getTime() < to; d.setDate(d.getDate() + 1)) {
     const xx = x(d.getTime());
     s += `<line x1="${xx}" x2="${xx}" y1="${T}" y2="${H - B}" stroke="#2C3542"/>`;
-    s += `<text x="${xx + 3}" y="${H - 5}" fill="#8B9BAE" font-size="8" font-family="JetBrains Mono">${d.toLocaleDateString(LOC, { weekday: 'short', timeZone: TZ }).toUpperCase()}</text>`;
+    s += `<text x="${xx + 3}" y="${H - 5}" fill="#8B9BAE" font-size="8" font-family="JetBrains Mono">${(d.toLocaleDateString(LOC, { weekday: 'short', timeZone: TZ }) + (W > 600 ? ' ' + d.toLocaleDateString(LOC, { day: 'numeric', month: 'short', timeZone: TZ }) : '')).toUpperCase()}</text>`;
+    // wide chart (PC): the hours 06 · 12 · 18 of each day
+    if (W > 600) (x(from + 6 * 3.6e6) - x(from) > 75 ? [6, 12, 18] : [12, 18]).forEach(hh => { const th = d.getTime() + hh * 3.6e6, xh = x(th); if (th > from && th < to) s += `<line x1="${xh}" x2="${xh}" y1="${H - B}" y2="${H - B + 3}" stroke="#4A5565"/><text x="${xh}" y="${H - 5}" text-anchor="middle" fill="#5C6878" font-size="7.5" font-family="JetBrains Mono">${String(hh).padStart(2, '0')}</text>`; });
   }
   const xn = x(now);
   s += `<line x1="${xn}" x2="${xn}" y1="${T}" y2="${H - B}" stroke="#fff" stroke-opacity=".7" stroke-dasharray="2 3"/>`;
-  s += `<text x="${xn + 3}" y="${T + 8}" fill="#fff" font-size="8" font-family="JetBrains Mono">${window.T('NOW')}</text>`;
+  s += `<text x="${xn + 3}" y="${T + 8}" fill="#fff" font-size="8" font-family="JetBrains Mono">${window.T('NOW')} · ${new Date(now).toLocaleString(LOC, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: TZ }).toUpperCase()}</text>`;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.innerHTML = s; svg.dataset.tx = JSON.stringify([from, to, x(from), x(to), H]); window.tcursor && tcursor();
 }
 
@@ -1782,5 +2038,155 @@ window.earthReport = () => ({ dst: $('dstChart'), cr: $('secCr').style.display =
 })();
 </script>
 <script>/* sacred:js */(()=>{const go=()=>document.querySelectorAll('.card').forEach((c,i)=>{c.classList.add('sg'+i%7);c.classList.toggle('sgb',i%2===1)});go();new MutationObserver(go).observe(document.body,{childList:true,subtree:false});setTimeout(go,4000)})();</script>
+<script>/* motion (PC, no reduced motion) */
+(() => { let off = false; try { off = localStorage.getItem('aurora.motion') === 'off'; } catch (e) {}
+  if (off || innerWidth < 1000 || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const root = document.documentElement; root.classList.add('mo');
+  // cards + chapter openings rise in once; their charts draw themselves the first time
+  const io = new IntersectionObserver(es => es.forEach(e => { if (!e.isIntersecting) return; const el = e.target; el.classList.add('in'); io.unobserve(el);
+    el.querySelectorAll('svg').forEach(sv => { if (sv.closest('.chx')) return; sv.classList.add('draw'); setTimeout(() => sv.classList.remove('draw'), 2600); }); }), { rootMargin: '0px 0px -8% 0px', threshold: .06 });
+  document.querySelectorAll('main .card, main .chx').forEach(el => io.observe(el));
+  // safety net (e.g. a background tab, where observers can stall): reveal whatever is on screen on every scroll / load
+  const seen = () => document.querySelectorAll('main .card:not(.in), main .chx:not(.in)').forEach(el => { const r = el.getBoundingClientRect(); if (r.top < innerHeight && r.bottom > 0) el.classList.add('in'); });
+  let sq = 0; addEventListener('scroll', () => { if (!sq) sq = requestAnimationFrame(() => { sq = 0; seen(); }); }, { passive: true }); addEventListener('load', seen); setTimeout(seen, 1200);
+  document.addEventListener('visibilitychange', seen);
+  // chapter images + the flower of life drift with the scroll (slow parallax)
+  const chx = [...document.querySelectorAll('.chx')]; let q = 0;
+  const par = () => { q = 0; const vh = innerHeight; chx.forEach(c => { const r = c.getBoundingClientRect(); if (r.bottom < 0 || r.top > vh) return; c.style.setProperty('--py', ((r.top + r.height / 2 - vh / 2) * -.12).toFixed(1) + 'px'); });
+    document.body.style.backgroundPosition = 'center, center ' + (-scrollY * .06).toFixed(1) + 'px'; };
+  addEventListener('scroll', () => { if (!q) q = requestAnimationFrame(par); }, { passive: true }); par();
+  // live numbers count to their new value and glow briefly when they change
+  const NUM = /-?\d+(?:\.\d+)?/, busy = new WeakSet(), last = new WeakMap();
+  const count = el => { if (busy.has(el)) return; const txt = el.textContent, m = txt.match(NUM); if (!m) return; const to = +m[0], from = last.has(el) ? last.get(el) : 0; last.set(el, to);
+    if (from === to) return; const dec = (m[0].split('.')[1] || '').length, t0 = performance.now(), D = 900; busy.add(el);
+    const step = now => { const k = Math.min(1, (now - t0) / D), v = from + (to - from) * (1 - Math.pow(1 - k, 3)); el.textContent = txt.replace(m[0], v.toFixed(dec)); if (k < 1) requestAnimationFrame(step); else { el.textContent = txt; busy.delete(el); el.classList.remove('tick'); void el.offsetWidth; el.classList.add('tick'); } };
+    requestAnimationFrame(step); };
+  ['kpNow', 'swV', 'swBz'].forEach(id => { const el = document.getElementById(id); if (!el) return; new MutationObserver(() => count(el)).observe(el, { childList: true, characterData: true, subtree: true }); if (NUM.test(el.textContent)) count(el); });
+  // a jump from the side nav or a chapter link lights up where you landed
+  document.addEventListener('click', e => { const a = e.target.closest('.sidenav a, .chlinks a'); if (!a) return; const t = document.getElementById(a.hash.slice(1)); if (!t) return;
+    setTimeout(() => { t.classList.remove('flash'); void t.offsetWidth; t.classList.add('flash'); }, 650); });
+})();</script>
+<script>/* explain mode (PC): point at anything to learn what it is and how to read it */
+(() => { const X = [["#vcard", "#39FF9E", "The answer for tonight", "Our verdict for your place, built from NOAA's Kp forecast, the cloud forecast, darkness and the Moon.", "The big word is the chance tonight. Under it: the Kp expected, the clouds and when it gets dark enough."], ["#tonight", "#39FF9E", "Tonight hour by hour", "Every hour from dusk to dawn, scored.", "Dark = the Sun is low enough. Clouds = less is better. Aurora = the Kp forecast against the Kp your place needs. Moon = a bright Moon washes out a faint aurora. Chance = all of them together; the tallest bars are the best window."], ["#kpcard > .card:first-child", "#39FF9E", "Kp index now", "One number from 0 to 9 for how disturbed Earth's magnetic field is, from magnetometers around the world, updated every minute.", "0–3 quiet, 4 active, 5 = G1 minor storm, 7 = G3 strong, 9 = G5 extreme. Each step up pushes the aurora further south. The gauge lights one segment per Kp."], [".ovalc", "#39FF9E", "NOAA aurora forecast · OVATION", "NOAA's model of where the aurora is now and for the next 30–90 minutes, computed from the solar wind measured at L1.", "Green to red = more likely and brighter. The yellow dot is you. When the oval's edge comes near your latitude, look north: an aurora can be seen up to about 1000 km away from under it."], ["#kpChartCard", "#39FF9E", "Kp · past and forecast", "Kp in 3-hour blocks: the last 2 days measured, then NOAA's 3-day forecast.", "Each bar = 3 hours, its colour = the strength. The line is the Kp your place needs: bars above it are chances. The further ahead, the less certain."], ["#sunBox", "#FFE600", "The Sun now", "Real pictures from NASA's SDO, ESA / NASA SOHO and NOAA's GOES-19 — the last 5 days as a film.", "Coronagraphs (LASCO, CCOR) hide the Sun's disc to show CMEs leaving it. AIA filters show the hot corona at different temperatures. HMI shows sunspots and the magnetic field. Change the filter with ‹ › or by swiping; the clock bar moves the film."], ["#secDen", "#39FF9E", "Solar wind forecast · density", "NOAA's WSA-ENLIL model: how dense the solar wind will be from the Sun out past Earth, for the next days.", "From above: the Sun in the centre, Earth = the dot on the right. From the side: the same in profile. Bright blobs moving out are CMEs and dense streams. The chart below = the density expected at Earth; above ~20 /cm³ pushes hard on our field."], ["#secSpd", "#FFA040", "Solar wind forecast · speed", "The same model, coloured by speed.", "Normal wind is ~400 km/s. Above 600 km/s means a fast stream or a CME — good for auroras, especially when its magnetic field points south (Bz negative)."], ["#secInfo", "#7BE0FF", "About the forecast", "When NOAA ran the model and what it expects to reach Earth.", "A CME arrival time is a forecast: the error is typically about ±7 hours."], ["#syncCard", "#FFE600", "One clock", "One time line for the Sun's pictures, the ENLIL forecast and the yellow line on every chart.", "Press play or drag: the past (Sun films, measured data) and the future (forecast) move together, so you can follow a CME from the Sun to Earth. Share makes a picture card at the clock's time."], ["#secReg", "#FFE600", "Active regions, flares and coronal holes", "Where on the Sun the trouble starts: numbered sunspot regions (NOAA), the flares of the last days (GOES X-rays) and coronal holes found in the SDO / SUVI pictures.", "Flares: C small, M medium (radio blackouts on the day side), X large. A region near the centre of the disc faces Earth — its CMEs are more likely to hit us. Dark coronal holes send fast wind that arrives 2–4 days later."], ["#secCyc", "#FFE600", "Solar cycle", "The number of sunspots, smoothed over months, for the last cycles.", "The Sun goes from quiet to active and back about every 11 years. Near and just after the peak come more flares, CMEs and big auroras. The dashed line is the prediction."], ["#secL1", "#7BE0FF", "Solar wind measured at L1", "What the probes 1.5 million km towards the Sun measure right now — it reaches Earth 30–60 minutes later.", "Bt = the strength of the wind's magnetic field, Bz = its north–south direction: Bz negative (south) opens our shield — the most important number for auroras. Density and speed: more and faster = a harder push. A sudden jump in all of them = a shock (a CME arriving)."], ["#swV", "#7BE0FF", "Wind speed now", "How fast the solar wind blows at L1.", "300–400 km/s calm · 500–700 a fast stream · 800 and more a strong CME."], ["#swBz", "#7BE0FF", "Bz now", "The north–south direction of the wind's magnetic field.", "Positive (north) = the shield stays closed. Negative (south) for hours = energy flows in → storms and auroras. −10 nT or lower is strong."], ["#secSW", "#7BE0FF", "Space weather at Earth · NOAA scales", "NOAA's 1–5 scales for what the Sun does to us. Tap one to see its chart.", "S = radiation storms (fast protons, hours after a big flare). G = geomagnetic storms (CMEs and fast wind, 1–4 days later — these make the aurora). Satellites = high-energy electrons that can charge satellites. The lines on the chart mark each level."], ["#secDst", "#7BE0FF", "Dst index", "How much a storm weakens Earth's field at the equator, from four observatories (Kyoto).", "Near 0 = calm. A sudden rise = a shock arrived. Below −50 nT = a storm, −100 strong, −250 extreme. The slow climb back takes days."], ["#secCr", "#7BE0FF", "Cosmic rays at the ground", "Particles from far outside the solar system, counted by a neutron monitor.", "When a CME passes, its magnetic cloud sweeps cosmic rays away: the count drops by a few % (a Forbush decrease). Over the cycle: more sunspots = fewer cosmic rays."], ["#secLong", "#7BE0FF", "Sun–Earth record since 2008", "Every day since 2008 — sunspots, solar wind, Kp and storms side by side. It grows by itself every day.", "Pick a range and see how storms follow the solar cycle and the fast-wind streams."], ["#secEq", "#7BE0FF", "Earthquakes", "Earthquakes of the last days (USGS).", "Bigger = stronger. They are Earth's own: science has found no reliable link between solar storms and earthquakes."], ["#secVo", "#7BE0FF", "Volcanoes", "Volcanoes reported active recently.", "Like earthquakes, they come from inside Earth and are not driven by the Sun."], ["#sec3d", "#B9A7FF", "3D model", "Earth's magnetic shield, the solar system, nearby stars and the galaxy — on the same clock, with real data (planet positions, NOAA's CMEs).", "Drag to turn, scroll or pinch to zoom, the tabs change the scale. Click the Sun or a planet for facts."]], ST = [["#FFE600", "The Sun", "Sunspots are knots of magnetic field. When they snap: a flare (light, here in 8 minutes) and often a CME — a billion tonnes of plasma thrown into space.", "sunEarth"], ["#FFA040", "The journey", "The solar wind always blows (~400 km/s). CMEs and fast streams from coronal holes take 1–4 days to reach us.", "secDen"], ["#7BE0FF", "Early warning at L1", "Probes 1.5 million km away measure the wind 30–60 minutes before it hits.", "secL1"], ["#7BE0FF", "The shield", "If the wind's magnetic field points south (Bz negative), it links with Earth's field and pours energy in: a geomagnetic storm (Kp, G, Dst).", "frShield"], ["#39FF9E", "The aurora", "Electrons rain into the air 100–300 km up: oxygen glows green and red, nitrogen blue and purple. The stronger the storm, the further south.", "kpcard"], ["#39FF9E", "From your place", "Darkness, clouds and the Moon decide whether you see it tonight.", "vcard"]], $q = (q, r) => (r || document).querySelector(q), H = document.documentElement;
+  const top = $q('.topbar'); if (!top) return;
+  const btn = document.createElement('button'); btn.id = 'xpBtn'; btn.type = 'button'; btn.setAttribute('aria-pressed', 'false'); btn.textContent = T('? HOW TO READ'); top.insertBefore(btn, top.children[1] || null);
+  const bar = document.createElement('div'); bar.id = 'xpBar'; bar.setAttribute('role', 'status');
+  bar.innerHTML = `<span>${T('Explain mode — point at anything to learn what it is and how to read it.')}</span><button class="go" type="button">${T('How it all works')}</button><button class="rpgo" type="button" data-replay>▶ ${T('Storm replay')}</button><button type="button" aria-label="${T('Close')}">✕</button>`;
+  const tip = document.createElement('div'); tip.id = 'xpTip'; tip.setAttribute('role', 'tooltip');
+  const ov = document.createElement('div'); ov.id = 'xpOv'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', T('How it all works'));
+  const FX = [["#FFE600", "in 8 minutes", "Radio blackouts", "A flare's X-rays hit the sunlit side: shortwave radio for ships and planes fades for minutes to hours (NOAA R scale)."], ["#FF8A4A", "20 min – hours", "Astronauts and polar flights", "Fast protons (S scale) add radiation: astronauts take shelter, airlines move flights away from the poles."], ["#C792FF", "hours – days", "Satellites", "Particles charge their electronics; a storm heats and puffs up the air, which drags them down — in Feb 2022 Starlink lost 38 new satellites."], ["#7BE0FF", "1–4 days", "GPS and navigation", "A storm makes the upper air ripple: GPS positions jump by metres — a problem for drones, farming machines, surveying."], ["#FF6B6B", "1–4 days", "Power grids", "Strong storms induce currents in long power lines and pipelines. In March 1989 Québec lost power for 9 hours."], ["#39FF9E", "1–4 days", "Auroras", "The beautiful side of the same storm — the stronger it is, the further south."]], FC = [["#FFE600", "days ahead", "Look at the Sun", "A big sunspot region near the centre of the disc faces Earth. A dark coronal hole in the middle = fast wind in 2–4 days.", "frSun"], ["#FFE600", "hours", "A flare goes off", "An M or X spike in the X-ray chart. Then watch the coronagraphs (CCOR, LASCO): a cloud spreading all around the Sun (a \"halo\") is coming at us.", "sunEarth"], ["#FFA040", "1–3 days before", "The forecast run", "NOAA's ENLIL model shows the CME bubble and an arrival time (±7 hours). Follow it with the clock.", "secDen"], ["#7BE0FF", "30–60 min before", "The shock at L1", "Speed, density and Bt jump together = the CME has arrived at L1. Now only Bz matters: south (negative) for hours = a storm.", "secL1"], ["#39FF9E", "now", "The storm", "Kp climbs, Dst drops, the OVATION oval grows south. Kp at your number + dark + clear = go out and look north.", "kpcard"]], EX = [["#FFE600", "A flare · X-ray chart", "Up in minutes, down in an hour. The band it reaches gives its class (C, M, X).", "<rect width=\"300\" height=\"120\" fill=\"#0B0E12\"/><line x1=\"0\" x2=\"300\" stroke=\"#2A3340\" stroke-dasharray=\"3 4\" y1=\"88\" y2=\"88\"/><line x1=\"0\" x2=\"300\" stroke=\"#2A3340\" stroke-dasharray=\"3 4\" y1=\"58\" y2=\"58\"/><line x1=\"0\" x2=\"300\" stroke=\"#2A3340\" stroke-dasharray=\"3 4\" y1=\"28\" y2=\"28\"/><text x=\"292\" y=\"84\" fill=\"#5C6878\" font-size=\"10\" text-anchor=\"end\">C</text><text x=\"292\" y=\"54\" fill=\"#5C6878\" font-size=\"10\" text-anchor=\"end\">M</text><text x=\"292\" y=\"24\" fill=\"#5C6878\" font-size=\"10\" text-anchor=\"end\">X</text><path d=\"M0 100 L60 98 L110 96 L122 34 L130 40 C150 62 175 82 220 92 L300 98\" fill=\"none\" stroke=\"#FFE600\" stroke-width=\"2.2\"/>"], ["#FF7AB6", "A CME coming at us · coronagraph", "The disc hides the Sun. A ring growing all around it = a \"halo\" CME aimed at Earth; a cloud to one side misses us.", "<rect width=\"300\" height=\"120\" fill=\"#000\"/><circle cx=\"150\" cy=\"60\" r=\"52\" fill=\"none\" stroke=\"#FF7AB6\" stroke-opacity=\".22\" stroke-width=\"10\"/><circle cx=\"150\" cy=\"60\" r=\"38\" fill=\"none\" stroke=\"#FF7AB6\" stroke-opacity=\".45\" stroke-width=\"7\"/><circle cx=\"150\" cy=\"60\" r=\"26\" fill=\"none\" stroke=\"#FF7AB6\" stroke-opacity=\".8\" stroke-width=\"4\"/><circle cx=\"150\" cy=\"60\" r=\"17\" fill=\"#1A1F27\"/><circle cx=\"150\" cy=\"60\" r=\"7\" fill=\"none\" stroke=\"#fff\" stroke-dasharray=\"2 2\"/>"], ["#7BE0FF", "The shock at L1", "Speed (orange) and density (green) jump at the same moment; then Bz (blue) turns south — the shaded part feeds the storm.", "<rect width=\"300\" height=\"120\" fill=\"#0B0E12\"/><line x1=\"130\" x2=\"130\" y1=\"4\" y2=\"116\" stroke=\"#E6EDF5\" stroke-opacity=\".35\" stroke-dasharray=\"3 3\"/><text x=\"134\" y=\"13\" fill=\"#9AA7B8\" font-size=\"10\">__SHOCK__</text><line x1=\"0\" x2=\"300\" stroke=\"#2A3340\" stroke-dasharray=\"3 4\" y1=\"84\" y2=\"84\"/><path d=\"M150 84 L156 104 L176 110 L206 102 L232 92 L240 84 Z\" fill=\"#7BE0FF\" fill-opacity=\".25\"/><path d=\"M0 46 L129 46 L131 20 L300 24\" fill=\"none\" stroke=\"#FFA040\" stroke-width=\"2\"/><path d=\"M0 70 L129 70 L131 42 L150 52 L185 66 L300 72\" fill=\"none\" stroke=\"#39FF9E\" stroke-width=\"2\"/><path d=\"M0 80 L60 87 L129 82 L140 70 L150 84 L156 104 L176 110 L206 102 L232 92 L240 84 L300 78\" fill=\"none\" stroke=\"#7BE0FF\" stroke-width=\"2\"/>"], ["#39FF9E", "A storm · Kp bars", "Quiet bars, then a day of tall red ones as the CME passes, then back down.", "<rect width=\"300\" height=\"120\" fill=\"#0B0E12\"/><rect x=\"6\" y=\"90\" width=\"18\" height=\"22\" rx=\"2\" fill=\"#39FF9E\"/><rect x=\"30\" y=\"90\" width=\"18\" height=\"22\" rx=\"2\" fill=\"#39FF9E\"/><rect x=\"54\" y=\"101\" width=\"18\" height=\"11\" rx=\"2\" fill=\"#39FF9E\"/><rect x=\"78\" y=\"79\" width=\"18\" height=\"33\" rx=\"2\" fill=\"#39FF9E\"/><rect x=\"102\" y=\"90\" width=\"18\" height=\"22\" rx=\"2\" fill=\"#39FF9E\"/><rect x=\"126\" y=\"57\" width=\"18\" height=\"55\" rx=\"2\" fill=\"#FFD84A\"/><rect x=\"150\" y=\"35\" width=\"18\" height=\"77\" rx=\"2\" fill=\"#FF4D4D\"/><rect x=\"174\" y=\"24\" width=\"18\" height=\"88\" rx=\"2\" fill=\"#FF4D4D\"/><rect x=\"198\" y=\"46\" width=\"18\" height=\"66\" rx=\"2\" fill=\"#FF8A4A\"/><rect x=\"222\" y=\"68\" width=\"18\" height=\"44\" rx=\"2\" fill=\"#39FF9E\"/><rect x=\"246\" y=\"79\" width=\"18\" height=\"33\" rx=\"2\" fill=\"#39FF9E\"/><rect x=\"270\" y=\"90\" width=\"18\" height=\"22\" rx=\"2\" fill=\"#39FF9E\"/><line x1=\"0\" x2=\"300\" stroke=\"#2A3340\" stroke-dasharray=\"3 4\" y1=\"35\" y2=\"35\"/>"], ["#7BE0FF", "A storm · Dst", "A small rise when the shock hits, a deep dive during the storm, then days of slow recovery.", "<rect width=\"300\" height=\"120\" fill=\"#0B0E12\"/><line x1=\"0\" x2=\"300\" stroke=\"#2A3340\" stroke-dasharray=\"3 4\" y1=\"28\" y2=\"28\"/><text x=\"4\" y=\"22\" fill=\"#5C6878\" font-size=\"10\">0 nT</text><path d=\"M0 30 L80 29 L88 18 L98 24 C110 60 118 100 132 104 C160 106 200 60 300 36\" fill=\"none\" stroke=\"#7BE0FF\" stroke-width=\"2.2\"/>"], ["#B9A7FF", "A CME passing · cosmic rays", "The magnetic cloud sweeps cosmic rays away: the count drops a few % in hours and takes days to come back (a Forbush decrease).", "<rect width=\"300\" height=\"120\" fill=\"#0B0E12\"/><path d=\"M0 34 L40 32 L80 35 L120 33 L130 36 C138 70 142 84 156 86 C200 84 240 52 300 38\" fill=\"none\" stroke=\"#B9A7FF\" stroke-width=\"2.2\"/>"]], TB = ["The chain", "What else it does", "Make a forecast", "What it looks like"];
+  const card = (c, h, p, w, go) => `<div class="st" style="--c:${c}">${w ? `<span class="wh">${T(w)}</span>` : ''}<h3>${T(h)}</h3><p>${T(p)}</p>${go ? `<button type="button" data-go="${go}">${T('See it')} ↓</button>` : ''}</div>`;
+  const PANES = [
+    `<p class="lead">${T('Everything on this page is live data from NOAA, NASA, ESA and other observatories, read directly by your browser and refreshed every few minutes.')}</p><div class="steps num">${ST.map(x => card(x[0], x[1], x[2], '', x[3])).join('')}</div><p class="note">${T('Light from the Sun takes 8 minutes, fast particles under an hour, a CME 1–4 days. Not every flare has a CME, and not every CME hits us.')}</p>`,
+    `<p class="lead">${T('The Sun does more than auroras. By arrival time:')}</p><div class="steps">${FX.map(x => card(x[0], x[2], x[3], x[1])).join('')}</div>`,
+    `<p class="lead">${T('Follow it on this page, in this order:')}</p><div class="steps five num">${FC.map(x => card(x[0], x[2], x[3], x[1], x[4])).join('')}</div><p class="note tip">${T("Rule of thumb: fast wind (600 km/s or more) with Bz below −10 nT for a few hours usually means a strong storm (Kp 6–7 or more). Bz is only known once the wind reaches L1 — that is why even NOAA is sure only an hour ahead.")}</p>`,
+    `<p class="lead">${T('Simplified drawings of real patterns — compare them with the live charts.')} <button type="button" class="rpgo xrb" data-replay>▶ ${T('Replay the real May 2024 G5 storm')}</button></p><div class="steps">${EX.map(x => `<div class="st ex" style="--c:${x[0]}"><svg viewBox="0 0 300 120" aria-hidden="true">${x[3].replace('__SHOCK__', T('shock'))}</svg><h3>${T(x[1])}</h3><p>${T(x[2])}</p></div>`).join('')}</div>`];
+  ov.innerHTML = `<div class="box"><div class="lbl">${T('How it all works')}</div><h2>${T('From the Sun to your sky')}</h2>
+    <div class="xtabs" role="tablist">${TB.map((t, i) => `<button type="button" role="tab" data-tab="${i}" aria-selected="${i === 0}">${T(t)}</button>`).join('')}</div>
+    <div class="xpane">${PANES[0]}</div>
+    <div class="foot"><span>${T('Point at a card, a chart, a value or a filter.')}</span><button type="button" data-x>${T('Close')}</button></div></div>`;
+  ov.addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; ov.querySelectorAll('[data-tab]').forEach(x => x.setAttribute('aria-selected', String(x === b))); $q('.xpane', ov).innerHTML = PANES[+b.dataset.tab]; });
+  { const m = location.hash.match(/^#how(?:-([1-4]))?$/); if (m) setTimeout(() => { set(true); openOv(); if (m[1]) ov.querySelector('[data-tab="' + (m[1] - 1) + '"]').click(); }, 0); }   // #how / #how-2 … opens the guide (shareable)
+  document.body.append(bar, tip, ov);
+  X.forEach((x, i) => document.querySelectorAll(x[0]).forEach(el => { if (el.dataset.xp == null) el.dataset.xp = i; }));
+  let on = false, cur = null;
+  const mark = el => { if (cur === el) return; if (cur) cur.classList.remove('xpon'); cur = el; if (el) el.classList.add('xpon'); };
+  const set = v => { on = v; H.classList.toggle('xp', v); btn.setAttribute('aria-pressed', String(v)); if (!v) { tip.classList.remove('on'); mark(null); } };
+  const openOv = () => { ov.classList.add('on'); $q('button', ov).focus(); }, closeOv = () => ov.classList.remove('on');
+  btn.onclick = () => { set(!on); if (on && !sessionStorageOk('xpSeen')) openOv(); };
+  function sessionStorageOk(k) { try { if (sessionStorage.getItem(k)) return true; sessionStorage.setItem(k, '1'); } catch (e) {} return false; }
+  bar.querySelector('.go').onclick = openOv; bar.lastElementChild.onclick = () => set(false);
+  ov.onclick = e => { const g = e.target.closest('[data-go]'); if (g) { closeOv(); const t = document.getElementById(g.dataset.go); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    if (e.target === ov || e.target.closest('[data-x]')) closeOv(); };
+  addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (ov.classList.contains('on')) closeOv(); else if (on) set(false); });
+  const show = (el, mx, my) => { let c, t, w, r;
+    if (el.parentNode && el.parentNode.id === 'sunChips') { const f = SUNF[+el.dataset.i]; c = f[2]; t = T('Filter') + ' · ' + f[1]; w = f[3]; r = ''; }
+    else { const x = X[+el.dataset.xp]; c = x[1]; t = T(x[2]); w = T(x[3]); r = T(x[4]); }
+    tip.style.setProperty('--xpc', c); el.style.setProperty('--xpc', c);
+    tip.innerHTML = `<h3>${t}</h3><div class="k">${T('What it is')}</div><p>${w}</p>` + (r ? `<div class="k">${T('How to read it')}</div><p>${r}</p>` : '');
+    tip.classList.add('on'); mark(el); place(mx, my); };
+  const place = (mx, my) => { const W = tip.offsetWidth, Ht = tip.offsetHeight, g = 18; let x = mx + g, y = my + g;
+    if (x + W > innerWidth - 16) x = mx - g - W; if (y + Ht > innerHeight - 16) y = Math.max(16, my - g - Ht); tip.style.left = Math.max(16, x) + 'px'; tip.style.top = y + 'px'; };
+  document.addEventListener('mousemove', e => { if (!on || ov.classList.contains('on')) return; const el = e.target.closest('#sunChips button, [data-xp]');
+    if (!el || e.target.closest('#xpBar')) { tip.classList.remove('on'); mark(null); return; } if (el !== cur) show(el, e.clientX, e.clientY); else place(e.clientX, e.clientY); }, { passive: true });
+  document.addEventListener('focusin', e => { if (!on) return; const el = e.target.closest('#sunChips button, [data-xp]'); if (!el) return; const b = el.getBoundingClientRect(); show(el, b.left, b.bottom); });
+})();</script>
+<script>/* storm replay: lazy-loaded, opened from the guide / the explain bar / #replay */
+window.openReplay = n => { if (window.StormReplay) return StormReplay.open(n); const s = document.createElement('script'); s.src = 'replay.js?v=e6a9899f'; s.onload = () => StormReplay.open(n); document.body.appendChild(s); };
+{ const m = location.hash.match(/^#replay(?:-(\d+))?$/); if (m) setTimeout(() => openReplay(m[1] ? m[1] - 1 : 0), 0); }   // #replay / #replay-9 = open at that step
+document.addEventListener('click', e => { const b = e.target.closest('[data-replay]'); if (!b) return; e.preventDefault(); const o = document.getElementById('xpOv'); if (o) o.classList.remove('on'); openReplay(); });</script>
+<script>/* calm / storm switch: storm = ?storm=may2024 (storm.js answers every feed with the 10 May 2024 data) */
+(() => { const on = !!window.STORM, set = v => { const u = new URL(location.href); if (v) u.searchParams.set('storm', v); else u.searchParams.delete('storm'); u.hash = ''; location.href = u.href; };
+  document.querySelectorAll('.stormseg button').forEach(b => { b.setAttribute('aria-pressed', String(on ? b.dataset.storm === STORM.id : !b.dataset.storm)); b.onclick = () => { if ((b.dataset.storm || '') !== (on ? STORM.id : '')) set(b.dataset.storm); }; });
+  if (!on) return;
+  const bar = document.createElement('div'); bar.className = 'stormbar'; bar.setAttribute('role', 'status');
+  bar.innerHTML = `<span>⚡ <b>${T('STORM MODE')}</b> · ${T('This page shows {t} — the peak of the G5 storm of May 2024. Real data of that day, not live.', { t: new Date(STORM.now).toLocaleString(LOC, { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: TZ }) })}</span><button type="button">${T('Back to calm')}</button>`;
+  bar.querySelector('button').onclick = () => set('');
+  document.body.prepend(bar);
+  // links to other parts of the page keep the storm on
+  document.addEventListener('click', e => { const a = e.target.closest('a[href^="?"]'); if (a && !/storm=/.test(a.href)) { const u = new URL(a.href); u.searchParams.set('storm', STORM.id); a.href = u.href; } }, true);
+})();</script>
+<script>/* PC (≥ 1000 px): the Kp chart moves into the answer card; back under the top row on narrower screens */
+(() => { const c = document.getElementById('kpChartCard'), v = document.getElementById('vcard'), g = document.querySelector('.grid.top'); if (!c || !v || !g) return;
+  const help = v.querySelector(':scope > .help'), home = c.parentNode, next = c.nextSibling;
+  const place = () => { const pc = innerWidth >= 1000;
+    if (pc && c.parentNode !== v) { v.insertBefore(c, help); v.classList.add('haskp'); } else if (!pc && c.parentNode === v) { home.insertBefore(c, next); v.classList.remove('haskp'); } else return;
+    if (window.S && S.kpList && window.drawKpChartAgain) drawKpChartAgain(); else dispatchEvent(new Event('resize')); };
+  place(); let q = 0; addEventListener('resize', () => { clearTimeout(q); q = setTimeout(place, 150); }); })();</script>
+<script>/* settings drawer (⚙) + the PC tools at the top of the side bar; every control drives the page's own buttons */
+(() => { if (innerWidth < 1000) return;
+  const $q = q => document.querySelector(q), get = k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, put = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} };
+  const storm = !!window.STORM, lang = document.documentElement.lang || 'en';
+  const goStorm = v => { const b = $q(`.stormseg [data-storm="${v}"]`); if (b) b.click(); };
+  if (get('aurora.nav') === 'off') document.documentElement.classList.add('nonav');
+  // the drawer
+  const sh = document.createElement('div'); sh.id = 'setShade';
+  const pn = document.createElement('aside'); pn.id = 'setPane'; pn.setAttribute('aria-label', T('Settings')); pn.setAttribute('aria-hidden', 'true');
+  pn.innerHTML = `<h2>⚙ ${T('Settings')}<button type="button" data-x aria-label="${T('Close')}">✕</button></h2>
+    <div class="sg"><div class="lbl">${T('Language')}</div><div class="seg" data-noi18n>${['en', 'ro', 'de'].map(l => `<button type="button" data-l="${l}" aria-pressed="${l === lang}">${l.toUpperCase()}</button>`).join('')}</div></div>
+    <div class="sg"><div class="lbl">${T('Your place')}</div><div class="row"><span class="place">${($q('#gPlace') || {}).textContent || ''}</span><button type="button" class="sb" data-a="place">${T('CHANGE PLACE')}</button></div>
+      <div class="note">${T('The verdict, tonight\'s hours and the Kp you need follow this place. It stays on this device only.')}</div></div>
+    <div class="sg"><div class="lbl">${T('Space weather shown')}</div><div class="seg"><button type="button" data-m="" aria-pressed="${!storm}">CALM</button><button type="button" data-m="may2024" aria-pressed="${storm}">⚡ STORM</button></div>
+      <div class="note">${T('Storm = the whole page at the peak of the G5 storm of 10 May 2024, with that day\'s real data.')}</div>
+      <button type="button" class="sb storm" data-a="replay">▶ ${T('Storm replay · May 2024')}</button></div>
+    <div class="sg"><div class="lbl">${T('Help')}</div><label class="sw">${T('Explain on hover (? How to read)')}<input type="checkbox" data-t="xp"></label><button type="button" class="sb" data-a="guide">${T('How it all works')}</button></div>
+    <div class="sg"><div class="lbl">${T('Display')}</div><label class="sw">${T('Animations')}<input type="checkbox" data-t="mo" ${get('aurora.motion') === 'off' ? '' : 'checked'}></label>
+      <label class="sw">${T('Side menu')}<input type="checkbox" data-t="nav" ${get('aurora.nav') === 'off' ? '' : 'checked'}></label></div>
+    <div class="sg"><div class="lbl">${T('Report')}</div><button type="button" class="sb rep" data-a="rep">⬇ ${T('Save the full report (image)')}</button>
+      <a href="#safe" class="note" data-a="safe">${T('No cookies, no tracking, nothing about you is stored')} ›</a></div>`;
+  document.body.append(sh, pn);
+  const open = () => { pn.classList.add('on'); sh.classList.add('on'); pn.setAttribute('aria-hidden', 'false'); const xb = $q('#xpBtn'); pn.querySelector('[data-t="xp"]').checked = !!(xb && xb.getAttribute('aria-pressed') === 'true'); pn.querySelector('[data-x]').focus(); };
+  const close = () => { pn.classList.remove('on'); sh.classList.remove('on'); pn.setAttribute('aria-hidden', 'true'); };
+  sh.onclick = close; addEventListener('keydown', e => { if (e.key === 'Escape' && pn.classList.contains('on')) close(); });
+  pn.addEventListener('click', e => { const t = e.target;
+    if (t.closest('[data-x]')) return close();
+    const l = t.closest('[data-l]'); if (l) { const o = $q(`.seg [data-lang="${l.dataset.l}"]`); if (o) o.click(); return; }
+    const m = t.closest('[data-m]'); if (m) return goStorm(m.dataset.m);
+    const a = t.closest('[data-a]'); if (!a) return; const k = a.dataset.a;
+    if (k === 'place') { close(); const b = $q('#locBtn'); if (b) { b.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(() => b.click(), 400); } }
+    else if (k === 'replay') { close(); window.openReplay && openReplay(); }
+    else if (k === 'guide') { close(); const xb = $q('#xpBtn'); if (xb && xb.getAttribute('aria-pressed') !== 'true') xb.click(); setTimeout(() => { const g = $q('#xpBar .go'); if (g) g.click(); }, 50); }
+    else if (k === 'rep') { close(); const r = $q('#repSave'); if (r) r.click(); }
+    else if (k === 'safe') close(); });
+  pn.addEventListener('change', e => { const c = e.target.closest('[data-t]'); if (!c) return;
+    if (c.dataset.t === 'xp') { const xb = $q('#xpBtn'); if (xb && (xb.getAttribute('aria-pressed') === 'true') !== c.checked) xb.click(); }
+    if (c.dataset.t === 'mo') { put('aurora.motion', c.checked ? null : 'off'); location.reload(); }
+    if (c.dataset.t === 'nav') { put('aurora.nav', c.checked ? null : 'off'); document.documentElement.classList.toggle('nonav', !c.checked); } });
+  // ⚙ in the top row (1000–1279 px) …
+  const g1 = document.createElement('button'); g1.id = 'setBtn'; g1.type = 'button'; g1.setAttribute('aria-label', T('Settings')); g1.textContent = '⚙'; g1.onclick = open;
+  const top = $q('.topbar'); if (top) top.appendChild(g1);
+  if (location.hash === '#settings') setTimeout(open, 0);   // link straight to the settings
+  // … and at the top of the side bar (≥ 1280 px): calm / storm, ? how to read, ⚙
+  const nav = $q('.sidenav'); if (!nav) return;
+  const tl = document.createElement('div'); tl.className = 'sntools';
+  tl.innerHTML = `<div class="seg" role="group" aria-label="${T('Calm or storm')}"><button type="button" data-m="" aria-pressed="${!storm}">CALM</button><button type="button" data-m="may2024" aria-pressed="${storm}">⚡ STORM</button></div>
+    <div class="row"><button type="button" class="tb" data-a="xp" aria-pressed="false">? ${T('HOW TO READ')}</button><button type="button" class="tb gear" aria-label="${T('Settings')}">⚙</button></div>`;
+  nav.prepend(tl); document.documentElement.classList.add('snt');
+  tl.addEventListener('click', e => { const m = e.target.closest('[data-m]'); if (m) return goStorm(m.dataset.m);
+    if (e.target.closest('.gear')) return open();
+    const x = e.target.closest('[data-a="xp"]'); if (x) { const xb = $q('#xpBtn'); if (xb) { xb.click(); x.setAttribute('aria-pressed', xb.getAttribute('aria-pressed')); } } });
+  // keep the side-bar button in step when explain mode is closed from its own bar / Esc
+  new MutationObserver(() => { const xb = $q('#xpBtn'), x = tl.querySelector('[data-a="xp"]'); if (xb && x) x.setAttribute('aria-pressed', xb.getAttribute('aria-pressed') || 'false'); }).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+})();</script>
 </body>
 </html>

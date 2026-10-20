@@ -39,7 +39,7 @@
     const last = reg.reduce((a, r) => r.observed_date > a ? r.observed_date : a, '');
     const now = Date.now();
     const regions = reg.filter(r => r.observed_date === last).map(r => ({ id: r.region, area: r.area || 0, cls: r.spot_class, mag: r.mag_class || '', n: r.number_spots,
-      c: r.c_flare_probability || 0, m: r.m_flare_probability || 0, x: r.x_flare_probability || 0, first: r.first_date }));
+      c: r.c_flare_probability || 0, m: r.m_flare_probability == null ? null : r.m_flare_probability, x: r.x_flare_probability || 0, first: r.first_date }));
     // X-ray flares (GOES), one per event (NOAA lists updates of the same event), C and up
     const seen = {}, flares = [];
     ev.filter(e => e.type === 'XRA' && /^[CMX]/.test(e.particulars1 || '')).forEach(e => { const k = e.begin_datetime;
@@ -132,7 +132,7 @@
       if (!D) return; const now = Date.now(), rs = all || !o.limit ? D.regions : D.regions.slice(0, o.limit);
       q('.sr-list').innerHTML = rs.map(r => { const [c, w] = risk(r), lon = r.lon, side = lon == null ? '' : Math.abs(lon) < EARTH ? ` · <b style="color:#7BE0FF">↯ ${tr('faces Earth')}</b>` : lon > 70 ? ` · ${tr('leaving over the edge')}` : lon < -70 ? ` · ${tr('just turned into view')}` : '';
         return `<button class="sr-rg${sel === r.id ? ' on' : ''}" data-id="${r.id}"><span class="sr-n" style="color:${c}">${r.id}</span><span class="sr-t">${r.cls ? magW(r.mag) + ' · ' + (r.n === 1 ? tr('1 spot') : tr('{n} spots', { n: r.n || '?' })) : tr('bright patch, no spots')}${side}</span>
-          <span class="sr-p" style="color:${c};border:1px solid ${c}66">M ${r.m}% · ${w}</span>
+          <span class="sr-p" style="color:${c};border:1px solid ${c}66">${r.m == null ? w : `M ${r.m}% · ${w}`}</span>
           <span class="sr-s">${r.fl.length ? tr('Flares 24 h:') + ' ' + r.fl.map(f => `<b style="color:${fcol(f.cls)}">${f.cls}</b>`).join(' ') : tr('no flares in 24 h')}${r.area ? ' · ' + tr('size {a} MSH', { a: r.area }) : ''}</span></button>`; }).join('')
         + (o.limit && D.regions.length > o.limit ? `<button class="sr-more">${all ? tr('SHOW FEWER') : tr('ALL {n} REGIONS ›', { n: D.regions.length })}</button>` : '');
       const p = D.prob, n24 = D.flares.filter(f => now - f.t < DAY).length;

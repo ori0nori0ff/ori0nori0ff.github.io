@@ -41,7 +41,7 @@
   /**
    * draw(canvas, opts) — opts: ov (OVATION grid or null), lat0/lon0 (view centre, degrees),
    * viewLine (bool), label (bool, place name), graticule (bool), rim (css colour or null),
-   * here ({lat, lon, name}: the marked place, default Brașov).
+   * here ({lat, lon, name}: the marked place, default Brașov), t (ms: time for day / night, default now).
    */
   function draw(cv, o) {
     o = Object.assign({ ov: null, lat0: 58, lon0: 18, viewLine: true, label: true, graticule: true, rim: 'rgba(57,255,158,.18)' }, o || {});
@@ -51,7 +51,7 @@
     if (!mask) mask = buildMask();
     const g = cv.getContext('2d'), R = size / 2 - 2 * dpr, cx = size / 2, cy = size / 2;
     const lat0 = o.lat0 * Math.PI / 180, lon0 = o.lon0 * Math.PI / 180, sinP0 = Math.sin(lat0), cosP0 = Math.cos(lat0);
-    const sun = subsolar(Date.now()), sl = sun.lat * Math.PI / 180, slo = sun.lon * Math.PI / 180;
+    const sun = subsolar(o.t || Date.now()), sl = sun.lat * Math.PI / 180, slo = sun.lon * Math.PI / 180;
     const img = g.createImageData(size, size), px = img.data, N = size * size;
     const lats = new Float32Array(N).fill(NaN), lons = new Float32Array(N), lnd = new Uint8Array(N);
     for (let sy = 0; sy < size; sy++) for (let sx = 0; sx < size; sx++) {
