@@ -2,7 +2,8 @@
 .github/workflows/sun.yml every hour. Writes:
   aurora/data/earth.json   = {updated, cosmic: {station, pts: [[t_ms, % vs 7-day mean]]} | null,
                               ongoing: [[name, lat, lon, start 'YYYY-MM-DD', VEI|null]],   (GVP: eruptions with no end date)
-                              eruptMonthly: {from: 'YYYY-MM', n: [...]}}                   (GVP: eruption starts per month)
+                              eruptMonthly: {from: 'YYYY-MM', n: [...]},                   (GVP: eruption starts per month, up to its last update)
+                              active: [[name, country, lat, lon, last 'YYYY-MM-DDTHH:MMZ', source, level|null]]}   (ash advisories + US alerts, 14 days)
   aurora/data/journal.json = the daily journal, one column per field, day 0 = `from`:
                               {from: 'YYYY-MM-DD', kp: [max Kp], ssn: [sunspot number], q5: [M5+ quakes],
                                dst: [min Dst], v: [max wind km/s], fl: [biggest flare, log10 W/m²]}
@@ -78,6 +79,16 @@ if s:
         i = day_index(d)
         if 0 <= i < n_days and v >= 0:
             J['ssn'][i] = round(v)
+# SILSO's daily file is final only up to the end of last month: the days after it come from NOAA SWPC's daily count (provisional, a little higher)
+s = get('https://services.swpc.noaa.gov/json/solar-cycle/swpc_observed_ssn.json')
+if s:
+    for r in s:
+        try:
+            i = day_index(dt.date.fromisoformat(r['Obsdate'][:10])); v = float(r['swpc_ssn'])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if 0 <= i < n_days and v >= 0 and J['ssn'][i] is None:
+            J['ssn'][i] = round(v)
 
 # M5+ earthquakes — USGS, per year on the first run, then the last 40 days
 def quakes(a, b):
@@ -138,8 +149,8 @@ E = load('aurora/data/earth.json', {})
 E['updated'] = int(time.time() * 1000)
 
 # volcanoes (Smithsonian GVP): once a day is plenty
-if not E.get('ongoing') or NOW.hour == 3 or full or E.get('gvp') != 3:
-    E['gvp'] = 3
+if not E.get('ongoing') or NOW.hour == 3 or full or E.get('gvp') != 4:
+    E['gvp'] = 4
     W = 'https://webservices.volcano.si.edu/geoserver/GVP-VOTW/ows?service=WFS&version=2.0.0&request=GetFeature&typeName=GVP-VOTW:Smithsonian_VOTW_Holocene_Eruptions&outputFormat=application/json&count=5000&sortBy=StartDateYear+D&cql_filter='
     on = get(W + urllib.parse.quote(f'StartDateYear>={TODAY.year - 30}'))
     if on and on.get('features'):
@@ -166,7 +177,55 @@ if not E.get('ongoing') or NOW.hour == 3 or full or E.get('gvp') != 3:
             i = (p['StartDateYear'] - START.year) * 12 + p['StartDateMonth'] - 1
             if 0 <= i < len(n):
                 n[i] += 1
-        E['eruptMonthly'] = {'from': f'{START.year}-01', 'n': n}
+        asof = dt.date.fromisoformat(E.get('gvpAsOf') or TODAY.isoformat())   # GVP is updated a few times a year: months after its last update are unknown, not 0
+        E['eruptMonthly'] = {'from': f'{START.year}-01', 'n': n[:(asof.year - START.year) * 12 + asof.month]}
+
+# volcanoes active NOW (every hour; GVP's eruption list above is only updated a few times a year):
+# volcanic-ash advisories of VAAC Tokyo (≈ 7 weeks listed) + VAAC Washington (last 24 h) + US alert levels (USGS HANS).
+# Kept in E['active'] = [[name, country, lat, lon, last seen 'YYYY-MM-DDTHH:MMZ', source, level]], 14 days.
+def active_volcanoes():
+    norm = lambda s: re.sub(r'[^A-Z]', '', s.upper())
+    seen = {}   # key -> [name, source, iso, level]
+    def add(name, src, when, lvl=None):
+        k = norm(name)
+        if k and (k not in seen or seen[k][2] < when):
+            seen[k] = [name, src, when, lvl]
+    h = get('https://www.data.jma.go.jp/vaac/data/vaac_list.html', 'text') or ''
+    for when, name in re.findall(r'DISPLAY: none">(\d{4}/\d\d/\d\d \d\d:\d\d):\d\d</td>\s*<td>[^<]*</td>\s*<td>([^<]+)</td>', h):
+        add(name.strip(), 'VAAC Tokyo', when.replace('/', '-').replace(' ', 'T') + 'Z')
+    h = get('https://www.ospo.noaa.gov/products/atmosphere/vaac/messages.html', 'text') or ''
+    for name in set(re.findall(r'href="volcanoes/[^"]+\.html">([^<]+)</a>', h)):
+        add(name.strip(), 'VAAC Washington', NOW.strftime('%Y-%m-%dT%H:%MZ'))
+    for v in get('https://volcanoes.usgs.gov/hans-public/api/volcano/getElevatedVolcanoes') or []:
+        if v.get('color_code') in ('ORANGE', 'RED') or v.get('alert_level') in ('WATCH', 'WARNING'):
+            add(v['volcano_name'], 'USGS', v['sent_utc'].replace(' ', 'T')[:16] + 'Z', f"{v['color_code']} · {v['alert_level']}")
+    old = {norm(r[0]): r for r in E.get('active') or []}
+    coord = E.setdefault('vcoord', {})   # VAAC name -> [GVP name, country, lat, lon] (or None when not found)
+    need = [k for k in seen if k not in coord]
+    if need:
+        g = get('https://webservices.volcano.si.edu/geoserver/GVP-VOTW/ows?service=WFS&version=2.0.0&request=GetFeature&typeName=GVP-VOTW:Smithsonian_VOTW_Holocene_Volcanoes&outputFormat=application/json&propertyName=Volcano_Name,Country,GeoLocation', timeout=120)
+        gvp = {}
+        for ft in (g or {}).get('features', []):
+            p, c = ft['properties'], ft['geometry']['coordinates']
+            gvp.setdefault(norm(p['Volcano_Name']), [p['Volcano_Name'], p.get('Country') or '', round(c[1], 3), round(c[0], 3)])
+        if gvp:
+            for k in need:
+                name = seen[k][0]; words = re.sub(r'\(.*?\)', ' ', name).split()
+                cands = [norm(m) for m in re.findall(r'\((.*?)\)', name)] + [norm(' '.join(words[:i])) for i in range(len(words), 0, -1)]
+                cands += [c2.replace('CALDERA', '') for c2 in cands]
+                coord[k] = next((gvp[c2] for c2 in cands if c2 in gvp), None)
+    rows = dict(old)
+    for k, (name, src, when, lvl) in seen.items():
+        g = coord.get(k)
+        if g:
+            rows[k] = [g[0], g[1], g[2], g[3], when, src, lvl]
+    cut = (NOW - dt.timedelta(days=14)).strftime('%Y-%m-%dT%H:%MZ')
+    return sorted((r for r in rows.values() if r[4] >= cut), key=lambda r: r[4], reverse=True)
+
+try:
+    E['active'] = active_volcanoes(); E['activeAt'] = int(time.time() * 1000)
+except Exception as e:   # noqa: BLE001 — keep the last list
+    print('active volcanoes failed', e, file=sys.stderr)
 
 # cosmic rays: Oulu neutron monitor via NMDB (several URL forms; the card hides itself without data)
 def cosmic():

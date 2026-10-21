@@ -1,12 +1,12 @@
 """Builds aurora/sun/frames.json for the live aurora page (NASA's archives allow no browser requests, so
-GitHub Actions lists them): the last 5 days of frames per filter, thinned like the PowHau app
+GitHub Actions lists them): the last 7 days of frames per filter, thinned like the PowHau app
 (SDO every 4th ≈ 40 min, SOHO C3 every 3rd ≈ 36 min, HMI from Stanford JSOC every 3rd ≈ 45 min).
 With --clips it also renders the last 48 h of each filter as a small MP4 into clips/ (512 px, ffmpeg)."""
 import datetime as dt, json, os, re, subprocess, sys, time, urllib.request
 
 UTC = dt.timezone.utc
 NOW = dt.datetime.now(UTC)
-HIST = 5 * 86400
+HIST = 7 * 86400
 UA = {'User-Agent': 'PowHau aurora page (https://ori0nori0ff.github.io/aurora/)'}
 SDO_IDS = ['0171', '0193', '0304', '0094', '0131', '1600', 'HMIBC']
 
@@ -31,7 +31,7 @@ def thin(found, step):
 
 
 def days():
-    return [NOW - dt.timedelta(days=d) for d in range(6)]
+    return [NOW - dt.timedelta(days=d) for d in range(8)]
 
 
 def ts(s, fmt):
