@@ -18,7 +18,7 @@
     return Math.asin(Math.sin((lam - om) * D2R) * Math.sin(7.25 * D2R)); }
   // heliographic lat / lon (west +, from the central meridian) → disc x, y (−1…1, north up, west right), z > 0 = on our side
   function xy(lat, lon, b0) { lat *= D2R; lon *= D2R; return [Math.cos(lat) * Math.sin(lon), Math.sin(lat) * Math.cos(b0) - Math.cos(lat) * Math.cos(lon) * Math.sin(b0), Math.cos(lat) * Math.cos(lon) * Math.cos(b0) + Math.sin(lat) * Math.sin(b0)]; }
-  const magW = m => (m || '').replace('A', 'α').replace('B', 'β').replace('G', 'γ').replace('D', 'δ');
+  const GR = { A: 'α', B: 'β', G: 'γ', D: 'δ' }, magW = m => (m || '').replace(/(Alpha|Beta|Gamma|Delta|[ABGD])-?/g, w => GR[w[0]]);   // 'Beta-Gamma-Delta' or 'BGD' → βγδ
   const fcol = c => c[0] === 'X' ? '#FF4444' : c[0] === 'M' ? '#FFA040' : '#FFE600';
   const risk = r => r.m >= 30 || /D/.test(r.mag) ? ['#FF4444', tr('HIGH')] : r.m >= 10 || /G/.test(r.mag) ? ['#FFA040', tr('MEDIUM')] : ['#6EE7A0', tr('QUIET')];
   const EARTH = 30;   // ° from the central meridian: a flare here can send its CME our way
@@ -131,9 +131,9 @@
     function list() {
       if (!D) return; const now = Date.now(), rs = all || !o.limit ? D.regions : D.regions.slice(0, o.limit);
       q('.sr-list').innerHTML = rs.map(r => { const [c, w] = risk(r), lon = r.lon, side = lon == null ? '' : Math.abs(lon) < EARTH ? ` · <b style="color:#7BE0FF">↯ ${tr('faces Earth')}</b>` : lon > 70 ? ` · ${tr('leaving over the edge')}` : lon < -70 ? ` · ${tr('just turned into view')}` : '';
-        return `<button class="sr-rg${sel === r.id ? ' on' : ''}" data-id="${r.id}"><span class="sr-n" style="color:${c}">${r.id}</span><span class="sr-t">${r.cls ? magW(r.mag) + ' · ' + (r.n === 1 ? tr('1 spot') : tr('{n} spots', { n: r.n || '?' })) : tr('bright patch, no spots')}${side}</span>
+        return `<button class="sr-rg${sel === r.id ? ' on' : ''}" data-id="${r.id}"><span class="sr-n" style="color:${c}">${r.id}</span><span class="sr-t">${/D/.test(r.mag) ? `<b style="color:#FF4444" title="${tr('δ = opposite magnetic poles pressed together: where the biggest flares come from')}">⚠ δ</b> ` : ''}${r.cls ? magW(r.mag) + ' · ' + (r.n === 1 ? tr('1 spot') : tr('{n} spots', { n: r.n || '?' })) : tr('bright patch, no spots')}${side}</span>
           <span class="sr-p" style="color:${c};border:1px solid ${c}66">${r.m == null ? w : `M ${r.m}% · ${w}`}</span>
-          <span class="sr-s">${r.fl.length ? tr('Flares 24 h:') + ' ' + r.fl.map(f => `<b style="color:${fcol(f.cls)}">${f.cls}</b>`).join(' ') : tr('no flares in 24 h')}${r.area ? ' · ' + tr('size {a} MSH', { a: r.area }) : ''}</span></button>`; }).join('')
+          <span class="sr-s">${r.fl.length ? tr('Flares 24 h:') + ' ' + r.fl.map(f => `<b style="color:${fcol(f.cls)}">${f.cls}</b>`).join(' ') : tr('no flares in 24 h')}${r.area ? ' · ' + tr('size {a} MSH', { a: r.area }) : ''}${/D/.test(r.mag) ? `<br><span style="color:#FF8A8A">⚠ ${tr('δ = opposite magnetic poles pressed together: where the biggest flares come from')}</span>` : ''}</span></button>`; }).join('')
         + (o.limit && D.regions.length > o.limit ? `<button class="sr-more">${all ? tr('SHOW FEWER') : tr('ALL {n} REGIONS ›', { n: D.regions.length })}</button>` : '');
       const p = D.prob, n24 = D.flares.filter(f => now - f.t < DAY).length;
       holeList();
