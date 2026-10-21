@@ -1155,5 +1155,7 @@ window.I18N_DICT.ro = {
   "Nebula": "Nebuloasă",
   "Ocean": "Ocean",
   "Graphite": "Grafit",
-  "Peak of the May 2024 G5 storm \u00b7 real data, not live": "Vârful furtunii G5 din mai 2024 · date reale, nu live"
+  "Peak of the May 2024 G5 storm \u00b7 real data, not live": "Vârful furtunii G5 din mai 2024 · date reale, nu live",
+  "Stop and go back to now": "Oprește și revino la acum",
+  "Sun filters change by themselves": "Filtrele Soarelui se schimbă singure"
 };

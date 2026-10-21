@@ -6,13 +6,14 @@
   if (new URLSearchParams(location.search).get('tiles') === '0' || innerWidth < 1000) return;   // ?tiles=0 = the old long page
   const $ = id => document.getElementById(id), T = window.T || (s => s), H = document.documentElement;
   const P = [   // key, panel, colour, title, side, live line
-    ['sun', 'sunEarth', '#FFE600', 'The Sun Now', 'L'], ['flares', 'frSun', '#FFB020', 'Flares and coronal holes', 'L', () => txt('ptSun')],
-    ['wind', 'frWind', '#7BE0FF', 'Solar wind and storm levels', 'L', () => txt('ptEarth')], ['shield', 'frShield', '#5AC8FF', 'Magnetic shield and cosmic rays', 'L'],
+    ['sun', 'sunEarth', '#FFE600', 'The Sun Now', 'L', () => first('#enlSum')], ['flares', 'frSun', '#FFB020', 'Flares and coronal holes', 'L', () => txt('ptSun')],
+    ['wind', 'frWind', '#7BE0FF', 'Solar wind and storm levels', 'L', () => txt('ptEarth')], ['shield', 'frShield', '#5AC8FF', 'Magnetic shield and cosmic rays', 'L', () => first('#dstSum')],
     ['forecast', 'frForecast', '#39FF9E', 'NOAA Aurora Forecast', 'C'],
-    ['earth', 'frEarth', '#3EE08F', 'Sun–Earth record · earthquakes', 'R'], ['replay', null, '#FF5A5A', 'Storm replay', 'R', () => T('The May 2024 G5 storm, step by step')],
-    ['cycle', 'secCyc', '#FFD24A', 'Solar cycle', 'R'], ['3d', 'sec3d', '#B9A7FF', '3D model', 'R']];
+    ['earth', 'frEarth', '#3EE08F', 'Sun–Earth record · earthquakes', 'R', () => first('#eqSum')], ['replay', null, '#FF5A5A', 'Storm replay', 'R', () => T('The May 2024 G5 storm, step by step')],
+    ['cycle', 'secCyc', '#FFD24A', 'Solar cycle', 'R', () => first('#cycSum')], ['3d', 'sec3d', '#B9A7FF', '3D model', 'R', () => first('#s3dHost .s3d-sub') || T('Planets, wind and CMEs on one clock')]];
   const FCW = 900;   // the forecast is laid out this wide, then shrunk to the middle column
   const txt = id => { const e = $(id); return e && e.textContent.trim() || ''; };
+  const first = sel => { const e = typeof sel === 'string' ? document.querySelector(sel) : sel; const s = e && e.textContent.replace(/\s+/g, ' ').trim() || ''; return s.split(/(?<=[.!?])\s|;\s| — /)[0].replace(/[.;]$/, '').slice(0, 90); };
   H.classList.add('tiles');
   const css = document.createElement('style');
   css.textContent = `
@@ -26,6 +27,7 @@
   .tls { position: absolute; top: 0; left: 0; transform-origin: 0 0; pointer-events: none; padding: 21px 26px; }
   .tl.fc .tls { padding: 0; }
   .tls > section { margin: 0 !important; } .tls #syncCard { position: static !important; }
+  .tls .tcur { stroke-width: 5px; }   /* the clock's line: thick enough to survive the shrink without flickering */
   .tl .cap { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: baseline; gap: 10px; padding: 24px 14px 10px; background: linear-gradient(180deg, rgba(6,8,11,0), rgba(6,8,11,.94) 55%); }
   .tl.fc .cap { display: none; }
   .tl .cap strong { font: 700 14px Inter, sans-serif; color: #F1F4F8; white-space: nowrap; } .tl .cap .lv { font: 600 11px 'JetBrains Mono', monospace; color: var(--c); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -69,7 +71,7 @@
       if (t.classList.contains('fc')) { s.style.width = FCW + 'px'; const k = Math.min(t.clientWidth / FCW, t.clientHeight / Math.max(1, s.scrollHeight)); s.style.transform = `scale(${k})`; s.style.left = Math.max(0, (t.clientWidth - FCW * k) / 2) + 'px'; s.style.top = Math.max(0, (t.clientHeight - s.scrollHeight * k) / 2) + 'px'; }
       else { s.style.width = W + 'px'; s.style.transform = `scale(${t.clientWidth / W})`; } }); };
   P.forEach(p => { if (!p[1]) return; const el = $(p[1]); if (!el) return; el.inert = true; st(p[0]).appendChild(el); });
-  fit(); addEventListener('resize', fit); setTimeout(fit, 1500); setTimeout(fit, 5000);   // the forecast grows as its data comes in
+  fit(); addEventListener('resize', fit); H.classList.remove('tpre'); setTimeout(fit, 1500); setTimeout(fit, 5000);   // the forecast grows as its data comes in
   const live = () => P.forEach(p => { if (!p[5]) return; const v = p[5](), el = box.querySelector(`[data-p="${p[0]}"] .lv`); if (el && v && el.textContent !== v) el.textContent = v; });
   live(); setInterval(live, 4000);
   // the replay tile: the real Kp of 8–13 May 2024 as a small bar chart
@@ -99,7 +101,7 @@
   function open(key, push = true, target) {
     const p = P.find(q => q[0] === key); if (!p) return;
     if (!p[1]) { close(); if (window.openReplay) openReplay(); return; }   // the replay has its own full screen
-    ov.classList.add('on'); document.body.style.overflow = 'hidden'; show(act, key, target); ov.setAttribute('aria-label', T(p[3])); if (push) hash();
+    ov.classList.add('on'); document.body.style.overflow = 'hidden'; show(act, key, target); if (key === 'sun' && window.syAuto) syAuto(); ov.setAttribute('aria-label', T(p[3])); if (push) hash();
   }
   function setSplit(on, key) {
     if (on === split) return; split = on;
@@ -111,7 +113,7 @@
     S.forEach((k, i) => { if (k) home($(P.find(q => q[0] === k)[1])); S[i] = null; }); split = false; act = 0; mark(); relayout();
     if (push && /^#p-/.test(location.hash)) history.pushState({}, '', location.pathname + location.search); }
   const step = d => { const ks = P.filter(p => p[1]).map(p => p[0]); let j = ks.indexOf(S[act]); do { j = (j + d + ks.length) % ks.length; } while (split && ks[j] === S[1 - act]); show(act, ks[j]); hash(); };
-  box.addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (b) open(b.dataset.p); });
+  box.addEventListener('click', e => { if (!e.isTrusted) return; const b = e.target.closest('[data-p]'); if (b) open(b.dataset.p); });   // a script pressing a button inside a tile (the header clock) must not open it
   ov.addEventListener('click', e => {
     const b = e.target.closest('#tlStrip [data-p]'); if (b) { show(act, b.dataset.p); hash(); return; }
     const g = e.target.closest('[data-go]'); if (g) return step(+g.dataset.go);

@@ -4,6 +4,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script>if (innerWidth >= 1000 && new URLSearchParams(location.search).get('tiles') !== '0') { document.documentElement.classList.add('tpre'); setTimeout(() => document.documentElement.classList.remove('tpre'), 6000); }</script>
 <script>try { const t = new URLSearchParams(location.search).get('theme') || localStorage.getItem('aurora.theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}</script>
 <script src="storm.js?v=4357fdff"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -668,6 +669,22 @@
     .hdtools .hs span { display: flex; align-items: center; height: 100%; padding: 0 12px; border-radius: 999px; transition: background .25s, color .25s; }
     .hdtools .hs[aria-pressed="false"] .c { background: var(--acc, #39FF9E); color: #0A0A0A; } .hdtools .hs[aria-pressed="true"] .s { background: #FF5A5A; color: #0A0A0A; } .hdtools .hs[aria-pressed="true"] { border-color: #FF5A5A; }
     .hdtools .hg { width: 32px; justify-content: center; font-size: 15px; color: #C9D3DF; } .hdtools .hg:hover, .hdtools .hx:hover { border-color: #7BE0FF; }
+    .hdclock { display: flex; align-items: center; gap: 2px; height: 32px; padding: 0 12px 0 12px; border-radius: 999px; border: 1px solid #2A323D; background: var(--head, #0D1116); --k: var(--acc, #39FF9E); }
+    .hdclock.st { --k: #FF5A5A; }
+    .hdclock .ct { display: flex; align-items: center; gap: 7px; width: 218px; overflow: hidden; margin-right: 6px; font: 600 11px 'JetBrains Mono', monospace; color: #C9D3DF; white-space: nowrap; }
+    .hdclock .ct i { flex: none; width: 7px; height: 7px; border-radius: 50%; background: #5C6878; transition: background .25s, box-shadow .25s; }
+    .hdclock.on .ct i { background: var(--k); box-shadow: 0 0 0 3px color-mix(in srgb, var(--k) 25%, transparent); animation: ckPulse 1.6s ease-in-out infinite; }
+    @keyframes ckPulse { 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--k) 8%, transparent); } }
+    .hdclock button { display: grid; place-items: center; width: 26px; height: 24px; padding: 0; border: 0; border-radius: 999px; background: none; color: #AAB6C4; cursor: pointer; transition: background .2s, color .2s; }
+    .hdclock button svg { width: 12px; height: 12px; } .hdclock button path { fill: currentColor; stroke: currentColor; stroke-width: 1.4; stroke-linejoin: round; }
+    .hdclock button:hover { background: #1F2630; color: #fff; } .hdclock button:focus-visible, .hdclock .rg:focus-visible { outline: 2px solid #7BE0FF; outline-offset: 1px; }
+    .hdclock .pp { width: 30px; background: var(--k); color: #0A0A0A; } .hdclock .pp:hover { background: var(--k); color: #0A0A0A; filter: brightness(1.15); }
+    .hdclock .pp .pa { display: none; } .hdclock.on .pp .pa { display: inline; } .hdclock.on .pp .pl { display: none; }
+    .hdclock .nw { width: auto; padding: 0 9px; margin-left: 2px; border: 1px solid #2A323D; font: 700 10px 'JetBrains Mono', monospace; letter-spacing: .06em; color: #C9D3DF; } .hdclock .nw:hover { border-color: var(--k); color: var(--k); background: none; }
+    .hdclock button.a { color: var(--k); } .hdclock .sp { width: 30px; font: 600 10.5px 'JetBrains Mono', monospace; color: #8B9BAE; }
+    .hdclock .rg { -webkit-appearance: none; appearance: none; width: 170px; height: 4px; margin: 0 0 0 8px; border-radius: 2px; cursor: pointer; background: linear-gradient(90deg, var(--k) var(--p, 100%), #2A323D var(--p, 100%)); }
+    .hdclock .rg::-webkit-slider-thumb { -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%; background: #F1F4F8; border: 2px solid var(--k); box-shadow: 0 1px 4px rgba(0,0,0,.5); }
+    .hdclock .rg::-moz-range-thumb { width: 11px; height: 11px; border-radius: 50%; background: #F1F4F8; border: 2px solid var(--k); }
     .stormnote { position: absolute; right: 2px; top: 56px; z-index: 5; color: #FF9A9A !important; font: 500 11px/1.3 Inter, sans-serif !important; letter-spacing: 0 !important; white-space: nowrap; }
     .hdtools .hx { gap: 7px; padding: 0 6px 0 4px; } .hdtools .hx b { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: #1F2630; color: #E6EDF5; font: 700 13px Inter, sans-serif; transition: background .25s, color .25s; }
     .hdtools .hx i { position: relative; width: 28px; height: 16px; border-radius: 8px; background: #2A323D; transition: background .25s; } .hdtools .hx i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #8B9BAE; transition: transform .25s, background .25s; }
@@ -675,6 +692,8 @@
     .hdtools button:hover { filter: brightness(1.25); } .hdtools button:focus-visible { outline: 2px solid #7BE0FF; outline-offset: 2px; }
   }
   /* colour themes (⚙ → Colour theme, localStorage aurora.theme): the page's surfaces and the accent of the controls; data colours never change */
+  html.tpre main { visibility: hidden; } html.tiles main { animation: tlIn .35s ease; } @keyframes tlIn { from { opacity: 0; } }
+  @media (min-width: 1000px) { .stormbar { display: none !important; } }
   :root { --acc: #39FF9E; --tile: #0A0D11; --head: #0D1116; --fline: #232B36; }
   html[data-theme="aurora"] { --bg: #050F0C; --card: #0D1B17; --line: #19322A; --fline: #1F3D33; --tile: #08140F; --head: #0B1914; --acc: #39FF9E; }
   html[data-theme="solar"] { --bg: #0F0905; --card: #1B130C; --line: #33251A; --fline: #3D2C1D; --tile: #140D07; --head: #19110A; --acc: #FFB020; }
@@ -943,8 +962,8 @@
   <div class="fctl"><div class="pbtn" id="enlFPlay">▶</div><div class="pbtn spd" style="font:700 10px 'JetBrains Mono',monospace">1×</div><input type="range" id="enlFSlide" min="0" max="0" value="0"><span class="lbl" id="enlFT" style="min-width:150px;text-align:right">–</span><span class="lbl">PINCH · DRAG</span><div class="x" id="enlX">✕</div></div></div></div>
 <div id="toast"></div>
 <script src="i18n.js?v=b936034a"></script>
-<script src="i18n.ro.js?v=b81eee7a"></script>
-<script src="i18n.de.js?v=0c25e6bd"></script>
+<script src="i18n.ro.js?v=a32417fb"></script>
+<script src="i18n.de.js?v=894c10a7"></script>
 <script src="land.js?v=a8b7e715"></script>
 <script src="globe.js?v=fa6d06d5"></script>
 <script src="tonight.js?v=8f552af5"></script>
@@ -1136,7 +1155,7 @@ function sunPick(k) {
   $('sunHelp').innerHTML = f[3]; $('sunClip').href = ownClip ? CLIPS + 'sun-' + f[0] + '.mp4' : VID(f[0]); $('sunClip').setAttribute('download', 'sun-' + f[0] + '.mp4');
   $('sunClip').textContent = /^CCOR/.test(f[0]) ? T('⬇ CLIP · 7 DAYS') : T('⬇ CLIP · 48 H');
   if (/^CCOR/.test(f[0])) $('sunClip').href = VID(f[0]).replace('last_24hrs', 'last_7_days');   // NOAA's 7-day movie covers the whole loop
-  $('sunVidB').style.display = HASVID(f[0]) ? '' : 'none';
+  $('sunVidB').style.display = 'none';
   sunStatus(); clearInterval(sun.timer); sun.imgs = []; const wasVid = vidOn; vidStop();
   if (wasVid) setTimeout(() => { if (seq === sun.seq) vidStart(); }, 0);   // switching filter keeps the movie going
   if (!fr.length) { const u = latestOf(f) + '?t=' + Math.floor(Date.now() / 600000); sunImgSrc(u); $('sunSave').href = u; $('sunTime').textContent = $('sunFTime').textContent = T('LATEST');
@@ -1208,7 +1227,7 @@ $('sunPrev').onclick = () => sunPick(sun.k - 1); $('sunNext').onclick = () => su
 (() => { let x0 = null; const B = $('sunBox');
   B.addEventListener('pointerdown', e => { if (!e.target.closest('button')) x0 = e.clientX; });
   B.addEventListener('pointerup', e => { if (x0 == null) return; const d = e.clientX - x0; x0 = null; if (Math.abs(d) > 50) sunPick(sun.k + (d < 0 ? 1 : -1)); }); })();
-$('sunFullB').onclick = () => { if ($('sunBox').classList.contains('vid')) sunStop(); $('sunFull').classList.add('on'); sunShow(sun.i); };
+$('sunFullB').onclick = () => { if ($('sunBox').classList.contains('vid')) sunStop(); $('sunFull').classList.add('on'); sunShow(sun.i); window.syAuto && syAuto(); };
 $('sunFX').onclick = () => $('sunFull').classList.remove('on');
 $('sunClip').onclick = () => toast(T(/^CCOR/.test(SUNF[sun.k][0]) ? 'Downloading the last 7 days of {f}…' : 'Downloading the last 48 h of {f}…', { f: SUNF[sun.k][1] }));
 
@@ -1285,10 +1304,10 @@ function enlChart(g, k, X, Y, W, H, fs) {
   g.beginPath(); g.moveTo(x(from), y(lo)); P.forEach(p => g.lineTo(x(p.t), y(val(p)))); g.lineTo(x(to), y(lo)); g.closePath();
   g.fillStyle = k === 'n' ? 'rgba(57,255,158,.14)' : 'rgba(255,160,64,.12)'; g.fill();
   g.beginPath(); P.forEach((p, i) => i ? g.lineTo(x(p.t), y(val(p))) : g.moveTo(x(p.t), y(val(p)))); g.strokeStyle = col; g.lineWidth = 1.8; g.stroke();
-  const now = Date.now(); if (now > from && now < to) { g.setLineDash([2, 3]); g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 1; g.beginPath(); g.moveTo(x(now), Y + T); g.lineTo(x(now), Y + H - B); g.stroke(); g.setLineDash([]);
+  const now = Date.now(), inTile = !!g.canvas.closest('.tls'); if (now > from && now < to) { g.setLineDash(inTile ? [] : [2, 3]); g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = inTile ? 3 : 1; g.beginPath(); g.moveTo(x(now), Y + T); g.lineTo(x(now), Y + H - B); g.stroke(); g.setLineDash([]);
     enlCap(g, x(now) + 3, Y + T + fs * .9, window.T('NOW'), '#fff', fs * .8); }
   const f = enl.frames[enl.i]; if (f && f.t >= from && f.t <= to) { const p = P.reduce((a, q) => Math.abs(q.t - f.t) < Math.abs(a.t - f.t) ? q : a);
-    g.strokeStyle = '#7FB8FF'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x(f.t), Y + T); g.lineTo(x(f.t), Y + H - B); g.stroke();
+    g.strokeStyle = '#7FB8FF'; g.lineWidth = g.canvas.closest('.tls') ? 5 : 1.5; g.beginPath(); g.moveTo(x(f.t), Y + T); g.lineTo(x(f.t), Y + H - B); g.stroke();   // thicker in a board tile (shrunk ~3×), or the moving line flickers
     g.fillStyle = '#7FB8FF'; g.beginPath(); g.arc(x(p.t), y(val(p)), fs * .4, 0, 7); g.fill();
     enlCap(g, X + W - fs, Y + fs * 1.4, (k === 'n' ? p.n.toFixed(1) + ' /CM³' : Math.round(p.v) + ' KM/S'), '#CFE3FF', fs * .9, 'right'); }
 }
@@ -1338,7 +1357,7 @@ function fzLayout() {
   st.style.width = sw + 'px'; st.style.height = sh + 'px'; st.style.transform = `translate(-50%,-50%) rotate(${fz.rot}deg)`;
   fz.w = sw - 8; fz.h = sh - 66; fzApply(); const f = enl.frames[enl.i]; if (f && enlImg(f.u).complete) enlFDraw(enlImg(f.u));
 }
-$('enlCvN').onclick = $('enlCvV').onclick = () => { if (!enl.frames[enl.i]) return; $('enlFull').style.display = 'block'; fz.s = 1; fz.x = fz.y = 0; fzLayout();
+$('enlCvN').onclick = $('enlCvV').onclick = () => { if (!enl.frames[enl.i]) return; window.syAuto && syAuto(); $('enlFull').style.display = 'block'; fz.s = 1; fz.x = fz.y = 0; fzLayout();
   $('enlFSlide').max = 1000; enlShow(enl.i); };
 $('enlX').onclick = () => { $('enlFull').style.display = 'none'; };
 $('enlFSlide').oninput = e => { stopEnl(); enlShow(nearestT(enl.frames.length, m => enl.frames[m].t, toTime(+e.target.value))); };
@@ -1468,6 +1487,15 @@ $('syPrev').onclick = () => syStep(-3600e3); $('syNext').onclick = () => syStep(
 const pad2 = v => String(v).padStart(2, '0'), locStr = t => { const d = new Date(t); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`; };
 $('syDate').onchange = e => { const t = Date.parse(e.target.value); if (isFinite(t)) { syStop(); sy.on = true; if (syRange()) syShow(t); } };
 PLAYS.forEach(id => { const b = $(id); if (b) b.onclick = syToggle; });
+// autoplay: the shared clock starts by itself (PC at load, the Sun / ENLIL full screen, the Sun window of the board) — not under reduced motion or animations off
+window.syAuto = fromStart => { let off = false; try { off = localStorage.getItem('aurora.motion') === 'off'; } catch (e) {} if (REDUCED || off || sy.timer) return;
+  let n = 0; const go = () => { if (sy.timer) return; if (syRange()) { if (fromStart) { sy.dir = 1; sy.t = sy.a; } syStart(); } else if (n++ < 40) setTimeout(go, 1500); }; go(); };
+if (innerWidth >= 1000) setTimeout(() => syAuto(true), 2500);   // on opening the page the clock plays from the start of the loop
+// the Sun viewer moves to the next filter by itself every 45 s (⚙ → off: aurora.sunauto=off); a pick by hand pauses it for 3 minutes
+(() => { let hold = 0; const off = () => { try { return localStorage.getItem('aurora.sunauto') === 'off'; } catch (e) { return false; } };
+  $('sunChips').addEventListener('click', e => { if (e.isTrusted) hold = Date.now() + 180e3; });
+  setInterval(() => { if (innerWidth < 1000 || off() || document.hidden || Date.now() < hold || !sun.started || $('sunFull').classList.contains('on')) return; sunPick(sun.k + 1); }, 45000); })();   // only the setting turns it off (it is a change of picture, not motion)
+window.syNow = () => { syStop(); sy.on = true; if (syRange()) syShow(Math.min(sy.b, Math.max(sy.a, Date.now()))); };   // stop and come back to the present
 const sySpeed = () => { sy.spd = sy.spd === 1 ? 2 : sy.spd === 2 ? 4 : 1; document.querySelectorAll('#sySpd, .spd').forEach(o => o.textContent = sy.spd + '×'); };
 $('sySpd').onclick = sySpeed; document.querySelectorAll('.spd').forEach(o => o.onclick = sySpeed);
 SLIDES.forEach(id => { const el = $(id); if (el) el.oninput = e => { syStop(); sy.on = true; if (syRange()) syShow(toTime(+e.target.value)); }; });
@@ -2300,6 +2328,7 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-repl
     <div class="sg"><div class="lbl">${T('Help')}</div><label class="sw">${T('Explain on hover (? How to read)')}<input type="checkbox" data-t="xp"></label><button type="button" class="sb" data-a="guide">${T('How it all works')}</button></div>
     <div class="sg"><div class="lbl">${T('Colour theme')}</div><div class="thm"><button type="button" data-th="" aria-pressed="${(get('aurora.theme') || '') === ''}"><i style="background:linear-gradient(90deg,#0A0A0A 0 40%,#12161C 40% 85%,#39FF9E 85%)"></i>${T('Night')}</button><button type="button" data-th="aurora" aria-pressed="${(get('aurora.theme') || '') === 'aurora'}"><i style="background:linear-gradient(90deg,#050F0C 0 40%,#0D1B17 40% 85%,#39FF9E 85%)"></i>${T('Aurora')}</button><button type="button" data-th="solar" aria-pressed="${(get('aurora.theme') || '') === 'solar'}"><i style="background:linear-gradient(90deg,#0F0905 0 40%,#1B130C 40% 85%,#FFB020 85%)"></i>${T('Solar')}</button><button type="button" data-th="nebula" aria-pressed="${(get('aurora.theme') || '') === 'nebula'}"><i style="background:linear-gradient(90deg,#0B0713 0 40%,#161025 40% 85%,#B9A7FF 85%)"></i>${T('Nebula')}</button><button type="button" data-th="ocean" aria-pressed="${(get('aurora.theme') || '') === 'ocean'}"><i style="background:linear-gradient(90deg,#040A13 0 40%,#0B1525 40% 85%,#7BE0FF 85%)"></i>${T('Ocean')}</button><button type="button" data-th="mono" aria-pressed="${(get('aurora.theme') || '') === 'mono'}"><i style="background:linear-gradient(90deg,#080808 0 40%,#141414 40% 85%,#E6EDF5 85%)"></i>${T('Graphite')}</button></div></div>
     <div class="sg"><div class="lbl">${T('Display')}</div><label class="sw">${T('Animations')}<input type="checkbox" data-t="mo" ${get('aurora.motion') === 'off' ? '' : 'checked'}></label>
+      <label class="sw">${T('Sun filters change by themselves')}<input type="checkbox" data-t="sunauto" ${get('aurora.sunauto') === 'off' ? '' : 'checked'}></label>
       <label class="sw">${T('Keep the side menu open')}<input type="checkbox" data-t="nav" ${get('aurora.nav') === 'pin' ? 'checked' : ''}></label></div>
     <div class="sg"><div class="lbl">${T('Report')}</div><button type="button" class="sb rep" data-a="rep">⬇ ${T('Save the full report (image)')}</button>
       <a href="#safe" class="note" data-a="safe">${T('No cookies, no tracking, nothing about you is stored')} ›</a></div>`;
@@ -2321,6 +2350,7 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-repl
   pn.addEventListener('change', e => { const c = e.target.closest('[data-t]'); if (!c) return;
     if (c.dataset.t === 'xp') { const xb = $q('#xpBtn'); if (xb && (xb.getAttribute('aria-pressed') === 'true') !== c.checked) xb.click(); }
     if (c.dataset.t === 'mo') { put('aurora.motion', c.checked ? null : 'off'); location.reload(); }
+    if (c.dataset.t === 'sunauto') put('aurora.sunauto', c.checked ? null : 'off');
     if (c.dataset.t === 'nav') { put('aurora.nav', c.checked ? 'pin' : null); document.documentElement.classList.toggle('navpin', c.checked); } });
   // ⚙ in the top row (1000–1279 px) …
   const g1 = document.createElement('button'); g1.id = 'setBtn'; g1.type = 'button'; g1.setAttribute('aria-label', T('Settings')); g1.textContent = '⚙'; g1.onclick = open;
@@ -2356,10 +2386,23 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-repl
   (h.closest('main') || w).appendChild(t);
   t.querySelector('.hg').onclick = () => { const b = document.getElementById('setBtn'); if (b) b.click(); };
   if (storm) { const sb = document.querySelector('.stormbar'); if (sb) sb.style.display = 'none'; const n = document.createElement('div'); n.className = 'stormnote'; n.textContent = '⚡ ' + T('Peak of the May 2024 G5 storm · real data, not live'); t.after(n); }   // storm mode: a small note under the switches, not a band over the page
+  // the one clock (Sun + ENLIL) as a small bar under the switches: drives the page's own clock buttons
+  const ck = document.createElement('div'); ck.className = 'hdclock' + (storm ? ' st' : ''); ck.setAttribute('role', 'group'); ck.setAttribute('aria-label', T('One clock · Sun + solar wind'));
+  ck.innerHTML = `<span class="ct"><i></i><b>–</b></span><button type="button" data-k="syPrev" aria-label="${T('One hour back')}"><svg viewBox="0 0 16 16"><path d="M3 3v10M13 3 6 8l7 5z"/></svg></button><button type="button" data-k="syRev" aria-label="${T('Play backwards')}"><svg viewBox="0 0 16 16"><path d="M12 3 4 8l8 5z"/></svg></button><button type="button" class="pp" data-k="syPlay" aria-label="${T('Play / pause')}"><svg viewBox="0 0 16 16"><path class="pl" d="M5 3l8 5-8 5z"/><path class="pa" d="M4 3h2.4v10H4zM9.6 3H12v10H9.6z"/></svg></button><button type="button" data-k="syNext" aria-label="${T('One hour forward')}"><svg viewBox="0 0 16 16"><path d="M13 3v10M3 3l7 5-7 5z"/></svg></button><button type="button" class="sp" data-k="sySpd" aria-label="${T('Playback speed')}">1×</button><button type="button" class="nw" data-now aria-label="${T('Stop and go back to now')}">${T('NOW')}</button><input type="range" class="rg" min="0" max="1000" value="1000" aria-label="${T('Date and time shown in every chart')}">`;
+  t.prepend(ck);
+  const rg = ck.querySelector('.rg'); let drag = false;
+  rg.addEventListener('input', () => { drag = true; const s = document.getElementById('sySlide'); if (s && s.oninput) { s.value = rg.value; s.oninput({ target: s }); } sync2(); });
+  rg.addEventListener('change', () => { drag = false; });
+  ck.addEventListener('click', e => { if (e.target.closest('[data-now]')) { if (window.syNow) syNow(); sync2(); return; } const b = e.target.closest('[data-k]'); if (!b) return; const o = document.getElementById(b.dataset.k); if (o) o.click(); sync2(); });
+  const sync2 = () => { const pl = document.getElementById('syPlay'), on = !!pl && pl.textContent.trim() === '⏸', rv = document.getElementById('syRev'), sl = document.getElementById('sySlide'), tt = document.getElementById('syT'), sd = document.getElementById('sySpd');
+    ck.classList.toggle('on', on); ck.querySelector('[data-k="syRev"]').classList.toggle('a', !!rv && rv.getAttribute('aria-pressed') === 'true' && on);
+    if (tt) ck.querySelector('.ct b').textContent = tt.textContent.trim(); if (sd) ck.querySelector('.sp').textContent = sd.textContent.trim();
+    if (sl && !drag) rg.value = sl.value; rg.style.setProperty('--p', (+rg.value / 10) + '%'); };
+  sync2(); setInterval(sync2, 400);
   t.querySelector('.hs').onclick = () => { const b = document.querySelector(`.stormseg [data-storm="${storm ? '' : 'may2024'}"]`); if (b) b.click(); };
   const hx = t.querySelector('.hx'), sync = () => hx.setAttribute('aria-pressed', String(document.documentElement.classList.contains('xp')));
   hx.onclick = () => { const b = document.getElementById('xpBtn'); if (b) b.click(); sync(); };
   new MutationObserver(sync).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] }); sync(); })();</script>
-<script src="tiles.js?v=101d1b5d"></script>
+<script src="tiles.js?v=c212e772"></script>
 </body>
 </html>

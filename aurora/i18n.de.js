@@ -1155,5 +1155,7 @@ window.I18N_DICT.de = {
   "Nebula": "Nebel",
   "Ocean": "Ozean",
   "Graphite": "Graphit",
-  "Peak of the May 2024 G5 storm \u00b7 real data, not live": "Höhepunkt des G5-Sturms vom Mai 2024 · echte Daten, nicht live"
+  "Peak of the May 2024 G5 storm \u00b7 real data, not live": "Höhepunkt des G5-Sturms vom Mai 2024 · echte Daten, nicht live",
+  "Stop and go back to now": "Anhalten und zurück zu jetzt",
+  "Sun filters change by themselves": "Sonnenfilter wechseln von selbst"
 };
