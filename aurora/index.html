@@ -4,6 +4,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script>try { const t = new URLSearchParams(location.search).get('theme') || localStorage.getItem('aurora.theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}</script>
 <script src="storm.js?v=4357fdff"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Orion's Space Observer</title>
@@ -205,7 +206,7 @@
   .hidden { display: none !important; }
   /* the app's chips / play buttons */
   .chips { display: flex; gap: 6px; } .chip { padding: 7px 11px; border-radius: 16px; border: 1px solid var(--line); color: var(--t2); font: 500 10px 'JetBrains Mono', monospace; letter-spacing: 1px; cursor: pointer; }
-  .chip.on { background: rgba(57,255,158,.12); border-color: var(--aur); color: #CFFFE6; }
+  .chip.on { background: color-mix(in srgb, var(--acc, #39FF9E) 12%, transparent); border-color: var(--acc, var(--aur)); color: #E6EDF5; }
   .dl { display: flex; gap: 8px; margin-top: 10px; } .dl > * { flex: 1; text-align: center; text-decoration: none; padding: 10px 6px; border-radius: 18px; background: #14171C; border: 1px solid var(--line);
         color: #FFA040; font: 700 10px 'JetBrains Mono', monospace; letter-spacing: 1px; cursor: pointer; -webkit-user-select: none; user-select: none; }
   .dl > *:active { background: #1A1E24; } .dl .busy { color: var(--dim); }
@@ -661,14 +662,29 @@
   /* PC: two tiny switches above the word "Observer" (no text — the tooltip names them): calm / storm and the explanations on hover */
   .hdwrap { display: inline-block; position: relative; } .hdtools { display: none; }
   @media (min-width: 1000px) {
-    .hdtools { display: flex; gap: 8px; position: absolute; right: 2px; bottom: calc(100% + 3px); }
-    .hdtools button { position: relative; width: 30px; height: 16px; padding: 0; border-radius: 8px; border: 1px solid var(--k); background: color-mix(in srgb, var(--k) 14%, #0D1116); cursor: pointer; transition: background .25s, border-color .25s; }
-    .hdtools button::after { content: ""; position: absolute; top: 2px; left: 2px; width: 10px; height: 10px; border-radius: 50%; background: var(--k); transition: transform .25s, background .25s; }
-    .hdtools button[aria-pressed="true"]::after { transform: translateX(14px); }
-    .hdtools .hs { --k: #39FF9E; } .hdtools .hs[aria-pressed="true"] { --k: #FF5A5A; }
-    .hdtools .hx { --k: #5C6878; } .hdtools .hx[aria-pressed="true"] { --k: #7BE0FF; }
+    main { position: relative; }
+    .hdtools { display: flex; gap: 10px; position: absolute; right: 0; top: 16px; z-index: 5; }
+    .hdtools button { display: flex; align-items: center; height: 32px; padding: 0; border-radius: 999px; border: 1px solid #2A323D; background: #0D1116; color: #AAB6C4; font: 600 11px 'JetBrains Mono', monospace; letter-spacing: .04em; cursor: pointer; transition: border-color .25s, background .25s, color .25s; }
+    .hdtools .hs span { display: flex; align-items: center; height: 100%; padding: 0 12px; border-radius: 999px; transition: background .25s, color .25s; }
+    .hdtools .hs[aria-pressed="false"] .c { background: var(--acc, #39FF9E); color: #0A0A0A; } .hdtools .hs[aria-pressed="true"] .s { background: #FF5A5A; color: #0A0A0A; } .hdtools .hs[aria-pressed="true"] { border-color: #FF5A5A; }
+    .hdtools .hg { width: 32px; justify-content: center; font-size: 15px; color: #C9D3DF; } .hdtools .hg:hover, .hdtools .hx:hover { border-color: #7BE0FF; }
+    .stormnote { position: absolute; right: 2px; top: 56px; z-index: 5; color: #FF9A9A !important; font: 500 11px/1.3 Inter, sans-serif !important; letter-spacing: 0 !important; white-space: nowrap; }
+    .hdtools .hx { gap: 7px; padding: 0 6px 0 4px; } .hdtools .hx b { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: #1F2630; color: #E6EDF5; font: 700 13px Inter, sans-serif; transition: background .25s, color .25s; }
+    .hdtools .hx i { position: relative; width: 28px; height: 16px; border-radius: 8px; background: #2A323D; transition: background .25s; } .hdtools .hx i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #8B9BAE; transition: transform .25s, background .25s; }
+    .hdtools .hx[aria-pressed="true"] { border-color: #7BE0FF; color: #E6EDF5; } .hdtools .hx[aria-pressed="true"] b { background: #7BE0FF; color: #0A0A0A; } .hdtools .hx[aria-pressed="true"] i { background: color-mix(in srgb, #7BE0FF 35%, #0D1116); } .hdtools .hx[aria-pressed="true"] i::after { transform: translateX(12px); background: #7BE0FF; }
     .hdtools button:hover { filter: brightness(1.25); } .hdtools button:focus-visible { outline: 2px solid #7BE0FF; outline-offset: 2px; }
   }
+  /* colour themes (⚙ → Colour theme, localStorage aurora.theme): the page's surfaces and the accent of the controls; data colours never change */
+  :root { --acc: #39FF9E; --tile: #0A0D11; --head: #0D1116; --fline: #232B36; }
+  html[data-theme="aurora"] { --bg: #050F0C; --card: #0D1B17; --line: #19322A; --fline: #1F3D33; --tile: #08140F; --head: #0B1914; --acc: #39FF9E; }
+  html[data-theme="solar"] { --bg: #0F0905; --card: #1B130C; --line: #33251A; --fline: #3D2C1D; --tile: #140D07; --head: #19110A; --acc: #FFB020; }
+  html[data-theme="nebula"] { --bg: #0B0713; --card: #161025; --line: #2A2140; --fline: #33284D; --tile: #100B1B; --head: #140E22; --acc: #B9A7FF; }
+  html[data-theme="ocean"] { --bg: #040A13; --card: #0B1525; --line: #1A2B44; --fline: #203551; --tile: #07101D; --head: #0A1424; --acc: #7BE0FF; }
+  html[data-theme="mono"] { --bg: #080808; --card: #141414; --line: #262626; --fline: #2E2E2E; --tile: #0C0C0C; --head: #111111; --acc: #E6EDF5; }
+  @media (min-width: 1000px) { html[data-theme] .frame, html[data-theme] .unify { border-color: var(--fline); } }
+  .thm { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .thm button { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 8px; border-radius: 10px; border: 1px solid #2A323D; background: none; color: #C9D3DF; font: 500 11.5px Inter, sans-serif; cursor: pointer; }
+  .thm button i { display: block; width: 100%; height: 26px; border-radius: 6px; } .thm button[aria-pressed="true"] { border-color: #E6EDF5; color: #fff; box-shadow: 0 0 0 1px #E6EDF5; }
 </style>
 </head>
 <body>
@@ -927,13 +943,13 @@
   <div class="fctl"><div class="pbtn" id="enlFPlay">▶</div><div class="pbtn spd" style="font:700 10px 'JetBrains Mono',monospace">1×</div><input type="range" id="enlFSlide" min="0" max="0" value="0"><span class="lbl" id="enlFT" style="min-width:150px;text-align:right">–</span><span class="lbl">PINCH · DRAG</span><div class="x" id="enlX">✕</div></div></div></div>
 <div id="toast"></div>
 <script src="i18n.js?v=b936034a"></script>
-<script src="i18n.ro.js?v=d0744baf"></script>
-<script src="i18n.de.js?v=725176b8"></script>
+<script src="i18n.ro.js?v=b81eee7a"></script>
+<script src="i18n.de.js?v=0c25e6bd"></script>
 <script src="land.js?v=a8b7e715"></script>
 <script src="globe.js?v=fa6d06d5"></script>
 <script src="tonight.js?v=8f552af5"></script>
 <script src="regions.js?v=207ad730"></script>
-<script src="space3d.js?v=ad89bd13"></script>
+<script src="space3d.js?v=ee5117a0"></script>
 <script src="earth3d.js?v=5a75a550"></script>
 <script>
 'use strict';
@@ -2217,11 +2233,12 @@ window.earthReport = () => ({ dst: $('dstChart'), cr: $('secCr').style.display =
   { const m = location.hash.match(/^#how(?:-([1-4]))?$/); if (m) setTimeout(() => { set(true); openOv(); if (m[1]) ov.querySelector('[data-tab="' + (m[1] - 1) + '"]').click(); }, 0); }   // #how / #how-2 … opens the guide (shareable)
   document.body.append(bar, tip, ov);
   X.forEach((x, i) => document.querySelectorAll(x[0]).forEach(el => { if (el.dataset.xp == null) el.dataset.xp = i; }));
+  window.xpAdd = a => a.forEach(x => { const i = X.push(x) - 1; document.querySelectorAll(x[0]).forEach(el => { el.dataset.xp = i; }); });   // tiles.js etc.
   let on = false, cur = null;
   const mark = el => { if (cur === el) return; if (cur) cur.classList.remove('xpon'); cur = el; if (el) el.classList.add('xpon'); };
   const set = v => { on = v; H.classList.toggle('xp', v); btn.setAttribute('aria-pressed', String(v)); if (!v) { tip.classList.remove('on'); mark(null); } };
   const openOv = () => { ov.classList.add('on'); $q('button', ov).focus(); }, closeOv = () => ov.classList.remove('on');
-  btn.onclick = () => { set(!on); if (on && !sessionStorageOk('xpSeen')) openOv(); };
+  btn.onclick = () => set(!on);
   function sessionStorageOk(k) { try { if (sessionStorage.getItem(k)) return true; sessionStorage.setItem(k, '1'); } catch (e) {} return false; }
   bar.querySelector('.go').onclick = openOv; bar.lastElementChild.onclick = () => set(false);
   ov.onclick = e => { const g = e.target.closest('[data-go]'); if (g) { closeOv(); const t = document.getElementById(g.dataset.go); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
@@ -2281,6 +2298,7 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-repl
       <div class="note">${T('Storm = the whole page at the peak of the G5 storm of 10 May 2024, with that day\'s real data.')}</div>
       <button type="button" class="sb storm" data-a="replay">▶ ${T('Storm replay · May 2024')}</button></div>
     <div class="sg"><div class="lbl">${T('Help')}</div><label class="sw">${T('Explain on hover (? How to read)')}<input type="checkbox" data-t="xp"></label><button type="button" class="sb" data-a="guide">${T('How it all works')}</button></div>
+    <div class="sg"><div class="lbl">${T('Colour theme')}</div><div class="thm"><button type="button" data-th="" aria-pressed="${(get('aurora.theme') || '') === ''}"><i style="background:linear-gradient(90deg,#0A0A0A 0 40%,#12161C 40% 85%,#39FF9E 85%)"></i>${T('Night')}</button><button type="button" data-th="aurora" aria-pressed="${(get('aurora.theme') || '') === 'aurora'}"><i style="background:linear-gradient(90deg,#050F0C 0 40%,#0D1B17 40% 85%,#39FF9E 85%)"></i>${T('Aurora')}</button><button type="button" data-th="solar" aria-pressed="${(get('aurora.theme') || '') === 'solar'}"><i style="background:linear-gradient(90deg,#0F0905 0 40%,#1B130C 40% 85%,#FFB020 85%)"></i>${T('Solar')}</button><button type="button" data-th="nebula" aria-pressed="${(get('aurora.theme') || '') === 'nebula'}"><i style="background:linear-gradient(90deg,#0B0713 0 40%,#161025 40% 85%,#B9A7FF 85%)"></i>${T('Nebula')}</button><button type="button" data-th="ocean" aria-pressed="${(get('aurora.theme') || '') === 'ocean'}"><i style="background:linear-gradient(90deg,#040A13 0 40%,#0B1525 40% 85%,#7BE0FF 85%)"></i>${T('Ocean')}</button><button type="button" data-th="mono" aria-pressed="${(get('aurora.theme') || '') === 'mono'}"><i style="background:linear-gradient(90deg,#080808 0 40%,#141414 40% 85%,#E6EDF5 85%)"></i>${T('Graphite')}</button></div></div>
     <div class="sg"><div class="lbl">${T('Display')}</div><label class="sw">${T('Animations')}<input type="checkbox" data-t="mo" ${get('aurora.motion') === 'off' ? '' : 'checked'}></label>
       <label class="sw">${T('Keep the side menu open')}<input type="checkbox" data-t="nav" ${get('aurora.nav') === 'pin' ? 'checked' : ''}></label></div>
     <div class="sg"><div class="lbl">${T('Report')}</div><button type="button" class="sb rep" data-a="rep">⬇ ${T('Save the full report (image)')}</button>
@@ -2293,6 +2311,7 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-repl
     if (t.closest('[data-x]')) return close();
     const l = t.closest('[data-l]'); if (l) { const o = $q(`.seg [data-lang="${l.dataset.l}"]`); if (o) o.click(); return; }
     const m = t.closest('[data-m]'); if (m) return goStorm(m.dataset.m);
+    const th = t.closest('[data-th]'); if (th) { const v = th.dataset.th; if (v) document.documentElement.dataset.theme = v; else delete document.documentElement.dataset.theme; put('aurora.theme', v || null); pn.querySelectorAll('[data-th]').forEach(b => b.setAttribute('aria-pressed', String(b === th))); return; }
     const a = t.closest('[data-a]'); if (!a) return; const k = a.dataset.a;
     if (k === 'place') { close(); const b = $q('#locBtn'); if (b) { b.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(() => b.click(), 400); } }
     else if (k === 'replay') { close(); window.openReplay && openReplay(); }
@@ -2333,11 +2352,14 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-repl
   const w = document.createElement('span'); w.className = 'hdwrap'; h.parentNode.insertBefore(w, h); w.appendChild(h); h.style.display = 'inline-block';
   const storm = !!window.STORM, t = document.createElement('div'); t.className = 'hdtools';
   const lS = T('Calm or storm') + ' — ' + (storm ? T('STORM MODE') : 'CALM'), lX = T('Explain on hover (? How to read)');
-  t.innerHTML = `<button type="button" class="hs" aria-pressed="${storm}" title="${lS}" aria-label="${lS}"></button><button type="button" class="hx" aria-pressed="false" title="${lX}" aria-label="${lX}"></button>`;
-  w.appendChild(t);
+  t.innerHTML = `<button type="button" class="hs" aria-pressed="${storm}" aria-label="${lS}"><span class="c">☀ ${T('CALM')}</span><span class="s">${T('⚡ STORM')}</span></button><button type="button" class="hx" aria-pressed="false" aria-label="${lX}"><b>?</b><i></i></button><button type="button" class="hg" aria-label="${T('Settings')}">⚙</button>`;
+  (h.closest('main') || w).appendChild(t);
+  t.querySelector('.hg').onclick = () => { const b = document.getElementById('setBtn'); if (b) b.click(); };
+  if (storm) { const sb = document.querySelector('.stormbar'); if (sb) sb.style.display = 'none'; const n = document.createElement('div'); n.className = 'stormnote'; n.textContent = '⚡ ' + T('Peak of the May 2024 G5 storm · real data, not live'); t.after(n); }   // storm mode: a small note under the switches, not a band over the page
   t.querySelector('.hs').onclick = () => { const b = document.querySelector(`.stormseg [data-storm="${storm ? '' : 'may2024'}"]`); if (b) b.click(); };
   const hx = t.querySelector('.hx'), sync = () => hx.setAttribute('aria-pressed', String(document.documentElement.classList.contains('xp')));
   hx.onclick = () => { const b = document.getElementById('xpBtn'); if (b) b.click(); sync(); };
   new MutationObserver(sync).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] }); sync(); })();</script>
+<script src="tiles.js?v=101d1b5d"></script>
 </body>
 </html>

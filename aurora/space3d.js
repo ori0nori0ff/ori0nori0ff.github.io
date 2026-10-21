@@ -678,7 +678,7 @@
         el.querySelector('.s3d-sub').textContent = (Math.abs(gT) < .01 ? tr('the Sun circles the galaxy at 230 km/s') + ' · ' + moved : tr('one lap around the galaxy ≈ 230 million years · up and down through the disc every ~70')); return; }
       el.querySelector('.s3d-t').textContent = rate > 86400 * 20 ? new Date(hTime).toLocaleDateString(window.LOC || 'en-GB', { month: 'long', year: 'numeric' }) : new Date(hTime).toLocaleString(window.LOC || 'en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: rate < 60 ? '2-digit' : undefined });
       el.querySelector('.s3d-sub').textContent = tr('the Sun moves {d} AU a year', { d: (kmsAU(TRAVEL[frameK].v) * 365.25).toFixed(1) }) + ' · ' + moved; }
-    function resize() { const r = el.getBoundingClientRect(); W = Math.max(200, r.width); H = Math.max(200, r.height); dpr = Math.min(2, devicePixelRatio || 1);
+    function resize() { const r = el.getBoundingClientRect(); W = Math.max(200, el.clientWidth || r.width); H = Math.max(200, el.clientHeight || r.height); /* layout size: a scaled-down tile would shrink the rect */ dpr = Math.min(2, devicePixelRatio || 1);
       [cv, ov].forEach(c => { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); c.style.width = W + 'px'; c.style.height = H + 'px'; }); dirty = true; }
     function setTime(t) { if (!isFinite(t)) return; time = t; if (mode === 'helix') return; title(); build(); dirty = true; }
     function title() { if (mode !== 'sys') return; const t = time;
