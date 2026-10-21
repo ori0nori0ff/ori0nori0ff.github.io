@@ -1,10 +1,12 @@
-/* Storm replay — the real 8–13 May 2024 G5 storm (Gannon storm), step by step, on one clock.
+/* Storm replay — the real 8–14 May 2024 G5 storm (Gannon storm), step by step, on one clock.
    Data baked by tools/build_replay.py into replay/may2024/ (OMNI solar wind + SYM-H, GFZ Kp, GOES X-rays, NMDB cosmic rays,
    SDO / SOHO pictures, NASA CCMC WSA-ENLIL run). Loaded on demand by index.html: window.StormReplay.open() */
 (() => {
   const T = (s, o) => window.T ? window.T(s, o) : String(s).replace(/\{(\w+)\}/g, (m, k) => o && o[k] != null ? o[k] : m);
   const BASE = 'replay/may2024/', H = 3600e3, NS = 'http://www.w3.org/2000/svg';
   let D = null, root = null, t = 0, play = false, speed = 1, raf = 0, last = 0, step = -1, SUNK = 'HMIIF', story = [];
+  // guided tour (default): one step at a time — the clock glides to the next step, the rest of the screen dims, a pause to read, then on; after the last step (or ⇄) the viewer drives
+  let guide = true, hold = 0, glide = 0;
   const $ = q => root.querySelector(q), esc = s => String(s).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
   const utc = x => new Date(x).toISOString().slice(5, 16).replace('T', ' ').replace('-', '.') + ' UTC';
   const ro = x => new Date(x).toLocaleString(document.documentElement.lang || 'en', { timeZone: 'Europe/Bucharest', weekday: 'short', hour: '2-digit', minute: '2-digit' });
@@ -20,7 +22,9 @@
   function buildStory() {
     const d = s => Date.UTC(2024, 4, +s.slice(0, 2), +s.slice(3, 5), +s.slice(6, 8));
     const fl = (a, b) => peak('xr', d(a), d(b), (v, w) => v > w);
-    const f1 = fl('08 04:00', '08 07:00'), f2 = fl('09 08:00', '09 11:00'), f3 = fl('09 16:30', '09 19:30'), f4 = fl('10 05:30', '10 08:30'), f5 = fl('11 00:30', '11 03:00');
+    const f1 = fl('08 04:00', '08 07:00'), f2 = fl('09 08:00', '09 11:00'), f3 = fl('09 16:30', '09 19:30'), f4 = fl('10 05:30', '10 08:30'), f5 = fl('11 00:30', '11 03:00'), f6 = fl('14 16:00', '14 18:30');
+    const v2 = peak('v', d('11 12:00'), d('13 00:00'), (v, w) => v > w);   // the fast wind after the X5.8 CME (its flank)
+    const c0 = (D.cr.filter(p => p[0] < f5[0]).pop() || [0, 0])[1], gle = D.cr.filter(p => p[0] >= f5[0] && p[0] <= f5[0] + 4 * H).reduce((a, p) => p[1] > a[1] ? p : a, [0, -99]);   // GLE: the ground count jumps right after the flare
     // the shock at L1 = the biggest 15-minute jump in speed on 10 May
     let sh = d('10 16:30'), bj = 0; for (let i = idx(d('10 10:00')); i < idx(d('10 23:00')); i++) { const a = D.v[i], b = D.v[i + 3]; if (a != null && b != null && b - a > bj) { bj = b - a; sh = D.t0 + (i + 1) * D.step; } }
     const sym = peak('sym', d('10 18:00'), d('12 00:00'), (v, w) => v < w), bz = peak('bz', sh, sh + 12 * H, (v, w) => v < w), vmax = peak('v', sh, d('12 12:00'), (v, w) => v > w);
@@ -49,13 +53,19 @@
       { t: d('10 20:30'), sun: 'C3', hi: ['globe', 'kp'], c: '#39FF9E', h: L('Auroras over Romania'),
         p: L('Night falls over Europe with the storm at its peak: red and pink auroras are seen all over Romania, Italy and Spain — and far further south, in Mexico and northern India. Phone cameras see them even better than the eye.') },
       { t: f5[0], sun: '0131', hi: ['sun', 'xr'], c: '#3FD2FF', h: L('The biggest flare: {x}', { x: xcls(f5[1]) }),
-        p: L('In the middle of the storm the region fires its strongest flare of the week — but this CME is aimed away from Earth.'), fx: ['R3 radio blackout'] },
+        p: L("In the middle of the storm the region fires its strongest flare of the week. Its CME leaves at an angle: the ENLIL run of 11 May shows Earth catching only its flank."), fx: ['R3 radio blackout'] },
+      ...(gle[1] - c0 >= 1 ? [{ t: gle[0], sun: '0131', hi: ['cr'], c: '#FFE14D', h: L('Particles from the flare reach the ground'),
+        p: L("Protons from the flare, sped up to almost the speed of light, reach Earth within minutes and are counted at the ground: the Oulu neutron monitor jumps by {c} % in the middle of the Forbush decrease. A ground level enhancement (GLE 74) is rare — the first since 2021.", { c: (gle[1] - c0).toFixed(1) }), fx: ['S2 radiation storm', 'More radiation on polar flights'] }] : []),
+      { t: v2[0], sun: 'C3', hi: ['v', 'bz', 'enl'], c: '#FFA040', h: L('Fast wind, but Bz north'),
+        p: L("The flank of the X5.8 CME and the tail of the earlier clouds keep the wind at L1 very fast — up to {v} km/s on 12 May. But their magnetic field points north (Bz above 0), so the shield stays closed and the storm fades instead of starting again.", { v: Math.round(v2[1]) }) },
       { t: sym[0], sun: 'C3', hi: ['sym'], c: '#7BE0FF', h: L('The deepest point: SYM-H {v} nT', { v: Math.round(sym[1]) }),
         p: L("Earth's field at the equator is weakened the most since 2003 (the hourly Dst index reached −412 nT). The ring of current around Earth is full of storm particles.") },
       { t: crmin[0], sun: 'C3', hi: ['v', 'cr'], c: '#B9A7FF', h: L('Cosmic rays swept away'),
         p: L('The fast cloud (up to {v} km/s) carries its own magnetic field past Earth and pushes cosmic rays aside: the neutron count drops by {c} % — a Forbush decrease.', { v: Math.round(vmax[1]), c: Math.abs(crmin[1]).toFixed(1) }) },
-      { t: d('12 12:00'), sun: 'HMIIF', hi: ['sym', 'kp', 'cr'], c: '#8E9AAB', h: L('Slow recovery'),
+      { t: d('13 12:00'), sun: 'HMIIF', hi: ['sym', 'kp', 'cr'], c: '#8E9AAB', h: L('Slow recovery'),
         p: L('The wind calms, Bz turns north, Kp falls. Dst and cosmic rays need days to come back. Region 3664 rotates away — and two weeks later, on the far side, it fires an X12 flare.') },
+      { t: f6[0], sun: '0131', hi: ['sun', 'xr'], c: '#3FD2FF', h: L('The biggest flare of the cycle: {x}', { x: xcls(f6[1]) }),
+        p: L("On 14 May, as region 3664 turns over the Sun's western edge, it fires the strongest flare of solar cycle 25. Its CME flies away from Earth — the region's farewell before it rotates out of view."), fx: ['R3 radio blackout'] },
       { t: D.t1 - 2 * H, sun: 'HMIIF', hi: [], c: '#39FF9E', h: L('What we learn'),
         p: L('Every warning on this page worked in order: the region on the Sun → the flares → the CMEs in the coronagraphs → the ENLIL forecast → the shock at L1 → Kp, Dst and the aurora. The same chain, live, is what the rest of this page shows every day.') },
     ].sort((a, b) => a.t - b.t);
@@ -108,7 +118,7 @@
     });
     box.addEventListener('click', e => { const b = e.target.closest('.rpxf [data-t]'); if (b) { e.stopPropagation(); pause(); seek(+b.dataset.t); } });
     // day labels under the strips
-    let lab = ''; for (let d = 0; d < 5; d++) lab += `<span style="left:${(d + .5) * 20}%">${new Date(D.t0 + d * 24 * H).toLocaleDateString(document.documentElement.lang || 'en', { day: 'numeric', month: 'short', timeZone: 'UTC' })}</span>`;
+    const nd = Math.round((D.t1 - D.t0) / (24 * H)); let lab = ''; for (let d = 0; d < nd; d++) lab += `<span style="left:${(d + .5) * 100 / nd}%">${new Date(D.t0 + d * 24 * H).toLocaleDateString(document.documentElement.lang || 'en', { day: 'numeric', month: 'short', timeZone: 'UTC' })}</span>`;
     box.insertAdjacentHTML('beforeend', `<div class="rpdays">${lab}</div>`);
     box.onpointerdown = e => { const r = box.querySelector('svg').getBoundingClientRect(); const go = ev => seek(D.t0 + Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width)) * (D.t1 - D.t0)); pause(); go(e);
       const mv = ev => go(ev), up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); }; addEventListener('pointermove', mv); addEventListener('pointerup', up); };
@@ -143,7 +153,7 @@
     if (f) { const el = $('#rpSun'); if (el.dataset.u !== f[1]) { el.src = BASE + f[1]; el.dataset.u = f[1]; } $('#rpSunT').textContent = utc(f[0]); }
     const i = L.indexOf(f); for (let k = 1; k < 6; k++) if (L[i + k]) img(L[i + k][1]);
     const e = near(D.enl, t), en = $('#rpEnl');
-    if (e && t >= D.enl[0][0]) { const u = `url("${BASE}${e[1]}")`; if (en.dataset.u !== e[1]) { en.style.backgroundImage = u; en.dataset.u = e[1]; } $('#rpEnlT').textContent = utc(e[0]); en.classList.remove('wait'); }
+    if (e && t >= D.enl[0][0]) { const u = `url("${BASE}${e[1]}")`; if (en.dataset.u !== e[1]) { en.style.backgroundImage = u; en.dataset.u = e[1]; } $('#rpEnlT').textContent = utc(e[0]); en.classList.remove('wait'); const rc = $('#rpEnlRun'); if (rc) rc.textContent = T(e[0] >= Date.UTC(2024, 4, 11) ? 'NASA CCMC run of 11 May 06:00 UTC (with the CME of the X5.8 flare). Sun in the centre, Earth = the yellow dot on the right.' : 'NASA CCMC run of 9 May 20:27 UTC. Sun in the centre, Earth = the yellow dot on the right.'); }
     else { en.classList.add('wait'); $('#rpEnlT').textContent = T('the run starts on 9 May'); }
   }
 
@@ -158,60 +168,101 @@
 
   function setStep(n, jump) {
     n = Math.max(0, Math.min(story.length - 1, n)); const s = story[n];
-    if (jump) { t = s.t; if (s.sun) setSun(s.sun); }
+    if (jump) { t = s.t; glide = 0; if (s.sun) setSun(s.sun); }
     if (n === step && !jump) return; step = n;
     $('#rpStep').style.setProperty('--c', s.c);
     $('#rpStep').innerHTML = `<div class="rpn">${T('Step {a} of {b}', { a: n + 1, b: story.length })} · ${utc(s.t)}</div><h3>${esc(T(s.h.k, s.h.o))}</h3><p>${esc(T(s.p.k, s.p.o))}</p>` +
-      (s.fx ? `<div class="rpfx">${s.fx.map(f => `<span>${esc(T(f))}</span>`).join('')}</div>` : '');
+      (s.fx ? `<div class="rpfx">${s.fx.map(f => `<span>${esc(T(f))}</span>`).join('')}</div>` : '') + (guide ? '<div class="rpread"><i></i></div>' : '');
     root.querySelectorAll('.rpli button').forEach((b, i) => b.classList.toggle('on', i === n));
+    $('#rpGP').innerHTML = `<b>${T('Step {a} of {b}', { a: n + 1, b: story.length })}</b>${story.map((x, i) => `<i class="${i < n ? 'd' : i === n ? 'n' : ''}" style="--c:${x.c}"></i>`).join('')}`;
     root.querySelectorAll('[data-hi]').forEach(el => el.classList.toggle('hi', s.hi.includes(el.dataset.hi)));
     root.querySelectorAll('.rpst').forEach(el => el.classList.toggle('hi', s.hi.includes(el.dataset.k)));
+    root.classList.toggle('focus', guide && s.hi.length > 0); root.classList.toggle('guide', guide); root.classList.toggle('fch', guide && !!root.querySelector('.rpst.hi'));   // guided: only the charts of this step stay, so they sit next to the pictures
+    if (guide) { $('#rpTip').innerHTML = $('#rpStep').innerHTML; $('#rpTip').style.setProperty('--c', s.c); requestAnimationFrame(placeTip); }
     if (!jump && s.sun && play) setSun(s.sun);
+  }
+  function placeTip() {   // beside the first highlighted panel that has room (right, else left); a full-width chart → above it, else under it; never under the control bar
+    const hs = [...root.querySelectorAll('.rpcharts .hi')]; if (hs.length) { hs[hs.length - 1].scrollIntoView({ block: 'nearest' }); hs[0].scrollIntoView({ block: 'nearest' }); }   // the charts the step is about come into view
+    const tip = $('#rpTip'), box = $('.rpleft').getBoundingClientRect(), g = 14; tip.style.width = '';
+    let H0 = tip.offsetHeight, W0 = tip.offsetWidth;
+    const bot = Math.min(box.bottom, $('.rpctl').getBoundingClientRect().top) - 8, top = box.top + 8;
+    const R = [...root.querySelectorAll('.rpleft .hi')].map(e => e.getBoundingClientRect()).filter(r => r.width && r.bottom > top && r.top < bot);
+    let x, y, side = 'c', ay = 34;
+    // a card beside a panel (right, else left; narrower down to 300 px if needed) that covers no other highlighted panel
+    const hit = (x0, y0, w, h) => R.some(q => x0 < q.right && x0 + w > q.left && y0 < q.bottom && y0 + h > q.top);
+    let r = null;
+    for (const q of R) { for (const sd of ['l', 'r']) { const rm = (sd === 'l' ? box.right - q.right : q.left - box.left) - g, w = Math.min(W0, Math.floor(rm)); if (w < 300) continue;
+        const x0 = sd === 'l' ? q.right + g : q.left - g - w; if (hit(x0, q.top, w, Math.min(H0, 200))) continue; r = q; side = sd; if (w < W0) { W0 = w; tip.style.width = w + 'px'; H0 = tip.offsetHeight; } x = x0; break; }
+      if (r) break; }
+    if (r) y = r.top;
+    else if (R.length) { const r0 = R[0]; x = Math.max(box.left, Math.min(box.right - W0, r0.left + 24));
+      if (r0.top - g - H0 >= top) { y = r0.top - g - H0; side = 'b'; } else { y = r0.bottom + g; side = 't'; } }
+    else { x = box.left + (box.width - W0) / 2; y = box.top + (box.height - H0) / 2; }
+    const y1 = Math.max(top, Math.min(bot - H0, y)); if (side === 'l' || side === 'r') ay = Math.max(18, Math.min(H0 - 24, r.top + 30 - y1));
+    tip.style.left = Math.round(x) + 'px'; tip.style.top = Math.round(y1) + 'px'; tip.style.setProperty('--ay', ay + 'px'); tip.dataset.side = side; tip.classList.add('on');
   }
   function setSun(k) { SUNK = k; root.querySelectorAll('.rpsf button').forEach(b => b.classList.toggle('on', b.dataset.k === k)); pics(); }
 
-  function render(force) { values(); pics(); drawGlobe(force); let n = 0; story.forEach((s, i) => { if (s.t <= t + 60e3) n = i; }); setStep(n); }
+  function render(force) { values(); pics(); drawGlobe(force); if (guide && play) return;   // the tour moves the steps itself (arrival → read → glide)
+    let n = 0; story.forEach((s, i) => { if (s.t <= t + 60e3) n = i; }); setStep(n); }
   function seek(x) { t = Math.max(D.t0, Math.min(D.t1, x)); render(); }
   function pause() { play = false; cancelAnimationFrame(raf); $('#rpPlay').textContent = '▶'; $('#rpPlay').setAttribute('aria-label', T('Play')); }
-  function start() { if (t >= D.t1 - 1) t = D.t0; play = true; last = performance.now(); $('#rpPlay').textContent = '⏸'; $('#rpPlay').setAttribute('aria-label', T('Pause'));
-    const tick = now => { if (!play) return; const dt = Math.min(100, now - last); last = now; t += dt / 1000 * speed * 2 * H;   // 1× = 2 hours per second
-      const nx = story[step + 1];   // story mode: the clock stops at every step so it can be read; ▶ goes on
-      if (nx && t >= nx.t) { t = nx.t; setStep(step + 1, true); render(true); pause(); return; }
+  const readMs = s => Math.max(7000, Math.min(16000, T(s.p.k, s.p.o).split(/\s+/).length * 330));   // time to read a step
+  function start() { if (t >= D.t1 - 1) { t = D.t0; if (guide) setStep(0, true); } play = true; last = performance.now(); hold = guide && story[step] && Math.abs(t - story[step].t) < 60e3 ? readMs(story[step]) : 0;   // on a step: read it first $('#rpPlay').textContent = '⏸'; $('#rpPlay').setAttribute('aria-label', T('Pause'));
+    const tick = now => { if (!play) return; const dt = Math.min(guide ? 250 : 100, now - last); last = now;
+      if (guide) {
+        if (hold > 0) { hold -= dt; bar(1 - hold / readMs(story[step])); if (hold > 0) { raf = requestAnimationFrame(tick); return; } }
+        const nx = story[step + 1];
+        if (!nx) { t = Math.min(D.t1, t + dt / 1000 * 2 * H); render(); if (t >= D.t1) { pause(); freeMode(true); return; } raf = requestAnimationFrame(tick); return; }
+        if (!glide || glide.to !== nx) { const gap = nx.t - t; glide = { to: nx, r: gap / Math.max(4000, Math.min(9000, gap / (2 * H) * 1000)) }; }   // ms of clock per ms of screen
+        t += dt * glide.r;
+        if (t >= nx.t) { t = nx.t; glide = 0; setStep(step + 1, true); render(true); hold = readMs(story[step]); bar(0); }
+        else render();
+        raf = requestAnimationFrame(tick); return;
+      }
+      t += dt / 1000 * speed * 2 * H;   // free: 1× = 2 hours per second, straight through
       if (t >= D.t1) { t = D.t1; render(); pause(); return; } render(); raf = requestAnimationFrame(tick); }; raf = requestAnimationFrame(tick); }
+  function bar(f) { root.querySelectorAll('.rpread i').forEach(b => b.style.width = (Math.max(0, Math.min(1, f)) * 100).toFixed(1) + '%'); }
+  function freeMode(end) { guide = false; glide = 0; root.classList.remove('focus', 'guide'); $('#rpTip').classList.remove('on'); root.classList.add('free'); $('#rpMode').textContent = T('↺ Guided tour');
+    if (end) $('#rpStep').insertAdjacentHTML('beforeend', `<div class="rpyou">${T("Now it's yours: drag the slider, change the speed, click any step or chart.")}</div>`); }
+  function guideMode() { guide = true; root.classList.remove('free'); $('#rpMode').textContent = T('⇄ Explore freely'); setStep(0, true); render(true); start(); }
 
   function build() {
     root = document.createElement('div'); root.id = 'rp'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', T('Storm replay · May 2024'));
-    root.innerHTML = `<div class="rpbar"><span class="rptag">${T('REPLAY · REAL DATA FROM MAY 2024 · NOT LIVE')}</span><h2>${T('The G5 storm of 10–11 May 2024, step by step')}</h2><button type="button" class="rpx" aria-label="${T('Close')}">✕</button></div>
+    root.className = 'guide'; root.innerHTML = `<div class="rpbar"><span class="rptag">${T('REPLAY · REAL DATA FROM MAY 2024 · NOT LIVE')}</span><h2>${T('The G5 storm of May 2024, step by step')}</h2><button type="button" class="rpx" aria-label="${T('Close')}">✕</button></div>
     <div class="rpgrid">
       <div class="rpleft">
         <div class="rpmedia">
           <figure data-hi="sun"><div class="rpsq"><img id="rpSun" alt="${T('The Sun at the replay time')}"></div><figcaption><b>${T('The Sun')}</b><span id="rpSunT"></span></figcaption>
             <div class="rpsf">${SUNF.map(f => `<button type="button" data-k="${f[0]}" style="--c:${f[2]}">${T(f[1])}</button>`).join('')}</div></figure>
           <figure data-hi="enl"><div class="rpsq"><div id="rpEnl" role="img" aria-label="${T('NASA WSA-ENLIL solar wind density, seen from above')}"></div></div><figcaption><b>${T('WSA-ENLIL · density from above')}</b><span id="rpEnlT"></span></figcaption>
-            <p class="rpcap">${T('NASA CCMC run of 9 May 20:27 UTC. Sun in the centre, Earth = the yellow dot on the right.')}</p></figure>
+            <p class="rpcap" id="rpEnlRun">${T('NASA CCMC run of 9 May 20:27 UTC. Sun in the centre, Earth = the yellow dot on the right.')}</p></figure>
           <figure data-hi="globe"><div class="rpsq"><canvas id="rpGlobe" aria-label="${T('Aurora oval estimated from Kp')}"></canvas></div><figcaption><b>${T('Aurora oval')}</b><span>${T('estimated from Kp')}</span></figcaption>
             <p class="rpcap">${T('The yellow dot is Brașov. The further south the glow, the stronger the storm.')}</p></figure>
         </div>
         <div class="rpcharts"></div>
       </div>
+      <div id="rpTip" class="rpstep rptip" aria-live="polite"></div>
       <aside class="rpright"><div id="rpStep" class="rpstep"></div><ol class="rpli">${story.map((s, i) => `<li><button type="button" data-i="${i}" style="--c:${s.c}"><i></i><span>${esc(T(s.h.k, s.h.o))}</span></button></li>`).join('')}</ol>
         <p class="rpsrc">${T('Data: NASA OMNI (solar wind, SYM-H), GFZ Potsdam (Kp), NOAA GOES-16 via LASP (X-rays), NMDB Oulu (cosmic rays), NASA SDO, ESA / NASA SOHO, NASA CCMC (ENLIL).')}</p></aside>
     </div>
     <div class="rpctl"><button type="button" id="rpPrev" aria-label="${T('Previous step')}">⏮</button><button type="button" id="rpPlay" class="pl" aria-label="${T('Play')}">▶</button><button type="button" id="rpNext" aria-label="${T('Next step')}">⏭</button>
-      <div class="rpsp" role="group" aria-label="${T('Speed')}">${[1, 2, 4].map(v => `<button type="button" data-s="${v}" class="${v === 1 ? 'on' : ''}">${v}×</button>`).join('')}</div>
-      <input type="range" id="rpSlide" min="0" max="1000" value="0" aria-label="${T('Replay time')}"><div id="rpClock" class="rpclock"></div></div>`;
+      <button type="button" id="rpMode" class="rpmode">${T('⇄ Explore freely')}</button><div class="rpsp" role="group" aria-label="${T('Speed')}">${[1, 2, 4].map(v => `<button type="button" data-s="${v}" class="${v === 1 ? 'on' : ''}">${v}×</button>`).join('')}</div>
+      <div id="rpGP" class="rpgp"></div><input type="range" id="rpSlide" min="0" max="1000" value="0" aria-label="${T('Replay time')}"><div id="rpClock" class="rpclock"></div></div>`;
     document.body.appendChild(root);
     $('.rpx').onclick = close;
     $('#rpPlay').onclick = () => play ? pause() : start();
-    $('#rpPrev').onclick = () => { pause(); setStep(step - (t - story[step].t > 30 * 60e3 ? 0 : 1), true); render(true); };
-    $('#rpNext').onclick = () => { pause(); setStep(step + 1, true); render(true); };
-    $('#rpSlide').oninput = e => { pause(); seek(D.t0 + e.target.value / 1000 * (D.t1 - D.t0)); };
-    root.querySelector('.rpsp').onclick = e => { const b = e.target.closest('[data-s]'); if (!b) return; speed = +b.dataset.s; root.querySelectorAll('.rpsp button').forEach(x => x.classList.toggle('on', x === b)); };
+    $('#rpMode').onclick = () => { if (guide) { pause(); freeMode(); } else guideMode(); };
+    const hop = d => { const was = play; pause(); setStep(step + d, true); render(true); if (was) { start(); } };   // guided: one step back / on, the tour goes on reading from there
+    $('#rpPrev').onclick = () => { if (guide) return hop(-1); pause(); setStep(step - (t - story[step].t > 30 * 60e3 ? 0 : 1), true); render(true); };
+    $('#rpNext').onclick = () => { if (guide) return hop(1); pause(); setStep(step + 1, true); render(true); };
+    $('#rpSlide').oninput = e => { pause(); if (guide) freeMode(); seek(D.t0 + e.target.value / 1000 * (D.t1 - D.t0)); };
+    root.querySelector('.rpsp').onclick = e => { const b = e.target.closest('[data-s]'); if (!b) return; speed = +b.dataset.s; if (guide) freeMode(); root.querySelectorAll('.rpsp button').forEach(x => x.classList.toggle('on', x === b)); };
     root.querySelector('.rpsf').onclick = e => { const b = e.target.closest('[data-k]'); if (b) setSun(b.dataset.k); };
     root.querySelector('.rpli').onclick = e => { const b = e.target.closest('[data-i]'); if (b) { pause(); setStep(+b.dataset.i, true); render(true); } };
     root.addEventListener('keydown', e => { if (e.key === 'Escape') close(); else if (e.key === ' ' && !e.target.closest('button, input')) { e.preventDefault(); play ? pause() : start(); }
       else if (e.key === 'ArrowRight' && !e.target.closest('input')) $('#rpNext').click(); else if (e.key === 'ArrowLeft' && !e.target.closest('input')) $('#rpPrev').click(); });
-    drawStrips();
+    drawStrips(); addEventListener('resize', () => { if (guide && root.classList.contains('on')) placeTip(); });
   }
   function close() { pause(); if (root) root.classList.remove('on'); document.documentElement.classList.remove('rpon'); if (location.hash === '#replay') history.replaceState(null, '', location.pathname + location.search); }
 
@@ -222,6 +273,7 @@
       w.remove(); story = buildStory(); build(); t = story[0].t; setStep(0, true); }
     if (n > 0) setStep(n, true);
     root.classList.add('on'); render(true); $('#rpPlay').focus();
+    if (guide && !play && !matchMedia('(prefers-reduced-motion: reduce)').matches) { hold = 0; setTimeout(() => { if (root.classList.contains('on') && !play) start(); }, 900); }
   }
   window.StormReplay = { open, close };
 })();

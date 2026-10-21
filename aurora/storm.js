@@ -26,6 +26,7 @@
     if (abs.startsWith(SWPC)) {
       const p = strip(abs.slice(SWPC.length));
       if (p.startsWith('__replay/')) return 'replay/may2024/' + p.slice(9);
+      if (!have.has(p) && have.has(p.replace('-7-day', '-3-day'))) return BASE + 'swpc/' + p.replace('-7-day', '-3-day');   // the page asks for 7 days, the storm copy has 3
       return have.has(p) || (kind === 'img' && p.startsWith('images/animations/enlil/')) ? BASE + 'swpc/' + p : '';
     }
     if (abs.startsWith(location.origin)) {

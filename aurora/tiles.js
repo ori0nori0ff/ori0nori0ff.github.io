@@ -32,7 +32,9 @@
   .tl.fc .cap { display: none; }
   .tl .cap strong { font: 700 14px Inter, sans-serif; color: #F1F4F8; white-space: nowrap; } .tl .cap .lv { font: 600 11px 'JetBrains Mono', monospace; color: var(--c); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tl .cap i { margin-left: auto; font-style: normal; color: var(--c); transition: transform .25s; } .tl:hover .cap i { transform: translateX(3px); }
-  .tlrp { position: absolute; inset: 0 0 38px; padding: 14px; } .tlrp svg { width: 100%; height: 100%; }
+  .tlrp { position: absolute; inset: 0; background: #000 url(replay/may2024/img/C3/0511_0300.jpg) 50% 50% / 115% auto no-repeat; }
+  .tlrp::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0,0,0,.75), rgba(0,0,0,.15) 55%, rgba(0,0,0,0)), linear-gradient(0deg, rgba(0,0,0,.85), transparent 45%); }
+  .tlrp b { position: absolute; left: 16px; top: 14px; z-index: 1; font: 700 10.5px 'JetBrains Mono', monospace; letter-spacing: .08em; color: #FFB3B3; }
   #tlOv { position: fixed; inset: 0; z-index: 46; display: none; background: rgba(4,6,9,.66); -webkit-backdrop-filter: blur(9px) saturate(.8); backdrop-filter: blur(9px) saturate(.8); }
   #tlOv.on { display: block; animation: tlFade .25s ease; }
   #tlWin { position: absolute; inset: 2.5vh 2.5vw; display: flex; flex-direction: column; border-radius: 16px; background: var(--tile); border: 1px solid var(--line); box-shadow: 0 30px 90px rgba(0,0,0,.6); overflow: hidden; animation: tlGrow .3s cubic-bezier(.2,.8,.2,1); }
@@ -54,6 +56,7 @@
   .tlb > section { margin: 0 !important; }
   #tlOv:not(.split) #tlP2 { display: none; }
   #tlOv.split .tlb .grid.two-col, #tlOv.split .tlb .grid.top { grid-template-columns: minmax(0, 1fr) !important; } #tlOv.split .tlb .grid.two-col > *, #tlOv.split .tlb .grid.top > * { grid-column: auto !important; }
+  .tlb #cycchart { max-height: calc(95vh - 270px); }
   .tlb #s3dHost { aspect-ratio: auto; height: calc(95vh - 230px); max-height: none; }
   `;
   document.head.appendChild(css);
@@ -74,9 +77,8 @@
   fit(); addEventListener('resize', fit); H.classList.remove('tpre'); setTimeout(fit, 1500); setTimeout(fit, 5000);   // the forecast grows as its data comes in
   const live = () => P.forEach(p => { if (!p[5]) return; const v = p[5](), el = box.querySelector(`[data-p="${p[0]}"] .lv`); if (el && v && el.textContent !== v) el.textContent = v; });
   live(); setInterval(live, 4000);
-  // the replay tile: the real Kp of 8–13 May 2024 as a small bar chart
-  fetch('replay/may2024/data.json').then(r => r.json()).then(R => { const w = 300 / R.kp.length, kc = k => k >= 9 ? '#8C7CFF' : k >= 8 ? '#D61F3A' : k >= 7 ? '#FF4D4D' : k >= 6 ? '#FF9338' : k >= 5 ? '#FFE14D' : k >= 4 ? '#B8F25C' : '#3FD98A';
-    box.querySelector('.tlrp').innerHTML = `<svg viewBox="0 0 300 120" preserveAspectRatio="none">${R.kp.map(([t, k], i) => `<rect x="${i * w + .5}" y="${120 - k / 9 * 112}" width="${w - 1}" height="${k / 9 * 112}" rx="1" fill="${kc(k)}"/>`).join('')}</svg>`; }).catch(() => {});
+  // the replay tile: the CME of 11 May 2024 in SOHO LASCO C3 (from the replay) — a picture, so it is not mistaken for today's Kp
+  box.querySelector('.tlrp').innerHTML = `<b>${T('CME · 11 MAY 2024 · SOHO LASCO C3')}</b>`;
   // the window: one module, or two side by side
   const ov = document.createElement('div'); ov.id = 'tlOv'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true');
   const pane = n => `<div class="tlp" id="tlP${n}"><div class="ph"><span></span><button type="button" data-shut="${n}" aria-label="${T('Close')}">✕</button></div><div class="tlb"></div></div>`;
