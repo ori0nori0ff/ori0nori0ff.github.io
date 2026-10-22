@@ -7,7 +7,7 @@
   'use strict';
   const tr = (s, o) => window.T ? window.T(s, o) : String(s).replace(/\{(\w+)\}/g, (m, k) => o && o[k] != null ? o[k] : m);
   const D2R = Math.PI / 180, R_KM = 6371, MAXLAT = 85.05113;
-  const day = t => new Date(Date.now() - t < 2 * 864e5 ? t - 864e5 : t).toISOString().slice(0, 10);   // recent → yesterday (today's VIIRS mosaic fills during the day); a chosen past date → that day
+  const day = t => { t = Math.min(t, Date.now()); return new Date(Date.now() - t < 2 * 864e5 ? t - 864e5 : t).toISOString().slice(0, 10); };   // recent → yesterday (today's VIIRS mosaic fills during the day); a chosen past date → that day
   const SRC = {
     clear: (z, x, y) => z <= 8 ? `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/2004-08/GoogleMapsCompatible_Level8/${z}/${y}/${x}.jpeg` : null,
     today: (z, x, y, t) => z <= 9 ? `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/${day(t)}/GoogleMapsCompatible_Level9/${z}/${y}/${x}.jpg` : null,
@@ -26,8 +26,9 @@
     const B = 2 * Math.PI * (doy - 81) / 364, eot = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B), hrs = d.getUTCHours() + d.getUTCMinutes() / 60 + eot / 60;
     return xyz(dec, (12 - hrs) * 15, 1); }
 
-  const VS = 'attribute vec3 p;attribute vec2 uv;uniform mat4 m;uniform vec4 ud;uniform vec4 un;varying vec2 vd;varying vec2 vn;varying vec3 vp;varying vec2 vu;void main(){gl_Position=m*vec4(p,1.);vd=uv*ud.xy+ud.zw;vn=uv*un.xy+un.zw;vp=p;vu=uv;}';
-  const FS = 'precision mediump float;uniform sampler2D td;uniform sampler2D tn;uniform sampler2D tl;uniform vec3 sun;uniform float hn;uniform float hl;uniform float nk;uniform vec4 ul;varying vec2 vd;varying vec2 vn;varying vec3 vp;varying vec2 vu;void main(){vec3 n=normalize(vp);float d=dot(n,sun);float dl=max(smoothstep(-.12,.18,d),1.-nk);vec3 c=texture2D(td,vd).rgb;vec4 lb=texture2D(tl,vu*ul.xy+ul.zw);c=mix(c,lb.rgb,lb.a*hl);vec3 l=texture2D(tn,vn).rgb*hn*nk;vec3 night=c*.06+l*vec3(1.,.82,.55)*1.5;gl_FragColor=vec4(mix(night,c*(.75+.35*max(d,0.)*nk+.25*(1.-nk)),dl),1.);}';
+  const VS = 'attribute vec3 p;attribute vec2 uv;attribute float dh;uniform mat4 m;uniform float mo;uniform vec4 ud;uniform vec4 uq;uniform vec4 un;uniform vec4 ue;varying vec2 vd;varying vec2 vq;varying vec2 vn;varying vec2 ve;varying vec3 vp;varying vec2 vu;void main(){vec3 q=p+normalize(p)*dh*mo;gl_Position=m*vec4(q,1.);vd=uv*ud.xy+ud.zw;vq=uv*uq.xy+uq.zw;vn=uv*un.xy+un.zw;ve=uv*ue.xy+ue.zw;vp=p;vu=uv;}';
+  // day picture (fading in over the previous one) · labels · hillshade: the DEM normal (east, north, up) lit by the real Sun, relative to the flat ground · night lights
+  const FS = 'precision mediump float;uniform sampler2D td;uniform sampler2D tp;uniform sampler2D tn;uniform sampler2D tl;uniform sampler2D te;uniform vec3 sun;uniform float hn;uniform float hl;uniform float nk;uniform float fa;uniform float he;uniform float rs;uniform vec4 ul;varying vec2 vd;varying vec2 vq;varying vec2 vn;varying vec2 ve;varying vec3 vp;varying vec2 vu;void main(){vec3 n=normalize(vp);float d=dot(n,sun);float dl=max(smoothstep(-.12,.18,d),1.-nk);vec3 c=mix(texture2D(tp,vq).rgb,texture2D(td,vd).rgb,fa);vec4 lb=texture2D(tl,vu*ul.xy+ul.zw);c=mix(c,lb.rgb,lb.a*hl);vec4 e=texture2D(te,ve);vec3 en=e.xyz*2.-1.;vec3 ea=normalize(vec3(n.z,0.,-n.x)+vec3(1e-6));vec3 no=cross(n,ea);vec3 nt=normalize(ea*en.x+no*en.y+n*en.z);vec3 sv=normalize(mix(n+ea*.4+no*.6,sun,nk));c*=clamp(1.+(dot(nt,sv)-dot(n,sv))*rs*he*mix(.5,1.,e.a)*mix(1.,smoothstep(-.05,.2,d),nk),.3,1.8);vec3 l=texture2D(tn,vn).rgb*hn*nk;vec3 night=c*.06+l*vec3(1.,.82,.55)*1.5;gl_FragColor=vec4(mix(night,c*(.75+.35*max(d,0.)*nk+.25*(1.-nk)),dl),1.);}';
   const persp = (fov, asp, n, f) => { const t = 1 / Math.tan(fov / 2); return [t / asp, 0, 0, 0, 0, t, 0, 0, 0, 0, (f + n) / (n - f), -1, 0, 0, 2 * f * n / (n - f), 0]; };
   const lookAt = (e, c, u) => { let z = [e[0] - c[0], e[1] - c[1], e[2] - c[2]], l = Math.hypot(...z); z = z.map(v => v / l);
     let x = [u[1] * z[2] - u[2] * z[1], u[2] * z[0] - u[0] * z[2], u[0] * z[1] - u[1] * z[0]]; l = Math.hypot(...x); x = x.map(v => v / l);
@@ -35,7 +36,7 @@
     return [x[0], y[0], z[0], 0, x[1], y[1], z[1], 0, x[2], y[2], z[2], 0, -(x[0] * e[0] + x[1] * e[1] + x[2] * e[2]), -(y[0] * e[0] + y[1] * e[1] + y[2] * e[2]), -(z[0] * e[0] + z[1] * e[1] + z[2] * e[2]), 1]; };
   const mul = (a, b) => { const o = new Array(16); for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { let s = 0; for (let k = 0; k < 4; k++) s += a[k * 4 + j] * b[i * 4 + k]; o[i * 4 + j] = s; } return o; };
 
-  const CSS = `.e3d{position:absolute;inset:0;display:none;background:#000}.e3d.on{display:block}.e3d canvas{position:absolute;left:0;top:0;touch-action:none}
+  const CSS = `.e3d{position:absolute;inset:0;display:none;background:#000}.e3d.on{display:block}.e3d canvas{position:absolute;left:0;top:0;touch-action:none}.e3d .e3d-gl{opacity:0;transition:opacity .5s}
 .e3d-ui{position:absolute;left:10px;bottom:10px;display:flex;gap:6px;flex-wrap:wrap;max-width:calc(100% - 70px)}
 .e3d-ui button{border:1px solid rgba(255,255,255,.18);background:rgba(10,14,20,.78);color:#E6EBF1;border-radius:999px;padding:7px 12px;min-height:36px;font:600 12px Inter,system-ui,sans-serif;cursor:pointer}
 .e3d-date{background:rgba(10,14,20,.78);color:#E6EBF1;border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:6px 10px;min-height:36px;font:600 12px Inter,system-ui,sans-serif;color-scheme:dark}
@@ -49,7 +50,7 @@
     if (!document.getElementById('e3d-css')) { const st = document.createElement('style'); st.id = 'e3d-css'; st.textContent = CSS; document.head.appendChild(st); }
     const el = document.createElement('div'); el.className = 'e3d'; host.appendChild(el);
     el.innerHTML = `<canvas class="e3d-gl"></canvas><canvas class="e3d-ov"></canvas><div class="e3d-alt">–</div>
-      <div class="e3d-ui"><button data-b="back">‹ ${tr('Solar system')}</button><button data-b="home">${tr('My place')}</button><button data-s="today" aria-pressed="true">${tr('Today (clouds)')}</button><button data-s="clear" aria-pressed="false">${tr('Clear view')}</button><button data-s="map" aria-pressed="false">${tr('Map')}</button><button data-l aria-pressed="true">${tr('Names')}</button>
+      <div class="e3d-ui"><button data-b="back">‹ ${tr('Solar system')}</button><button data-b="home">${tr('My place')}</button><button data-s="today" aria-pressed="false">${tr('Today (clouds)')}</button><button data-s="clear" aria-pressed="true">${tr('Clear view')}</button><button data-s="map" aria-pressed="false">${tr('Map')}</button><button data-l aria-pressed="false">${tr('Names')}</button>
         <input type="datetime-local" class="e3d-date" aria-label="${tr('Date and time')}"><button data-b="now">${tr('Now')}</button></div>
       <div class="e3d-attr">NASA GIBS · Blue Marble · Black Marble · VIIRS · Esri, Maxar, Earthstar Geographics · © OpenStreetMap contributors · Sentinel-2 cloudless by EOX</div>`;
     const cv = el.querySelector('.e3d-gl'), ov = el.querySelector('.e3d-ov'), g2 = ov.getContext('2d');
@@ -58,10 +59,17 @@
     if (!gl) return api;
     const sh = (t, s) => { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); return o; };
     const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(pr); gl.useProgram(pr);
-    const L = { p: gl.getAttribLocation(pr, 'p'), uv: gl.getAttribLocation(pr, 'uv') }, U = {}; ['m', 'ud', 'un', 'td', 'tn', 'tl', 'sun', 'hn', 'hl', 'nk', 'ul'].forEach(k => U[k] = gl.getUniformLocation(pr, k));
-    gl.uniform1i(U.td, 0); gl.uniform1i(U.tn, 1); gl.uniform1i(U.tl, 2); gl.enable(gl.DEPTH_TEST); gl.enable(gl.CULL_FACE);
+    const L = { p: gl.getAttribLocation(pr, 'p'), uv: gl.getAttribLocation(pr, 'uv'), dh: gl.getAttribLocation(pr, 'dh') }, U = {}; ['m', 'mo', 'ud', 'uq', 'un', 'ue', 'td', 'tp', 'tn', 'tl', 'te', 'sun', 'hn', 'hl', 'nk', 'fa', 'he', 'rs', 'ul'].forEach(k => U[k] = gl.getUniformLocation(pr, k));
+    gl.uniform1i(U.td, 0); gl.uniform1i(U.tn, 1); gl.uniform1i(U.tl, 2); gl.uniform1i(U.tp, 3); gl.uniform1i(U.te, 4); gl.enable(gl.DEPTH_TEST);   // no face culling: the skirts face every way (the far side is culled by the quadtree)
+    const ANI = gl.getExtension('EXT_texture_filter_anisotropic') || gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic'), ANIMAX = ANI ? Math.min(8, gl.getParameter(ANI.MAX_TEXTURE_MAX_ANISOTROPY_EXT)) : 0;
+    const mip = () => { gl.generateMipmap(gl.TEXTURE_2D); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); if (ANI) gl.texParameterf(gl.TEXTURE_2D, ANI.TEXTURE_MAX_ANISOTROPY_EXT, ANIMAX); };   // mipmaps + anisotropy: no shimmer when turning, sharp at a slant
+    const upQ = [];   // GPU uploads waiting: at most 2 per frame, so turning never stutters
     // one shared index buffer for an N×N tile grid
-    const N = 16, idx = []; for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const a = j * (N + 1) + i; idx.push(a, a + N + 1, a + 1, a + 1, a + N + 1, a + N + 2); }
+    const N = 16, NV = (N + 1) * (N + 1), idx = []; for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const a = j * (N + 1) + i; idx.push(a, a + N + 1, a + 1, a + 1, a + N + 1, a + N + 2); }
+    const EDGE = [k => k, k => N * (N + 1) + k, k => k * (N + 1), k => k * (N + 1) + N];   // top, bottom, left, right edge vertex k
+    EDGE.forEach((f, e) => { for (let k = 0; k < N; k++) { const a = f(k), b = f(k + 1), sa = NV + e * (N + 1) + k, sb = sa + 1; idx.push(a, sa, b, b, sa, sb); } });
+    const NI = idx.length;
     const ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(idx), gl.STATIC_DRAW);
     const blank = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, blank); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([12, 24, 48, 255]));
     const black = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, black); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
@@ -69,47 +77,66 @@
       const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(v), gl.STATIC_DRAW);
       const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(north ? [200, 214, 228, 255] : [225, 232, 240, 255])); return { b, t, north }; }
     const caps = [cap(true), cap(false)];
-    // tile geometry cache (positions on the unit sphere + uv), texture cache (LRU)
+    // tile geometry cache (positions on the unit sphere + uv + relief morph), texture cache (LRU), DEM cache (heights + a normal-map texture)
     const geo = new Map(), tex = new Map(); let loading = 0, frameNo = 0, esriBad = 0;
-    const dem = new Map(), EXAG = 1, DEMZ = 12; let demLoading = 0;
-    function demTile(z, x, y) { const k = z + '/' + x + '/' + y; let d = dem.get(k); if (d) return d.h ? d : null; if (demLoading > 8) return null;
-      d = {}; dem.set(k, d); demLoading++; const im = new Image(); im.crossOrigin = 'anonymous';
-      im.onload = () => { demLoading--; try { const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d'); g.drawImage(im, 0, 0); const px = g.getImageData(0, 0, 256, 256).data, h = new Float32Array(65536);
-          for (let i = 0; i < 65536; i++) h[i] = Math.max(0, px[i * 4] * 256 + px[i * 4 + 1] + px[i * 4 + 2] / 256 - 32768); d.h = h; dirty = true; } catch (e) { d.bad = true; } };
+    const dem = new Map(), EXAG = 1, DEMZ = 12, MORPH = 450, FADE = 350; let demLoading = 0;
+    const exag = z => Math.min(5, 1.2 * Math.pow(2, (12 - z) / 3));   // hillshade exaggeration: coarse tiles need more to show their mountains
+    function demNormals(d, z, y) {   // RGB = surface normal (east, north, up), A = land 1 / sea 0, from the heights; mipmapped like the pictures
+      const h = d.h, ps = 40075016.7 * Math.cos(y2lat(y + .5, z) * D2R) / (1 << z) / 256, k = exag(z) / (2 * ps), o = new Uint8Array(65536 * 4);
+      for (let j = 0; j < 256; j++) for (let i = 0; i < 256; i++) { const at = (a, b) => h[Math.max(0, Math.min(255, b)) * 256 + Math.max(0, Math.min(255, a))];
+        const ex = -(at(i + 1, j) - at(i - 1, j)) * k, ny = -(at(i, j - 1) - at(i, j + 1)) * k, l = Math.hypot(ex, ny, 1), q = (j * 256 + i) * 4;
+        o[q] = (ex / l * .5 + .5) * 255; o[q + 1] = (ny / l * .5 + .5) * 255; o[q + 2] = (1 / l * .5 + .5) * 255; o[q + 3] = h[j * 256 + i] > 0 ? 255 : 0; }
+      const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 256, 256, 0, gl.RGBA, gl.UNSIGNED_BYTE, o); mip(); d.nt = t; }
+    const dkey = (z, x, y) => z + '/' + x + '/' + y;
+    function demTile(z, x, y) { const k = dkey(z, x, y); let d = dem.get(k); if (d) return d.h ? d : null; if (demLoading > 10) return null;
+      d = { z, y }; dem.set(k, d); demLoading++; const im = new Image(); im.crossOrigin = 'anonymous';
+      im.onload = () => { demLoading--; upQ.push(() => { try { const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d'); g.drawImage(im, 0, 0); const px = g.getImageData(0, 0, 256, 256).data, h = new Float32Array(65536);
+          for (let i = 0; i < 65536; i++) h[i] = px[i * 4] * 256 + px[i * 4 + 1] + px[i * 4 + 2] / 256 - 32768; d.h = h; demNormals(d, z, y); } catch (e) { d.bad = true; } }); dirty = true; };
       im.onerror = () => { demLoading--; d.bad = true; }; im.src = `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${z}/${x}/${y}.png`;
-      if (dem.size > 160) dem.delete(dem.keys().next().value); return null; }
-    function heightAt(z, x, y, u, v) {   // metres at (u, v) inside tile z/x/y, from the DEM tile covering it (z ≤ 12)
-      if (z < 7) return 0; const zz = Math.min(z, DEMZ), s = 1 << (z - zz), dx = x >> (z - zz), dy = y >> (z - zz), d = demTile(zz, dx, dy); if (!d) return null;
-      const fu = ((x - dx * s) + u) / s, fv = ((y - dy * s) + v) / s; return d.h[Math.min(255, Math.floor(fv * 256)) * 256 + Math.min(255, Math.floor(fu * 256))]; }
-    function tileGeo(z, x, y) { const k = z + '/' + x + '/' + y; let g = geo.get(k);
-      if (g && (g.dem || z < 7 || heightAt(z, x, y, .5, .5) == null)) return g;
+      if (dem.size > 220) { const [fk, fv] = dem.entries().next().value; if (fv.nt) gl.deleteTexture(fv.nt); dem.delete(fk); } return null; }
+    const loaded = (z, x, y) => { const d = dem.get(dkey(z, x, y)); return d && d.h ? d : null; };
+    function sample(d, s, fu, fv) { fu = fu * 255; fv = fv * 255; const i = Math.min(254, Math.floor(fu)), j = Math.min(254, Math.floor(fv)), a = fu - i, b = fv - j, h = d.h;   // bilinear, sea level = 0 for the geometry
+      return Math.max(0, (h[j * 256 + i] * (1 - a) + h[j * 256 + i + 1] * a) * (1 - b) + (h[(j + 1) * 256 + i] * (1 - a) + h[(j + 1) * 256 + i + 1] * a) * b); }
+    function demLevel(z, x, y, ask) {   // the most detailed DEM loaded for this tile (asks for its own level first)
+      if (z < 7) return -1; const top = Math.min(z, DEMZ); if (ask) demTile(top, x >> (z - top), y >> (z - top));
+      for (let zz = top; zz >= 7; zz--) if (loaded(zz, x >> (z - zz), y >> (z - zz))) return zz; return -1; }
+    function heightL(z, x, y, u, v, zz) { if (zz < 0) return 0; const s = 1 << (z - zz), dx = x >> (z - zz), dy = y >> (z - zz), d = loaded(zz, dx, dy); return d ? sample(d, s, ((x - dx * s) + u) / s, ((y - dy * s) + v) / s) : 0; }
+    function heightAt(z, x, y, u, v) { const zz = demLevel(z, x, y, true); return zz < 0 ? null : heightL(z, x, y, u, v, zz); }
+    function tileGeo(z, x, y) { const k = z + '/' + x + '/' + y; let g = geo.get(k); const lv = demLevel(z, x, y, !!g);
+      if (g && lv <= g.lv) return g;
+      const old = g ? g.lv : lv;   // a new tile starts on the heights its parent showed; a better DEM later morphs into place
       if (g) { gl.deleteBuffer(g.b); geo.delete(k); }
-      const v = new Float32Array((N + 1) * (N + 1) * 5); let o = 0;
-      const withDem = z >= 7 && heightAt(z, x, y, .5, .5) != null;
-      for (let j = 0; j <= N; j++) { const yy = y + j / N, lat = y2lat(yy, z); for (let i = 0; i <= N; i++) { const lon = (x + i / N) / (1 << z) * 360 - 180, hm = withDem ? heightAt(z, x, y, i / N, j / N) || 0 : 0, p = xyz(lat, lon, 1 + hm / 6371000 * EXAG); v.set([p[0], p[1], p[2], i / N, j / N], o); o += 5; } }
+      const v = new Float32Array((NV + 4 * (N + 1)) * 6), skirt = Math.max(600, 6371000 * 2 * Math.PI / (1 << z) * .01) / 6371000; let o = 0;
+      const put = (i, j, dr) => { const lat = y2lat(y + j / N, z), lon = (x + i / N) / (1 << z) * 360 - 180, h0 = heightL(z, x, y, i / N, j / N, old), h1 = heightL(z, x, y, i / N, j / N, lv), pp = xyz(lat, lon, 1 + h0 / 6371000 * EXAG - dr);
+        v.set([pp[0], pp[1], pp[2], i / N, j / N, (h1 - h0) / 6371000 * EXAG], o); o += 6; };
+      for (let j = 0; j <= N; j++) for (let i = 0; i <= N; i++) put(i, j, 0);
+      [[k2 => [k2, 0]], [k2 => [k2, N]], [k2 => [0, k2]], [k2 => [N, k2]]].forEach(([f]) => { for (let k2 = 0; k2 <= N; k2++) { const [i, j] = f(k2); put(i, j, skirt); } });
       const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, v, gl.STATIC_DRAW);
-      g = { b, c: xyz(y2lat(y + .5, z), (x + .5) / (1 << z) * 360 - 180, 1), dem: withDem, corners: [[0, 0], [1, 0], [0, 1], [1, 1], [.5, 0], [.5, 1], [0, .5], [1, .5]].map(([a, c]) => xyz(y2lat(y + c, z), (x + a) / (1 << z) * 360 - 180, 1)) };
+      g = { b, lv, t0: old === lv ? 0 : performance.now(), c: xyz(y2lat(y + .5, z), (x + .5) / (1 << z) * 360 - 180, 1), corners: [[0, 0], [1, 0], [0, 1], [1, 1], [.5, 0], [.5, 1], [0, .5], [1, .5]].map(([a, c]) => xyz(y2lat(y + c, z), (x + a) / (1 << z) * 360 - 180, 1)) };
       geo.set(k, g); if (geo.size > 1500) { const [fk, fv] = geo.entries().next().value; gl.deleteBuffer(fv.b); geo.delete(fk); } return g; }
     function texture(url) { if (!url) return null; let t = tex.get(url); if (t) { t.used = frameNo; return t.ok ? t : null; }
       t = { used: frameNo, ok: false }; tex.set(url, t); if (loading > 24) { tex.delete(url); return null; }
       const im = new Image(); im.crossOrigin = 'anonymous'; loading++;
-      im.onload = () => { loading--; const g = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, g); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, im);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); t.g = g; t.ok = true; dirty = true; };
+      im.onload = () => { loading--; upQ.push(() => { const g = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, g); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, im); mip(); t.g = g; t.ok = true; }); dirty = true; };
       im.onerror = () => { loading--; t.bad = true; if (url.indexOf('World_Imagery') > 0 && ++esriBad === 6) { dirty = true; } }; im.src = url;
-      if (tex.size > 420) { let old = null; tex.forEach((v, k) => { if (v.ok && (!old || v.used < old[1].used)) old = [k, v]; }); if (old) { gl.deleteTexture(old[1].g); tex.delete(old[0]); } }
+      if (tex.size > 420) { let old = null; tex.forEach((v, k) => { if (v.ok && v.used < frameNo - 1 && (!old || v.used < old[1].used)) old = [k, v]; }); if (old) { gl.deleteTexture(old[1].g); old[1].ok = false; tex.delete(old[0]); } }
       return null; }
     const url = (z, x, y, kind) => kind === 'night' ? (z <= 8 ? SRC.night(z, x, y) : null) : kind === 'lab' ? (z >= 2 && z <= MAXZ ? SRC.lab(z, x, y) : null)
       : src === 'map' ? (z <= MAXZ ? SRC.map(z, x, y) : null)
       : (z >= DETAIL_FROM[src] ? (esriBad < 6 ? SRC.esri(z, x, y) : z <= EOXZ ? SRC.detail(z, x, y) : null) : SRC[src](z, x, y, now()));   // Esri World Imagery (sharp, no key); Sentinel-2 if Esri fails
     // the nearest loaded texture for a tile: itself or an ancestor (uv scaled into the ancestor's square)
-    function bestTex(z, x, y, kind) { for (let zz = z, xx = x, yy = y; zz >= 0; zz--, xx >>= 1, yy >>= 1) { const u = url(zz, xx, yy, kind); const t = u && texture(u);
-        if (t) { const s = 1 / (1 << (z - zz)); return { g: t.g, tf: [s, s, (x - (xx << (z - zz))) * s, (y - (yy << (z - zz))) * s] }; } } return null; }
+    function bestTex(z, x, y, kind) { for (let zz = z, xx = x, yy = y; zz >= 0; zz--, xx >>= 1, yy >>= 1) { let u = url(zz, xx, yy, kind), t = u && texture(u);
+        if (!t && u && kind === 'day' && src === 'today' && tex.get(u) && tex.get(u).bad && zz <= 8) { u = SRC.clear(zz, xx, yy); t = texture(u); }   // no clouds picture for that day → the clear Blue Marble
+        if (t) { const s = 1 / (1 << (z - zz)); return { g: t.g, t, u, tf: [s, s, (x - (xx << (z - zz))) * s, (y - (yy << (z - zz))) * s] }; } } return null; }
+    function bestDem(z, x, y) { const top = Math.min(z, DEMZ); demTile(top, x >> (z - top), y >> (z - top));
+      for (let zz = top; zz >= 0; zz--) { const d = loaded(zz, x >> (z - zz), y >> (z - zz)); if (d && d.nt) { const s = 1 / (1 << (z - zz)), xx = x >> (z - zz), yy = y >> (z - zz); return { g: d.nt, tf: [s, s, (x - (xx << (z - zz))) * s, (y - (yy << (z - zz))) * s] }; } } return null; }
+    const shown = new Map();   // per tile: the picture on screen now + the one it fades from
 
-    let W = 0, H = 0, dpr = 1, M = null, dirty = true, visible = false, src = 'today', labels = true, sunV = [1, 0, 0];
+    let W = 0, H = 0, dpr = 1, M = null, dirty = true, visible = false, src = 'clear', labels = false, sunV = [1, 0, 0];
     const cam = { lat: 45.6, lon: 25.6, alt: 18000, goal: null };   // alt in km above the surface
     let tOver = null; const now = () => tOver != null ? tOver : (opts.time ? opts.time() : Date.now());
-    const lonlatTile = (lat, lon, z) => { const t = 1 << z, xf = (lon + 180) / 360 * t, yf = lat2y(lat, z); return [z, Math.floor(xf), Math.floor(yf), xf % 1, yf % 1]; };
+    const wrapLon = l => ((l + 180) % 360 + 360) % 360 - 180;
+    const lonlatTile = (lat, lon, z) => { const t = 1 << z, xf = (wrapLon(lon) + 180) / 360 * t, yf = lat2y(lat, z); return [z, Math.floor(xf), Math.floor(yf), xf % 1, yf % 1]; };
     function eyePos() { const r = 1 + cam.alt / R_KM; return xyz(cam.lat, cam.lon, r); }
     const proj = p => { const x = M[0] * p[0] + M[4] * p[1] + M[8] * p[2] + M[12], y = M[1] * p[0] + M[5] * p[1] + M[9] * p[2] + M[13], w = M[3] * p[0] + M[7] * p[1] + M[11] * p[2] + M[15];
       return w <= 1e-6 ? null : [(x / w * .5 + .5) * W, (1 - (y / w * .5 + .5)) * H, w]; };
@@ -132,7 +159,7 @@
     }
     function draw() {
       frameNo++;
-      if (cam.goal) { const g = cam.goal; cam.lat += (g.lat - cam.lat) * .1; let dl = ((g.lon - cam.lon + 540) % 360) - 180; cam.lon += dl * .1; cam.alt *= Math.pow(g.alt / cam.alt, .1);
+      if (cam.goal) { const g = cam.goal; cam.lat += (g.lat - cam.lat) * .1; let dl = ((g.lon - cam.lon + 540) % 360) - 180; cam.lon = wrapLon(cam.lon + dl * .1); cam.alt *= Math.pow(g.alt / cam.alt, .1);
         if (Math.abs(g.lat - cam.lat) < .01 && Math.abs(dl) < .01 && Math.abs(Math.log(g.alt / cam.alt)) < .01) cam.goal = null; dirty = true; }
       const a = cam.lat * D2R, b = cam.lon * D2R, n = xyz(cam.lat, cam.lon, 1), north = [-Math.sin(a) * Math.cos(b), Math.cos(a), Math.sin(a) * Math.sin(b)], h = cam.alt / R_KM;
       const tilt = cam.alt < 400 ? (1 - cam.alt / 400) * .95 : 0, gh = (cam.alt < 400 ? heightAt(...lonlatTile(cam.lat, cam.lon, 12)) || 0 : 0) / 6371000 * EXAG, tgt = n.map(v => v * (1 + gh));
@@ -143,18 +170,28 @@
       gl.viewport(0, 0, cv.width, cv.height); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       gl.useProgram(pr); gl.uniformMatrix4fv(U.m, false, new Float32Array(M)); sunV = sunDir(now()); gl.uniform3fv(U.sun, sunV); gl.uniform1f(U.nk, cam.alt > 2500 ? 1 : cam.alt < 800 ? .12 : .12 + .88 * (cam.alt - 800) / 1700);   // near the ground: the picture in daylight, like Google Earth
       list.length = 0; select(0, 0, 0, eye); list.sort((a, b) => a[0] - b[0]);
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); let pending = false;
-      list.forEach(([z, x, y]) => { const g = tileGeo(z, x, y), d = bestTex(z, x, y, 'day'), n = bestTex(Math.min(z, 8), x >> Math.max(0, z - 8), y >> Math.max(0, z - 8), 'night');
+      for (let n = 0; n < 2 && upQ.length; n++) upQ.shift()();   // at most two GPU uploads per frame
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); let pending = false, moving = false; const tnow = performance.now(); gl.uniform1f(U.rs, src === 'map' ? .45 : .7);
+      list.forEach(([z, x, y]) => { const g = tileGeo(z, x, y), d = bestTex(z, x, y, 'day'), n = bestTex(Math.min(z, 8), x >> Math.max(0, z - 8), y >> Math.max(0, z - 8), 'night'), k = z + '/' + x + '/' + y;
         if (!d || d.tf[0] < 1) pending = true;
-        gl.bindBuffer(gl.ARRAY_BUFFER, g.b); gl.enableVertexAttribArray(L.p); gl.vertexAttribPointer(L.p, 3, gl.FLOAT, false, 20, 0); gl.enableVertexAttribArray(L.uv); gl.vertexAttribPointer(L.uv, 2, gl.FLOAT, false, 20, 12);
+        let st = shown.get(k); if (!st) { st = {}; shown.set(k, st); if (shown.size > 3000) shown.delete(shown.keys().next().value); }
+        if (d && st.u !== d.u) { st.prev = st.cur && st.cur.t.ok ? st.cur : null; st.cur = d; st.u = d.u; st.t0 = st.prev ? tnow : 0; }
+        const fa = st.prev && st.prev.t.ok ? Math.min(1, (tnow - st.t0) / FADE) : 1; if (fa < 1) moving = true;
+        const mo = g.t0 ? Math.min(1, (tnow - g.t0) / MORPH) : 1; if (mo < 1) moving = true;
+        gl.bindBuffer(gl.ARRAY_BUFFER, g.b); gl.enableVertexAttribArray(L.p); gl.vertexAttribPointer(L.p, 3, gl.FLOAT, false, 24, 0); gl.enableVertexAttribArray(L.uv); gl.vertexAttribPointer(L.uv, 2, gl.FLOAT, false, 24, 12); gl.enableVertexAttribArray(L.dh); gl.vertexAttribPointer(L.dh, 1, gl.FLOAT, false, 24, 20); gl.uniform1f(U.mo, mo);
         gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, d ? d.g : blank); gl.uniform4fv(U.ud, d ? d.tf : [1, 1, 0, 0]);
+        const pv = fa < 1 ? st.prev : null; gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, pv ? pv.g : blank); gl.uniform4fv(U.uq, pv ? pv.tf : [1, 1, 0, 0]); gl.uniform1f(U.fa, pv ? fa : 1);
         let ntf = [1, 1, 0, 0]; if (n) { const s = z > 8 ? 1 / (1 << (z - 8)) : 1, ox = z > 8 ? (x - ((x >> (z - 8)) << (z - 8))) * s : 0, oy = z > 8 ? (y - ((y >> (z - 8)) << (z - 8))) * s : 0; ntf = [n.tf[0] * s, n.tf[1] * s, n.tf[2] + ox * n.tf[0], n.tf[3] + oy * n.tf[1]]; }
         gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, n ? n.g : black); gl.uniform4fv(U.un, ntf); gl.uniform1f(U.hn, n ? 1 : 0);
         const lt = labels && src !== 'map' ? bestTex(z, x, y, 'lab') : null; gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, lt ? lt.g : black); gl.uniform4fv(U.ul, lt ? lt.tf : [1, 1, 0, 0]); gl.uniform1f(U.hl, lt ? 1 : 0);
-        gl.drawElements(gl.TRIANGLES, N * N * 6, gl.UNSIGNED_SHORT, 0); });
-      gl.disable(gl.CULL_FACE); caps.forEach(c => { gl.bindBuffer(gl.ARRAY_BUFFER, c.b); gl.vertexAttribPointer(L.p, 3, gl.FLOAT, false, 20, 0); gl.vertexAttribPointer(L.uv, 2, gl.FLOAT, false, 20, 12);
+        const e = bestDem(z, x, y); gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D, e ? e.g : black); gl.uniform4fv(U.ue, e ? e.tf : [1, 1, 0, 0]); gl.uniform1f(U.he, e ? 1 : 0);
+        gl.drawElements(gl.TRIANGLES, NI, gl.UNSIGNED_SHORT, 0); });
+      gl.disableVertexAttribArray(L.dh); gl.vertexAttrib1f(L.dh, 0); gl.uniform1f(U.mo, 0); gl.uniform1f(U.fa, 1); gl.uniform1f(U.he, 0);
+      caps.forEach(c => { gl.bindBuffer(gl.ARRAY_BUFFER, c.b); gl.vertexAttribPointer(L.p, 3, gl.FLOAT, false, 20, 0); gl.vertexAttribPointer(L.uv, 2, gl.FLOAT, false, 20, 12);
         gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, c.t); gl.uniform4fv(U.ud, [1, 1, 0, 0]); gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, black); gl.uniform1f(U.hn, 0);
-        gl.drawArrays(gl.TRIANGLE_FAN, 0, 66); }); gl.enable(gl.CULL_FACE);
+        gl.drawArrays(gl.TRIANGLE_FAN, 0, 66); });
+      // first view: the globe appears once its first pictures are in (no half-drawn Earth)
+      if (!cv.dataset.ready && (!pending || tnow - shownAt > 4000)) { cv.dataset.ready = 1; cv.style.opacity = 1; }
       // overlay: atmosphere rim, pins, altitude
       g2.setTransform(dpr, 0, 0, dpr, 0, 0); g2.clearRect(0, 0, W, H);
       const c = proj([0, 0, 0]), rEye = Math.hypot(...eye), ang = Math.asin(Math.min(1, 1 / rEye)), rpx = Math.tan(ang) / Math.tan(22.5 * D2R) * H / 2;
@@ -173,14 +210,14 @@
         const tw = g2.measureText(pl.name).width; g2.fillStyle = 'rgba(0,0,0,.6)'; g2.fillRect(q[0] + 8, q[1] - 9, tw + 10, 18); g2.fillStyle = '#FFE08A'; g2.fillText(pl.name, q[0] + 13, q[1]); });
       const ak = cam.alt, al = ak >= 1000 ? Math.round(ak).toLocaleString(window.LOC || 'en-GB') + ' km' : ak >= 10 ? ak.toFixed(0) + ' km' : (ak * 1000).toFixed(0) + ' m';
       el.querySelector('.e3d-alt').innerHTML = `${tr('Altitude')} ${al}<small>${cam.lat.toFixed(2)}°, ${cam.lon.toFixed(2)}° · ${new Date(now()).toLocaleString(window.LOC || 'en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })} UTC</small>`;
-      dirty = pending || loading > 0 || demLoading > 0;
+      dirty = pending || moving || upQ.length > 0 || loading > 0 || demLoading > 0;
     }
     function frame() { if (visible && (dirty || cam.goal || spin[0] || spin[1])) { if (spin[0] || spin[1]) { move(spin[0], spin[1]); spin = spin.map(v => Math.abs(v) < .05 ? 0 : v * .9); } draw(); } requestAnimationFrame(frame); }
     function resize() { const r = host.getBoundingClientRect(); W = Math.max(200, r.width); H = Math.max(200, r.height); dpr = Math.min(2, devicePixelRatio || 1);
       [cv, ov].forEach(c => { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); c.style.width = W + 'px'; c.style.height = H + 'px'; }); dirty = true; }
     // controls: drag = move over the globe (slower near the ground), pinch / wheel = altitude, double-tap = zoom in there
     let spin = [0, 0]; const pts = new Map(); let d0 = 0, a0 = 0, moved = 0, lastTap = 0;
-    function move(dx, dy) { const k = (cam.alt / R_KM) / (H / 2) * 50; cam.lon -= dx * k / Math.max(.2, Math.cos(cam.lat * D2R)); cam.lat = Math.max(-85, Math.min(85, cam.lat + dy * k)); cam.goal = null; dirty = true; }
+    function move(dx, dy) { const k = (cam.alt / R_KM) / (H / 2) * 50; cam.lon = wrapLon(cam.lon - dx * k / Math.max(.2, Math.cos(cam.lat * D2R))); cam.lat = Math.max(-85, Math.min(85, cam.lat + dy * k)); cam.goal = null; dirty = true; }
     let shownAt = 0; const out = () => { if (visible && opts.onOut && performance.now() - shownAt > 700) opts.onOut(); };   // zoomed out past the globe → solar system
     const zoom = f => { if (performance.now() - shownAt < 900) return; if (f > 1 && cam.alt * f > 60000) return out(); cam.alt = Math.max(.3, Math.min(60000, cam.alt * f)); cam.goal = null; dirty = true; };
     ov.addEventListener('pointerdown', e => { ov.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]); moved = 0; spin = [0, 0]; if (pts.size === 2) { const [a, b] = [...pts.values()]; d0 = Math.hypot(a[0] - b[0], a[1] - b[1]); a0 = cam.alt; } });
@@ -200,7 +237,7 @@
     el.querySelector('[data-b=home]').onclick = () => { const p = (opts.places || [])[0]; if (p) cam.goal = { lat: p.lat, lon: p.lon, alt: 60 }; dirty = true; };
     if (window.ResizeObserver) new ResizeObserver(resize).observe(host);
     resize(); requestAnimationFrame(frame);
-    api.show = (lat, lon, far) => { shownAt = performance.now(); el.querySelector('.e3d-date').value = localStr(now()); el.classList.add('on'); visible = true; resize(); if (lat != null) { cam.lat = lat; cam.lon = lon; } cam.alt = far ? 59000 : 30000; cam.goal = { lat: cam.lat, lon: cam.lon, alt: far ? 16000 : 12000 }; dirty = true; };
+    api.show = (lat, lon, far) => { shownAt = performance.now(); if (!cv.dataset.ready) cv.style.opacity = 0; el.querySelector('.e3d-date').value = localStr(now()); el.classList.add('on'); visible = true; resize(); if (lat != null) { cam.lat = lat; cam.lon = lon; } cam.alt = far ? 59000 : 30000; cam.goal = { lat: cam.lat, lon: cam.lon, alt: far ? 16000 : 12000 }; dirty = true; };
     api.hide = () => { el.classList.remove('on'); visible = false; };
     api.setTime = () => { dirty = true; };
     api.flyTo = (lat, lon, km) => { cam.goal = { lat, lon, alt: km || 50 }; dirty = true; };

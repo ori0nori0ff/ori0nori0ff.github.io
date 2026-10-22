@@ -661,7 +661,7 @@
         else if (mode === 'helix') { hTime += sim * 1000; if (ts - hbAt > (rate > 3600 ? 40 : 1000)) { buildHelix(); hbAt = ts; dirty = true; } if (ts - tAt > 250) { hDate(); tAt = ts; } }
         else { time += sim * 1000; if (ts - bAt > (rate > 600 ? 40 : 1000)) { build(); bAt = ts; } if (ts - tAt > 500) { title(); tAt = ts; } } }
       if (mode === 'sys' && visible && (!REDUCED || magOn)) dirty = true;   // the wind and the shield are animated
-      if (mode !== 'earth' && visible && (dirty || cam.goal || spin[0] || spin[1])) draw(); requestAnimationFrame(frame); }
+      if (mode !== 'earth' && visible && !(opts.paused && opts.paused()) && (dirty || cam.goal || spin[0] || spin[1])) draw(); requestAnimationFrame(frame); }
     const kmTxt = km => km < 1e6 ? tr('{n} km', { n: Math.round(km).toLocaleString(window.LOC || 'en-GB') }) : km < 1.5e9 ? tr('{n} million km', { n: +(km / 1e6).toPrecision(3) }) : km < 9.46e12 ? tr('{n} AU', { n: +(km / AU_KM).toPrecision(3) }) : tr('{n} light years', { n: +(km / 9.4607e12).toPrecision(3) });
     function rateTxt(r) { const a = Math.abs(r); if (Math.abs(a - 1) < .03) return tr('REAL TIME'); if (a < 1) return tr('SLOW MO ×{n}', { n: a.toFixed(a < .3 ? 2 : 1) });
       for (const [d, k] of [[1e6 * YEAR, '{n} million years/s'], [YEAR, '{n} years/s'], [86400, '{n} days/s'], [3600, '{n} h/s'], [60, '{n} min/s']]) if (a >= d) return tr(k, { n: +(a / d).toPrecision(2) });
@@ -761,7 +761,8 @@
     el.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { frameK = b.dataset.f; el.querySelectorAll('[data-f]').forEach(o => o.setAttribute('aria-pressed', o === b)); buildHelix(); hDate(); view('hx'); });
     let earth = null;
     function setMode(m, far) { modeAt = performance.now();
-      if (m === 'earth') { if (!window.Earth3D) return; if (!earth) earth = Earth3D.create(el, { places: opts.places ? opts.places() : [], time: () => time, aurora: opts.aurora, onBack: () => setMode('sys'), onOut: () => { setMode('sys', true); cam.tgt = planet('Earth', time); cam.dist = 3 * MS; cam.follow = 'Earth'; dirty = true; } });   // flies out into the shield view   // fly out from Earth, still following it
+      if (m === 'earth') { if (!window.Earth3D) return; if (!earth) earth = Earth3D.create(el, { places: opts.places ? opts.places() : [], time: () => Date.now(),   // its own clock: real time (or the date picked in it), not the page's playing clock — a forecast time has no pictures yet
+ aurora: opts.aurora, onBack: () => setMode('sys'), onOut: () => { setMode('sys', true); cam.tgt = planet('Earth', time); cam.dist = 3 * MS; cam.follow = 'Earth'; dirty = true; } });   // flies out into the shield view   // fly out from Earth, still following it
         mode = 'earth'; magOff(); el.classList.add('ea'); el.classList.remove('hx'); el.querySelectorAll('[data-m]').forEach(o => o.setAttribute('aria-pressed', o.dataset.m === m)); info = null;
         const pl = opts.places ? opts.places()[0] : null; if (opts.places) earth.setPlaces(opts.places()); earth.show(pl ? pl.lat : 45.6, pl ? pl.lon : 25.6, far); return; }
       if (earth) earth.hide(); el.classList.remove('ea');

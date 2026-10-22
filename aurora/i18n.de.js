@@ -1179,5 +1179,7 @@ window.I18N_DICT.de = {
   "⇄ Explore freely": "⇄ Frei erkunden",
   "Now it's yours: drag the slider, change the speed, click any step or chart.": "Jetzt bist du dran: zieh am Regler, ändere das Tempo, klick auf einen Schritt oder ein Diagramm.",
   "NASA CCMC run of 11 May 06:00 UTC (with the CME of the X5.8 flare). Sun in the centre, Earth = the yellow dot on the right.": "NASA-CCMC-Lauf vom 11. Mai 06:00 UTC (mit dem CME des X5.8-Flares). Sonne in der Mitte, Erde = der gelbe Punkt rechts.",
-  "The G5 storm of May 2024, step by step": "Der G5-Sturm vom Mai 2024, Schritt für Schritt"
+  "The G5 storm of May 2024, step by step": "Der G5-Sturm vom Mai 2024, Schritt für Schritt",
+  "Light mode for slower PCs": "Leichter Modus für langsamere PCs",
+  "Slower clock steps, no autoplay, no blur or animations, fewer Sun frames loaded, the 3D model paused while it is a small tile. The page reloads.": "Seltenere Uhrschritte, kein Autoplay, keine Unschärfe oder Animationen, weniger Sonnenbilder geladen, das 3D-Modell pausiert als kleine Kachel. Die Seite lädt neu."
 };

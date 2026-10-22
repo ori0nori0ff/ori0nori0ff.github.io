@@ -4,6 +4,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script>try { const q = new URLSearchParams(location.search).get('lite'); if (q === '1' || (q !== '0' && localStorage.getItem('aurora.lite') === 'on')) document.documentElement.classList.add('lite'); } catch (e) {}   // light mode for slower PCs</script>
 <script>if (innerWidth >= 1000 && new URLSearchParams(location.search).get('tiles') !== '0') { document.documentElement.classList.add('tpre'); setTimeout(() => document.documentElement.classList.remove('tpre'), 6000); }</script>
 <script>try { const t = new URLSearchParams(location.search).get('theme') || localStorage.getItem('aurora.theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}</script>
 <script src="storm.js?v=b0a3577b"></script>
@@ -709,6 +710,7 @@
   /* colour themes (⚙ → Colour theme, localStorage aurora.theme): the page's surfaces and the accent of the controls; data colours never change */
   html.tpre main { visibility: hidden; } html.tiles main { animation: tlIn .35s ease; } @keyframes tlIn { from { opacity: 0; } }
   @media (min-width: 1000px) { .stormbar { display: none !important; } }
+  html.lite *, html.lite *::before, html.lite *::after { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }   /* light mode: no blur behind windows */
   :root { --acc: #39FF9E; --tile: #0A0D11; --head: #0D1116; --fline: #232B36; }
   html[data-theme="aurora"] { --bg: #050F0C; --card: #0D1B17; --line: #19322A; --fline: #1F3D33; --tile: #08140F; --head: #0B1914; --acc: #39FF9E; }
   html[data-theme="solar"] { --bg: #0F0905; --card: #1B130C; --line: #33251A; --fline: #3D2C1D; --tile: #140D07; --head: #19110A; --acc: #FFB020; }
@@ -978,14 +980,14 @@
   <div class="fctl"><div class="pbtn" id="enlFPlay">▶</div><div class="pbtn spd" style="font:700 10px 'JetBrains Mono',monospace">1×</div><input type="range" id="enlFSlide" min="0" max="0" value="0"><span class="lbl" id="enlFT" style="min-width:150px;text-align:right">–</span><span class="lbl">PINCH · DRAG</span><div class="x" id="enlX">✕</div></div></div></div>
 <div id="toast"></div>
 <script src="i18n.js?v=b936034a"></script>
-<script src="i18n.ro.js?v=7d50b540"></script>
-<script src="i18n.de.js?v=cece9a99"></script>
+<script src="i18n.ro.js?v=b5a62d72"></script>
+<script src="i18n.de.js?v=b7205c8f"></script>
 <script src="land.js?v=a8b7e715"></script>
 <script src="globe.js?v=fa6d06d5"></script>
 <script src="tonight.js?v=8f552af5"></script>
 <script src="regions.js?v=207ad730"></script>
-<script src="space3d.js?v=ee5117a0"></script>
-<script src="earth3d.js?v=5a75a550"></script>
+<script src="space3d.js?v=906b8c79"></script>
+<script src="earth3d.js?v=97696c84"></script>
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
@@ -1181,11 +1183,11 @@ function sunPick(k) {
   let done = 0; sun.imgs = fr.map(() => null);
   const st = typeof sy !== 'undefined' && sy.on ? nearestT(fr.length, k => fr[k][0], Math.min(sy.t, fr[fr.length - 1][0])) : fr.length - 1, dirn = typeof sy !== 'undefined' && sy.dir < 0 ? -1 : 1;
   const order = st === fr.length - 1 && !(typeof sy !== 'undefined' && sy.timer) ? fr.map((_, i) => fr.length - 1 - i) : fr.map((_, n) => ((st + dirn * n) % fr.length + fr.length) % fr.length);
-  order.forEach((i, n) => setTimeout(() => { if (seq !== sun.seq) return;
+  const LTp = document.documentElement.classList.contains('lite'); (LTp ? order.slice(0, 80) : order).forEach((i, n) => setTimeout(() => { if (seq !== sun.seq) return;
     const im = new Image(); im.onload = im.onerror = () => { if (seq !== sun.seq) return; done++;
       $('sunLoad').textContent = done < fr.length ? T('LOADING {p}%', { p: Math.round(done / fr.length * 100) }) : '';
       if (done === Math.ceil(fr.length * .6) && sy.on) syShow(sy.t); };
-    im.src = lo(fr[i][1]); sun.imgs[i] = im; }, n * 15));
+    im.src = lo(fr[i][1]); sun.imgs[i] = im; }, n * (LTp ? 60 : 15)));
   sunShow(sun.i); if (typeof sy !== 'undefined' && sy.on) syShow(sy.t);
 }
 // two stacked pictures: the next frame is decoded off-screen, then swapped in at once (no half-loaded frames)
@@ -1472,7 +1474,7 @@ function tcursor() {
     if (!ln) { ln = document.createElementNS('http://www.w3.org/2000/svg', 'line'); ln.setAttribute('class', 'tcur'); ln.setAttribute('stroke', '#FFE600'); ln.setAttribute('stroke-width', '1.5'); svg.appendChild(ln); }
     if (!t || t < a || t > b) { ln.style.display = 'none'; return; }
     const x = xa + (t - a) / (b - a) * (xb - xa); ln.setAttribute('x1', x); ln.setAttribute('x2', x); ln.setAttribute('y1', 0); ln.setAttribute('y2', h); ln.style.display = ''; });
-  if (S.tnPlan) AuroraTonight.render($('tonight'), S.tnPlan, hhmm, kpColor, S.tnNeed, t, { compact: PHONE(), head: false, ...(innerWidth >= 1000 ? { tiles: false, hor: 128 } : {}) });
+  const tnK = Math.floor(t / 36e5); if (S.tnPlan && (tcursor.k !== tnK || tcursor.p !== S.tnPlan)) tcursor.k = tnK, tcursor.p = S.tnPlan, AuroraTonight.render($('tonight'), S.tnPlan, hhmm, kpColor, S.tnNeed, t, { compact: PHONE(), head: false, ...(innerWidth >= 1000 ? { tiles: false, hor: 128 } : {}) });
 }
 window.tcursor = tcursor;
 // tap a chart → the shared clock jumps to that moment
@@ -1492,7 +1494,7 @@ function syReady(t) {
 function syStart() {
   if (!syRange()) { toast(T('Still loading the pictures…')); return; }
   sy.on = true; playLabel(true); if (sy.dir > 0 && (!sy.t || sy.t >= sy.b)) sy.t = sy.a; if (sy.dir < 0 && (!sy.t || sy.t <= sy.a)) sy.t = sy.b;
-  clearInterval(sy.timer); let wait = 0; sy.timer = setInterval(() => { let t = sy.t + sy.dir * 60 * 60000 * sy.spd; if (t > sy.b) t = sy.a; if (t < sy.a) t = sy.b; if (!syReady(t) && wait++ < 40) { if (wait === 4) $('sunLoad').textContent = T('LOADING…'); return; } if (wait >= 4) $('sunLoad').textContent = ''; wait = 0; syShow(t); }, 80);
+  clearInterval(sy.timer); let wait = 0; const LT = document.documentElement.classList.contains('lite'), TK = LT ? 320 : 80; sy.timer = setInterval(() => { let t = sy.t + sy.dir * 60 * 60000 * sy.spd * TK / 80; if (t > sy.b) t = sy.a; if (t < sy.a) t = sy.b; if (!syReady(t) && wait++ < 40) { if (wait === 4) $('sunLoad').textContent = T('LOADING…'); return; } if (wait >= 4) $('sunLoad').textContent = ''; wait = 0; syShow(t); }, TK);
 }
 // one control for everything: any play button plays the shared clock, any slider moves every view
 const revLabel = () => $('syRev').setAttribute('aria-pressed', sy.dir < 0);
@@ -1506,11 +1508,11 @@ PLAYS.forEach(id => { const b = $(id); if (b) b.onclick = syToggle; });
 // autoplay: the shared clock starts by itself (PC at load, the Sun / ENLIL full screen, the Sun window of the board) — not under reduced motion or animations off
 window.syAuto = fromStart => { let off = false; try { off = localStorage.getItem('aurora.motion') === 'off'; } catch (e) {} if (REDUCED || off || sy.timer) return;
   let n = 0; const go = () => { if (sy.timer) return; if (syRange()) { if (fromStart) { sy.dir = 1; sy.t = sy.a; } syStart(); } else if (n++ < 40) setTimeout(go, 1500); }; go(); };
-if (innerWidth >= 1000) setTimeout(() => syAuto(true), 2500);   // on opening the page the clock plays from the start of the loop
+if (innerWidth >= 1000 && !document.documentElement.classList.contains('lite')) setTimeout(() => syAuto(true), 2500);   // on opening the page the clock plays from the start of the loop
 // the Sun viewer moves to the next filter by itself every 45 s (⚙ → off: aurora.sunauto=off); a pick by hand pauses it for 3 minutes
 (() => { let hold = 0; const off = () => { try { return localStorage.getItem('aurora.sunauto') === 'off'; } catch (e) { return false; } };
   $('sunChips').addEventListener('click', e => { if (e.isTrusted) hold = Date.now() + 180e3; });
-  setInterval(() => { if (innerWidth < 1000 || off() || document.hidden || Date.now() < hold || !sun.started || $('sunFull').classList.contains('on')) return; sunPick(sun.k + 1); }, 45000); })();   // only the setting turns it off (it is a change of picture, not motion)
+  setInterval(() => { if (innerWidth < 1000 || document.documentElement.classList.contains('lite') || off() || document.hidden || Date.now() < hold || !sun.started || $('sunFull').classList.contains('on')) return; sunPick(sun.k + 1); }, 45000); })();   // only the setting turns it off (it is a change of picture, not motion)
 window.syNow = () => { syStop(); sy.on = true; if (syRange()) syShow(Math.min(sy.b, Math.max(sy.a, Date.now()))); };   // stop and come back to the present
 const sySpeed = () => { sy.spd = sy.spd === 1 ? 2 : sy.spd === 2 ? 4 : 1; document.querySelectorAll('#sySpd, .spd').forEach(o => o.textContent = sy.spd + '×'); };
 $('sySpd').onclick = sySpeed; document.querySelectorAll('.spd').forEach(o => o.onclick = sySpeed);
@@ -1681,7 +1683,7 @@ $('repSave').onclick = async () => {
 /* ── 3D: planets + solar wind + CMEs (space3d.js), driven by the shared clock ── */
 // PC: in the page. Phone: a button opens it full screen (built on the first open; it hides again when you leave)
 function make3d() { if (window.space3d || !window.Space3D) return;
-  window.space3d = Space3D.create($('s3dHost'), { wind: S.enl || [], time: sy.on ? sy.t : Date.now(), tz: () => TZ, places: () => [{ name: TOWN.name, lat: TOWN.lat, lon: TOWN.lon }], aurora: () => S.ov });
+  window.space3d = Space3D.create($('s3dHost'), { paused: () => document.documentElement.classList.contains('lite') && !!$('s3dHost').closest('.tls'), wind: S.enl || [], time: sy.on ? sy.t : Date.now(), tz: () => TZ, places: () => [{ name: TOWN.name, lat: TOWN.lat, lon: TOWN.lon }], aurora: () => S.ov });
   j('data/cme.json?t=' + Math.floor(Date.now() / 600000)).then(c => { if (window.space3d) space3d.setCmes(c.cmes); }).catch(() => {}); }
 if (!PHONE()) make3d();
 else { const host = $('s3dHost'); host.style.display = 'none';
@@ -2206,7 +2208,7 @@ window.earthReport = () => ({ dst: $('dstChart'), cr: $('secCr').style.display =
 <script>/* sacred:js */(()=>{const go=()=>document.querySelectorAll('.card').forEach((c,i)=>{c.classList.add('sg'+i%7);c.classList.toggle('sgb',i%2===1)});go();new MutationObserver(go).observe(document.body,{childList:true,subtree:false});setTimeout(go,4000)})();</script>
 <script>/* motion (PC, no reduced motion) */
 (() => { let off = false; try { off = localStorage.getItem('aurora.motion') === 'off'; } catch (e) {}
-  if (off || innerWidth < 1000 || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (off || document.documentElement.classList.contains('lite') || innerWidth < 1000 || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const root = document.documentElement; root.classList.add('mo');
   // cards + chapter openings rise in once; their charts draw themselves the first time
   const io = new IntersectionObserver(es => es.forEach(e => { if (!e.isIntersecting) return; const el = e.target; el.classList.add('in'); io.unobserve(el);
@@ -2367,6 +2369,8 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-repl
     <div class="sg"><div class="lbl">${T('Help')}</div><label class="sw">${T('Explain on hover (? How to read)')}<input type="checkbox" data-t="xp"></label><button type="button" class="sb" data-a="guide">${T('How it all works')}</button></div>
     <div class="sg"><div class="lbl">${T('Colour theme')}</div><div class="thm"><button type="button" data-th="" aria-pressed="${(get('aurora.theme') || '') === ''}"><i style="background:linear-gradient(90deg,#0A0A0A 0 40%,#12161C 40% 85%,#39FF9E 85%)"></i>${T('Night')}</button><button type="button" data-th="aurora" aria-pressed="${(get('aurora.theme') || '') === 'aurora'}"><i style="background:linear-gradient(90deg,#050F0C 0 40%,#0D1B17 40% 85%,#39FF9E 85%)"></i>${T('Aurora')}</button><button type="button" data-th="solar" aria-pressed="${(get('aurora.theme') || '') === 'solar'}"><i style="background:linear-gradient(90deg,#0F0905 0 40%,#1B130C 40% 85%,#FFB020 85%)"></i>${T('Solar')}</button><button type="button" data-th="nebula" aria-pressed="${(get('aurora.theme') || '') === 'nebula'}"><i style="background:linear-gradient(90deg,#0B0713 0 40%,#161025 40% 85%,#B9A7FF 85%)"></i>${T('Nebula')}</button><button type="button" data-th="ocean" aria-pressed="${(get('aurora.theme') || '') === 'ocean'}"><i style="background:linear-gradient(90deg,#040A13 0 40%,#0B1525 40% 85%,#7BE0FF 85%)"></i>${T('Ocean')}</button><button type="button" data-th="mono" aria-pressed="${(get('aurora.theme') || '') === 'mono'}"><i style="background:linear-gradient(90deg,#080808 0 40%,#141414 40% 85%,#E6EDF5 85%)"></i>${T('Graphite')}</button></div></div>
     <div class="sg"><div class="lbl">${T('Display')}</div><label class="sw">${T('Animations')}<input type="checkbox" data-t="mo" ${get('aurora.motion') === 'off' ? '' : 'checked'}></label>
+      <label class="sw">${T('Light mode for slower PCs')}<input type="checkbox" data-t="lite" ${document.documentElement.classList.contains('lite') ? 'checked' : ''}></label>
+      <div class="sh" style="margin:-4px 0 8px;font-size:12px;color:var(--dim)">${T('Slower clock steps, no autoplay, no blur or animations, fewer Sun frames loaded, the 3D model paused while it is a small tile. The page reloads.')}</div>
       <label class="sw">${T('Sun filters change by themselves')}<input type="checkbox" data-t="sunauto" ${get('aurora.sunauto') === 'off' ? '' : 'checked'}></label>
       <label class="sw">${T('Keep the side menu open')}<input type="checkbox" data-t="nav" ${get('aurora.nav') === 'pin' ? 'checked' : ''}></label></div>
     <div class="sg"><div class="lbl">${T('Report')}</div><button type="button" class="sb rep" data-a="rep">⬇ ${T('Save the full report (image)')}</button>
@@ -2389,6 +2393,7 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-repl
   pn.addEventListener('change', e => { const c = e.target.closest('[data-t]'); if (!c) return;
     if (c.dataset.t === 'xp') { const xb = $q('#xpBtn'); if (xb && (xb.getAttribute('aria-pressed') === 'true') !== c.checked) xb.click(); }
     if (c.dataset.t === 'mo') { put('aurora.motion', c.checked ? null : 'off'); location.reload(); }
+    if (c.dataset.t === 'lite') { put('aurora.lite', c.checked ? 'on' : null); const u = new URL(location.href); u.searchParams.delete('lite'); location.replace(u.href); return; }
     if (c.dataset.t === 'sunauto') put('aurora.sunauto', c.checked ? null : 'off');
     if (c.dataset.t === 'nav') { put('aurora.nav', c.checked ? 'pin' : null); document.documentElement.classList.toggle('navpin', c.checked); } });
   // ⚙ in the top row (1000–1279 px) …

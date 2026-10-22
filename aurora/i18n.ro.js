@@ -1179,5 +1179,7 @@ window.I18N_DICT.ro = {
   "⇄ Explore freely": "⇄ Explorează liber",
   "Now it's yours: drag the slider, change the speed, click any step or chart.": "Acum e rândul tău: trage de bară, schimbă viteza, apasă pe orice pas sau grafic.",
   "NASA CCMC run of 11 May 06:00 UTC (with the CME of the X5.8 flare). Sun in the centre, Earth = the yellow dot on the right.": "Rularea NASA CCMC din 11 mai 06:00 UTC (cu CME-ul erupției X5.8). Soarele în centru, Pământul = punctul galben din dreapta.",
-  "The G5 storm of May 2024, step by step": "Furtuna G5 din mai 2024, pas cu pas"
+  "The G5 storm of May 2024, step by step": "Furtuna G5 din mai 2024, pas cu pas",
+  "Light mode for slower PCs": "Mod ușor pentru PC-uri mai slabe",
+  "Slower clock steps, no autoplay, no blur or animations, fewer Sun frames loaded, the 3D model paused while it is a small tile. The page reloads.": "Ceasul face pași mai rari, nimic nu pornește singur, fără blur și animații, mai puține cadre ale Soarelui încărcate, modelul 3D oprit cât e doar o placă mică. Pagina se reîncarcă."
 };
