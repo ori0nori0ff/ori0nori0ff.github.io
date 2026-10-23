@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Earth preview</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font: 500 13px Inter, system-ui, sans-serif; color: #E6EDF5; }
+  canvas { display: block; opacity: 0; transition: opacity 1s ease; } canvas.on { opacity: 1; }
+  .ui { position: fixed; left: 16px; bottom: 16px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .ui button { min-height: 34px; padding: 0 13px; border-radius: 999px; border: 1px solid rgba(255,255,255,.18); background: rgba(10,14,20,.7); color: #E6EDF5; font: 600 12px Inter, system-ui, sans-serif; cursor: pointer; }
+  .ui button[aria-pressed="true"] { border-color: #39FF9E; color: #39FF9E; }
+  .ui input { width: 220px; }
+  .hd { position: fixed; left: 16px; top: 14px; pointer-events: none; text-shadow: 0 1px 3px #000; }
+  .hd b { display: block; font-size: 15px; color: #FFE600; } .hd span { color: #AAB6C4; font-size: 12px; }
+  .cr { position: fixed; right: 10px; bottom: 6px; font-size: 10.5px; color: #8B9BAE; pointer-events: none; text-shadow: 0 1px 2px #000; }
+  #load { position: fixed; inset: 0; display: grid; place-items: center; color: #8B9BAE; font: 600 12px 'JetBrains Mono', monospace; letter-spacing: .08em; pointer-events: none; }
+</style>
+<script type="importmap">{ "imports": { "three": "../aurora/lib/three/three.module.min.js", "three/addons/": "../aurora/lib/three/addons/" } }</script>
+</head>
+<body>
+<div id="load">LOADING EARTH… 0%</div>
+<div class="hd"><b id="hT">Earth · now</b><span id="hS"></span></div>
+<div class="ui">
+  <button id="b2d" aria-pressed="false">2D map</button>
+  <button id="bCl" aria-pressed="true">Clouds</button>
+  <button id="bAu" aria-pressed="true">Aurora</button>
+  <button id="bSun" aria-pressed="false">Real Sun</button>
+  <button id="bSp" aria-pressed="true">Auto-rotate</button>
+  <input id="tm" type="range" min="-720" max="720" value="0" aria-label="Hours from now">
+  <button id="bNow">Now</button>
+</div>
+<div class="cr">Close-up imagery: Sentinel-2 cloudless 2023 by EOX (CC BY-NC-SA 4.0, modified Copernicus Sentinel data) · heights: Mapzen Terrarium / AWS · globe: NASA
+</div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+const Q = new URLSearchParams(location.search).get('q') || 'high';   // ?q=low | medium | high
+const D2R = Math.PI / 180, T = '../aurora/img/earth/';
+const renderer = new THREE.WebGLRenderer({ antialias: Q !== 'low', powerPreference: 'high-performance' });
+// a pixel budget: big / high-dpi screens would otherwise shade 8–15 M pixels a frame through the air and aurora ray-marches
+const PXB = Q === "high" ? 4.2e6 : Q === "medium" ? 2.6e6 : 1.4e6, prCap = () => Math.min(devicePixelRatio || 1, Q === "high" ? 1.5 : 1, Math.sqrt(PXB / (innerWidth * innerHeight)));
+renderer.setPixelRatio(prCap());
+renderer.setSize(innerWidth, innerHeight); renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, .01, 2000);
+camera.position.set(0, 1.1, 4.2);
+const controls = new OrbitControls(camera, renderer.domElement); controls.enableDamping = true; controls.dampingFactor = .06; controls.minDistance = 1.00001; controls.maxDistance = 30; controls.enablePan = false; controls.rotateSpeed = .5; controls.enableZoom = false;
+// our own zoom, by altitude (log steps), so it slows down near the ground like Google Earth; wheel + two-finger pinch
+let zoomTo = camera.position.length(); const pins = new Map(); let pinch = 0;
+const zoomBy = f => { zoomTo = Math.min(30, 1 + (zoomTo - 1) * f); };
+renderer.domElement.addEventListener('wheel', e => { e.preventDefault(); zoomBy(Math.exp(Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 150) * .0022)); }, { passive: false });
+renderer.domElement.addEventListener('pointerdown', e => { if (e.pointerType === 'touch') pins.set(e.pointerId, [e.clientX, e.clientY]); });
+renderer.domElement.addEventListener('pointermove', e => { if (!pins.has(e.pointerId)) return; pins.set(e.pointerId, [e.clientX, e.clientY]);
+  if (pins.size === 2) { const [a, b] = [...pins.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (pinch) zoomBy(pinch / d); pinch = d; } });
+const unpin = e => { pins.delete(e.pointerId); pinch = 0; }; renderer.domElement.addEventListener('pointerup', unpin); renderer.domElement.addEventListener('pointercancel', unpin);
+const smooth = (a, b, x) => { const k = Math.max(0, Math.min(1, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
+
+// sub-solar point (low precision is plenty for day / night) → direction in the Earth's own frame (x = lon 0, y = north, z = lon −90°)
+function sunDir(t) { const d = new Date(t), doy = (t - Date.UTC(d.getUTCFullYear(), 0, 0)) / 864e5, dec = 23.44 * Math.sin(2 * Math.PI * (doy - 81) / 365.25);
+  const B = 2 * Math.PI * (doy - 81) / 364, eot = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B), lon = (12 - d.getUTCHours() - d.getUTCMinutes() / 60 - eot / 60) * 15;
+  const a = dec * D2R, b = lon * D2R; return new THREE.Vector3(Math.cos(a) * Math.cos(b), Math.sin(a), -Math.cos(a) * Math.sin(b)); }
+
+// textures: everything loads first, then the globe fades in (never a half-built Earth)
+const mgr = new THREE.LoadingManager(), tl = new THREE.TextureLoader(mgr), aniso = renderer.capabilities.getMaxAnisotropy();
+mgr.onProgress = (u, n, total) => { document.getElementById('load').textContent = `LOADING EARTH… ${Math.round(n / total * 100)}%`; };
+const tex = (f, srgb) => { const t = tl.load(T + f); t.anisotropy = Q === 'low' ? 1 : Math.min(8, aniso); if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; };
+const TX = { day: tex('day.jpg', true), night: tex('night.jpg', true), clouds: tex('clouds.jpg'), normal: tex('normal.jpg'), water: tex('water.png') };
+
+const U = { day: { value: TX.day }, night: { value: TX.night }, clouds: { value: TX.clouds }, nrm: { value: TX.normal }, water: { value: TX.water },
+  sun: { value: new THREE.Vector3(1, 0, 0) }, rsun: { value: new THREE.Vector3(1, 0, 0) }, lightsOn: { value: 0 }, camO: { value: new THREE.Vector3() }, morph: { value: 0 }, cloudOn: { value: 1 }, cloudShift: { value: 0 },
+  cloudFade: { value: 1 }, aumap: { value: null }, auOn: { value: 1 }, hdA: { value: 0 }, pxk: { value: 1000 }, wtime: { value: 0 } };
+// one light model for the globe and the close-up tiles: n = up, P = the point, N = relief normal, Nw = water-surface normal, rough = wave slope variance,
+// d = colour, w = water 0…1, g = map uv, rk = how strongly the relief shades
+const SHADE = /* glsl */`
+  uniform sampler2D night, clouds, aumap; uniform vec3 sun, camO; uniform float lightsOn, morph, cloudOn, cloudShift, cloudFade, auOn;
+  vec3 shade(vec3 n, vec3 P, vec3 N, vec3 Nw, float rough, vec3 d, float w, vec2 g, float rk) {
+    vec3 ea = normalize(vec3(n.z, 0., -n.x) + vec3(1e-5)), no = cross(n, ea);
+    vec3 Vd = camO - P; float dist = length(Vd); vec3 V = Vd / dist;
+    float mu = dot(n, sun), vn = max(dot(n, V), 0.), dl = pow(smoothstep(-.02, .62, mu), 1.5);
+    vec2 cu = g + vec2(cloudShift, 0.); float cf = cloudOn * cloudFade, c = smoothstep(.12, .85, texture2D(clouds, cu).r) * cf;
+    float zen = clamp(sqrt(max(1. - mu * mu, 0.)) / max(mu, .08), 0., 9.);   // tan of the Sun's zenith angle
+    float cs = smoothstep(.1, .8, texture2D(clouds, cu - vec2(dot(sun, ea), dot(sun, no)) * (.0006 + .00035 * zen), 2.5).r) * cf * smoothstep(-.05, .25, mu);
+    float dif = dl * clamp(1. + (dot(N, sun) - mu) * rk, 1. - .5 * rk, 1. + .45 * rk);
+    vec3 col = d * dif * 1.6 * (1. - .72 * cs);
+    if (w > .001) {   // water: the sky mirrored in it (Fresnel) + the Sun's glint, spread by the wave slopes (Beckmann / Cox–Munk)
+      vec3 Hh = normalize(sun + V); float nh = max(dot(Nw, Hh), .01), nv = max(dot(Nw, V), .03), nl = dot(Nw, sun);
+      float F = .02 + .98 * pow(1. - max(dot(V, Hh), 0.), 5.), Fv = .02 + .98 * pow(1. - nv, 5.), c2 = nh * nh;
+      float Dm = exp((c2 - 1.) / (c2 * rough)) / (3.1416 * rough * c2 * c2);
+      vec3 skyc = vec3(.22, .42, .9) * smoothstep(-.04, .35, mu) * .45;   // no sky to mirror at night
+      col = mix(col, col * (1. - Fv) + skyc * Fv, w);
+      col += vec3(1., .94, .82) * min(5. * F * Dm / (4. * nv), 6.) * smoothstep(0., .06, nl) * w * (1. - c) * (1. - .8 * cs) * (.35 + .65 * lightsOn) * smoothstep(-.02, .1, mu);
+    }
+    // aerial perspective: a blue veil, thicker toward the edge and with distance (Google-Earth look); clear right under you
+    float hz = (.08 + .3 * pow(1. - vn, 2.)) * (1. - exp(-dist * 40.));
+    col = mix(col, vec3(.36, .58, 1.) * 1.05 * max(mu * .9 + .1, 0.), hz * dl * (1. - morph * .7));
+    float deep = 1. - smoothstep(-.32, -.05, mu);   // city lights only where it is really night, not at dusk
+    vec3 lights = pow(texture2D(night, g).rgb, vec3(1.35)) * vec3(1., .8, .55) * 1.5 * deep * lightsOn * (1. - c * .75);
+    // the aurora above lights the ground and the clouds under it a little — green, only in the dark
+    float av = texture2D(aumap, vec2(fract(g.x + .5), g.y), 2.).r * auOn * (1. - smoothstep(-.2, .05, mu));
+    col += vec3(.1, 1., .35) * av * (.12 * dot(d, vec3(.33)) + .05 * c);
+    return col + lights; }`;
+// one vertex shader for every layer: the globe, or (morph → 1) the flat map in front of the camera
+const VS = /* glsl */`
+  uniform float morph; varying vec2 vUv; varying vec3 vO; varying vec3 vW;
+  void main() { vUv = uv; vO = normalize(position);
+    vec3 w3 = (modelMatrix * vec4(position, 1.)).xyz, w2 = vec3((uv.x - .5) * 3.1416 * 2., (uv.y - .5) * 3.1416, 0.);
+    vW = mix(w3, w2, morph); gl_Position = projectionMatrix * viewMatrix * vec4(vW, 1.); }`;
+const earthMat = new THREE.ShaderMaterial({ uniforms: U, vertexShader: VS, fragmentShader: /* glsl */`
+  uniform sampler2D day, nrm, water; varying vec2 vUv; varying vec3 vO; ${SHADE}
+  void main() {
+    vec3 n = normalize(vO), ea = normalize(vec3(n.z, 0., -n.x) + vec3(1e-5)), no = cross(n, ea);
+    vec3 tn = texture2D(nrm, vUv).xyz * 2. - 1., N = normalize(ea * tn.x * .45 + no * tn.y * .45 + n * tn.z);
+    vec3 d = texture2D(day, vUv).rgb; float w = texture2D(water, vUv).r;
+    d = mix(d, vec3(.02, .085, .3), w * .6) * 1.08 + .01;   // oceans a clean mid blue, land a little lifted
+    gl_FragColor = vec4(shade(n, n, N, n, .045, d, w, vUv, .9), 1.); }` });
+const geo = new THREE.SphereGeometry(1, Q === 'low' ? 96 : 192, Q === 'low' ? 48 : 96), earth = new THREE.Mesh(geo, earthMat);
+earth.rotation.y = -Math.PI / 2;   // lon 0 faces +z, like the map
+scene.add(earth);
+// clouds: their own layer just above the ground — puffy relief from the cloud density, bright tops toward the Sun, dark undersides
+const cloudMat = new THREE.ShaderMaterial({ uniforms: U, vertexShader: VS, transparent: true, depthWrite: false, fragmentShader: /* glsl */`
+  uniform sampler2D clouds, aumap; uniform vec3 sun, camO; uniform float morph, cloudOn, cloudShift, cloudFade, auOn; varying vec2 vUv; varying vec3 vO;
+  float C(vec2 u) { return smoothstep(.1, .85, texture2D(clouds, u).r); }
+  void main() { vec3 n = normalize(vO), ea = normalize(vec3(n.z, 0., -n.x) + vec3(1e-5)), no = cross(n, ea);
+    vec2 u = vUv + vec2(cloudShift, 0.), e = vec2(1. / 4096., 1. / 2048.); float c = C(u) * cloudOn * cloudFade; if (c < .004) discard;
+    float gx = C(u + vec2(e.x, 0.)) - C(u - vec2(e.x, 0.)), gy = C(u + vec2(0., e.y)) - C(u - vec2(0., e.y));
+    vec3 N = normalize(n - (ea * gx + no * gy) * 4.5);
+    float self = smoothstep(.1, .85, texture2D(clouds, u + vec2(dot(sun, ea), dot(sun, no)) * .0012, 1.5).r) * cloudOn; float mu = dot(n, sun), lit = pow(smoothstep(-.02, .62, mu), 1.5) * clamp(1. + (dot(N, sun) - mu) * .7, .6, 1.3) * (1. - .35 * max(self - c, 0.) - .2 * c * c), V = max(dot(n, normalize(camO - n)), 0.);
+    vec3 col = mix(vec3(.5, .56, .68), vec3(1.04, 1.03, 1.), lit) * (lit * 1.25 + .002);
+    col = mix(col, vec3(.36, .58, 1.) * 1.05 * max(mu * .9 + .1, 0.), (.06 + .25 * pow(1. - V, 2.)) * smoothstep(-.3, .45, mu));
+    col += vec3(.1, 1., .35) * texture2D(aumap, vec2(fract(vUv.x + .5), vUv.y), 2.).r * auOn * (1. - smoothstep(-.2, .05, mu)) * .07;   // lit green from the aurora above
+    gl_FragColor = vec4(col * c, c * (1. - morph * .2)); }` });
+cloudMat.blending = THREE.CustomBlending; cloudMat.blendSrc = THREE.OneFactor; cloudMat.blendDst = THREE.OneMinusSrcAlphaFactor;   // premultiplied
+const cloudLayer = new THREE.Mesh(new THREE.SphereGeometry(1.0035, Q === 'low' ? 96 : 192, Q === 'low' ? 48 : 96), cloudMat); cloudLayer.rotation.y = -Math.PI / 2; cloudLayer.renderOrder = 2; scene.add(cloudLayer);
+
+// the air: single-scattering Rayleigh + Mie, ray-marched through a shell (the real reason the limb is blue and dusk is orange)
+const AIR_R = 1.025, STEPS = Q === 'low' ? 6 : Q === 'medium' ? 8 : 10;
+const air = new THREE.Mesh(new THREE.SphereGeometry(AIR_R, 160, 80), new THREE.ShaderMaterial({ uniforms: U, vertexShader: VS, transparent: true, side: THREE.BackSide, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, fragmentShader: /* glsl */`
+  uniform vec3 sun, camO; uniform float morph; varying vec3 vO;
+  const float RA = ${AIR_R.toFixed(4)}, HR = .0042, HM = .0011, G = .76;
+  const vec3 BR = vec3(12.3, 28.8, 70.6); const float BM = 21.;
+  vec2 hit(vec3 o, vec3 d, float r) { float b = dot(o, d), c = dot(o, o) - r * r, h = b * b - c; if (h < 0.) return vec2(1e9, -1e9); h = sqrt(h); return vec2(-b - h, -b + h); }
+  vec2 depthTo(vec3 p) {   // optical depth toward the Sun, analytic (Chapman-like): scale height over the slant of the path
+    float h = max(length(p) - 1., 0.), c = dot(normalize(p), sun); vec2 H = vec2(HR, HM);
+    return H * exp(-h / H) / (max(c, 0.) + .035); }
+  void main() {
+    vec3 o = camO, d = normalize(vO * RA - camO); vec2 a = hit(o, d, RA); if (a.x > a.y) discard;
+    vec2 g = hit(o, d, 1.); float t0 = max(a.x, 0.), t1 = g.x > 0. && g.x < a.y ? g.x : a.y, L = (t1 - t0) / float(${STEPS});
+    vec3 sr = vec3(0.), sm = vec3(0.); vec2 odC = vec2(0.);
+    for (int i = 0; i < ${STEPS}; i++) { vec3 p = o + d * (t0 + (float(i) + .5) * L); float h = max(length(p) - 1., 0.);
+      vec2 den = exp(-h / vec2(HR, HM)) * L; odC += den;
+      if (hit(p, sun, 1.).x > 0.) continue;   // the Earth's own shadow
+      vec2 odS = depthTo(p); vec3 tr = exp(-(BR * (odC.x + odS.x) + BM * 1.1 * (odC.y + odS.y)));
+      sr += tr * den.x; sm += tr * den.y; }
+    float mu = dot(d, sun), pr = .0596831 * (1. + mu * mu), pm = .1193662 * (1. - G * G) * (1. + mu * mu) / ((2. + G * G) * pow(1. + G * G - 2. * G * mu, 1.5));
+    vec3 col = 7. * (sr * BR * pr + sm * BM * pm);
+    gl_FragColor = vec4(col * (1. - morph), 1.); }` }));
+air.rotation.y = -Math.PI / 2; air.renderOrder = 3; scene.add(air);
+
+// aurora, from NOAA OVATION (both hemispheres): (1) a diffuse plasma glow painted from the probability map, shimmering,
+// (2) continuous curtains along the oval — a sharp bright green lower edge ~100 km, rays, folds that drift, red tops
+const AU = { time: { value: 0 } };
+const NOISE = /* glsl */`float hs(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  float vn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f); return mix(mix(hs(i), hs(i + vec2(1, 0)), f.x), mix(hs(i + vec2(0, 1)), hs(i + vec2(1, 1)), f.x), f.y); }
+  float fbm(vec2 p) { float s = 0., a = .5; for (int i = 0; i < 4; i++) { s += a * vn(p); p *= 2.03; a *= .5; } return s; }`;
+// (1) the diffuse glow as real light in a volume: emission between 85 and 330 km, ray-marched — green oxygen 557.7 nm peaking ~110 km with a sharp
+// bottom (Chapman profile), red oxygen 630 nm high up ~230 km, a faint violet N2+ fringe at the very bottom. Seen from above it is a soft veil,
+// at the limb the long path makes the bright layered band; it only adds light, so over the night side it melts into the dark
+const AU_LO = 1 + 85 / 6371, AU_HI = 1 + 520 / 6371, AUS = Q === "low" ? 48 : Q === "medium" ? 72 : 96;   // max steps; each ray takes ~25 km steps
+const glow = new THREE.Mesh(new THREE.SphereGeometry(AU_HI, 160, 80), new THREE.ShaderMaterial({ uniforms: { ...U, ...AU }, vertexShader: VS, transparent: true, side: THREE.BackSide, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, fragmentShader: /* glsl */`
+  uniform sampler2D aumap; uniform vec3 rsun, camO; uniform float time, morph; varying vec3 vO; ${NOISE}
+  const float RI = ${AU_LO.toFixed(5)}, RO = ${AU_HI.toFixed(5)};
+  vec2 hit(vec3 o, vec3 d, float r) { float b = dot(o, d), c = dot(o, o) - r * r, h = b * b - c; if (h < 0.) return vec2(1e9, -1e9); h = sqrt(h); return vec2(-b - h, -b + h); }
+  vec3 em(vec3 p) { float r = length(p); vec3 n = p / r; float h = (r - 1.) * 6371.;
+    float lat = asin(clamp(n.y, -1., 1.)), lon = atan(-n.z, n.x);
+    float v = texture2D(aumap, vec2(fract(lon / 6.2831853 + 1.), lat / 3.1415927 + .5)).r; if (v < .004) return vec3(0.);
+    float zg = (h - 110.) / 15., zr = (h - 230.) / 50., zb = (h - 97.) / 7.;
+    float g = exp(1. - zg - exp(-zg)), rd = exp(1. - zr - exp(-zr)), b = exp(-zb * zb);
+    float arcs = (.7 + .6 * vn(vec2(lon * 6. - time * .12, lat * 22. + sin(lon * 3. + time * .2) * .6))) * (.85 + .15 * sin(time * .5 + lon * 4.));   // broad brighter arcs that drift and breathe slowly
+    float dark = (1. - smoothstep(-.16, .06, dot(n, rsun))) * (1. - smoothstep(380., 500., h));   // daylight outshines it; the red tail fades out before the top
+    return (vec3(.12, 1., .38) * g + vec3(1., .1, .16) * rd * (.06 + .14 * v) + vec3(.55, .3, 1.) * b * .35 * v) * v * arcs * dark; }
+  void main() {
+    vec3 o = camO, d = normalize(vO * RO - camO); vec2 a = hit(o, d, RO); if (a.x > a.y) discard;
+    float t0 = max(a.x, 0.), t1 = a.y; vec2 g = hit(o, d, 1.); if (g.x < g.y && g.x > 0.) t1 = min(t1, g.x); if (t1 <= t0) discard;
+    { float s3 = .5736 * RI; if (abs(o.y + d.y * t0) < s3 && abs(o.y + d.y * t1) < s3 && abs(o.y + d.y * (t0 + t1) * .5) < s3) discard; }   // the ray never gets near the ovals (|lat| > 35°): nothing to add
+    vec2 ri = hit(o, d, RI); float s0 = t0, e0 = t1, s1 = 0., e1 = 0.;   // skip the empty hollow under 85 km: two pieces of path
+    if (ri.x < ri.y) { if (ri.x > t0) { e0 = min(t1, ri.x); s1 = ri.y; e1 = t1; } else if (ri.y > t0) s0 = min(ri.y, t1); }
+    float L0 = max(e0 - s0, 0.), L1 = max(e1 - s1, 0.), Lt = L0 + L1; if (Lt <= 0.) discard;
+    float ns = clamp(ceil(Lt / .004), 8., float(${AUS})), j = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(.06711056, .00583715)))), dt = Lt / ns;   // ~25 km steps, dithered: no banding, no dots at the limb
+    vec3 acc = vec3(0.);
+    for (int i = 0; i < ${AUS}; i++) { if (float(i) >= ns) break; float s = (float(i) + j) * dt; acc += em(o + d * (s < L0 ? s0 + s : s1 + s - L0)); }
+    vec3 col = acc * dt * 30.; col *= 1.2 / (1.2 + max(col.r, col.g));   // soft cap at the limb, colour kept
+    gl_FragColor = vec4(col * (1. - morph), 1.); }` }));
+glow.rotation.y = -Math.PI / 2; glow.renderOrder = 3; scene.add(glow);
+const curtMat = new THREE.ShaderMaterial({ uniforms: { ...U, ...AU }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+  vertexShader: /* glsl */`attribute vec3 b; attribute float pr; attribute float hgt; uniform float time, morph; varying float vP; varying float vH; varying float vL; varying vec3 vO; ${NOISE}
+    void main() { vP = pr; vH = hgt; vL = b.x + b.z * 1.7; float lat = b.y + (fbm(vec2(b.x * 5. + time * .035, b.z * 3.)) - .5) * 2.6 * .01745 + sin(b.x * 23. + time * .2 + b.z) * .12 * .01745;   // folds that wander
+      float r = 1. + (95. + hgt * 230.) / 6371.; vec3 p = vec3(r * cos(lat) * cos(b.x), r * sin(lat), -r * cos(lat) * sin(b.x)); vO = p;
+      gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(p, 1.); gl_Position.w += morph * 1e4; }`,
+  fragmentShader: /* glsl */`uniform vec3 rsun; uniform float time; varying float vP; varying float vH; varying float vL; varying vec3 vO; ${NOISE}
+    void main() { float st = vn(vec2(vL * 900., floor(time * 6.) * .0)) , rays = (.25 + 1.1 * pow(fbm(vec2(vL * 160. + time * .45, time * .15)), 1.6)) * (.55 + .45 * st);
+      float wave = .6 + .4 * sin(vL * 40. - time * .9) * sin(vL * 13. + time * .37);   // slow pulses running along the curtain
+      float prof = smoothstep(0., .035, vH) * exp(-vH * 3.6);   // bright sharp bottom edge, fading up
+      vec3 c = mix(vec3(.12, 1., .42), vec3(.95, .15, .3), smoothstep(.35, .85, vH)); c = mix(vec3(.7, .25, 1.), c, smoothstep(0., .05, vH));   // pink-violet fringe at the very bottom
+      float dark = 1. - smoothstep(-.2, .1, dot(normalize(vO), rsun));
+      gl_FragColor = vec4(c * vP * rays * wave * prof * dark * 2.4, 1.); }` });
+const curtains = new THREE.Mesh(new THREE.BufferGeometry(), curtMat); curtains.rotation.y = -Math.PI / 2; curtains.renderOrder = 3; scene.add(curtains);
+const aurora = { get visible() { return glow.visible; }, set visible(v) { glow.visible = curtains.visible = v; U.auOn.value = v ? 1 : 0; } };
+fetch('https://services.swpc.noaa.gov/json/ovation_aurora_latest.json').then(r => r.json()).then(j => {
+  const M = new Float32Array(360 * 181); j.coordinates.forEach(([lon, lat, v]) => { if (Math.abs(lat) < 40) return; M[(Math.round(lat) + 90) * 360 + (Math.round(lon) % 360)] = Math.min(1, v / 60); });
+  // soften the 1° grid: three box passes ≈ a Gaussian of ~2° lat × 4° lon — the oval is a glow, not pixels
+  const W = 360, H = 181, Bf = new Float32Array(M.length);
+  for (let p = 0; p < 3; p++) {
+    for (let y = 0; y < H; y++) { let s = 0; for (let i = -2; i <= 2; i++) s += M[y * W + (i + W) % W];
+      for (let x = 0; x < W; x++) { Bf[y * W + x] = s / 5; s += M[y * W + (x + 3) % W] - M[y * W + (x - 2 + W) % W]; } }
+    for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) { let s = 0, c = 0; for (let k = -1; k <= 1; k++) { const yy = y + k; if (yy >= 0 && yy < H) { s += Bf[yy * W + x]; c++; } } M[y * W + x] = s / c; } }
+  const px = new Uint8Array(360 * 181 * 4); for (let i = 0; i < M.length; i++) { px[i * 4] = Math.min(255, M[i] * 300); px[i * 4 + 3] = 255; }
+  const tx = new THREE.DataTexture(px, 360, 181, THREE.RGBAFormat); tx.magFilter = THREE.LinearFilter; tx.minFilter = THREE.LinearMipmapLinearFilter; tx.generateMipmaps = true; tx.wrapS = THREE.RepeatWrapping; tx.needsUpdate = true; U.aumap.value = tx;
+  // one continuous curtain per hemisphere: at each longitude, the brightest latitude of the oval
+  const B = [], A = [], Hh = [], I = []; let k = 0;
+  [1, -1].forEach(hemi => { let first = k;
+    // the oval's brightest latitude per longitude, refined between grid rows (parabola) and smoothed along the oval — a flowing line, no 1° steps
+    const PL = [], PV = [];
+    for (let L = 0; L < 360; L++) { let best = 0, bi = 66;
+      for (let la = 50; la <= 85; la++) { const v = M[(la * hemi + 90) * 360 + L]; if (v > best) { best = v; bi = la; } }
+      const a = M[((bi - 1) * hemi + 90) * 360 + L] || 0, c = M[((bi + 1) * hemi + 90) * 360 + L] || 0, den = a - 2 * best + c;
+      PL.push(bi + (den < 0 ? Math.max(-.5, Math.min(.5, .5 * (a - c) / den)) : 0)); PV.push(best); }
+    const sm = (X, r) => X.map((_, i) => { let s = 0; for (let q = -r; q <= r; q++) s += X[(i + q + 360) % 360]; return s / (2 * r + 1); });
+    const SL = sm(sm(PL, 5), 5), SV = sm(PV, 3);
+    for (let lo = 0; lo <= 360; lo++) { const L = lo % 360, best = SV[L], bl = SL[L] * hemi;
+      const lonR = (L > 180 ? L - 360 : L) * D2R; B.push(lonR, bl * D2R, hemi, lonR, bl * D2R, hemi); A.push(best, best); Hh.push(0, 1);
+      if (lo > 0) I.push(k - 2, k - 1, k, k - 1, k + 1, k); k += 2; } });
+  // two more sheets, a little poleward and equatorward, fainter — curtains come in layers
+  const n0 = B.length / 3; [[.9, .55, 1], [-.7, .4, 2]].forEach(([dl, f, seed]) => { const off = k;
+    for (let v = 0; v < n0; v++) { B.push(B[v * 3], B[v * 3 + 1] + dl * D2R * Math.sign(B[v * 3 + 2]), B[v * 3 + 2] * (1 + seed * .37)); A.push(A[v] * f); Hh.push(Hh[v]); }
+    for (let q = 0, m = I.length / (seed === 1 ? 1 : 2); q < m; q++) I.push(I[q] + off); k += n0; });
+  const g = curtains.geometry; g.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(B.length), 3)); g.setAttribute('b', new THREE.Float32BufferAttribute(B, 3));
+  g.setAttribute('pr', new THREE.Float32BufferAttribute(A, 1)); g.setAttribute('hgt', new THREE.Float32BufferAttribute(Hh, 1)); g.setIndex(I); g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1.1);
+}).catch(() => {});
+const auMat = { uniforms: AU }; { const qa = new URLSearchParams(location.search).get('au'); if (qa === 'glow') curtains.visible = false; if (qa === 'curt') glow.visible = false; }
+
+// the real sky: NASA SVS Deep Star Maps 2020 (Tycho-2 + Gaia) on a big sphere, turned by the sidereal time so the stars stand where they really are
+const skyT = tl.load('../aurora/img/sky/stars.jpg'); skyT.colorSpace = THREE.SRGBColorSpace; skyT.anisotropy = Q === 'low' ? 1 : 4;
+const stars = new THREE.Mesh(new THREE.SphereGeometry(900, 64, 32), new THREE.MeshBasicMaterial({ map: skyT, side: THREE.BackSide, depthWrite: false, color: new THREE.Color(.5, .5, .52) }));
+stars.scale.x = -1; earth.add(stars);   // inside the Earth's own frame: RA α sits over longitude α − GMST
+stars.material.depthTest = false; stars.renderOrder = -1;   // always the background; it follows the camera (see the loop)
+
+// ── close up: Sentinel-2 cloudless 2023 (EOX, 10 m) + Terrarium heights, streamed as a quadtree of tiles in Web-Mercator. A tile is drawn only
+// once its picture and heights are in; until all four children are ready the parent stays, and a new tile fades from its parent's picture — no holes, no pops
+const HD = { img: (z, x, y) => `https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2023_3857/default/g/${z}/${y}/${x}.jpg`,
+  dem: (z, x, y) => `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${z}/${x}/${y}.png`,
+  ZMAX: Q === 'low' ? 12 : Q === 'medium' ? 13 : 14, ZT: 12, EX: 1.5, PX: Q === 'low' ? 520 : Q === 'medium' ? 400 : 320, G: Q === 'low' ? 16 : 32 };
+const hd = new THREE.Group(); hd.rotation.y = -Math.PI / 2; scene.add(hd);
+const tileGeo = (() => { const G = HD.G, P = [], UV = [], SK = [], I = [], id = (i, j) => j * (G + 1) + i, ring = [];
+  for (let j = 0; j <= G; j++) for (let i = 0; i <= G; i++) { P.push(0, 0, 0); UV.push(i / G, j / G); SK.push(0); }
+  for (let i = 0; i < G; i++) ring.push([i, 0]); for (let j = 0; j < G; j++) ring.push([G, j]); for (let i = G; i > 0; i--) ring.push([i, G]); for (let j = G; j > 0; j--) ring.push([0, j]);
+  const base = (G + 1) * (G + 1); ring.forEach(([i, j]) => { P.push(0, 0, 0); UV.push(i / G, j / G); SK.push(1); });   // skirts: the border again, pulled down — cracks never show
+  for (let j = 0; j < G; j++) for (let i = 0; i < G; i++) { const a = id(i, j), b = id(i + 1, j), c = id(i, j + 1), d = id(i + 1, j + 1); I.push(a, c, b, b, c, d); }
+  for (let k = 0; k < ring.length; k++) { const k2 = (k + 1) % ring.length, a = id(...ring[k]), b = id(...ring[k2]); I.push(a, base + k, b, b, base + k, base + k2); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(UV, 2));
+  g.setAttribute('sk', new THREE.Float32BufferAttribute(SK, 1)); g.setIndex(I); return g; })();
+const TVS = /* glsl */`
+  uniform vec4 rect; uniform sampler2D hmap; uniform vec3 hsub; uniform float skirt; attribute float sk;
+  varying vec2 vT; varying vec2 vG; varying vec3 vO; varying vec3 vP; varying float vLat;
+  void main() { vT = uv; float lon = rect.x + uv.x * rect.y, my = rect.z - uv.y * rect.w, lat = 2. * atan(exp(my)) - 1.5707963;
+    float h = max(texture2D(hmap, hsub.xy + (uv * 255. + .5) / 256. * hsub.z).r, 0.);
+    vec3 n = vec3(cos(lat) * cos(lon), sin(lat), -cos(lat) * sin(lon));
+    float r = 1. + (h * ${HD.EX.toFixed(2)} + 400.) / 6371000. - sk * skirt;
+    vO = n; vP = n * r; vLat = lat; vG = vec2(lon / 6.2831853 + .5, lat / 3.1415927 + .5);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(vP, 1.); }`;
+const TFS = /* glsl */`
+  uniform sampler2D img, pimg, nmap; uniform vec3 psub, hsub; uniform vec4 rect, wo; uniform float fade, hdA, pxk, wtime;
+  varying vec2 vT; varying vec2 vG; varying vec3 vO; varying vec3 vP; varying float vLat; ${SHADE}
+  // waves: a few gravity waves (deep-water speeds), wavelengths 1000 m / |k| so the pattern repeats every kilometre and never seams between tiles
+  vec2 W(vec2 q, vec2 k, float t) { float kk = 6.2831853 * length(k) / 1000.; return normalize(k) * .055 * cos(6.2831853 * dot(k, q) / 1000. + t * sqrt(9.81 * kk)); }
+  vec2 waves(vec2 q, float t) { return W(q, vec2(7., 3.), t) + W(q, vec2(-5., 9.), t) + W(q, vec2(13., -4.), t) + W(q, vec2(3., 17.), t) + W(q, vec2(-19., -8.), t) + W(q, vec2(23., 11.), t) + W(q, vec2(-29., 17.), t); }
+  void main() { vec3 n = normalize(vO), ea = normalize(vec3(n.z, 0., -n.x) + vec3(1e-5)), no = cross(n, ea);
+    vec3 d = mix(texture2D(pimg, psub.xy + vT * psub.z).rgb, texture2D(img, vT).rgb, fade) * 1.15;
+    vec4 nm = texture2D(nmap, hsub.xy + vT * hsub.z); vec3 tn = nm.xyz * 2. - 1.;
+    float w = nm.a * (1. - smoothstep(.05, .12, dot(d, vec3(.3, .59, .11))));   // sea level and dark = water
+    vec3 N = normalize(mix(normalize(ea * tn.x + no * tn.y + n * tn.z), n, w));
+    float foot = length(camO - vP) * 6371000. / pxk, wf = (1. - smoothstep(6., 30., foot)) * w;   // metres per pixel → waves only when you can see them
+    float latN = 2. * atan(exp(rect.z)) - 1.5707963;
+    vec2 sl = waves(vec2(wo.x + vT.x * wo.z, wo.y + (vLat - latN) * 6371000.), wtime) * wf;
+    vec3 Nw = normalize(n - ea * sl.x - no * sl.y);
+    gl_FragColor = vec4(shade(n, vP, N, Nw, mix(.045, .008, wf), d, w, vG, 1.3), hdA); }`;
+const tiles = new Map(), cv2 = new OffscreenCanvas(256, 256), cx2 = cv2.getContext('2d', { willReadFrequently: true });
+const tileOf = (z, x, y) => { const k = z + '/' + x + '/' + y; let t = tiles.get(k); if (!t) { t = { k, z, x, y, used: 0 }; geomOf(t); tiles.set(k, t); } return t; };
+const latOf = (y, n) => Math.atan(Math.sinh(Math.PI * (1 - 2 * y / n)));
+const nrmOf = (lat, lon) => new THREE.Vector3(Math.cos(lat) * Math.cos(lon), Math.sin(lat), -Math.cos(lat) * Math.sin(lon));
+function geomOf(t) { const n = 1 << t.z, l0 = t.x / n * 2 * Math.PI - Math.PI, l1 = l0 + 2 * Math.PI / n, a0 = latOf(t.y, n), a1 = latOf(t.y + 1, n);
+  t.lon0 = l0; t.dlon = l1 - l0; t.my0 = Math.PI * (1 - 2 * t.y / n); t.dmy = 2 * Math.PI / n; t.latN = a0;
+  t.c = nrmOf((a0 + a1) / 2, (l0 + l1) / 2); t.rho = Math.max(...[[a0, l0], [a0, l1], [a1, l0], [a1, l1], [a0, (l0 + l1) / 2]].map(([a, b]) => t.c.angleTo(nrmOf(a, b)))); }
+const demOf = t => t.z <= HD.ZT ? t : tileOf(HD.ZT, t.x >> (t.z - HD.ZT), t.y >> (t.z - HD.ZT));
+const ready = t => t.img && demOf(t).dem;
+let act = 0, frameNo = 0; const demQ = [];
+async function getBitmap(u) { const r = await fetch(u); if (!r.ok) throw r.status; return createImageBitmap(await r.blob()); }
+function loadImg(t) { t.imgP = true; act++; getBitmap(HD.img(t.z, t.x, t.y)).then(bm => { const tx = new THREE.Texture(bm); tx.flipY = false; tx.colorSpace = THREE.SRGBColorSpace;
+    tx.anisotropy = Math.min(8, aniso); tx.minFilter = THREE.LinearMipmapLinearFilter; tx.generateMipmaps = true; tx.needsUpdate = true; t.img = tx; })
+  .catch(() => { t.fail = (t.fail || 0) + 1; }).finally(() => { act--; setTimeout(() => t.imgP = false, t.img ? 0 : 3000 * (t.fail || 1)); }); }
+function loadDem(t) { t.demP = true; act++; getBitmap(HD.dem(t.z, t.x, t.y)).then(bm => demQ.push([t, bm]))
+  .catch(() => { t.fail = (t.fail || 0) + 1; setTimeout(() => t.demP = false, 3000 * t.fail); }).finally(() => act--); }
+function decodeDem(t, bm) {   // heights (metres) for the mesh + a normal map (east / north / up, alpha = sea) for the light
+  cx2.drawImage(bm, 0, 0); bm.close(); const p = cx2.getImageData(0, 0, 256, 256).data, h = new Float32Array(65536), nm = new Uint8Array(65536 * 4), n = 1 << t.z;
+  for (let i = 0; i < 65536; i++) h[i] = p[i * 4] * 256 + p[i * 4 + 1] + p[i * 4 + 2] / 256 - 32768;
+  for (let j = 0; j < 256; j++) { const mpp = 2 * Math.PI * 6371000 * Math.cos(latOf(t.y + (j + .5) / 256, n)) / (n * 256), ju = Math.max(j - 1, 0) * 256, jd = Math.min(j + 1, 255) * 256;
+    for (let i = 0; i < 256; i++) { const k = j * 256 + i, gx = (h[j * 256 + Math.min(i + 1, 255)] - h[j * 256 + Math.max(i - 1, 0)]) / (2 * mpp) * HD.EX, gy = (h[ju + i] - h[jd + i]) / (2 * mpp) * HD.EX;
+      const nz = 1 / Math.sqrt(gx * gx + gy * gy + 1); nm[k * 4] = (-gx * nz * .5 + .5) * 255; nm[k * 4 + 1] = (-gy * nz * .5 + .5) * 255; nm[k * 4 + 2] = (nz * .5 + .5) * 255; nm[k * 4 + 3] = h[k] <= 0 ? 255 : 0; } }
+  const ht = new THREE.DataTexture(h, 256, 256, THREE.RedFormat, THREE.FloatType); ht.needsUpdate = true;
+  const nt = new THREE.DataTexture(nm, 256, 256, THREE.RGBAFormat); nt.magFilter = THREE.LinearFilter; nt.minFilter = THREE.LinearMipmapLinearFilter; nt.generateMipmaps = true; nt.needsUpdate = true;
+  t.dem = { h, ht, nt }; }
+function groundAt(lat, lon) {   // metres under a point, from the finest heights we have
+  const my = Math.log(Math.tan(Math.PI / 4 + Math.max(-1.48, Math.min(1.48, lat)) / 2));
+  for (let z = HD.ZT; z >= 2; z--) { const n = 1 << z, fx = (lon + Math.PI) / (2 * Math.PI) * n, fy = (1 - my / Math.PI) / 2 * n, t = tiles.get(z + '/' + (fx | 0) + '/' + (fy | 0));
+    if (t && t.dem) return Math.max(0, t.dem.h[Math.min(255, (fy % 1) * 256 | 0) * 256 + Math.min(255, (fx % 1) * 256 | 0)]); } return 0; }
+function meshOf(t) { if (t.mesh && t.mesh.material.uniforms.hmap.value === demOf(t).dem.ht) return t.mesh; t.mesh?.material.dispose(); const d = demOf(t), s = t.z > HD.ZT ? 1 / (1 << (t.z - HD.ZT)) : 1, m = t.z > HD.ZT ? 1 << (t.z - HD.ZT) : 1;
+  const p = t.z > 2 ? tiles.get((t.z - 1) + '/' + (t.x >> 1) + '/' + (t.y >> 1)) : null, pok = p && p.img;
+  const mat = new THREE.ShaderMaterial({ uniforms: { ...U, img: { value: t.img }, pimg: { value: pok ? p.img : t.img }, psub: { value: new THREE.Vector3(pok ? (t.x & 1) * .5 : 0, pok ? (t.y & 1) * .5 : 0, pok ? .5 : 1) },
+      hmap: { value: d.dem.ht }, nmap: { value: d.dem.nt }, hsub: { value: new THREE.Vector3((t.x % m) * s, (t.y % m) * s, s) }, rect: { value: new THREE.Vector4(t.lon0, t.dlon, t.my0, t.dmy) },
+      fade: { value: pok ? 0 : 1 }, skirt: { value: t.rho * .05 }, wo: { value: new THREE.Vector4() } }, vertexShader: TVS, fragmentShader: TFS, transparent: true, side: THREE.DoubleSide });
+  t.mesh = new THREE.Mesh(tileGeo, mat); t.mesh.frustumCulled = false; t.mesh.renderOrder = 1; t.born = 0; return t.mesh; }
+const fr = new THREE.Frustum(), fm = new THREE.Matrix4(), sph = new THREE.Sphere(), camN = new THREE.Vector3();
+let need = [], drawn = [], pxK = 1000;
+function culled(t, D, hor) { if (t.c.angleTo(camN) - t.rho > hor) return true; sph.center.copy(t.c); sph.radius = 2 * Math.sin(Math.min(t.rho, 1.5) / 2) + .002; return !fr.intersectsSphere(sph); }
+function walk(t, D, hor) {
+  if (culled(t, D, hor)) return; t.used = frameNo;
+  const dist = Math.max(U.camO.value.distanceTo(t.c) - 2 * Math.sin(Math.min(t.rho, 1.5) / 2), (D - 1) * .7, 1e-5), px = t.rho * 1.41 / dist * pxK;
+  if (t.z < HD.ZMAX && (t.z < 3 || px > HD.PX)) { const ch = [0, 1, 2, 3].map(i => tileOf(t.z + 1, t.x * 2 + (i & 1), t.y * 2 + (i >> 1)));
+    const vis = ch.filter(k => !culled(k, D, hor)); vis.forEach(k => { k.used = frameNo; if (!ready(k)) need.push(k); });
+    if (vis.every(ready)) { vis.forEach(k => walk(k, D, hor)); return; } }
+  if (ready(t)) { drawn.push(t); demOf(t).used = frameNo; } else need.push(t); }
+function hdUpdate(D) {
+  frameNo++; need = []; drawn = []; camN.copy(U.camO.value).normalize();
+  fm.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse).multiply(hd.matrixWorld); fr.setFromProjectionMatrix(fm);
+  const hor = Math.acos(Math.min(1, 1 / D)) + .03; pxK = renderer.domElement.height / (2 * Math.tan(camera.fov * D2R / 2));
+  for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) walk(tileOf(2, x, y), D, hor);
+  for (const t0 = performance.now(); demQ.length && performance.now() - t0 < 6;) decodeDem(...demQ.shift());   // ~6 ms of decoding per frame keeps it smooth
+  need.sort((a, b) => a.z - b.z);
+  for (const t of need) { if (act >= 16) break; const d = demOf(t); if (!d.dem && !d.demP) loadDem(d); if (!t.img && !t.imgP && act < 16) loadImg(t); }
+  hd.clear(); const now = performance.now(), cl = Math.cos(Math.asin(camN.y)), R = 6371000;
+  for (const t of drawn) { const m = meshOf(t), u = m.material.uniforms; if (!t.born) t.born = now;
+    const f = Math.min(1, (now - t.born) / 400); u.fade.value = f * f * (3 - 2 * f); if (f >= 1) u.pimg.value = t.img;
+    u.wo.value.set(((t.lon0 * R * cl) % 1000 + 1000) % 1000, ((t.latN * R) % 1000 + 1000) % 1000, t.dlon * R * cl, 0); hd.add(m); }
+  if (tiles.size > 900) for (const t of [...tiles.values()].sort((a, b) => a.used - b.used).slice(0, 200)) { if (t.used > frameNo - 120) break;   // forget what you have not looked at for ~2 s
+    t.img?.dispose(); t.dem?.ht.dispose(); t.dem?.nt.dispose(); t.mesh?.material.dispose(); tiles.delete(t.k); }
+  return drawn.length; }
+const gmst = t => ((280.46061837 + 360.98564736629 * (t / 864e5 + 2440587.5 - 2451545)) % 360) * D2R;
+
+// bloom: city lights, the glint and the aurora glow a little (off on low)
+let PR = renderer.getPixelRatio(); const rt = new THREE.WebGLRenderTarget(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio(), { type: THREE.HalfFloatType, samples: Q === "high" && renderer.getPixelRatio() <= 1.05 ? 4 : 0 });   // MSAA only when pixels are big
+const composer = new EffectComposer(renderer, rt); composer.addPass(new RenderPass(scene, camera));
+if (Q !== 'low') composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), .35, .6, .88));
+composer.addPass(new OutputPass());
+
+// controls
+let offH = +(new URLSearchParams(location.search).get('h') || 0), spin = true, want2d = 0; const clock = new THREE.Clock();
+const $ = id => document.getElementById(id);
+$('b2d').onclick = e => { want2d = want2d ? 0 : 1; e.target.setAttribute('aria-pressed', !!want2d); e.target.textContent = want2d ? '3D globe' : '2D map'; controls.enabled = !want2d;
+  if (want2d) { from = camera.position.clone(); fly = 0; } };
+$('bCl').onclick = e => { U.cloudOn.value = U.cloudOn.value ? 0 : 1; e.target.setAttribute('aria-pressed', !!U.cloudOn.value); };
+$('bAu').onclick = e => { aurora.visible = !aurora.visible; e.target.setAttribute('aria-pressed', aurora.visible); };
+let realSun = new URLSearchParams(location.search).get('sun') === '1'; $('bSun').setAttribute('aria-pressed', realSun);
+$('bSun').onclick = e => { realSun = !realSun; e.target.setAttribute('aria-pressed', realSun); };
+$('bSp').onclick = e => { spin = !spin; e.target.setAttribute('aria-pressed', spin); };
+$('tm').oninput = e => { offH = +e.target.value / 60; }; $('bNow').onclick = () => { offH = 0; $('tm').value = 0; };
+let from = null, fly = 1; const flat = new THREE.Vector3(0, 0, 6.2);
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight); });
+mgr.onLoad = () => { readyAt = performance.now(); $('load').remove(); if (location.search.includes('shot')) renderer.domElement.style.transition = 'none'; renderer.domElement.classList.add('on'); };
+
+const inv = new THREE.Matrix4();
+let fpsN = 60, slow = 0, fast = 0, readyAt = 0; const PRMIN = Math.min(Q === "low" ? .6 : 1, prCap()), PRMAX = prCap();
+renderer.setAnimationLoop(() => {
+  const dt0 = clock.getDelta(); fpsN += (1 / Math.max(dt0, 1e-3) - fpsN) * .05;
+  // adaptive resolution: if frames run long (> 24 ms) for a while, render fewer pixels; give them back when it is smooth again
+  if (readyAt && performance.now() - readyAt > 3000) { if (dt0 > .03) { slow++; fast = 0; } else if (dt0 < .016) { fast++; slow = Math.max(0, slow - 2); } }
+  if (slow > 90 && PR > PRMIN) { PR = Math.max(PRMIN, PR - .1); renderer.setPixelRatio(PR); renderer.setSize(innerWidth, innerHeight); composer.setPixelRatio(PR); composer.setSize(innerWidth, innerHeight); slow = 0; }
+  else if (fast > 180 && PR < PRMAX) { PR = Math.min(PR + .1, PRMAX); renderer.setPixelRatio(PR); renderer.setSize(innerWidth, innerHeight); composer.setPixelRatio(PR); composer.setSize(innerWidth, innerHeight); fast = 0; }
+  const dt = Math.min(.05, dt0), t = Date.now() + offH * 3.6e6;
+  U.morph.value += (want2d - U.morph.value) * Math.min(1, dt * 2.2);
+  if (want2d && fly < 1) { fly = Math.min(1, fly + dt * .8); const e = fly * fly * (3 - 2 * fly); camera.position.lerpVectors(from, flat, e); camera.lookAt(0, 0, 0); }
+  else if (!want2d) {
+    const cn = U.camO.value.clone().normalize(), gnd = groundAt(Math.asin(cn.y), Math.atan2(-cn.z, cn.x));   // never into a mountain
+    zoomTo = Math.max(zoomTo, 1 + (gnd * HD.EX + 400 + 1500) / 6371000);
+    const D0 = camera.position.length(); camera.position.setLength(1 + (D0 - 1) * Math.pow((zoomTo - 1) / (D0 - 1), Math.min(1, dt * 6)));
+    controls.rotateSpeed = .5 * Math.min(1, Math.max(.0006, (camera.position.length() - 1) / 1.5));
+    controls.autoRotate = spin && camera.position.length() > 1.6; controls.autoRotateSpeed = .25; controls.update(); }
+  const D = camera.position.length(); if (want2d) zoomTo = D;
+  air.visible = U.morph.value < .98; stars.visible = U.morph.value < .9;
+  U.cloudFade.value = smooth(.02, .1, D - 1); cloudLayer.visible = !!U.cloudOn.value && U.cloudFade.value > 0;   // clouds clear away as you come down
+  U.hdA.value = 1 - smooth(.4, .7, D - 1);
+  stars.rotation.y = -gmst(t) - Math.PI;
+  const s = sunDir(t); U.rsun.value.copy(s);   // already in the Earth's own frame
+  if (realSun) U.sun.value.copy(s);
+  else { camera.updateMatrixWorld(); const m = camera.matrixWorld.elements, R = new THREE.Vector3(m[0], m[1], m[2]), Up = new THREE.Vector3(m[4], m[5], m[6]), B = new THREE.Vector3(m[8], m[9], m[10]);
+    const Lw = R.multiplyScalar(-.5).add(Up.multiplyScalar(.52)).add(B.multiplyScalar(.69)).normalize();   // mostly from the front, a little from the upper left   // from the upper left, a little in front
+    U.sun.value.copy(Lw.applyQuaternion(earth.quaternion.clone().invert())); }
+  U.lightsOn.value += ((realSun ? 1 : 0) - U.lightsOn.value) * Math.min(1, dt * 3);
+  // close to the ground the view tilts toward the horizon (after the light, which stays on the untilted view)
+  if (!want2d && U.morph.value < .01) { const tf = 1 - smooth(Math.log(12), Math.log(1500), Math.log((D - 1) * 6371)); camera.rotateX(1.25 * tf * tf); }
+  camera.near = Math.max((D - 1) * .25, 1.5e-6); camera.far = Math.max(D + 1.2, U.morph.value > .01 ? 20 : 0);   // the far side of the air and aurora shells too camera.updateProjectionMatrix(); camera.updateMatrixWorld();
+  inv.copy(earth.matrixWorld).invert(); U.camO.value.copy(camera.position).applyMatrix4(inv);
+  stars.position.copy(U.camO.value); { const k = camera.far * .5 / 900; stars.scale.set(-k, k, k); }
+  hd.visible = U.hdA.value > 0 && U.morph.value < .01; const nT = hd.visible ? hdUpdate(D) : 0; U.pxk.value = pxK; U.wtime.value += dt;
+  U.cloudShift.value = (t % 864e5) / 864e5 * .002;   // a slow drift so the clouds feel alive
+  auMat.uniforms.time.value += dt;
+  $('hS').textContent = new Date(t).toLocaleString('ro-RO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) + ' UTC · ' + (offH ? (offH > 0 ? '+' : '') + offH.toFixed(1) + ' h' : 'live') + ' · quality ' + Q + ' · ' + PR.toFixed(2) + '× · ' + Math.round(fpsN) + ' fps · ' + Math.round((D - 1) * 6371) + ' km' + (nT ? ' · ' + nT + ' HD tiles' : '');
+  composer.render();
+});
+</script>
+</body>
+</html>
