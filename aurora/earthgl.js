@@ -26,6 +26,9 @@ const CSS = `.e3g{position:absolute;inset:0;display:none;background:#000;overflo
 .e3g-pnl{position:absolute;z-index:3;right:10px;bottom:76px;width:240px;padding:12px 14px;border:1px solid rgba(255,255,255,.18);border-radius:12px;background:rgba(10,14,20,.9);color:#E6EBF1;font:600 12px Inter,system-ui,sans-serif;display:flex;flex-direction:column;gap:10px}.e3g-pnl[hidden]{display:none}
 @media (max-width:640px){.e3g-ui{max-width:calc(100% - 66px)}.e3g-nav{flex-direction:column;bottom:auto;top:60px}.e3g-pnl{bottom:auto;top:60px;right:58px;width:min(240px,calc(100% - 80px))}}
 .e3g-pnl label{display:grid;grid-template-columns:64px 1fr;align-items:center;gap:8px}.e3g-pnl input{accent-color:#39FF9E;width:100%}.e3g-pnl button{align-self:flex-end}.e3g-pnl small{font-weight:500;color:#8B9BAE}
+.e3g-find{position:absolute;z-index:3;right:10px;top:56px;width:280px;font:600 13px Inter,system-ui,sans-serif}.e3g-find input{width:100%;box-sizing:border-box;border:1px solid rgba(255,255,255,.18);background:rgba(10,14,20,.85);color:#E6EBF1;border-radius:999px;padding:9px 14px;min-height:38px;font:inherit;outline:none}.e3g-find input:focus{border-color:#39FF9E}
+.e3g-find ul{list-style:none;margin:6px 0 0;padding:4px;border:1px solid rgba(255,255,255,.18);border-radius:12px;background:rgba(10,14,20,.94);max-height:300px;overflow:auto}.e3g-find ul:empty{display:none}.e3g-find li{padding:8px 10px;border-radius:8px;cursor:pointer;color:#E6EBF1}.e3g-find li small{display:block;font-weight:500;color:#8B9BAE}.e3g-find li:hover,.e3g-find li[aria-selected=true]{background:rgba(57,255,158,.14)}
+@media (max-width:640px){.e3g-find{right:auto;left:12px;top:104px;width:calc(100% - 80px)}}
 .e3g-attr{position:absolute;z-index:2;right:10px;bottom:6px;font:500 10px Inter,system-ui,sans-serif;color:rgba(220,227,235,.7);text-shadow:0 1px 2px #000;pointer-events:none;max-width:55%;text-align:right}`;
 
 // sub-solar point (low precision is plenty for day / night) → direction in the Earth's own frame (x = lon 0, y = north, z = lon −90°)
@@ -36,7 +39,7 @@ function sunDir(t) { const d = new Date(t), doy = (t - Date.UTC(d.getUTCFullYear
 function create(host, opts) {
   if (!document.getElementById('e3g-css')) { const st = document.createElement('style'); st.id = 'e3g-css'; st.textContent = CSS; document.head.appendChild(st); }
   const el = document.createElement('div'); el.className = 'e3g'; host.appendChild(el);
-  el.innerHTML = `<div class="e3g-load">${tr('Loading the Earth…')} 0%</div><div class="e3g-alt">–</div>
+  el.innerHTML = `<div class="e3g-find"><input type="search" data-k="find" placeholder="🔍 ${tr('Search a place or lat, lon')}" aria-label="${tr('Search a place or lat, lon')}" autocomplete="off"><ul role="listbox"></ul></div><div class="e3g-load">${tr('Loading the Earth…')} 0%</div><div class="e3g-alt">–</div>
     <div class="e3g-ui"><button data-k="back">‹ ${tr('Solar system')}</button><button data-k="cl" aria-pressed="true">${tr('Clouds')}</button><button data-k="cn" aria-pressed="false">${tr('Clouds: NASA')}</button><button data-k="au" aria-pressed="true">${tr('Aurora')}</button><button data-k="sun" aria-pressed="false">${tr('Real Sun')}</button><button data-k="sp" aria-pressed="true">${tr('Auto-rotate')}</button><button data-k="2d" aria-pressed="false">${tr('2D map')}</button>
       <input type="datetime-local" class="e3g-date" data-k="date" aria-label="${tr('Date and time')}"><button data-k="now">${tr('Now')}</button>
       <div class="e3g-tod" title="${tr('Time of day here (local Sun time)')}">☀<button data-k="todB" aria-label="${tr('Earlier')}">‹</button><input type="range" data-k="tod" min="0" max="1435" step="5" aria-label="${tr('Time of day here (local Sun time)')}"><button data-k="todF" aria-label="${tr('Later')}">›</button><span></span></div></div>
@@ -57,8 +60,8 @@ function create(host, opts) {
   // tilted `tilt` from straight down, turned `head` from north. In 3D mode the tilt grows as you come down (tk = how much of the allowed tilt).
   const Yax = new THREE.Vector3(0, 1, 0), tgt = new THREE.Vector3(0, 0, 1), cE = new THREE.Vector3(), cN = new THREE.Vector3(), cF = new THREE.Vector3(), cR = new THREE.Vector3();
   let rng = 3.2, rngTo = 3.2, head = 0, headTo = 0, tk = 1, tkTo = 1, tilt = 0, vel = [0, 0], dragAt = 0;
-  const RMAX = 60000 / 6371, RMIN = 1.5 / 6371;
-  const maxTilt = r => 1.36 * (1 - smooth(Math.log(250), Math.log(16000), Math.log(r * 6371)));   // ≈ 78° near the ground, 0 seen from far away
+  const RMAX = 60000 / 6371, RMIN = .12 / 6371;
+  const maxTilt = r => (1.36 + .12 * (1 - smooth(Math.log(1.5), Math.log(25), Math.log(r * 6371)))) * (1 - smooth(Math.log(250), Math.log(16000), Math.log(r * 6371)));   // ≈ 85° low over the ground, 78° at 25 km, 0 seen from far away
   const frameAt = () => { const t = tgt; cE.crossVectors(Yax, t); if (cE.lengthSq() < 1e-8) cE.set(1, 0, 0); cE.normalize(); cN.crossVectors(t, cE).normalize();
     cF.copy(cN).multiplyScalar(Math.cos(head)).addScaledVector(cE, Math.sin(head)); cR.copy(cE).multiplyScalar(Math.cos(head)).addScaledVector(cN, -Math.sin(head)); };
   const zoomBy = f => { rngTo = Math.max(RMIN, Math.min(RMAX, rngTo * f)); };
@@ -66,11 +69,11 @@ function create(host, opts) {
     tgt.addScaledVector(cR, -dx * k).addScaledVector(cF, dy * k / Math.max(.35, Math.cos(tilt))).normalize();
     if (Math.abs(tgt.y) > .9999) { tgt.y = Math.sign(tgt.y) * .9999; tgt.normalize(); } };
   const turnBy = (dx, dy) => { headTo += dx * .006; tkTo = Math.max(0, Math.min(1, tkTo - dy * .004)); };
-  renderer.domElement.addEventListener('wheel', e => { e.preventDefault(); zoomBy(Math.exp(Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 150) * .0022)); }, { passive: false });
+  renderer.domElement.addEventListener('wheel', e => { e.preventDefault(); goal = null; zoomBy(Math.exp(Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 150) * .0022)); }, { passive: false });
   renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
   const pins = new Map(); let pinch = 0, twist = 0, midY = 0, mode = '';
   renderer.domElement.addEventListener('mousedown', e => { if (e.button === 1) e.preventDefault(); });   // middle button = tilt + turn, not the browser's autoscroll
-  renderer.domElement.addEventListener('pointerdown', e => { renderer.domElement.setPointerCapture(e.pointerId); pins.set(e.pointerId, [e.clientX, e.clientY]); vel = [0, 0]; spinOff();
+  renderer.domElement.addEventListener('pointerdown', e => { renderer.domElement.setPointerCapture(e.pointerId); pins.set(e.pointerId, [e.clientX, e.clientY]); vel = [0, 0]; spinOff(); goal = null;
     mode = pins.size === 2 ? 'two' : (e.shiftKey || e.ctrlKey || e.button === 2 || e.button === 1) ? 'turn' : 'pan'; pinch = 0; });
   renderer.domElement.addEventListener('pointermove', e => { const o = pins.get(e.pointerId); if (!o || want2d) return; const dx = e.clientX - o[0], dy = e.clientY - o[1]; pins.set(e.pointerId, [e.clientX, e.clientY]);
     if (pins.size === 2) { const [a, b] = [...pins.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), an = Math.atan2(b[1] - a[1], b[0] - a[0]), my = (a[1] + b[1]) / 2;
@@ -407,7 +410,12 @@ ${SUNLIB}
   function groundAt(lat, lon) {   // metres under a point, from the finest heights we have
     const my = Math.log(Math.tan(Math.PI / 4 + Math.max(-1.48, Math.min(1.48, lat)) / 2));
     for (let z = HD.ZT; z >= 2; z--) { const n = 1 << z, fx = (lon + Math.PI) / (2 * Math.PI) * n, fy = (1 - my / Math.PI) / 2 * n, t = tiles.get(z + '/' + (fx | 0) + '/' + (fy | 0));
-      if (t && t.dem) return Math.max(0, t.dem.h[Math.min(255, (fy % 1) * 256 | 0) * 256 + Math.min(255, (fx % 1) * 256 | 0)]); } return 0; }
+      if (t && t.dem) { const h = t.dem.h, u = Math.min(254.999, Math.max(0, (fx % 1) * 256 - .5)), v = Math.min(254.999, Math.max(0, (fy % 1) * 256 - .5)), i = u | 0, j = v | 0, a = u - i, b = v - j, k = j * 256 + i;   // bilinear, like the mesh
+        return Math.max(0, (h[k] * (1 - a) + h[k + 1] * a) * (1 - b) + (h[k + 256] * (1 - a) + h[k + 257] * a) * b); } } return 0; }
+  const gR = (lat, lon) => (groundAt(lat, lon) * HD.EX + 400) / 6371000;   // the drawn ground, Earth radii above the sea-level sphere
+  const gMax = v => { const la = Math.asin(Math.max(-1, Math.min(1, v.y))), lo = Math.atan2(-v.z, v.x), e = 9e-6; let m = gR(la, lo);   // a few metres around too: the mesh between its vertices
+    for (const [a, b] of [[e, 0], [-e, 0], [0, e], [0, -e]]) m = Math.max(m, gR(la + a, lo + b / Math.max(.05, Math.cos(la)))); return m; };
+  let gT = 0, hAG = 1;   // ground height under the target (smoothed), camera height above the ground
   function meshOf(t) { if (t.mesh && t.mesh.material.uniforms.hmap.value === demOf(t).dem.ht) return t.mesh; t.mesh?.material.dispose(); const d = demOf(t), s = t.z > HD.ZT ? 1 / (1 << (t.z - HD.ZT)) : 1, m = t.z > HD.ZT ? 1 << (t.z - HD.ZT) : 1;
     const p = t.z > 2 ? tiles.get((t.z - 1) + '/' + (t.x >> 1) + '/' + (t.y >> 1)) : null, pok = p && p.img;
     const mat = new THREE.ShaderMaterial({ uniforms: { ...U, img: { value: t.img }, pimg: { value: pok ? p.img : t.img }, psub: { value: new THREE.Vector3(pok ? (t.x & 1) * .5 : 0, pok ? (t.y & 1) * .5 : 0, pok ? .5 : 1) },
@@ -511,6 +519,28 @@ ${SUNLIB}
     tOver = t; di.value = localStr(t); if (!realSun) { realSun = true; press($('sun'), true); } };
   tod.onchange = () => { todDrag = false; };
   // ‹ › : a click = 10 minutes; held, the time runs, faster the longer you hold
+  // ── search any place (Open-Meteo geocoding = GeoNames) or type "lat, lon"; the camera flies there
+  let goal = null, plN = '', plT = 0;
+  const kmFor = c => /^PCL/.test(c) ? 2600 : /^ADM1/.test(c) ? 700 : /^ADM2/.test(c) ? 250 : /^(MT|PK|VLC|HLL|PASS|CNYN|GLCR)/.test(c) ? 9 : /^PPLC|PPLA$/.test(c) ? 35 : 22;
+  function goTo(lat, lon, km, name) { const b = nrmOf(lat * D2R, lon * D2R).applyQuaternion(earth.quaternion), a = tgt.clone(), ang = a.angleTo(b);
+    const ax = b.clone().addScaledVector(a, -a.dot(b)); if (ax.lengthSq() < 1e-9) ax.copy(cE); ax.normalize();
+    goal = { a, b, ax, ang, u: 0, r0: rng, r1: Math.max(RMIN * 4, km / 6371), hop: Math.min(2.2, ang * .9) * Math.min(1, ang * 6), dur: 1.6 + Math.min(3, ang * 1.6) };
+    spinOff(); vel = [0, 0]; headTo = 0; tkTo = 1; if (want2d) $('2d').click(); plN = name; plT = performance.now() + 9000; }
+  { const fi = $('find'), ul = fi.nextElementSibling; let hits = [], sel = -1, qn = 0, tmr = 0;
+    const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+    const draw = () => { ul.innerHTML = hits.map((h, i) => `<li role="option" data-i="${i}" aria-selected="${i === sel}">${esc(h.name)}<small>${esc([h.admin1, h.country].filter(Boolean).join(', '))}${h.elevation != null ? ' · ' + Math.round(h.elevation) + ' m' : ''}</small></li>`).join(''); };
+    const pick = h => { if (!h) return; fi.value = h.name; hits = []; draw(); fi.blur(); goTo(h.latitude, h.longitude, h.km || kmFor(h.feature_code || ''), h.name); };
+    const ask = async v => { const n = ++qn, m = v.match(/^\s*(-?\d+(?:\.\d+)?)\s*[,; ]\s*(-?\d+(?:\.\d+)?)\s*$/);
+      if (m) { const la = +m[1], lo = +m[2]; if (Math.abs(la) <= 90 && Math.abs(lo) <= 180) { hits = [{ name: la.toFixed(4) + ', ' + lo.toFixed(4), latitude: la, longitude: lo, km: 15 }]; sel = 0; draw(); } return; }
+      if (v.trim().length < 2) { hits = []; draw(); return; }
+      const lang = (typeof LANG === 'string' && LANG) || document.documentElement.lang || 'en';
+      try { const r = await (await fetch('https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(v.trim()) + '&count=8&language=' + lang + '&format=json')).json();
+        if (n !== qn) return; hits = r.results || []; sel = hits.length ? 0 : -1; if (!hits.length) { ul.innerHTML = `<li aria-disabled="true"><small>${esc(tr('No place found'))}</small></li>`; return; } draw(); } catch (e) {} };
+    fi.oninput = () => { clearTimeout(tmr); tmr = setTimeout(() => ask(fi.value), 250); };
+    fi.onkeydown = e => { e.stopPropagation(); if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); if (hits.length) { sel = (sel + (e.key === 'ArrowDown' ? 1 : hits.length - 1)) % hits.length; draw(); } }
+      else if (e.key === 'Enter') { e.preventDefault(); pick(hits[Math.max(0, sel)]); } else if (e.key === 'Escape') { hits = []; draw(); fi.blur(); } };
+    ul.onpointerdown = e => { const li = e.target.closest('li[data-i]'); if (li) { e.preventDefault(); pick(hits[+li.dataset.i]); } };
+    fi.onblur = () => setTimeout(() => { hits = []; draw(); }, 150); }
   for (const [k, dir] of [['todB', -1], ['todF', 1]]) { const b = $(k); let iv = null, n = 0;
     const step = () => { const t = now() + dir * 6e5 * (n < 8 ? 1 : n < 30 ? 2 : 4); tOver = t; di.value = localStr(t); n++; if (!realSun) { realSun = true; press($('sun'), true); } };
     const stop = () => { clearInterval(iv); iv = null; };
@@ -544,13 +574,18 @@ ${SUNLIB}
       const kk = Math.min(1, dt * 6);
       if (spin && rng > .4) tgt.applyAxisAngle(Yax, dt * .02 * Math.min(1, rng));   // a slow turn seen from far away
       if (!pins.size && (vel[0] || vel[1])) { panBy(vel[0], vel[1]); vel = vel.map(v => Math.abs(v *= Math.pow(.05, dt)) < .05 ? 0 : v); }   // the throw glides on
+      if (goal) { goal.u = Math.min(1, goal.u + dt / goal.dur); const e = goal.u * goal.u * (3 - 2 * goal.u);   // fly: up, across, down (log range + a hop that grows with the distance)
+        tgt.copy(goal.a).lerp(goal.b, e).normalize(); if (goal.ang > 3.1) tgt.copy(goal.a).multiplyScalar(Math.cos(e * goal.ang)).addScaledVector(goal.ax, Math.sin(e * goal.ang)).normalize();
+        rng = rngTo = Math.exp(Math.log(goal.r0) * (1 - e) + Math.log(goal.r1) * e) + goal.hop * Math.sin(Math.PI * e); if (goal.u >= 1) goal = null; }
       rng *= Math.pow(rngTo / rng, kk); head += (headTo - head) * kk; tk += (tkTo - tk) * kk; tilt = tk * maxTilt(rng);
       frameAt(); const ct = Math.cos(tilt), st = Math.sin(tilt);
-      const cn = U.camO.value.clone().normalize(), gnd = groundAt(Math.asin(cn.y), Math.atan2(-cn.z, cn.x)), minA = (gnd * HD.EX + 400 + 1500) / 6371000;   // never into a mountain
-      const altOf = r => Math.sqrt(1 + r * r + 2 * r * ct) - 1;
-      for (let n = 0; n < 12 && altOf(rng) < minA; n++) { rng *= 1.15; rngTo = Math.max(rngTo, rng); }
-      camera.position.copy(tgt).addScaledVector(tgt, rng * ct).addScaledVector(cF, -rng * st);
-      camera.up.copy(tgt).multiplyScalar(st).addScaledVector(cF, ct); camera.lookAt(tgt);
+      // the camera looks at the ground itself (not the sea-level sphere under it) and never goes below 40 m over the drawn relief
+      const qi = earth.quaternion.clone().invert(), tO = tgt.clone().applyQuaternion(qi), gt = rng < .5 ? gMax(tO) : 0;
+      gT += (gt - gT) * (Math.abs(gt - gT) > 3e-4 ? 1 : Math.min(1, dt * 5));
+      const pos = new THREE.Vector3(), place = r => pos.copy(tgt).multiplyScalar(1 + gT + r * ct).addScaledVector(cF, -r * st), MARG = 40 / 6371000;
+      let gc = 0; for (let n = 0; n < 24; n++) { place(rng); gc = rng < .5 ? gMax(pos.clone().normalize().applyQuaternion(qi)) : 0; if (pos.length() - 1 >= gc + MARG) break; rng *= 1.12; rngTo = Math.max(rngTo, rng); }
+      hAG = Math.max(MARG * .5, pos.length() - 1 - gc);
+      camera.position.copy(pos); camera.up.copy(tgt).multiplyScalar(st).addScaledVector(cF, ct); camera.lookAt(pos.copy(tgt).multiplyScalar(1 + gT));
       sH.value = Math.round((((head % (2 * Math.PI)) + 3 * Math.PI) % (2 * Math.PI) - Math.PI) / D2R); sT.value = Math.round(tkTo * 100);
       cmp.firstChild.style.transform = `rotate(${-head / D2R}deg)`; press(b3, tkTo > .05); }
     const D = camera.position.length();
@@ -565,7 +600,7 @@ ${SUNLIB}
       const Lw = R.multiplyScalar(-.5).add(Up.multiplyScalar(.52)).add(B.multiplyScalar(.69)).normalize();   // studio light: mostly from the front, a little from the upper left
       U.sun.value.copy(Lw.applyQuaternion(earth.quaternion.clone().invert())); }
     U.lightsOn.value += ((realSun ? 1 : 0) - U.lightsOn.value) * Math.min(1, dt * 3);
-    camera.near = Math.max((D - 1) * .25, 1.5e-6); camera.far = Math.max(D + 1.2, U.morph.value > .01 ? 20 : 0);   // the far side of the air and aurora shells too
+    camera.near = Math.max(Math.min(D - 1, want2d ? D - 1 : hAG) * .3, 3e-7); camera.far = Math.max(D + 1.2, U.morph.value > .01 ? 20 : 0);   // the far side of the air and aurora shells too
     camera.updateProjectionMatrix(); camera.updateMatrixWorld();
     inv.copy(earth.matrixWorld).invert(); U.camO.value.copy(camera.position).applyMatrix4(inv);
     sunQ.visible = sunD.visible = realSun && U.morph.value < .01;
@@ -581,7 +616,7 @@ ${SUNLIB}
     auMat.uniforms.time.value += dt;
     const km = (D - 1) * 6371, cl = U.camO.value.clone().normalize();
     todShow(t);
-    el.querySelector('.e3g-alt').innerHTML = `${tr('Altitude')} ${km >= 1000 ? Math.round(km).toLocaleString(window.LOC || 'en-GB') : km.toFixed(km < 10 ? 1 : 0)} km<small>${(Math.asin(cl.y) / D2R).toFixed(2)}°, ${(Math.atan2(-cl.z, cl.x) / D2R).toFixed(2)}° · ${new Date(t).toLocaleString(window.LOC || 'en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}${tOver != null ? '' : ' · ' + tr('live')}</small>`;
+    el.querySelector('.e3g-alt').innerHTML = `${tr('Altitude')} ${km >= 1000 ? Math.round(km).toLocaleString(window.LOC || 'en-GB') : km.toFixed(km < 10 ? 1 : 0)} km${!want2d && hAG * 6371 < 3 ? ' · ' + Math.round(hAG * 6371000) + ' m ' + tr('above the ground') : ''}<small>${plN && performance.now() < plT ? '<b style="color:#39FF9E">' + plN + '</b> · ' : ''}${(Math.asin(cl.y) / D2R).toFixed(2)}°, ${(Math.atan2(-cl.z, cl.x) / D2R).toFixed(2)}° · ${new Date(t).toLocaleString(window.LOC || 'en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}${tOver != null ? '' : ' · ' + tr('live')}</small>`;
     airPass.uniforms.projInv.value.copy(camera.projectionMatrixInverse); airPass.uniforms.camW.value.copy(camera.matrixWorld); airPass.uniforms.toObj.value.setFromMatrix4(inv); airPass.uniforms.cn.value.set(camera.near, camera.far); airPass.enabled = air.visible;
     composer.render();
   }

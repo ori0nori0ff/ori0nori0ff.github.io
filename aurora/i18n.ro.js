@@ -1199,5 +1199,8 @@ window.I18N_DICT.ro = {
   "Time of day here (local Sun time)": "Ora zilei aici (ora solară locală)",
   "Sun time": "ora solară",
   "Earlier": "Mai devreme",
-  "Later": "Mai târziu"
+  "Later": "Mai târziu",
+  "Search a place or lat, lon": "Caută un loc sau lat, lon",
+  "No place found": "Niciun loc găsit",
+  "above the ground": "deasupra solului"
 };

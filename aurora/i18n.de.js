@@ -1199,5 +1199,8 @@ window.I18N_DICT.de = {
   "Time of day here (local Sun time)": "Tageszeit hier (Ortssonnenzeit)",
   "Sun time": "Sonnenzeit",
   "Earlier": "Früher",
-  "Later": "Später"
+  "Later": "Später",
+  "Search a place or lat, lon": "Ort suchen oder Breite, Länge",
+  "No place found": "Kein Ort gefunden",
+  "above the ground": "über dem Boden"
 };
