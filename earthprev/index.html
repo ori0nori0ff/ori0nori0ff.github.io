@@ -25,6 +25,7 @@
 <div class="ui">
   <button id="b2d" aria-pressed="false">2D map</button>
   <button id="bCl" aria-pressed="true">Clouds</button>
+  <button id="bCn" aria-pressed="false">Clouds: NASA</button>
   <button id="bAu" aria-pressed="true">Aurora</button>
   <button id="bSun" aria-pressed="false">Real Sun</button>
   <button id="bSp" aria-pressed="true">Auto-rotate</button>
@@ -40,6 +41,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 
 const Q = new URLSearchParams(location.search).get('q') || 'high';   // ?q=low | medium | high
 const D2R = Math.PI / 180, T = '../aurora/img/earth/';
@@ -127,11 +129,18 @@ scene.add(earth);
 const cloudMat = new THREE.ShaderMaterial({ uniforms: U, vertexShader: VS, transparent: true, depthWrite: false, fragmentShader: /* glsl */`
   uniform sampler2D clouds, aumap; uniform vec3 sun, camO; uniform float morph, cloudOn, cloudShift, cloudFade, auOn; varying vec2 vUv; varying vec3 vO;
   float C(vec2 u) { return smoothstep(.1, .85, texture2D(clouds, u).r); }
+  float h2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  float n2(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f); return mix(mix(h2(i), h2(i + vec2(1, 0)), f.x), mix(h2(i + vec2(0, 1)), h2(i + vec2(1, 1)), f.x), f.y); }
   void main() { vec3 n = normalize(vO), ea = normalize(vec3(n.z, 0., -n.x) + vec3(1e-5)), no = cross(n, ea);
-    vec2 u = vUv + vec2(cloudShift, 0.), e = vec2(1. / 4096., 1. / 2048.); float c = C(u) * cloudOn * cloudFade; if (c < .004) discard;
+    vec2 u = vUv + vec2(cloudShift, 0.), e = vec2(1. / 4096., 1. / 2048.);
+    // close up the map is ~10 km a pixel: fine detail from noise erodes the edges and puffs the tops (the shapes stay the real ones); off when far
+    float tx = length(fwidth(u * vec2(4096., 2048.))), kd = smoothstep(1.2, .2, tx), cd = 0.;
+    if (kd > 0.) { vec2 p = u * vec2(4096., 2048.) * .45; float a = .5; for (int i = 0; i < 5; i++) { cd += a * (n2(p) - .5); p = p * 2.07 + vec2(1.7, 9.2); a *= .5; } cd *= kd; }
+    float b0 = texture2D(clouds, u).r, c = smoothstep(.1, .85, b0 + cd * .7 * sqrt(b0)) * cloudOn * cloudFade; if (c < .004) discard;
     float gx = C(u + vec2(e.x, 0.)) - C(u - vec2(e.x, 0.)), gy = C(u + vec2(0., e.y)) - C(u - vec2(0., e.y));
     vec3 N = normalize(n - (ea * gx + no * gy) * 4.5);
     float self = smoothstep(.1, .85, texture2D(clouds, u + vec2(dot(sun, ea), dot(sun, no)) * .0012, 1.5).r) * cloudOn; float mu = dot(n, sun), lit = pow(smoothstep(-.02, .62, mu), 1.5) * clamp(1. + (dot(N, sun) - mu) * .7, .6, 1.3) * (1. - .35 * max(self - c, 0.) - .2 * c * c), V = max(dot(n, normalize(camO - n)), 0.);
+    lit *= 1. + cd * .45;   // puffy light and shade inside the clouds
     vec3 col = mix(vec3(.5, .56, .68), vec3(1.04, 1.03, 1.), lit) * (lit * 1.25 + .002);
     col = mix(col, vec3(.36, .58, 1.) * 1.05 * max(mu * .9 + .1, 0.), (.06 + .25 * pow(1. - V, 2.)) * smoothstep(-.3, .45, mu));
     col += vec3(.1, 1., .35) * texture2D(aumap, vec2(fract(vUv.x + .5), vUv.y), 2.).r * auOn * (1. - smoothstep(-.2, .05, mu)) * .07;   // lit green from the aurora above
@@ -195,21 +204,28 @@ const glow = new THREE.Mesh(new THREE.SphereGeometry(AU_HI, 160, 80), new THREE.
     float ns = clamp(ceil(Lt / .004), 8., float(${AUS})), j = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(.06711056, .00583715)))), dt = Lt / ns;   // ~25 km steps, dithered: no banding, no dots at the limb
     vec3 acc = vec3(0.);
     for (int i = 0; i < ${AUS}; i++) { if (float(i) >= ns) break; float s = (float(i) + j) * dt; acc += em(o + d * (s < L0 ? s0 + s : s1 + s - L0)); }
-    vec3 col = acc * dt * 30.; col *= 1.2 / (1.2 + max(col.r, col.g));   // soft cap at the limb, colour kept
-    gl_FragColor = vec4(col * (1. - morph), 1.); }` }));
+    vec3 col = acc * dt * 30.; col *= 1.2 / (1.2 + max(col.r, col.g)); col *= min(1., .82 / max(max(col.r, col.g), 1e-4));   // soft cap at the limb, colour kept, below the bloom threshold (no pumping)
+    col = any(isnan(col)) || any(isinf(col)) ? vec3(0.) : col; gl_FragColor = vec4(col * (1. - morph), 1.); }` }));
 glow.rotation.y = -Math.PI / 2; glow.renderOrder = 3; scene.add(glow);
 const curtMat = new THREE.ShaderMaterial({ uniforms: { ...U, ...AU }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
   vertexShader: /* glsl */`attribute vec3 b; attribute float pr; attribute float hgt; uniform float time, morph; varying float vP; varying float vH; varying float vL; varying vec3 vO; ${NOISE}
     void main() { vP = pr; vH = hgt; vL = b.x + b.z * 1.7; float lat = b.y + (fbm(vec2(b.x * 5. + time * .035, b.z * 3.)) - .5) * 2.6 * .01745 + sin(b.x * 23. + time * .2 + b.z) * .12 * .01745;   // folds that wander
       float r = 1. + (95. + hgt * 230.) / 6371.; vec3 p = vec3(r * cos(lat) * cos(b.x), r * sin(lat), -r * cos(lat) * sin(b.x)); vO = p;
       gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(p, 1.); gl_Position.w += morph * 1e4; }`,
-  fragmentShader: /* glsl */`uniform vec3 rsun; uniform float time; varying float vP; varying float vH; varying float vL; varying vec3 vO; ${NOISE}
-    void main() { float st = vn(vec2(vL * 900., floor(time * 6.) * .0)) , rays = (.25 + 1.1 * pow(fbm(vec2(vL * 160. + time * .45, time * .15)), 1.6)) * (.55 + .45 * st);
-      float wave = .6 + .4 * sin(vL * 40. - time * .9) * sin(vL * 13. + time * .37);   // slow pulses running along the curtain
+  fragmentShader: /* glsl */`uniform vec3 rsun, camO; uniform float time; varying float vP; varying float vH; varying float vL; varying vec3 vO; ${NOISE}
+    void main() {
+      // no detail finer than a pixel (that is what blinked): the fine rays fade out once they get smaller than a pixel
+      float aS = 1. - smoothstep(.3, 1., fwidth(vL * 900.)), aR = 1. - smoothstep(.3, 1., fwidth(vL * 160.));
+      float st = mix(.5, vn(vec2(vL * 900., 0.)), aS), rays = (.25 + 1.1 * pow(mix(.5, fbm(vec2(vL * 160. + time * .15, time * .05)), aR), 1.6)) * (.55 + .45 * st);
+      float wave = .7 + .3 * sin(vL * 40. - time * .5) * sin(vL * 13. + time * .25);   // slow pulses running along the curtain
       float prof = smoothstep(0., .035, vH) * exp(-vH * 3.6);   // bright sharp bottom edge, fading up
       vec3 c = mix(vec3(.12, 1., .42), vec3(.95, .15, .3), smoothstep(.35, .85, vH)); c = mix(vec3(.7, .25, 1.), c, smoothstep(0., .05, vH));   // pink-violet fringe at the very bottom
       float dark = 1. - smoothstep(-.2, .1, dot(normalize(vO), rsun));
-      gl_FragColor = vec4(c * vP * rays * wave * prof * dark * 2.4, 1.); }` });
+      // a sheet seen edge-on or only a few pixels tall is thinner than a pixel and would blink on / off frame to frame (and the bloom with it): fade it, the soft glow carries it
+      vec3 n = normalize(vO), ea = normalize(vec3(n.z, 0., -n.x) + vec3(1e-5)), no = cross(n, ea);
+      float face = smoothstep(.05, .3, abs(dot(no, normalize(camO - vO)))), tall = smoothstep(3., 10., 1. / max(fwidth(vH), 1e-4));
+      vec3 col = c * vP * rays * wave * prof * dark * 2.4 * face * tall;
+      col = any(isnan(col)) || any(isinf(col)) ? vec3(0.) : col; gl_FragColor = vec4(col * min(1., .8 / max(max(col.r, col.g), 1e-4)), 1.); }` });
 const curtains = new THREE.Mesh(new THREE.BufferGeometry(), curtMat); curtains.rotation.y = -Math.PI / 2; curtains.renderOrder = 3; scene.add(curtains);
 const aurora = { get visible() { return glow.visible; }, set visible(v) { glow.visible = curtains.visible = v; U.auOn.value = v ? 1 : 0; } };
 fetch('https://services.swpc.noaa.gov/json/ovation_aurora_latest.json').then(r => r.json()).then(j => {
@@ -355,6 +371,9 @@ const gmst = t => ((280.46061837 + 360.98564736629 * (t / 864e5 + 2440587.5 - 24
 // bloom: city lights, the glint and the aurora glow a little (off on low)
 let PR = renderer.getPixelRatio(); const rt = new THREE.WebGLRenderTarget(innerWidth * renderer.getPixelRatio(), innerHeight * renderer.getPixelRatio(), { type: THREE.HalfFloatType, samples: Q === "high" && renderer.getPixelRatio() <= 1.05 ? 4 : 0 });   // MSAA only when pixels are big
 const composer = new EffectComposer(renderer, rt); composer.addPass(new RenderPass(scene, camera));
+// a safety net: a single NaN / Inf pixel from any shader would be smeared by the bloom into black blocks and a whole-screen flicker — clean it first
+composer.addPass(new ShaderPass({ uniforms: { tDiffuse: { value: null } }, vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`,
+  fragmentShader: `uniform sampler2D tDiffuse; varying vec2 vUv; void main() { vec4 c = texture2D(tDiffuse, vUv); vec3 k = any(isnan(c.rgb)) || any(isinf(c.rgb)) ? vec3(0.) : clamp(c.rgb, 0., 64.); gl_FragColor = vec4(k, 1.); }` }));
 if (Q !== 'low') composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), .35, .6, .88));
 composer.addPass(new OutputPass());
 
@@ -364,6 +383,14 @@ const $ = id => document.getElementById(id);
 $('b2d').onclick = e => { want2d = want2d ? 0 : 1; e.target.setAttribute('aria-pressed', !!want2d); e.target.textContent = want2d ? '3D globe' : '2D map'; controls.enabled = !want2d;
   if (want2d) { from = camera.position.clone(); fly = 0; } };
 $('bCl').onclick = e => { U.cloudOn.value = U.cloudOn.value ? 0 : 1; e.target.setAttribute('aria-pressed', !!U.cloudOn.value); };
+// today's real clouds (NOAA GMGSI infrared mosaic, every 3 h by the Pages bot → branch "clouds") or the NASA composite; today's by default, NASA if they can't load
+const CLN = 'https://raw.githubusercontent.com/ori0nori0ff/ori0nori0ff.github.io/clouds/', hr3 = Math.floor(Date.now() / 108e5);
+let cNow = null, cNowT = ''; const bCn = $('bCn');
+const cUse = now => { U.clouds.value = now ? cNow : TX.clouds; bCn.textContent = now ? 'Clouds: today' + (cNowT ? ' ' + cNowT : '') : 'Clouds: NASA'; bCn.setAttribute('aria-pressed', now); };
+const cLoad = (base, done, fail) => { fetch(base + 'clouds_now.json?' + hr3).then(r => r.json()).then(j => { cNowT = j.t.slice(11, 16) + ' UTC'; if (cNow) cUse(true); }).catch(() => {});
+  new THREE.TextureLoader().load(base + 'clouds_now.jpg?' + hr3, t => { t.anisotropy = TX.clouds.anisotropy; cNow = t; done(); }, undefined, fail); };
+cLoad(CLN, () => cUse(true), () => cLoad(T, () => cUse(true), () => {}));   // the bot's picture, else a local one, else stay on NASA
+bCn.onclick = () => { if (cNow) cUse(U.clouds.value !== cNow); };
 $('bAu').onclick = e => { aurora.visible = !aurora.visible; e.target.setAttribute('aria-pressed', aurora.visible); };
 let realSun = new URLSearchParams(location.search).get('sun') === '1'; $('bSun').setAttribute('aria-pressed', realSun);
 $('bSun').onclick = e => { realSun = !realSun; e.target.setAttribute('aria-pressed', realSun); };

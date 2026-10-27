@@ -1,0 +1,24 @@
+# Every 3 h: today's real clouds for the 3D Earth (NOAA GMGSI geostationary IR mosaic → tools/build_clouds.py).
+# The picture goes to branch "clouds" as one force-pushed commit (no history growth), read by the page from raw.githubusercontent.com (CORS *).
+name: Clouds now
+on:
+  schedule: [{ cron: '41 */3 * * *' }]
+  workflow_dispatch:
+  push: { branches: [main], paths: ['.github/workflows/clouds.yml', 'tools/build_clouds.py'] }   # run at once when the bot itself changes
+permissions:
+  contents: write
+concurrency: { group: clouds, cancel-in-progress: true }
+jobs:
+  clouds:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install -q h5py numpy pillow
+      - run: python3 tools/build_clouds.py --out out --base aurora/img/earth/clouds.jpg
+      - name: Publish to branch "clouds"
+        run: |
+          cd out
+          git init -q -b clouds
+          git add clouds_now.jpg clouds_now.json
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -qm "Clouds $(cat clouds_now.json)"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" clouds:clouds
