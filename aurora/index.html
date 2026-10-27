@@ -1508,7 +1508,8 @@ $('syDate').onchange = e => { const t = Date.parse(e.target.value); if (isFinite
 PLAYS.forEach(id => { const b = $(id); if (b) b.onclick = syToggle; });
 // autoplay: the shared clock starts by itself (PC at load, the Sun / ENLIL full screen, the Sun window of the board) — not under reduced motion or animations off
 window.syAuto = fromStart => { let off = false; try { off = localStorage.getItem('aurora.motion') === 'off'; } catch (e) {} if (REDUCED || off || sy.timer || sy.held) return;
-  let n = 0; const go = () => { if (sy.timer || sy.held) return;   // a retry still waiting for the pictures also respects a stop by hand if (syRange()) { if (fromStart) { sy.dir = 1; sy.t = sy.a; } syStart(); } else if (n++ < 40) setTimeout(go, 1500); }; go(); };
+  // a retry still waiting for the pictures also respects a stop by hand
+  let n = 0; const go = () => { if (sy.timer || sy.held) return; if (syRange()) { if (fromStart) { sy.dir = 1; sy.t = sy.a; } syStart(); } else if (n++ < 40) setTimeout(go, 1500); }; go(); };
 if (innerWidth >= 1000 && !document.documentElement.classList.contains('lite')) setTimeout(() => syAuto(true), 2500);   // on opening the page the clock plays from the start of the loop
 // the Sun viewer moves to the next filter by itself every 45 s (⚙ → off: aurora.sunauto=off); a pick by hand pauses it for 3 minutes
 (() => { let hold = 0; const off = () => { try { return localStorage.getItem('aurora.sunauto') === 'off'; } catch (e) { return false; } };
