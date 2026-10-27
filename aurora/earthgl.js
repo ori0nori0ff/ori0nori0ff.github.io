@@ -4,7 +4,6 @@
    Earth3D.create(host, { places: [{name, lat, lon}], time: () => ms, onBack, onOut, quality, storm, paused }) → { show(lat, lon, far), hide(), setTime(), flyTo(), setPlaces() }
    Preview page: web/earthprev/. */
 import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -14,14 +13,16 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 const tr = (s, o) => window.T ? window.T(s, o) : String(s).replace(/\{(\w+)\}/g, (m, k) => o && o[k] != null ? o[k] : m);
 const D2R = Math.PI / 180, BASE = new URL('./', import.meta.url).href, T = BASE + 'img/earth/';
 const CSS = `.e3g{position:absolute;inset:0;display:none;background:#000;overflow:hidden}.e3g.on{display:block}.e3g canvas{position:absolute;left:0;top:0;z-index:0;display:block;touch-action:none;opacity:0;transition:opacity 1s}.e3g canvas.on{opacity:1}
-.e3g-ui{position:absolute;z-index:2;left:10px;bottom:26px;display:flex;gap:6px;flex-wrap:wrap;max-width:calc(100% - 70px)}
-.e3g-ui button,.e3g-date{border:1px solid rgba(255,255,255,.18);background:rgba(10,14,20,.78);color:#E6EBF1;border-radius:999px;padding:7px 12px;min-height:36px;font:600 12px Inter,system-ui,sans-serif;cursor:pointer}
-.e3g-date{padding:6px 10px;color-scheme:dark}.e3g-ui button[aria-pressed=true]{border-color:#39FF9E;color:#39FF9E}
+.e3g-ui{position:absolute;z-index:2;left:10px;bottom:26px;display:flex;gap:6px;flex-wrap:wrap;max-width:calc(100% - 260px)}
+.e3g-ui button,.e3g-nav button,.e3g-pnl button,.e3g-date{border:1px solid rgba(255,255,255,.18);background:rgba(10,14,20,.78);color:#E6EBF1;border-radius:999px;padding:7px 12px;min-height:36px;font:600 12px Inter,system-ui,sans-serif;cursor:pointer}
+.e3g-date{padding:6px 10px;color-scheme:dark}.e3g-ui button[aria-pressed=true],.e3g-nav button[aria-pressed=true]{border-color:#39FF9E;color:#39FF9E}
 .e3g-alt{position:absolute;z-index:2;left:12px;top:56px;font:700 15px Inter,system-ui,sans-serif;color:#FFE600;text-shadow:0 1px 3px #000;pointer-events:none}
 .e3g-alt small{display:block;font:500 12px Inter,system-ui,sans-serif;color:#C9D1DB}
 .e3g-load{position:absolute;z-index:2;inset:0;display:grid;place-items:center;color:#8B9BAE;font:600 12px 'JetBrains Mono',monospace;letter-spacing:.08em;pointer-events:none}
-.e3g-pin{position:absolute;z-index:1;left:0;top:0;pointer-events:none;display:flex;align-items:center;gap:6px;margin:-5px 0 0 -5px;font:600 12px Inter,system-ui,sans-serif;color:#fff;text-shadow:0 1px 3px #000}
-.e3g-pin i{width:10px;height:10px;border-radius:50%;background:#FFE600;box-shadow:0 0 0 2px rgba(0,0,0,.6),0 0 10px #FFE600}
+.e3g-nav{position:absolute;z-index:2;right:10px;bottom:26px;display:flex;gap:6px}.e3g-nav button{width:40px;height:40px;padding:0;border-radius:50%;font-size:15px;display:grid;place-items:center}.e3g-nav svg{transition:transform .1s linear}
+.e3g-pnl{position:absolute;z-index:3;right:10px;bottom:76px;width:240px;padding:12px 14px;border:1px solid rgba(255,255,255,.18);border-radius:12px;background:rgba(10,14,20,.9);color:#E6EBF1;font:600 12px Inter,system-ui,sans-serif;display:flex;flex-direction:column;gap:10px}.e3g-pnl[hidden]{display:none}
+@media (max-width:640px){.e3g-ui{max-width:calc(100% - 66px)}.e3g-nav{flex-direction:column;bottom:auto;top:60px}.e3g-pnl{bottom:auto;top:60px;right:58px;width:min(240px,calc(100% - 80px))}}
+.e3g-pnl label{display:grid;grid-template-columns:64px 1fr;align-items:center;gap:8px}.e3g-pnl input{accent-color:#39FF9E;width:100%}.e3g-pnl button{align-self:flex-end}.e3g-pnl small{font-weight:500;color:#8B9BAE}
 .e3g-attr{position:absolute;z-index:2;right:10px;bottom:6px;font:500 10px Inter,system-ui,sans-serif;color:rgba(220,227,235,.7);text-shadow:0 1px 2px #000;pointer-events:none;max-width:55%;text-align:right}`;
 
 // sub-solar point (low precision is plenty for day / night) → direction in the Earth's own frame (x = lon 0, y = north, z = lon −90°)
@@ -32,9 +33,11 @@ function sunDir(t) { const d = new Date(t), doy = (t - Date.UTC(d.getUTCFullYear
 function create(host, opts) {
   if (!document.getElementById('e3g-css')) { const st = document.createElement('style'); st.id = 'e3g-css'; st.textContent = CSS; document.head.appendChild(st); }
   const el = document.createElement('div'); el.className = 'e3g'; host.appendChild(el);
-  el.innerHTML = `<div class="e3g-load">${tr('Loading the Earth…')} 0%</div><div class="e3g-pin" hidden><i></i><span></span></div><div class="e3g-alt">–</div>
-    <div class="e3g-ui"><button data-k="back">‹ ${tr('Solar system')}</button><button data-k="home">${tr('My place')}</button><button data-k="cl" aria-pressed="true">${tr('Clouds')}</button><button data-k="cn" aria-pressed="false">${tr('Clouds: NASA')}</button><button data-k="au" aria-pressed="true">${tr('Aurora')}</button><button data-k="sun" aria-pressed="false">${tr('Real Sun')}</button><button data-k="sp" aria-pressed="true">${tr('Auto-rotate')}</button><button data-k="2d" aria-pressed="false">${tr('2D map')}</button>
+  el.innerHTML = `<div class="e3g-load">${tr('Loading the Earth…')} 0%</div><div class="e3g-alt">–</div>
+    <div class="e3g-ui"><button data-k="back">‹ ${tr('Solar system')}</button><button data-k="cl" aria-pressed="true">${tr('Clouds')}</button><button data-k="cn" aria-pressed="false">${tr('Clouds: NASA')}</button><button data-k="au" aria-pressed="true">${tr('Aurora')}</button><button data-k="sun" aria-pressed="false">${tr('Real Sun')}</button><button data-k="sp" aria-pressed="true">${tr('Auto-rotate')}</button><button data-k="2d" aria-pressed="false">${tr('2D map')}</button>
       <input type="datetime-local" class="e3g-date" data-k="date" aria-label="${tr('Date and time')}"><button data-k="now">${tr('Now')}</button></div>
+    <div class="e3g-nav"><button data-k="ang" aria-pressed="false" aria-label="${tr('Tilt')} / ${tr('Heading')}">∠</button><button data-k="cmp" aria-label="${tr('Reset to north')}"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 3l4 9h-8z" fill="#FF4D4D"/><path d="M12 21l-4-9h8z" fill="#E6EBF1"/></svg></button><button data-k="3d" aria-pressed="true" aria-label="${tr('3D view')}">3D</button><button data-k="zout" aria-label="${tr('Zoom out')}">−</button><button data-k="zin" aria-label="${tr('Zoom in')}">+</button></div>
+    <div class="e3g-pnl" hidden><label>${tr('Tilt')}<input type="range" data-s="tilt" min="0" max="100" value="100"></label><label>${tr('Heading')}<input type="range" data-s="head" min="-180" max="180" value="0"></label><button data-k="north">${tr('Reset to north')}</button><small>${tr('Shift + drag or right-drag: tilt and turn')}</small></div>
     <div class="e3g-attr">NASA Blue Marble · Black Marble · SVS star map · NOAA GMGSI · OVATION · ${tr('close-up')}: Sentinel-2 cloudless 2023 by EOX (CC BY-NC-SA 4.0) · Mapzen Terrarium / AWS</div>`;
   let W = 800, H = 600;
   const Q = opts.quality || (document.documentElement.classList.contains('lite') ? 'low' : 'high');   // low | medium | high (light mode → low)
@@ -46,15 +49,30 @@ function create(host, opts) {
   el.appendChild(renderer.domElement);
   const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(35, W / H, .01, 2000);
   camera.position.set(0, 1.1, 4.2);
-  const controls = new OrbitControls(camera, renderer.domElement); controls.enableDamping = true; controls.dampingFactor = .06; controls.minDistance = 1.00001; controls.maxDistance = 30; controls.enablePan = false; controls.rotateSpeed = .5; controls.enableZoom = false;
-  // our own zoom, by altitude (log steps), so it slows down near the ground like Google Earth; wheel + two-finger pinch
-  let zoomTo = camera.position.length(); const pins = new Map(); let pinch = 0;
-  const zoomBy = f => { zoomTo = Math.min(1 + 60000 / 6371, 1 + (zoomTo - 1) * f); };
+  // ── the camera, like Google Earth: it looks at a point on the ground (tgt, world frame) from `rng` Earth radii away,
+  // tilted `tilt` from straight down, turned `head` from north. In 3D mode the tilt grows as you come down (tk = how much of the allowed tilt).
+  const Yax = new THREE.Vector3(0, 1, 0), tgt = new THREE.Vector3(0, 0, 1), cE = new THREE.Vector3(), cN = new THREE.Vector3(), cF = new THREE.Vector3(), cR = new THREE.Vector3();
+  let rng = 3.2, rngTo = 3.2, head = 0, headTo = 0, tk = 1, tkTo = 1, tilt = 0, vel = [0, 0], dragAt = 0;
+  const RMAX = 60000 / 6371, RMIN = 1.5 / 6371;
+  const maxTilt = r => 1.36 * (1 - smooth(Math.log(250), Math.log(16000), Math.log(r * 6371)));   // ≈ 78° near the ground, 0 seen from far away
+  const frameAt = () => { const t = tgt; cE.crossVectors(Yax, t); if (cE.lengthSq() < 1e-8) cE.set(1, 0, 0); cE.normalize(); cN.crossVectors(t, cE).normalize();
+    cF.copy(cN).multiplyScalar(Math.cos(head)).addScaledVector(cE, Math.sin(head)); cR.copy(cE).multiplyScalar(Math.cos(head)).addScaledVector(cN, -Math.sin(head)); };
+  const zoomBy = f => { rngTo = Math.max(RMIN, Math.min(RMAX, rngTo * f)); };
+  const panBy = (dx, dy) => { const k = rng * 2 * Math.tan(camera.fov * D2R / 2) / H; frameAt();   // the ground follows the pointer
+    tgt.addScaledVector(cR, -dx * k).addScaledVector(cF, dy * k / Math.max(.35, Math.cos(tilt))).normalize();
+    if (Math.abs(tgt.y) > .9999) { tgt.y = Math.sign(tgt.y) * .9999; tgt.normalize(); } };
+  const turnBy = (dx, dy) => { headTo += dx * .006; tkTo = Math.max(0, Math.min(1, tkTo - dy * .004)); };
   renderer.domElement.addEventListener('wheel', e => { e.preventDefault(); zoomBy(Math.exp(Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 150) * .0022)); }, { passive: false });
-  renderer.domElement.addEventListener('pointerdown', e => { if (e.pointerType === 'touch') pins.set(e.pointerId, [e.clientX, e.clientY]); });
-  renderer.domElement.addEventListener('pointermove', e => { if (!pins.has(e.pointerId)) return; pins.set(e.pointerId, [e.clientX, e.clientY]);
-    if (pins.size === 2) { const [a, b] = [...pins.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (pinch) zoomBy(pinch / d); pinch = d; } });
-  const unpin = e => { pins.delete(e.pointerId); pinch = 0; }; renderer.domElement.addEventListener('pointerup', unpin); renderer.domElement.addEventListener('pointercancel', unpin);
+  renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
+  const pins = new Map(); let pinch = 0, twist = 0, midY = 0, mode = '';
+  renderer.domElement.addEventListener('mousedown', e => { if (e.button === 1) e.preventDefault(); });   // middle button = tilt + turn, not the browser's autoscroll
+  renderer.domElement.addEventListener('pointerdown', e => { renderer.domElement.setPointerCapture(e.pointerId); pins.set(e.pointerId, [e.clientX, e.clientY]); vel = [0, 0]; spinOff();
+    mode = pins.size === 2 ? 'two' : (e.shiftKey || e.ctrlKey || e.button === 2 || e.button === 1) ? 'turn' : 'pan'; pinch = 0; });
+  renderer.domElement.addEventListener('pointermove', e => { const o = pins.get(e.pointerId); if (!o || want2d) return; const dx = e.clientX - o[0], dy = e.clientY - o[1]; pins.set(e.pointerId, [e.clientX, e.clientY]);
+    if (pins.size === 2) { const [a, b] = [...pins.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), an = Math.atan2(b[1] - a[1], b[0] - a[0]), my = (a[1] + b[1]) / 2;
+      if (pinch) { zoomBy(pinch / d); let da = an - twist; da = Math.atan2(Math.sin(da), Math.cos(da)); headTo -= da; turnBy(0, (my - midY) * 1.4); } pinch = d; twist = an; midY = my; return; }   // pinch = zoom, twist = turn, both fingers up / down = tilt
+    if (mode === 'turn') turnBy(dx, dy); else if (mode === 'pan') { panBy(dx, dy); vel = [dx, dy]; dragAt = performance.now(); } });
+  const unpin = e => { pins.delete(e.pointerId); pinch = 0; if (!pins.size) { if (mode !== 'pan' || performance.now() - dragAt > 80) vel = [0, 0]; mode = ''; } }; renderer.domElement.addEventListener('pointerup', unpin); renderer.domElement.addEventListener('pointercancel', unpin);
   const smooth = (a, b, x) => { const k = Math.max(0, Math.min(1, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
   
   // textures: everything loads first, then the globe fades in (never a half-built Earth)
@@ -310,9 +328,17 @@ function create(host, opts) {
     .catch(() => { t.fail = (t.fail || 0) + 1; }).finally(() => { act--; setTimeout(() => t.imgP = false, t.img ? 0 : 3000 * (t.fail || 1)); }); }
   function loadDem(t) { t.demP = true; act++; getBitmap(HD.dem(t.z, t.x, t.y)).then(bm => demQ.push([t, bm]))
     .catch(() => { t.fail = (t.fail || 0) + 1; setTimeout(() => t.demP = false, 3000 * t.fail); }).finally(() => act--); }
+  // the Terrarium tiles have broken lines in places (rows up to 32 km high or 2 km deep, e.g. off Yemen): a pixel more than 250 m away from
+  // the median of the 9 pixels along a column (then a row, then a column again) takes that median. Real peaks and cliffs (Matterhorn, Eiger, Yosemite) are untouched.
+  const win = new Float32Array(9);
+  function despike(h) { for (const st of [256, 1, 256]) for (let k = 0; k < 65536; k++) { const q = st === 1 ? k & 255 : k >> 8, v = h[k];
+      const at = d => h[k + (Math.max(0, Math.min(255, q + d)) - q) * st];
+      if (Math.abs(v - at(-4)) < 250 && Math.abs(v - at(4)) < 250 && Math.abs(v - at(-1)) < 250 && Math.abs(v - at(1)) < 250) continue;   // quick: nothing odd here
+      for (let d = -4; d <= 4; d++) win[d + 4] = at(d); win.sort(); if (Math.abs(v - win[4]) > 250) h[k] = win[4]; } }
   function decodeDem(t, bm) {   // heights (metres) for the mesh + a normal map (east / north / up, alpha = sea) for the light
     cx2.drawImage(bm, 0, 0); bm.close(); const p = cx2.getImageData(0, 0, 256, 256).data, h = new Float32Array(65536), nm = new Uint8Array(65536 * 4), n = 1 << t.z;
-    for (let i = 0; i < 65536; i++) h[i] = p[i * 4] * 256 + p[i * 4 + 1] + p[i * 4 + 2] / 256 - 32768;
+    for (let i = 0; i < 65536; i++) h[i] = Math.max(-11000, Math.min(8900, p[i * 4] * 256 + p[i * 4 + 1] + p[i * 4 + 2] / 256 - 32768));
+    despike(h);
     for (let j = 0; j < 256; j++) { const mpp = 2 * Math.PI * 6371000 * Math.cos(latOf(t.y + (j + .5) / 256, n)) / (n * 256), ju = Math.max(j - 1, 0) * 256, jd = Math.min(j + 1, 255) * 256;
       for (let i = 0; i < 256; i++) { const k = j * 256 + i, gx = (h[j * 256 + Math.min(i + 1, 255)] - h[j * 256 + Math.max(i - 1, 0)]) / (2 * mpp) * HD.EX, gy = (h[ju + i] - h[jd + i]) / (2 * mpp) * HD.EX;
         const nz = 1 / Math.sqrt(gx * gx + gy * gy + 1); nm[k * 4] = (-gx * nz * .5 + .5) * 255; nm[k * 4 + 1] = (-gy * nz * .5 + .5) * 255; nm[k * 4 + 2] = (nz * .5 + .5) * 255; nm[k * 4 + 3] = h[k] <= 0 ? 255 : 0; } }
@@ -371,9 +397,17 @@ function create(host, opts) {
   const $ = k => el.querySelector('[data-k="' + k + '"]'), press = (b, on) => b.setAttribute('aria-pressed', !!on);
   const now = () => tOver != null ? tOver : (opts.time ? opts.time() : Date.now());
   $('back').onclick = () => opts.onBack && opts.onBack();
-  $('home').onclick = () => { const p = (opts.places || [])[0]; if (p) flyTo(p.lat, p.lon, 900); };
-  $('2d').onclick = e => { want2d = want2d ? 0 : 1; press(e.currentTarget, want2d); e.currentTarget.textContent = want2d ? tr('3D globe') : tr('2D map'); controls.enabled = !want2d;
-    if (want2d) { from = camera.position.clone(); fly = 0; } else zoomTo = camera.position.length(); };
+  const spinOff = () => { if (spin) { spin = false; press($('sp'), false); } };
+  $('2d').onclick = e => { want2d = want2d ? 0 : 1; press(e.currentTarget, want2d); e.currentTarget.textContent = want2d ? tr('3D globe') : tr('2D map');
+    if (want2d) { from = camera.position.clone(); fly = 0; camera.up.set(0, 1, 0); } else { tgt.copy(camera.position).normalize(); rng = rngTo = camera.position.length() - 1; head = headTo = 0; } };
+  // Google Earth's 3D switch (tilts as you come down) + compass (tap = north up, flat) + the tilt / heading sliders
+  const b3 = $('3d'), cmp = $('cmp'), pnl = el.querySelector('.e3g-pnl'), sT = pnl.querySelector('[data-s="tilt"]'), sH = pnl.querySelector('[data-s="head"]');
+  press(b3, true); b3.onclick = () => { tkTo = tkTo > .05 ? 0 : 1; };
+  cmp.onclick = () => { headTo = Math.round(headTo / (2 * Math.PI)) * 2 * Math.PI; };
+  $('ang').onclick = e => { pnl.hidden = !pnl.hidden; press(e.currentTarget, !pnl.hidden); };
+  pnl.querySelector('[data-k="north"]').onclick = () => { headTo = Math.round(headTo / (2 * Math.PI)) * 2 * Math.PI; tkTo = 0; };
+  sT.oninput = () => { tkTo = sT.value / 100; }; sH.oninput = () => { const w = ((headTo % (2 * Math.PI)) + 3 * Math.PI) % (2 * Math.PI) - Math.PI; headTo += sH.value * D2R - w; };
+  $('zin').onclick = () => zoomBy(.5); $('zout').onclick = () => zoomBy(2);
   $('cl').onclick = e => { U.cloudOn.value = U.cloudOn.value ? 0 : 1; press(e.currentTarget, U.cloudOn.value); };
   // today's real clouds (NOAA GMGSI infrared mosaic, every 3 h by the Pages bot → branch "clouds") or the NASA composite; today's by default (not in storm mode), NASA if they can't load
   const CLN = 'https://raw.githubusercontent.com/ori0nori0ff/ori0nori0ff.github.io/clouds/', hr3 = Math.floor(Date.now() / 108e5);
@@ -389,23 +423,15 @@ function create(host, opts) {
   const pad = v => String(v).padStart(2, '0'), localStr = t => { const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
   const di = $('date'); di.onchange = () => { const t = Date.parse(di.value); if (isFinite(t)) tOver = t; };
   $('now').onclick = () => { tOver = null; di.value = localStr(now()); };
-  let from = null, fly = 1, goal = null; const flat = new THREE.Vector3(0, 0, 6.2);
-  // fly to a place: the camera swings over it (object frame → world) and comes down to `km`
-  function flyTo(lat, lon, km) { const p = nrmOf(lat * D2R, lon * D2R).applyQuaternion(earth.quaternion); goal = { dir: p, D: 1 + km / 6371 }; spin = false; press($('sp'), false); }
+  let from = null, fly = 1; const flat = new THREE.Vector3(0, 0, 6.2), lm = new THREE.Matrix4(), O3 = new THREE.Vector3();
   function resize() { const r = host.getBoundingClientRect(); W = Math.max(200, r.width); H = Math.max(200, r.height); PRMAX = prCap(); PR = Math.min(PR, PRMAX);
     camera.aspect = W / H; camera.updateProjectionMatrix(); renderer.setPixelRatio(PR); renderer.setSize(W, H); composer.setPixelRatio(PR); composer.setSize(W, H); }
   if (window.ResizeObserver) new ResizeObserver(() => visible && resize()).observe(host);
   mgr.onLoad = () => { readyAt = performance.now(); el.querySelector('.e3g-load').remove(); renderer.domElement.classList.add('on'); };
   // zooming out past ~60 000 km leaves for the solar system
   const DMAX = 1 + 60000 / 6371, out = () => { if (visible && opts.onOut && performance.now() - shownAt > 900) opts.onOut(); };
-  renderer.domElement.addEventListener('wheel', e => { if (e.deltaY > 0 && zoomTo >= DMAX - .01) out(); }, { passive: true });
+  renderer.domElement.addEventListener('wheel', e => { if (e.deltaY > 0 && rngTo >= RMAX - .01) out(); }, { passive: true });
 
-  // the place marks: a dot + the name, hidden behind the globe
-  const pin = el.querySelector('.e3g-pin'), pv = new THREE.Vector3();
-  function places() { const p = (opts.places || [])[0]; if (!p || want2d) { pin.hidden = true; return; }
-    const n = nrmOf(p.lat * D2R, p.lon * D2R), w = n.clone().multiplyScalar(1.0005).applyQuaternion(earth.quaternion);
-    const facing = n.clone().applyQuaternion(earth.quaternion).dot(pv.copy(camera.position).sub(w)) > 0; pv.copy(w).project(camera);
-    pin.hidden = !facing || pv.z > 1; if (pin.hidden) return; pin.style.transform = `translate(${(pv.x * .5 + .5) * W}px, ${(.5 - pv.y * .5) * H}px)`; pin.lastChild.textContent = p.name; }
 
   const inv = new THREE.Matrix4();
   let fpsN = 60, slow = 0, fast = 0, readyAt = 0; const PRMIN = Math.min(Q === "low" ? .6 : 1, prCap()); let PRMAX = prCap();
@@ -420,13 +446,18 @@ function create(host, opts) {
     U.morph.value += (want2d - U.morph.value) * Math.min(1, dt * 2.2);
     if (want2d && fly < 1) { fly = Math.min(1, fly + dt * .8); const e = fly * fly * (3 - 2 * fly); camera.position.lerpVectors(from, flat, e); camera.lookAt(0, 0, 0); }
     else if (!want2d) {
-      if (goal) { const d = camera.position.clone().normalize(), k = Math.min(1, dt * 2.2); d.lerp(goal.dir, k).normalize(); camera.position.copy(d.multiplyScalar(camera.position.length())); zoomTo = goal.D;
-        if (d.angleTo(goal.dir) < .002) goal = null; }
-      const cn = U.camO.value.clone().normalize(), gnd = groundAt(Math.asin(cn.y), Math.atan2(-cn.z, cn.x));   // never into a mountain
-      zoomTo = Math.min(DMAX, Math.max(zoomTo, 1 + (gnd * HD.EX + 400 + 1500) / 6371000));
-      const D0 = camera.position.length(); camera.position.setLength(1 + (D0 - 1) * Math.pow((zoomTo - 1) / (D0 - 1), Math.min(1, dt * 6)));
-      controls.rotateSpeed = .5 * Math.min(1, Math.max(.0006, (camera.position.length() - 1) / 1.5));
-      controls.autoRotate = spin && camera.position.length() > 1.6; controls.autoRotateSpeed = .25; controls.update(); }
+      const kk = Math.min(1, dt * 6);
+      if (spin && rng > .4) tgt.applyAxisAngle(Yax, dt * .02 * Math.min(1, rng));   // a slow turn seen from far away
+      if (!pins.size && (vel[0] || vel[1])) { panBy(vel[0], vel[1]); vel = vel.map(v => Math.abs(v *= Math.pow(.05, dt)) < .05 ? 0 : v); }   // the throw glides on
+      rng *= Math.pow(rngTo / rng, kk); head += (headTo - head) * kk; tk += (tkTo - tk) * kk; tilt = tk * maxTilt(rng);
+      frameAt(); const ct = Math.cos(tilt), st = Math.sin(tilt);
+      const cn = U.camO.value.clone().normalize(), gnd = groundAt(Math.asin(cn.y), Math.atan2(-cn.z, cn.x)), minA = (gnd * HD.EX + 400 + 1500) / 6371000;   // never into a mountain
+      const altOf = r => Math.sqrt(1 + r * r + 2 * r * ct) - 1;
+      for (let n = 0; n < 12 && altOf(rng) < minA; n++) { rng *= 1.15; rngTo = Math.max(rngTo, rng); }
+      camera.position.copy(tgt).addScaledVector(tgt, rng * ct).addScaledVector(cF, -rng * st);
+      camera.up.copy(tgt).multiplyScalar(st).addScaledVector(cF, ct); camera.lookAt(tgt);
+      sH.value = Math.round((((head % (2 * Math.PI)) + 3 * Math.PI) % (2 * Math.PI) - Math.PI) / D2R); sT.value = Math.round(tkTo * 100);
+      cmp.firstChild.style.transform = `rotate(${-head / D2R}deg)`; press(b3, tkTo > .05); }
     const D = camera.position.length();
     air.visible = U.morph.value < .98; stars.visible = U.morph.value < .9;
     U.cloudFade.value = smooth(.02, .1, D - 1); cloudLayer.visible = !!U.cloudOn.value && U.cloudFade.value > 0;   // clouds clear away as you come down
@@ -434,12 +465,11 @@ function create(host, opts) {
     stars.rotation.y = -gmst(t) - Math.PI;
     const s = sunDir(t); U.rsun.value.copy(s);   // already in the Earth's own frame
     if (realSun) U.sun.value.copy(s);
-    else { camera.updateMatrixWorld(); const m = camera.matrixWorld.elements, R = new THREE.Vector3(m[0], m[1], m[2]), Up = new THREE.Vector3(m[4], m[5], m[6]), B = new THREE.Vector3(m[8], m[9], m[10]);
+    // studio light from the untilted view (looking at the centre), so tilting does not swing the light
+    else { camera.updateMatrixWorld(); const m = (want2d ? camera.matrixWorld : lm.lookAt(camera.position, O3, Math.abs(camera.position.clone().normalize().y) > .98 ? cF : Yax)).elements, R = new THREE.Vector3(m[0], m[1], m[2]), Up = new THREE.Vector3(m[4], m[5], m[6]), B = new THREE.Vector3(m[8], m[9], m[10]);
       const Lw = R.multiplyScalar(-.5).add(Up.multiplyScalar(.52)).add(B.multiplyScalar(.69)).normalize();   // studio light: mostly from the front, a little from the upper left
       U.sun.value.copy(Lw.applyQuaternion(earth.quaternion.clone().invert())); }
     U.lightsOn.value += ((realSun ? 1 : 0) - U.lightsOn.value) * Math.min(1, dt * 3);
-    // close to the ground the view tilts toward the horizon (after the light, which stays on the untilted view)
-    if (!want2d && U.morph.value < .01) { const tf = 1 - smooth(Math.log(12), Math.log(1500), Math.log((D - 1) * 6371)); camera.rotateX(1.25 * tf * tf); }
     camera.near = Math.max((D - 1) * .25, 1.5e-6); camera.far = Math.max(D + 1.2, U.morph.value > .01 ? 20 : 0);   // the far side of the air and aurora shells too
     camera.updateProjectionMatrix(); camera.updateMatrixWorld();
     inv.copy(earth.matrixWorld).invert(); U.camO.value.copy(camera.position).applyMatrix4(inv);
@@ -449,17 +479,15 @@ function create(host, opts) {
     auMat.uniforms.time.value += dt;
     const km = (D - 1) * 6371, cl = U.camO.value.clone().normalize();
     el.querySelector('.e3g-alt').innerHTML = `${tr('Altitude')} ${km >= 1000 ? Math.round(km).toLocaleString(window.LOC || 'en-GB') : km.toFixed(km < 10 ? 1 : 0)} km<small>${(Math.asin(cl.y) / D2R).toFixed(2)}°, ${(Math.atan2(-cl.z, cl.x) / D2R).toFixed(2)}° · ${new Date(t).toLocaleString(window.LOC || 'en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}${tOver != null ? '' : ' · ' + tr('live')}</small>`;
-    places();
     composer.render();
   }
   const api = {
     show(lat, lon, far) { shownAt = performance.now(); el.classList.add('on'); visible = true; resize(); di.value = localStr(now()); clock.getDelta();
       const p = nrmOf((lat ?? 45.6) * D2R, (lon ?? 25.6) * D2R).applyQuaternion(earth.quaternion);
-      camera.position.copy(p.multiplyScalar(far ? DMAX - .2 : 4.2)); zoomTo = camera.position.length(); goal = null; controls.update();
-      if (far) zoomTo = 4.2;   // arriving from the solar system: come down to the globe
+      tgt.copy(p); head = headTo = 0; vel = [0, 0]; rng = far ? RMAX - .2 : 3.2; rngTo = 3.2;   // arriving from the solar system: come down to the globe
       renderer.setAnimationLoop(frame); },
     hide() { el.classList.remove('on'); visible = false; renderer.setAnimationLoop(null); },
-    setTime() {}, flyTo, setPlaces(p) { opts.places = p; } };
+    setTime() {}, flyTo() {}, setPlaces(p) { opts.places = p; } };
   return api;
 }
 window.Earth3D = { create, sunDir: t => { const v = sunDir(t); return [v.x, v.y, v.z]; } };

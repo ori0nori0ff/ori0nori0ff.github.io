@@ -1190,5 +1190,10 @@ window.I18N_DICT.de = {
   "Loading the Earth…": "Die Erde wird geladen…",
   "Real Sun": "Echte Sonne",
   "close-up": "Nahansicht",
-  "live": "live"
+  "live": "live",
+  "Tilt": "Neigung",
+  "Heading": "Richtung",
+  "Reset to north": "Norden nach oben",
+  "3D view": "3D-Ansicht",
+  "Shift + drag or right-drag: tilt and turn": "Umschalt + ziehen oder rechts ziehen: neigen und drehen"
 };

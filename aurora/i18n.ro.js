@@ -1190,5 +1190,10 @@ window.I18N_DICT.ro = {
   "Loading the Earth…": "Se încarcă Pământul…",
   "Real Sun": "Soarele real",
   "close-up": "de aproape",
-  "live": "în direct"
+  "live": "în direct",
+  "Tilt": "Înclinare",
+  "Heading": "Direcție",
+  "Reset to north": "Nordul în sus",
+  "3D view": "Vedere 3D",
+  "Shift + drag or right-drag: tilt and turn": "Shift + trage sau click dreapta + trage: înclini și rotești"
 };
