@@ -10,25 +10,41 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
+import { createSolar } from './solar.js';
 
 const tr = (s, o) => window.T ? window.T(s, o) : String(s).replace(/\{(\w+)\}/g, (m, k) => o && o[k] != null ? o[k] : m);
 const D2R = Math.PI / 180, BASE = new URL('./', import.meta.url).href, T = BASE + 'img/earth/';
 const CSS = `.e3g{position:absolute;inset:0;display:none;background:#000;overflow:hidden}.e3g.on{display:block}.e3g canvas{position:absolute;left:0;top:0;z-index:0;display:block;touch-action:none;opacity:0;transition:opacity 1s}.e3g canvas.on{opacity:1}
-.e3g-ui{position:absolute;z-index:2;left:10px;bottom:26px;display:flex;gap:6px;flex-wrap:wrap;max-width:calc(100% - 260px)}
-.e3g-ui button,.e3g-nav button,.e3g-pnl button,.e3g-date{border:1px solid rgba(255,255,255,.18);background:rgba(10,14,20,.78);color:#E6EBF1;border-radius:999px;padding:7px 12px;min-height:36px;font:600 12px Inter,system-ui,sans-serif;cursor:pointer}
-.e3g-date{padding:6px 10px;color-scheme:dark}.e3g-ui button[aria-pressed=true],.e3g-nav button[aria-pressed=true]{border-color:#39FF9E;color:#39FF9E}
+.e3g-go,.e3g-nav{position:absolute;z-index:2;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:6px}.e3g-go{left:10px}.e3g-nav{right:10px}
+.e3g-go button,.e3g-nav button{width:40px;height:40px;padding:0;border-radius:50%;font-size:16px;display:grid;place-items:center}.e3g-nav svg{transition:transform .1s linear}
+.e3g-bl{position:absolute;z-index:3;left:58px;top:50%;transform:translateY(-50%);list-style:none;margin:0;padding:6px;border:1px solid rgba(255,255,255,.18);border-radius:12px;background:rgba(10,14,20,.92);display:grid;gap:2px}.e3g-bl[hidden]{display:none}
+.e3g-bl button{width:100%;text-align:left;border:0;background:none;border-radius:8px;min-height:32px;padding:6px 12px}.e3g-bl button:hover,.e3g-bl button[aria-current=true]{background:rgba(57,255,158,.14)}
+.e3g-lay{position:absolute;z-index:3;left:10px;bottom:30px}.e3g-lp{position:absolute;left:48px;bottom:0;width:250px;padding:8px;border:1px solid rgba(255,255,255,.18);border-radius:12px;background:rgba(10,14,20,.92);display:flex;flex-direction:column;gap:6px}.e3g-lp[hidden]{display:none}
+.e3g-lp>button,.e3g-row button{text-align:left}.e3g-row{display:flex;gap:6px}.e3g-row button{flex:1}
+.e3g-time{position:absolute;z-index:2;left:50%;bottom:30px;transform:translateX(-50%);width:max-content;display:flex;gap:6px;align-items:center;max-width:calc(100% - 140px);flex-wrap:wrap;justify-content:center}
+.e3g.nf .eo{display:none}
+.e3g button,.e3g-date{border:1px solid rgba(255,255,255,.18);background:rgba(10,14,20,.78);color:#E6EBF1;border-radius:999px;padding:7px 12px;min-height:36px;font:600 12px Inter,system-ui,sans-serif;cursor:pointer}
+.e3g-date{padding:6px 10px;color-scheme:dark}.e3g button[aria-pressed=true]{border-color:#39FF9E;color:#39FF9E}
 .e3g-tod{display:flex;align-items:center;gap:8px;border:1px solid rgba(255,255,255,.18);background:rgba(10,14,20,.78);color:#FFE600;border-radius:999px;padding:0 12px;min-height:36px;font:600 12px Inter,system-ui,sans-serif}
 .e3g-tod input{width:170px;accent-color:#FFB020}.e3g-tod button{border:0;background:none;color:#E6EBF1;font:700 16px Inter,system-ui,sans-serif;padding:0 4px;min-height:30px;cursor:pointer;user-select:none;touch-action:none}.e3g-tod button:hover{color:#FFE600}.e3g-tod span{color:#E6EBF1;min-width:86px;font-variant-numeric:tabular-nums}
 .e3g-alt{position:absolute;z-index:2;left:12px;top:56px;font:700 15px Inter,system-ui,sans-serif;color:#FFE600;text-shadow:0 1px 3px #000;pointer-events:none}
 .e3g-alt small{display:block;font:500 12px Inter,system-ui,sans-serif;color:#C9D1DB}
 .e3g-load{position:absolute;z-index:2;inset:0;display:grid;place-items:center;color:#8B9BAE;font:600 12px 'JetBrains Mono',monospace;letter-spacing:.08em;pointer-events:none}
-.e3g-nav{position:absolute;z-index:2;right:10px;bottom:26px;display:flex;gap:6px}.e3g-nav button{width:40px;height:40px;padding:0;border-radius:50%;font-size:15px;display:grid;place-items:center}.e3g-nav svg{transition:transform .1s linear}
-.e3g-pnl{position:absolute;z-index:3;right:10px;bottom:76px;width:240px;padding:12px 14px;border:1px solid rgba(255,255,255,.18);border-radius:12px;background:rgba(10,14,20,.9);color:#E6EBF1;font:600 12px Inter,system-ui,sans-serif;display:flex;flex-direction:column;gap:10px}.e3g-pnl[hidden]{display:none}
-@media (max-width:640px){.e3g-ui{max-width:calc(100% - 66px)}.e3g-nav{flex-direction:column;bottom:auto;top:60px}.e3g-pnl{bottom:auto;top:60px;right:58px;width:min(240px,calc(100% - 80px))}}
+.e3g-pnl{position:absolute;z-index:3;right:58px;top:50%;transform:translateY(-50%);width:240px;padding:12px 14px;border:1px solid rgba(255,255,255,.18);border-radius:12px;background:rgba(10,14,20,.9);color:#E6EBF1;font:600 12px Inter,system-ui,sans-serif;display:flex;flex-direction:column;gap:10px}.e3g-pnl[hidden]{display:none}
+@media (max-width:640px){.e3g-go,.e3g-nav{gap:4px}.e3g-go button,.e3g-nav button{width:36px;height:36px}.e3g-time{left:56px;right:10px;transform:none;max-width:none;width:auto;justify-content:flex-end}.e3g-tod input{width:96px}.e3g-tod span{min-width:0}.e3g-lp{width:min(250px,calc(100vw - 40px))}.e3g-pnl{width:min(240px,calc(100% - 120px))}}
+.e3g-info{position:absolute;z-index:3;right:58px;top:104px;width:264px;max-height:calc(100% - 190px);overflow:auto;padding:12px 14px;border:1px solid rgba(255,255,255,.18);border-radius:12px;background:rgba(10,14,20,.92);color:#E6EBF1;font:500 13px/1.45 Inter,system-ui,sans-serif;display:flex;flex-direction:column;gap:10px}.e3g-info[hidden]{display:none}
+.e3g-ih{display:flex;justify-content:space-between;align-items:center}.e3g-ih b{font-size:17px}.e3g-ih button{width:30px;height:30px;padding:0;border-radius:50%}
+.e3g-if{display:grid;grid-template-columns:1fr 1fr;gap:6px}.e3g-if div{background:rgba(255,255,255,.06);border-radius:8px;padding:6px 8px}.e3g-if small{display:block;color:#8B9BAE;font-size:11px}
+.e3g-im{border-left:2px solid #39FF9E;padding-left:8px;color:#C8D2DC}.e3g-iph small{color:#8B9BAE;font-size:11px}.e3g-iph div{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:4px}
+.e3g-iph a{position:relative;display:block;aspect-ratio:1;border-radius:6px;overflow:hidden;background:rgba(255,255,255,.06)}.e3g-iph img{width:100%;height:100%;object-fit:cover}.e3g-iph span{position:absolute;left:0;right:0;bottom:0;color:#fff;font-size:10.5px;padding:1px 4px;background:rgba(0,0,0,.6)}
+.e3g-ib{display:flex;gap:6px}.e3g-ib button{flex:1}
+@media (max-width:640px){.e3g-info{left:56px;right:56px;width:auto;top:auto;bottom:76px;max-height:45%}}
 .e3g-pnl label{display:grid;grid-template-columns:64px 1fr;align-items:center;gap:8px}.e3g-pnl input{accent-color:#39FF9E;width:100%}.e3g-pnl button{align-self:flex-end}.e3g-pnl small{font-weight:500;color:#8B9BAE}
 .e3g-find{position:absolute;z-index:3;right:10px;top:56px;width:280px;font:600 13px Inter,system-ui,sans-serif}.e3g-find input{width:100%;box-sizing:border-box;border:1px solid rgba(255,255,255,.18);background:rgba(10,14,20,.85);color:#E6EBF1;border-radius:999px;padding:9px 14px;min-height:38px;font:inherit;outline:none}.e3g-find input:focus{border-color:#39FF9E}
 .e3g-find ul{list-style:none;margin:6px 0 0;padding:4px;border:1px solid rgba(255,255,255,.18);border-radius:12px;background:rgba(10,14,20,.94);max-height:300px;overflow:auto}.e3g-find ul:empty{display:none}.e3g-find li{padding:8px 10px;border-radius:8px;cursor:pointer;color:#E6EBF1}.e3g-find li small{display:block;font-weight:500;color:#8B9BAE}.e3g-find li:hover,.e3g-find li[aria-selected=true]{background:rgba(57,255,158,.14)}
 @media (max-width:640px){.e3g-find{right:auto;left:12px;top:104px;width:calc(100% - 80px)}}
+.e3g-pl{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden}.e3g-pl span{position:absolute;left:0;top:0;font:700 12px Inter,system-ui,sans-serif;text-shadow:0 1px 3px #000,0 0 2px #000;white-space:nowrap;opacity:0;transition:opacity .25s}
+.e3g-ms{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden}.e3g-ms span{position:absolute;left:0;top:0;padding:2px 7px;border-radius:4px;background:rgba(0,0,0,.55);font:700 11px Inter,system-ui,sans-serif;color:#8FD3FF;white-space:nowrap;opacity:0;transition:opacity .25s}.e3g-ms span:nth-child(1){color:#F3E6D2}.e3g-ms span:nth-child(4){color:#C9B8FF}.e3g-ms span:nth-child(5){color:#96C8FF}.e3g-ms span:nth-child(6){color:#DCE3EB}.e3g-ms span:nth-child(7){color:#8E9AAB;font-weight:500}
 .e3g-attr{position:absolute;z-index:2;right:10px;bottom:6px;font:500 10px Inter,system-ui,sans-serif;color:rgba(220,227,235,.7);text-shadow:0 1px 2px #000;pointer-events:none;max-width:55%;text-align:right}`;
 
 // sub-solar point (low precision is plenty for day / night) → direction in the Earth's own frame (x = lon 0, y = north, z = lon −90°)
@@ -39,11 +55,17 @@ function sunDir(t) { const d = new Date(t), doy = (t - Date.UTC(d.getUTCFullYear
 function create(host, opts) {
   if (!document.getElementById('e3g-css')) { const st = document.createElement('style'); st.id = 'e3g-css'; st.textContent = CSS; document.head.appendChild(st); }
   const el = document.createElement('div'); el.className = 'e3g'; host.appendChild(el);
-  el.innerHTML = `<div class="e3g-find"><input type="search" data-k="find" placeholder="🔍 ${tr('Search a place or lat, lon')}" aria-label="${tr('Search a place or lat, lon')}" autocomplete="off"><ul role="listbox"></ul></div><div class="e3g-load">${tr('Loading the Earth…')} 0%</div><div class="e3g-alt">–</div>
-    <div class="e3g-ui"><button data-k="back">‹ ${tr('Solar system')}</button><button data-k="cl" aria-pressed="true">${tr('Clouds')}</button><button data-k="cn" aria-pressed="false">${tr('Clouds: NASA')}</button><button data-k="au" aria-pressed="true">${tr('Aurora')}</button><button data-k="sun" aria-pressed="false">${tr('Real Sun')}</button><button data-k="sp" aria-pressed="true">${tr('Auto-rotate')}</button><button data-k="2d" aria-pressed="false">${tr('2D map')}</button>
-      <input type="datetime-local" class="e3g-date" data-k="date" aria-label="${tr('Date and time')}"><button data-k="now">${tr('Now')}</button>
-      <div class="e3g-tod" title="${tr('Time of day here (local Sun time)')}">☀<button data-k="todB" aria-label="${tr('Earlier')}">‹</button><input type="range" data-k="tod" min="0" max="1435" step="5" aria-label="${tr('Time of day here (local Sun time)')}"><button data-k="todF" aria-label="${tr('Later')}">›</button><span></span></div></div>
+  el.innerHTML = `<div class="e3g-find eo"><input type="search" data-k="find" placeholder="🔍 ${tr('Search a place or lat, lon')}" aria-label="${tr('Search a place or lat, lon')}" autocomplete="off"><ul role="listbox"></ul></div><div class="e3g-load">${tr('Loading the Earth…')} 0%</div><div class="e3g-alt">–</div>
+    <div class="e3g-go"><button data-k="home" aria-label="${tr('Earth')}" title="${tr('Earth')}">🌍</button><button data-k="sys" aria-label="${tr('Solar system')}" title="${tr('Solar system')}">☀</button><button data-k="bodies" aria-expanded="false" aria-label="${tr('Go to')}" title="${tr('Go to')}">🪐</button></div>
+    <ul class="e3g-bl" hidden>${['Sun', 'Mercury', 'Venus', 'Earth', 'Moon', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune'].map(n => `<li><button data-b="${n}">${tr(n)}</button></li>`).join('')}</ul>
+    <div class="e3g-lay"><button data-k="layers" aria-expanded="false">☰ ${tr('Layers')} ▾</button><div class="e3g-lp" hidden>
+      <button class="eo" data-k="cl" aria-pressed="true">${tr('Clouds')}</button><button class="eo" data-k="cn" aria-pressed="false">${tr('Clouds: NASA')}</button><button class="eo" data-k="au" aria-pressed="true">${tr('Aurora')}</button>
+      <div class="e3g-row eo"><button data-k="ms" aria-pressed="true">🧲 ${tr('Magnetic shield')}</button><button data-k="cme">💥 ${tr('CME impact')}</button></div>
+      <button data-k="sun" aria-pressed="false">${tr('Real Sun')}</button><button data-k="sp" aria-pressed="true">${tr('Auto-rotate')}</button><button data-k="rs" aria-pressed="false">${tr('Real scale')}</button><button data-k="gd" aria-pressed="true">${tr('Names and orbits')}</button><button data-k="sw" aria-pressed="true">${tr('Solar wind + CMEs')}</button><div class="e3g-row"><button data-k="sf" aria-pressed="true">${tr('Sun’s magnetic field')}</button><button data-k="dw" aria-pressed="false">🌀 ${tr('Without the solar wind')}</button></div></div></div>
+    <div class="e3g-time"><input type="datetime-local" class="e3g-date" data-k="date" aria-label="${tr('Date and time')}"><button data-k="now">${tr('Now')}</button>
+      <div class="e3g-tod eo" title="${tr('Time of day here (local Sun time)')}">☀<button data-k="todB" aria-label="${tr('Earlier')}">‹</button><input type="range" data-k="tod" min="0" max="1435" step="5" aria-label="${tr('Time of day here (local Sun time)')}"><button data-k="todF" aria-label="${tr('Later')}">›</button><span></span></div></div>
     <div class="e3g-nav"><button data-k="ang" aria-pressed="false" aria-label="${tr('Tilt')} / ${tr('Heading')}">∠</button><button data-k="cmp" aria-label="${tr('Reset to north')}"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 3l4 9h-8z" fill="#FF4D4D"/><path d="M12 21l-4-9h8z" fill="#E6EBF1"/></svg></button><button data-k="3d" aria-pressed="true" aria-label="${tr('3D view')}">3D</button><button data-k="zout" aria-label="${tr('Zoom out')}">−</button><button data-k="zin" aria-label="${tr('Zoom in')}">+</button></div>
+    <div class="e3g-info" hidden aria-live="polite"></div>
     <div class="e3g-pnl" hidden><label>${tr('Tilt')}<input type="range" data-s="tilt" min="0" max="100" value="100"></label><label>${tr('Heading')}<input type="range" data-s="head" min="-180" max="180" value="0"></label><button data-k="north">${tr('Reset to north')}</button><small>${tr('Shift + drag or right-drag: tilt and turn')}</small></div>
     <div class="e3g-attr">NASA Blue Marble · Black Marble · SVS star map · NOAA GMGSI · OVATION · ${tr('close-up')}: Sentinel-2 cloudless 2023 by EOX (CC BY-NC-SA 4.0) · Mapzen Terrarium / AWS</div>`;
   let W = 800, H = 600;
@@ -60,12 +82,14 @@ function create(host, opts) {
   // tilted `tilt` from straight down, turned `head` from north. In 3D mode the tilt grows as you come down (tk = how much of the allowed tilt).
   const Yax = new THREE.Vector3(0, 1, 0), tgt = new THREE.Vector3(0, 0, 1), cE = new THREE.Vector3(), cN = new THREE.Vector3(), cF = new THREE.Vector3(), cR = new THREE.Vector3();
   let rng = 3.2, rngTo = 3.2, head = 0, headTo = 0, tk = 1, tkTo = 1, tilt = 0, vel = [0, 0], dragAt = 0;
-  const RMAX = 60000 / 6371, RMIN = .12 / 6371;
+  const RMIN = .12 / 6371, RFAR = 5e7;   // R⊕: down to 120 m over the Earth, out to ~2 100 AU (room for the Oort cloud later)
+  let focus = 'Earth', Rf = 1;   // the body the camera turns around (its radius in R⊕); ranges are in its radii
+  const rMin = () => focus === 'Earth' ? RMIN : .015, rMax = () => RFAR / Rf;
   const maxTilt = r => (1.36 + .12 * (1 - smooth(Math.log(1.5), Math.log(25), Math.log(r * 6371)))) * (1 - smooth(Math.log(250), Math.log(16000), Math.log(r * 6371)));   // ≈ 85° low over the ground, 78° at 25 km, 0 seen from far away
   const frameAt = () => { const t = tgt; cE.crossVectors(Yax, t); if (cE.lengthSq() < 1e-8) cE.set(1, 0, 0); cE.normalize(); cN.crossVectors(t, cE).normalize();
     cF.copy(cN).multiplyScalar(Math.cos(head)).addScaledVector(cE, Math.sin(head)); cR.copy(cE).multiplyScalar(Math.cos(head)).addScaledVector(cN, -Math.sin(head)); };
-  const zoomBy = f => { rngTo = Math.max(RMIN, Math.min(RMAX, rngTo * f)); };
-  const panBy = (dx, dy) => { const k = rng * 2 * Math.tan(camera.fov * D2R / 2) / H; frameAt();   // the ground follows the pointer
+  const zoomBy = f => { rngTo = Math.max(rMin(), Math.min(rMax(), rngTo * f)); };
+  const panBy = (dx, dy) => { const k = Math.min(rng * 2 * Math.tan(camera.fov * D2R / 2), 3) / H; frameAt();   // the ground follows the pointer; far out: at most ~half a turn per screen height
     tgt.addScaledVector(cR, -dx * k).addScaledVector(cF, dy * k / Math.max(.35, Math.cos(tilt))).normalize();
     if (Math.abs(tgt.y) > .9999) { tgt.y = Math.sign(tgt.y) * .9999; tgt.normalize(); } };
   const turnBy = (dx, dy) => { headTo += dx * .006; tkTo = Math.max(0, Math.min(1, tkTo - dy * .004)); };
@@ -73,9 +97,10 @@ function create(host, opts) {
   renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
   const pins = new Map(); let pinch = 0, twist = 0, midY = 0, mode = '';
   renderer.domElement.addEventListener('mousedown', e => { if (e.button === 1) e.preventDefault(); });   // middle button = tilt + turn, not the browser's autoscroll
-  renderer.domElement.addEventListener('pointerdown', e => { renderer.domElement.setPointerCapture(e.pointerId); pins.set(e.pointerId, [e.clientX, e.clientY]); vel = [0, 0]; spinOff(); goal = null;
+  let downAt = null; renderer.domElement.addEventListener('pointerup', e => { if (downAt && performance.now() - downAt[2] < 350 && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) < 6) { const r = renderer.domElement.getBoundingClientRect(), b = solar.pick(e.clientX - r.left, e.clientY - r.top, W, H); if (b && b.name !== focus) flyToBody(b.name); } downAt = null; });
+  renderer.domElement.addEventListener('pointerdown', e => { downAt = [e.clientX, e.clientY, performance.now()]; renderer.domElement.setPointerCapture(e.pointerId); pins.set(e.pointerId, [e.clientX, e.clientY]); vel = [0, 0]; spinOff(); goal = null;
     mode = pins.size === 2 ? 'two' : (e.shiftKey || e.ctrlKey || e.button === 2 || e.button === 1) ? 'turn' : 'pan'; pinch = 0; });
-  renderer.domElement.addEventListener('pointermove', e => { const o = pins.get(e.pointerId); if (!o || want2d) return; const dx = e.clientX - o[0], dy = e.clientY - o[1]; pins.set(e.pointerId, [e.clientX, e.clientY]);
+  renderer.domElement.addEventListener('pointermove', e => { const o = pins.get(e.pointerId); if (!o) return; const dx = e.clientX - o[0], dy = e.clientY - o[1]; pins.set(e.pointerId, [e.clientX, e.clientY]);
     if (pins.size === 2) { const [a, b] = [...pins.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), an = Math.atan2(b[1] - a[1], b[0] - a[0]), my = (a[1] + b[1]) / 2;
       if (pinch) { zoomBy(pinch / d); let da = an - twist; da = Math.atan2(Math.sin(da), Math.cos(da)); headTo -= da; turnBy(0, (my - midY) * 1.4); } pinch = d; twist = an; midY = my; return; }   // pinch = zoom, twist = turn, both fingers up / down = tilt
     if (mode === 'turn') turnBy(dx, dy); else if (mode === 'pan') { panBy(dx, dy); vel = [dx, dy]; dragAt = performance.now(); } });
@@ -242,7 +267,7 @@ ${SUNLIB}
   
   // aurora, from NOAA OVATION (both hemispheres): (1) a diffuse plasma glow painted from the probability map, shimmering,
   // (2) continuous curtains along the oval — a sharp bright green lower edge ~100 km, rays, folds that drift, red tops
-  const AU = { time: { value: 0 } };
+  const AU = { time: { value: 0 }, auB: { value: 1 } };   // auB: brighter during a CME hit
   const NOISE = /* glsl */`float hs(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
     float vn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f); return mix(mix(hs(i), hs(i + vec2(1, 0)), f.x), mix(hs(i + vec2(0, 1)), hs(i + vec2(1, 1)), f.x), f.y); }
     float fbm(vec2 p) { float s = 0., a = .5; for (int i = 0; i < 4; i++) { s += a * vn(p); p *= 2.03; a *= .5; } return s; }`;
@@ -251,7 +276,7 @@ ${SUNLIB}
   // at the limb the long path makes the bright layered band; it only adds light, so over the night side it melts into the dark
   const AU_LO = 1 + 85 / 6371, AU_HI = 1 + 520 / 6371, AUS = Q === "low" ? 48 : Q === "medium" ? 72 : 96;   // max steps; each ray takes ~25 km steps
   const glow = new THREE.Mesh(new THREE.SphereGeometry(AU_HI, 160, 80), new THREE.ShaderMaterial({ uniforms: { ...U, ...AU }, vertexShader: VS, transparent: true, side: THREE.BackSide, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, fragmentShader: /* glsl */`
-    uniform sampler2D aumap; uniform vec3 rsun, camO; uniform float time, morph; varying vec3 vO; ${NOISE}
+    uniform sampler2D aumap; uniform vec3 rsun, camO; uniform float time, morph, auB; varying vec3 vO; ${NOISE}
     const float RI = ${AU_LO.toFixed(5)}, RO = ${AU_HI.toFixed(5)};
     vec2 hit(vec3 o, vec3 d, float r) { float b = dot(o, d), c = dot(o, o) - r * r, h = b * b - c; if (h < 0.) return vec2(1e9, -1e9); h = sqrt(h); return vec2(-b - h, -b + h); }
     vec3 em(vec3 p) { float r = length(p); vec3 n = p / r; float h = (r - 1.) * 6371.;
@@ -273,14 +298,14 @@ ${SUNLIB}
       vec3 acc = vec3(0.);
       for (int i = 0; i < ${AUS}; i++) { if (float(i) >= ns) break; float s = (float(i) + j) * dt; acc += em(o + d * (s < L0 ? s0 + s : s1 + s - L0)); }
       vec3 col = acc * dt * 30.; col *= 1.2 / (1.2 + max(col.r, col.g)); col *= min(1., .82 / max(max(col.r, col.g), 1e-4));   // soft cap at the limb, colour kept, below the bloom threshold (no pumping)
-      col = any(isnan(col)) || any(isinf(col)) ? vec3(0.) : col; gl_FragColor = vec4(col * (1. - morph), 1.); }` }));
+      col = any(isnan(col)) || any(isinf(col)) ? vec3(0.) : col * auB; gl_FragColor = vec4(col * (1. - morph), 1.); }` }));
   glow.rotation.y = -Math.PI / 2; glow.renderOrder = 3; scene.add(glow);
   const curtMat = new THREE.ShaderMaterial({ uniforms: { ...U, ...AU }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
     vertexShader: /* glsl */`attribute vec3 b; attribute float pr; attribute float hgt; uniform float time, morph; varying float vP; varying float vH; varying float vL; varying vec3 vO; ${NOISE}
       void main() { vP = pr; vH = hgt; vL = b.x + b.z * 1.7; float lat = b.y + (fbm(vec2(b.x * 5. + time * .035, b.z * 3.)) - .5) * 2.6 * .01745 + sin(b.x * 23. + time * .2 + b.z) * .12 * .01745;   // folds that wander
         float r = 1. + (95. + hgt * 230.) / 6371.; vec3 p = vec3(r * cos(lat) * cos(b.x), r * sin(lat), -r * cos(lat) * sin(b.x)); vO = p;
         gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(p, 1.); gl_Position.w += morph * 1e4; }`,
-    fragmentShader: /* glsl */`uniform vec3 rsun, camO; uniform float time; varying float vP; varying float vH; varying float vL; varying vec3 vO; ${NOISE}
+    fragmentShader: /* glsl */`uniform vec3 rsun, camO; uniform float time, auB; varying float vP; varying float vH; varying float vL; varying vec3 vO; ${NOISE}
       void main() {
         // no detail finer than a pixel (that is what blinked): the fine rays fade out once they get smaller than a pixel
         float aS = 1. - smoothstep(.3, 1., fwidth(vL * 900.)), aR = 1. - smoothstep(.3, 1., fwidth(vL * 160.));
@@ -293,7 +318,7 @@ ${SUNLIB}
         vec3 n = normalize(vO), ea = normalize(vec3(n.z, 0., -n.x) + vec3(1e-5)), no = cross(n, ea);
         float face = smoothstep(.05, .3, abs(dot(no, normalize(camO - vO)))), tall = smoothstep(3., 10., 1. / max(fwidth(vH), 1e-4));
         vec3 col = c * vP * rays * wave * prof * dark * 2.4 * face * tall;
-        col = any(isnan(col)) || any(isinf(col)) ? vec3(0.) : col; gl_FragColor = vec4(col * min(1., .8 / max(max(col.r, col.g), 1e-4)), 1.); }` });
+        col = any(isnan(col)) || any(isinf(col)) ? vec3(0.) : col * auB; gl_FragColor = vec4(col * min(1., .8 / max(max(col.r, col.g), 1e-4)), 1.); }` });
   const curtains = new THREE.Mesh(new THREE.BufferGeometry(), curtMat); curtains.rotation.y = -Math.PI / 2; curtains.renderOrder = 3; scene.add(curtains);
   const aurora = { get visible() { return glow.visible; }, set visible(v) { glow.visible = curtains.visible = v; U.auOn.value = v ? 1 : 0; } };
   fetch('https://services.swpc.noaa.gov/json/ovation_aurora_latest.json').then(r => r.json()).then(j => {
@@ -452,7 +477,10 @@ ${SUNLIB}
   // bloom: city lights, the glint and the aurora glow a little (off on low)
   let PR = renderer.getPixelRatio(); const rt = new THREE.WebGLRenderTarget(W * renderer.getPixelRatio(), H * renderer.getPixelRatio(), { type: THREE.HalfFloatType, samples: Q === "high" && renderer.getPixelRatio() <= 1.05 ? 4 : 0 });   // MSAA only when pixels are big
   rt.depthTexture = new THREE.DepthTexture(rt.width, rt.height);   // the air pass reads how far the ground is in each pixel
-  const composer = new EffectComposer(renderer, rt); composer.addPass(new RenderPass(scene, camera));
+  const solar = createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, quatW: earth.quaternion, dayTex: TX.day });
+  earth.remove(stars); { const sg = new THREE.Group(); sg.quaternion.copy(earth.quaternion); sg.add(stars); solar.scene.add(sg); stars.position.set(0, 0, 0); }   // the sky is the far layer's background
+  const composer = new EffectComposer(renderer, rt); composer.addPass(new RenderPass(solar.scene, solar.cam));
+  { const np = new RenderPass(scene, camera), r0 = np.render.bind(np); np.clear = false; np.render = (r, w, rb, ...a) => { r.setRenderTarget(rb); r.clearDepth(); r0(r, w, rb, ...a); }; composer.addPass(np); }   // the Earth's scene: its own depth, over the far layer
   composer.renderTarget2.depthTexture = new THREE.DepthTexture(rt.width, rt.height);   // its own depth: a clone shares one GL texture, and without MSAA the air pass would read the depth it is drawing into (black screen)
   const airPass = new ShaderPass({ uniforms: { tDiffuse: { value: null }, tDepth: { value: null }, projInv: { value: camera.projectionMatrixInverse }, camW: { value: camera.matrixWorld },
       toObj: { value: new THREE.Matrix3() }, cn: { value: new THREE.Vector2() }, camO: U.camO, sun: U.sun, morph: U.morph },
@@ -481,19 +509,139 @@ ${SUNLIB}
 
   
 
+  // ── Earth's magnetic shield, to scale, seen as you leave the globe: magnetopause + bow shock from the solar wind now (NOAA, Shue et al. 1998),
+  // dipole field lines squeezed on the day side and stretched into the tail, Van Allen belts, solar-wind particles flowing round, the Moon at its true distance
+  const MSH = (() => {
+    const g = new THREE.Group(); g.rotation.y = -Math.PI / 2; scene.add(g);   // the Earth's own frame, like the globe
+    const sw = new THREE.Group(), dip = new THREE.Group(); g.add(sw, dip); sw.matrixAutoUpdate = false;   // sw: x = to the Sun, y = magnetic north square to it · dip: y = the dipole axis
+    const Mg = nrmOf(80.7 * D2R, -72.7 * D2R);   // geomagnetic north pole (IGRF dipole)
+    const S = { R0: 10.5, Rw: 10.5, alw: .58, n: 5, v: 420, bz: 0, P: 1.5, ok: 0, cme: -1, fade: 0 };
+    const shue = (n, v, bz) => { const P = Math.max(.1, 1.6726e-6 * n * v * v); return { P, R: Math.max(4.5, Math.min(14, (10.22 + 1.29 * Math.tanh(.184 * (bz + 8.14))) * Math.pow(P, -1 / 6.6))), al: Math.max(.45, Math.min(.8, (.58 - .007 * bz) * (1 + .024 * Math.log(P)))) }; };
+    // the solar wind at L1 now (NOAA real-time, newest first; the spacecraft in use = active, else any good row)
+    const pick = (j, ks) => { const ok = r => ks.every(k => r[k] != null && isFinite(r[k])); return j.find(r => r.active && ok(r)) || j.find(ok); };
+    Promise.all(['wind', 'mag'].map(k => fetch(`https://services.swpc.noaa.gov/json/rtsw/rtsw_${k}_1m.json`).then(r => r.json()))).then(([w, m]) => {
+      const a = pick(w, ['proton_speed', 'proton_density']), b = pick(m, ['bz_gsm']); if (a) { S.n = a.proton_density; S.v = a.proton_speed; } if (b) S.bz = b.bz_gsm; S.ok = 1;
+      const s = shue(S.n, S.v, S.bz); S.Rw = s.R; S.alw = s.al; S.P = s.P; }).catch(() => {});
+    const U2 = { time: U.wtime, fade: { value: 0 }, R0: { value: 10.5 }, al: { value: .58 }, cme: { value: 0 }, px: { value: 1 } };
+    const add = { transparent: true, depthWrite: false, blending: THREE.AdditiveBlending };
+    // a glowing shell: bright at the rim, faint streaks flowing tailward (tail = how far down the tail it stays visible, in its own units)
+    const shellMat = (col, k, bs, tail) => new THREE.ShaderMaterial({ ...add, side: THREE.DoubleSide, uniforms: { ...U2, col: { value: new THREE.Color(...col) }, k: { value: k }, gate: { value: 1 } },
+      vertexShader: `varying vec3 vN, vV, vP; void main() { vP = position; vec4 w = modelMatrix * vec4(position, 1.); vN = normalize(mat3(modelMatrix) * normal); vV = cameraPosition - w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+      fragmentShader: `uniform vec3 col; uniform float k, fade, time, cme, gate; varying vec3 vN, vV, vP; ${NOISE}
+        void main() { float f = 1. - abs(dot(normalize(vN), normalize(vV))), a = ${bs ? 'pow(f, 4.5) * 1.2 + .008' : 'pow(f, 2.6) * 1.3 + .03'};
+          float st = .55 + .45 * vn(vec2(atan(vP.z, vP.y) * ${bs ? '4.' : '7.'}, vP.x * ${bs ? '2.' : '5.'} + time * (.5 + 1.5 * cme)));
+          a *= st * k * fade * gate * ${tail ? `smoothstep(${(-tail[0]).toFixed(2)}, ${(-tail[1]).toFixed(2)}, vP.x)` : '1.'} * smoothstep(2.5, 12., length(vV)) * (1. + cme * ${bs ? '1.6' : '.9'});
+          gl_FragColor = vec4(mix(col, vec3(1., .72, .45), cme * ${bs ? '.7' : '.25'}) * a, 1.); }` });
+    const lathe = (al, k) => { const P = []; for (let th = 0; th < 2.9; th += .035) { const r = k * Math.pow(2 / (1 + Math.cos(th)), al); if (r * Math.cos(th) < -6.5) break; P.push(new THREE.Vector2(r * Math.sin(th), r * Math.cos(th))); }
+      const geo = new THREE.LatheGeometry(P, 72); geo.rotateZ(-Math.PI / 2); return geo; };   // the lathe's axis (y) → x, toward the Sun
+    const mp = new THREE.Mesh(lathe(.58, 1), shellMat([.35, .7, 1], .4, 0, [3.2, 1])), bs = new THREE.Mesh(lathe(.75, 1.3), shellMat([1, .9, .78], .16, 1, [1.6, .3]));
+    mp.renderOrder = bs.renderOrder = 4; sw.add(mp, bs); let alBuilt = .58;
+    // field lines as screen-facing ribbons, laid out in the shader from dipole coordinates so a CME can squeeze them every frame
+    const FL = { p: [], q: [], s: [], sd: [] }, NS = 64;
+    const line = (kind, a1, a2, a3, seed) => { for (let i = 0; i <= NS; i++) for (const sd of [-1, 1]) { FL.p.push(kind, a1, a2, a3); FL.q.push(seed); FL.s.push(i / NS); FL.sd.push(sd); } };
+    for (let k = 0; k < 12; k++) [2.2, 3.4, 5, 7, 9].forEach((L, li) => line(0, L, k * Math.PI / 6 + (li % 2) * .26, li, Math.random()));   // closed loops
+    for (let k = -2; k <= 2; k++) [1, -1].forEach(hs => line(1, hs, k, 0, Math.random()));   // open: polar caps → the tail
+    for (let k = 0; k < 6; k++) [1, -1].forEach(hs => line(2, hs, (k - 2.5) * .5, 0, Math.random()));   // open on the day side, swept over the poles
+    const fg = new THREE.BufferGeometry(), nV = FL.s.length, idx = [];
+    for (let v = 0; v + 3 < nV; v += 2) if (FL.s[v + 2] > FL.s[v]) idx.push(v, v + 1, v + 2, v + 1, v + 3, v + 2);
+    fg.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(nV * 3), 3)); fg.setAttribute('prm', new THREE.Float32BufferAttribute(FL.p, 4));
+    fg.setAttribute('seed', new THREE.Float32BufferAttribute(FL.q, 1)); fg.setAttribute('s', new THREE.Float32BufferAttribute(FL.s, 1)); fg.setAttribute('sd', new THREE.Float32BufferAttribute(FL.sd, 1));
+    fg.setIndex(idx);
+    const fl = new THREE.Mesh(fg, new THREE.ShaderMaterial({ ...add, side: THREE.DoubleSide, uniforms: U2,
+      vertexShader: `attribute vec4 prm; attribute float seed, s, sd; uniform float R0, cme, px, time; varying float vS, vK, vA, vSeed;
+        vec3 at(float u) { float kind = prm.x;
+          if (kind < .5) { float L = prm.y, a = prm.z, lf = acos(sqrt(1. / L)), la = -lf + 2. * lf * u, r = L * cos(la) * cos(la);
+            vec3 p = vec3(r * cos(la) * cos(a), r * sin(la), r * cos(la) * sin(a)); float ca = cos(a);
+            p.x *= mix(1., min(1., .9 * R0 / L), max(ca, 0.)) * (1. + max(-ca, 0.) * .3 * L / 8. * (10.5 / R0)); return p; }
+          float hs = prm.y, k = prm.z, w0 = (1. - u) * (1. - u), w1 = 2. * u * (1. - u), w2 = u * u, sq = R0 / 10.5;
+          if (kind < 1.5) return w0 * vec3(.22, hs * .97, k * .15) + w1 * vec3(.8, hs * 6., k * .9) + w2 * vec3(-60., hs * 8.5 * sq, k * 4.5 * sq);
+          return w0 * vec3(.3, hs * .95, k * .12) + w1 * vec3(R0 * .95, hs * R0 * 1.25, k * 1.6) + w2 * vec3(-45., hs * 9. * sq, k * 5. * sq); }
+        void main() { vec3 p = at(s), q = at(min(1., s + .01)) - at(max(0., s - .01)); vec4 w = modelMatrix * vec4(p, 1.), t = modelMatrix * vec4(q, 0.);
+          vec3 vd = cameraPosition - w.xyz; vec3 side = normalize(cross(t.xyz, vd)); w.xyz += side * sd * px * length(vd) * (prm.x < .5 && prm.w < 1.5 ? 1.5 : 1.1);
+          vS = s; vK = prm.x; vA = prm.w; vSeed = seed; gl_Position = projectionMatrix * viewMatrix * w; }`,
+      fragmentShader: `uniform float fade, time, cme; varying float vS, vK, vA, vSeed;
+        void main() { float sp = vK < .5 ? .18 : .1, n = vK < .5 ? 2. : 3.; float pulse = pow(fract(vS * n - time * sp * (1. + 2. * cme) + vSeed), 10.);
+          float end = smoothstep(0., .04, vS) * smoothstep(1., .9, vS) * (vK > .5 ? smoothstep(1., .6, vS) : 1.);
+          vec3 c = vK < .5 ? (vA < 1.5 ? vec3(.47, .78, 1.) : vec3(.35, .59, 1.)) : vec3(.36, .55, 1.);
+          float a = (vK < .5 ? (vA < 1.5 ? .34 : .22) : .13) * (.55 + 2.2 * pulse) * end * fade;
+          gl_FragColor = vec4(mix(c, vec3(1., .8, .55), cme * pulse * .6) * a, 1.); }` }));
+    fl.renderOrder = 4; fl.frustumCulled = false; sw.add(fl);
+    // Van Allen belts: glowing shells shaped like field lines (inner ≈ 1.2–2 R⊕, mostly protons; outer ≈ 3–6 R⊕, electrons)
+    const belt = (L, col, k) => { const P = [], lf = Math.acos(Math.sqrt(1 / L)) * .78; for (let i = 0; i <= 40; i++) { const la = -lf + 2 * lf * i / 40, r = L * Math.cos(la) ** 2; P.push(new THREE.Vector2(r * Math.cos(la), r * Math.sin(la))); }
+      const m = new THREE.Mesh(new THREE.LatheGeometry(P, 72), shellMat(col, k, 0, 0)); m.renderOrder = 4; dip.add(m); return m; };
+    const belts = [belt(1.6, [1, .55, .35], .3), belt(2.1, [1, .55, .35], .15), belt(3.8, [.6, .5, 1], .25), belt(5, [.6, .5, 1], .18)];
+    // the solar wind: particles from the Sun's side, sliding round the magnetopause and down the tail (sped up; the real speed sets the pace)
+    const NP = Q === 'low' ? 1800 : 4000, pa = new Float32Array(NP * 3);
+    for (let i = 0; i < NP; i++) { pa[i * 3] = Math.sqrt(Math.random()) * 22; pa[i * 3 + 1] = Math.random() * 6.2832; pa[i * 3 + 2] = Math.random(); }
+    const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(NP * 3), 3)); pg.setAttribute('pr', new THREE.Float32BufferAttribute(pa, 3));
+    const U3 = { ...U2, spd: { value: 7 }, dpr: { value: 1 } };
+    const pts = new THREE.Points(pg, new THREE.ShaderMaterial({ ...add, uniforms: U3,
+      vertexShader: `attribute vec3 pr; uniform float R0, al, time, spd, dpr, cme; varying float vA;
+        float rho(float x, float R) { float lo = 0., hi = 2.95; for (int i = 0; i < 14; i++) { float th = .5 * (lo + hi), r = R * pow(2. / (1. + cos(th)), al); if (r * cos(th) > x) lo = th; else hi = th; }
+          float th = .5 * (lo + hi); return R * pow(2. / (1. + cos(th)), al) * sin(th); }
+        void main() { float x = 32. - mod(pr.z * 85. + time * spd, 85.), R = R0 * 1.12, rr = x > R ? pr.x : sqrt(pr.x * pr.x + pow(rho(x, R) * 1.04, 2.));
+          vec3 p = vec3(x, rr * sin(pr.y), rr * cos(pr.y)); vA = smoothstep(32., 26., x) * smoothstep(-53., -40., x);
+          gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(p, 1.); gl_PointSize = dpr * (1.6 + cme * .8); }`,
+      fragmentShader: `uniform float fade, cme; varying float vA; void main() { float d = 1. - smoothstep(.2, .5, length(gl_PointCoord - .5));
+        gl_FragColor = vec4(mix(vec3(.55, .76, 1.), vec3(1., .74, .45), cme) * d * vA * fade * .75, 1.); }` }));
+    pts.renderOrder = 4; pts.frustumCulled = false; sw.add(pts);
+    // the CME: a bright curved front sweeping in from the Sun; it hits, squeezes the shield and lights the aurora
+    const front = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 24, 0, Math.PI * 2, 0, .9), shellMat([1, .78, .5], 1.4, 1, 0));
+    front.geometry.rotateZ(Math.PI / 2); front.renderOrder = 4; front.visible = false; sw.add(front);   // the cap faces −x, toward the Earth
+    // the Moon at its true place and size (low-precision Meeus), lit by the real Sun; grey with maria-like patches
+    const moon = new THREE.Mesh(new THREE.SphereGeometry(.2727, 48, 24), new THREE.ShaderMaterial({ uniforms: { rsun: U.rsun, fade: U2.fade },
+      vertexShader: `varying vec3 vN; void main() { vN = normal; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`,
+      fragmentShader: `uniform vec3 rsun; uniform float fade; varying vec3 vN; ${NOISE}
+        void main() { vec3 n = normalize(vN); vec2 q = vec2(atan(n.z, n.x) * 2., asin(n.y) * 2.); float alb = .62 + .18 * fbm(q * 4.) - .32 * smoothstep(.5, .66, fbm(q * 1.3 + 7.));
+          float l = max(dot(n, rsun), 0.); gl_FragColor = vec4(vec3(alb * (l * 1.35 + .015)) * fade, 1.); }` }));
+    const moonAt = t => { const d = t / 864e5 - 10957.5, L = (218.316 + 13.176396 * d) * D2R, M = (134.963 + 13.064993 * d) * D2R, F = (93.272 + 13.229350 * d) * D2R;
+      const l = L + 6.289 * D2R * Math.sin(M), b = 5.128 * D2R * Math.sin(F), r = (385001 - 20905 * Math.cos(M)) / 6371, e = 23.4393 * D2R;
+      const x = Math.cos(b) * Math.cos(l), y = Math.cos(b) * Math.sin(l), z = Math.sin(b), ye = y * Math.cos(e) - z * Math.sin(e), ze = y * Math.sin(e) + z * Math.cos(e);
+      return nrmOf(Math.asin(ze), Math.atan2(ye, x) - gmst(t)).multiplyScalar(r); };   // right ascension − sidereal time = the longitude under the Moon
+    // labels in the page, so they stay crisp
+    const lab = document.createElement('div'); lab.className = 'e3g-ms'; el.appendChild(lab);
+    const LB = [0, 1, 2, 3, 4, 5, 6].map(() => lab.appendChild(document.createElement('span')));
+    const wp = new THREE.Vector3(), pv = new THREE.Vector3();
+    const hidden = p => { const d = pv.copy(p).sub(camera.position), len = d.length(); d.divideScalar(len); const b = camera.position.dot(d), h = b * b - camera.position.lengthSq() + 1; if (h <= 0) return false; const t0 = -b - Math.sqrt(h); return t0 > 0 && t0 < len; };
+    const put = (s, obj, x, y, z, txt) => { wp.set(x, y, z).applyMatrix4(obj.matrixWorld); pv.copy(wp).project(camera);
+      if (pv.z > 1 || Math.abs(pv.x) > 1.05 || Math.abs(pv.y) > 1.05 || hidden(wp)) { s.style.opacity = 0; return; }
+      s.style.opacity = S.fade; s.style.transform = `translate(${Math.round((pv.x * .5 + .5) * W + 8)}px, ${Math.round((.5 - pv.y * .5) * H - 9)}px)`; if (s.textContent !== txt) s.textContent = txt; };
+    let on = true;
+    function update(dt, t, D) {
+      const want = on ? smooth(5, 12, D - 1) * (1 - smooth(250, 500, D)) : 0; S.fade += (want - S.fade) * Math.min(1, dt * 3); U2.fade.value = S.fade;
+      g.visible = S.fade > .003; lab.style.display = g.visible ? '' : 'none'; if (!g.visible) { AU.auB.value = 1; return 0; }
+      const ex = U.rsun.value.clone().normalize(), ey = Mg.clone().addScaledVector(ex, -Mg.dot(ex)).normalize(), ez = new THREE.Vector3().crossVectors(ex, ey);
+      sw.matrix.makeBasis(ex, ey, ez); dip.quaternion.setFromUnitVectors(Yax, Mg);
+      // CME impact: 0–3 s the front sweeps in, then the shield is squeezed, holds, and relaxes
+      let c = 0, R = S.Rw, al = S.alw;
+      if (S.cme >= 0) { S.cme += dt; const u = S.cme; front.visible = u < 4.2;
+        if (front.visible) { const x = 45 - u * 15; front.position.set(x + 14, 0, 0); front.scale.setScalar(14 + u * 3); front.material.uniforms.gate.value = Math.min(1, u * 2) * (1 - smooth(3, 4.2, u)); }
+        c = smooth(2.6, 3.4, u) * (1 - smooth(16, 24, u)); if (u > 24) S.cme = -1;
+        const h = shue(25, 1100, -25); R = S.Rw + (h.R - S.Rw) * c; al = S.alw + (h.al - S.alw) * c; }
+      S.R0 += (R - S.R0) * Math.min(1, dt * (S.cme >= 0 ? 4 : 1.5)); U2.R0.value = S.R0; U2.cme.value = c; U2.al.value = al;
+      if (Math.abs(al - alBuilt) > .02) { mp.geometry.dispose(); mp.geometry = lathe(al, 1); alBuilt = al; }
+      mp.scale.setScalar(S.R0); bs.scale.setScalar(S.R0);
+      U2.px.value = 1.1 * Math.tan(camera.fov * D2R / 2) * 2 / H; U3.dpr.value = renderer.getPixelRatio(); U3.spd.value = (c > .2 ? 1500 : S.v) / 60;
+      AU.auB.value = 1 + 3.5 * c; belts[2].material.uniforms.k.value = .25 + .5 * c;
+      g.updateMatrixWorld(true);
+      put(LB[0], sw, S.R0 * 1.34, -1.6, 0, tr('Bow shock')); put(LB[1], sw, S.R0 * .2, S.R0 * 1.28, 0, tr('Magnetopause · {r} Earth radii', { r: S.R0.toFixed(1) }));
+      put(LB[2], sw, -40, 8.5 * S.R0 / 10.5, 0, tr('Magnetic tail')); put(LB[3], dip, 0, 0, 4.4, tr('Van Allen belts'));
+      put(LB[4], sw, 26, -8, 0, (c > .2 ? 'CME 1500 km/s' : tr('solar wind') + ' ' + Math.round(S.v) + ' km/s') + ' ← ' + tr('from the Sun'));
+      put(LB[6], sw, -10, -13, 0, tr('to scale · particle flow sped up ~100×'));
+      return 75; }   // how far past the Earth the camera must see (the Moon, the tail)
+    return { update, S, get on() { return on; }, set on(v) { on = v; }, impact() { S.cme = 0; } };
+  })();
+
   // ── controls: the buttons of the Earth view
-  let spin = true, want2d = 0, realSun = !!opts.realSun, tOver = null, visible = false, shownAt = 0; const clock = new THREE.Clock();
-  const $ = k => el.querySelector('[data-k="' + k + '"]'), press = (b, on) => b.setAttribute('aria-pressed', !!on);
+  let spin = true, realSun = !!opts.realSun, tOver = null, visible = false, shownAt = 0; const clock = new THREE.Clock();
+  const AUr = 1.495978707e8 / 6371, DAYms = 864e5, $ = k => el.querySelector('[data-k="' + k + '"]'), press = (b, on) => b.setAttribute('aria-pressed', !!on);
   const now = () => tOver != null ? tOver : (opts.time ? opts.time() : Date.now());
-  $('back').onclick = () => opts.onBack && opts.onBack();
   const spinOff = () => { if (spin) { spin = false; press($('sp'), false); } };
-  $('2d').onclick = e => { want2d = want2d ? 0 : 1; press(e.currentTarget, want2d); e.currentTarget.textContent = want2d ? tr('3D globe') : tr('2D map');
-    if (want2d) { from = camera.position.clone(); fly = 0; camera.up.set(0, 1, 0); } else { tgt.copy(camera.position).normalize(); rng = rngTo = camera.position.length() - 1; head = headTo = 0; } };
   // Google Earth's 3D switch (tilts as you come down) + compass (tap = north up, flat) + the tilt / heading sliders
   const b3 = $('3d'), cmp = $('cmp'), pnl = el.querySelector('.e3g-pnl'), sT = pnl.querySelector('[data-s="tilt"]'), sH = pnl.querySelector('[data-s="head"]');
   press(b3, true); b3.onclick = () => { tkTo = tkTo > .05 ? 0 : 1; };
   cmp.onclick = () => { headTo = Math.round(headTo / (2 * Math.PI)) * 2 * Math.PI; };
-  $('ang').onclick = e => { pnl.hidden = !pnl.hidden; press(e.currentTarget, !pnl.hidden); };
+  $('ang').onclick = e => { pnl.hidden = !pnl.hidden; press(e.currentTarget, !pnl.hidden); if (!pnl.hidden) info.hidden = true; else if (infoOf) info.hidden = false; };
   pnl.querySelector('[data-k="north"]').onclick = () => { headTo = Math.round(headTo / (2 * Math.PI)) * 2 * Math.PI; tkTo = 0; };
   sT.oninput = () => { tkTo = sT.value / 100; }; sH.oninput = () => { const w = ((headTo % (2 * Math.PI)) + 3 * Math.PI) % (2 * Math.PI) - Math.PI; headTo += sH.value * D2R - w; };
   $('zin').onclick = () => zoomBy(.5); $('zout').onclick = () => zoomBy(2);
@@ -509,6 +657,87 @@ ${SUNLIB}
   $('au').onclick = e => { aurora.visible = !aurora.visible; press(e.currentTarget, aurora.visible); };
   press($('sun'), realSun); $('sun').onclick = e => { realSun = !realSun; press(e.currentTarget, realSun); };
   $('sp').onclick = e => { spin = !spin; press(e.currentTarget, spin); };
+  // the shield: on / off; switched on close to the ground, the camera flies out to a side view (Sun on one side, the tail on the other)
+  const shieldView = () => { const ex = U.rsun.value.clone().normalize(), Mg = nrmOf(80.7 * D2R, -72.7 * D2R), ey = Mg.addScaledVector(ex, -Mg.dot(ex)).normalize(), ez = new THREE.Vector3().crossVectors(ex, ey);
+    const d = ez.multiplyScalar(.95).addScaledVector(ex, .05).addScaledVector(ey, .3).normalize(); goTo(Math.asin(d.y) / D2R, Math.atan2(-d.z, d.x) / D2R, 48 * 6371, ''); };
+  const saveView = v => { try { localStorage.setItem('aurora.s3dlast', v); } catch (e) {} };
+  const shield = () => { saveView('shield'); MSH.on = true; press($('ms'), true); if (focus !== 'Earth') flyToBody('Earth', 48); else if (rng < 20) shieldView(); };
+  // fly to another body: the focus changes at once (the camera stays where it is), then it comes in to a sunlit side
+  function flyToBody(name, r1, dir, keep) { const B = solar.bodies[name]; if (!B) return; const t = now(); solar.eclToWorld(t);
+    const c = name === 'Earth' ? O3.clone() : solar.toWorld(solar.helio(name, t).map((v, i) => v - hE[i])), off = camera.position.clone().sub(c), d = off.length();
+    look0.copy(camera.getWorldDirection(new THREE.Vector3())); lookU = 0;
+    focus = name; Rf = B.R; Mprev = solar.eclToWorld(t).clone(); headTo = 0; if (name !== 'Earth') tkTo = 0;
+    const a = off.normalize(), sunD = solar.toWorld(hE.map(v => -v)).sub(c).normalize();   // from the body toward the Sun
+    const b = dir ? dir.clone().normalize() : name === 'Sun' ? solar.toWorld([0, 0, 1]).multiplyScalar(.75).addScaledVector(a, .66).normalize() : sunD.clone().multiplyScalar(.75).addScaledVector(a, .5).normalize();
+    tgt.copy(a); rng = rngTo = Math.max(rMin(), d / Rf - 1);
+    const ax = b.clone().addScaledVector(a, -a.dot(b)); if (ax.lengthSq() < 1e-9) ax.set(0, 1, 0); ax.normalize();
+    const want = r1 != null ? r1 : name === 'Sun' ? 3.6 * 23481 / Rf : name === 'Earth' ? 3.2 : name === 'Saturn' ? 5 : 3;
+    goal = { a, b, ax, ang: a.angleTo(b), u: 0, r0: rng, r1: want, hop: 0, dur: 2 + Math.min(3.5, Math.log10(1 + rng / want)) };
+    spinOff(); vel = [0, 0]; plN = tr(name); plT = performance.now() + 6000; if (r1 == null) saveView(name); if (keep) return; if (r1 == null) showInfo(name); else hideInfo(); }
+  // the info card of the focused body: facts, its magnetic field, the latest NASA pictures, Closer / Follow the orbit
+  const FACT = { Sun: [1392700, 609.1, 0, 8], Mercury: [4879, 1407.6, 87.97, 0], Venus: [12104, -5832.5, 224.7, 0], Earth: [12742, 23.934, 365.256, 1],
+    Moon: [3474.8, 655.7, 27.322, 0], Mars: [6779, 24.623, 686.98, 2], Jupiter: [139820, 9.925, 4332.6, 97], Saturn: [116460, 10.656, 10759, 274],
+    Uranus: [50724, -17.24, 30687, 29], Neptune: [49244, 16.11, 60190, 16] };
+  const FIELD = { Sun: 'Closed loops near the Sun (orange); beyond ~2.5 solar radii the wind drags the lines into spirals that reach every planet (blue = towards the Sun, red = away). The wavy violet sheet is where they flip; bright dots ride the lines at the wind’s speed.',
+    Mercury: 'A weak field, 1% of Earth’s; the solar wind almost touches the ground.', Venus: 'No global magnetic field: the solar wind strips its upper air directly.',
+    Earth: 'Our shield: the magnetopause stands ~10 Earth radii towards the Sun, the tail stretches past the Moon. Where the field lines reach the poles: auroras.',
+    Moon: 'No global field today; old lunar rocks show it had one billions of years ago.',
+    Mars: 'Lost its global field ~4 billion years ago — and most of its atmosphere with it.', Jupiter: 'The biggest magnetosphere in the system: if we could see it, it would look bigger than the full Moon in our sky.',
+    Saturn: 'Its field is almost perfectly lined up with its spin axis.', Uranus: 'Tilted ~60° and off-centre: its magnetosphere tumbles as it turns.', Neptune: 'Tilted ~47° and off-centre, like Uranus.' };
+  const MOONS = { Earth: 'the Moon', Mars: 'Phobos, Deimos' }, PHOTO = {}, PHN = {}, info = el.querySelector('.e3g-info'), nf = v => Math.round(v).toLocaleString(window.LOC || 'en-GB');
+  const span = h => { const a = Math.abs(h); return a < 48 ? `${Math.floor(a)} h ${Math.round(a % 1 * 60)} m` : a < 24 * 1000 ? `${(a / 24).toFixed(a < 240 ? 1 : 0)} ${tr('days')}` : `${(a / 8766).toFixed(1)} ${tr('years')}`; };
+  async function photos(nm, host) { try {
+      if (!PHOTO[nm]) {
+        if (nm === 'Earth') { const r = await (await fetch('https://epic.gsfc.nasa.gov/api/natural')).json();
+          PHOTO[nm] = r.slice(-3).reverse().map(x => { const d = x.date.slice(0, 10).replace(/-/g, '/'); return { t: x.date.slice(0, 10), cap: tr('Earth from DSCOVR, 1.5 million km away'), src: `https://epic.gsfc.nasa.gov/archive/natural/${d}/thumbs/${x.image}.jpg`, href: `https://epic.gsfc.nasa.gov/archive/natural/${d}/png/${x.image}.png` }; }); }
+        else { const r = await (await fetch(`https://images-api.nasa.gov/search?keywords=${encodeURIComponent(nm)}&media_type=image&year_start=2012`)).json(), seen = new Set();
+          PHOTO[nm] = r.collection.items.filter(x => x.links && x.data[0].title.toLowerCase().includes(nm.toLowerCase()) && !seen.has(x.data[0].title) && seen.add(x.data[0].title))
+            .sort((a, b) => b.data[0].date_created.localeCompare(a.data[0].date_created)).slice(0, 3)
+            .map(x => ({ t: x.data[0].date_created.slice(0, 10), cap: x.data[0].title, src: x.links[0].href, href: `https://images.nasa.gov/details/${encodeURIComponent(x.data[0].nasa_id)}` })); } }
+      const L = PHOTO[nm], q = v => v.replace(/[<>&"]/g, c => '&#' + c.charCodeAt(0) + ';'); if (!L.length) { host.innerHTML = ''; return; }
+      host.innerHTML = `<small>${tr('Latest pictures')} · NASA</small><div>` + L.map(x => `<a href="${q(x.href)}" target="_blank" rel="noopener" title="${q(x.cap)}"><img src="${q(x.src)}" alt="${q(x.cap)}" loading="lazy"><span>${x.t}</span></a>`).join('') + '</div>';
+    } catch (e) { host.innerHTML = ''; } }
+  const photoNode = nm => { if (PHN[nm]) return PHN[nm]; const h = PHN[nm] = document.createElement('div'); h.className = 'e3g-iph'; h.innerHTML = `<small>${tr('Latest pictures')} · ${tr('loading…')}</small>`; photos(nm, h); return h; };
+  let infoOf = null, orbitOn = 0, orbitWait = 0, infoAt = 0, orbView = false;
+  function liveInfo(t) { const o = info.querySelector('.e3g-il'); if (!o || !infoOf) return; const E = solar.helio('Earth', t), P = infoOf === 'Earth' ? E : solar.helio(infoOf, t);
+    const de = Math.hypot(P[0] - E[0], P[1] - E[1], P[2] - E[2]) / AUr, ds = Math.hypot(...P) / AUr;
+    o.innerHTML = infoOf === 'Earth' ? `<small>${tr('From the Sun')}</small>${ds.toFixed(3)} AU · ${(ds * 8.317).toFixed(1)} ${tr('light min')}`
+      : infoOf === 'Moon' ? `<small>${tr('From Earth')}</small>${nf(de * 1.495978707e8)} km · ${(de * 499).toFixed(2)} ${tr('light s')}`
+      : `<small>${tr('From Earth')}</small>${de.toFixed(2)} AU · ${(de * 8.317).toFixed(1)} ${tr('light min')}`; }
+  function showInfo(nm) { infoOf = nm; orbitOn = orbitWait = 0; const F = FACT[nm]; pnl.hidden = true; press($('ang'), false);
+    info.innerHTML = `<div class="e3g-ih"><b>${tr(nm)}</b><button aria-label="${tr('Close')}">✕</button></div>
+      <div class="e3g-if"><div><small>${tr('Diameter')}</small>${nf(F[0])} km</div><div class="e3g-il"></div>
+      <div><small>${nm === 'Sun' ? tr('Turns once in') : tr('Day / year')}</small>${span(F[1])}${F[1] < 0 ? ' ↺' : ''}${F[2] ? ' · ' + span(F[2] * 24) : ''}</div>
+      <div><small>${nm === 'Sun' ? tr('Planets') : tr('Moons')}</small>${MOONS[nm] ? tr(MOONS[nm]) : F[3] || '—'}</div></div>
+      <div class="e3g-im">🧲 ${tr(FIELD[nm])}</div>
+      <div class="e3g-ib"><button data-i="near">${tr('Closer')}</button>${F[2] ? `<button data-i="orb" aria-pressed="false">${tr('Follow the orbit')}</button>` : ''}</div>`;
+    info.insertBefore(photoNode(nm), info.querySelector('.e3g-ib')); liveInfo(now()); info.hidden = false;
+    info.querySelector('.e3g-ih button').onclick = hideInfo;
+    info.querySelector('[data-i="near"]').onclick = () => { if (focus !== nm || orbView) { orbView = false; flyToBody(nm, undefined, null, true); } else zoomBy(.3); };
+    const ob = info.querySelector('[data-i="orb"]'); if (ob) ob.onclick = () => { const on = !(orbitOn || orbitWait), rate = F[2] * DAYms / 40; orbitOn = orbitWait = 0; press(ob, on); if (!on) return; spinOff();
+      // the camera stays on the planet, steps back outward + up: the Sun and the inner orbits stay in view behind it, so you see it move
+      const t = now(), E = solar.helio('Earth', t), P = solar.helio(nm, t), rel = nm === 'Moon' ? P.map((v, i) => v - E[i]) : P,
+        a = Math.hypot(...rel), u = rel.map(v => v / a), dir = solar.toWorld([u[0] * .55, u[1] * .55, .65]), back = a * 2.6 / solar.bodies[nm].R;
+      if (focus !== nm || Math.abs(rng - back) > back * .2) { flyToBody(nm, back, dir, true); orbitWait = rate; } else orbitOn = rate; orbView = true; }; }
+  function hideInfo() { info.hidden = true; infoOf = null; orbitOn = orbitWait = 0; }
+  $('sys').onclick = () => flyToBody('Sun'); $('home').onclick = () => flyToBody('Earth');
+  const bl = el.querySelector('.e3g-bl'), lp = el.querySelector('.e3g-lp'), pop = (b, p, on) => { p.hidden = !on; b.setAttribute('aria-expanded', on); };
+  $('bodies').onclick = () => { pop($('bodies'), bl, bl.hidden); bl.querySelectorAll('[data-b]').forEach(o => o.setAttribute('aria-current', o.dataset.b === focus)); };
+  bl.onclick = e => { const b = e.target.closest('[data-b]'); if (!b) return; pop($('bodies'), bl, false); if (b.dataset.b !== focus) flyToBody(b.dataset.b); };
+  $('layers').onclick = () => pop($('layers'), lp, lp.hidden);
+  el.addEventListener('pointerdown', e => { if (!e.target.closest('.e3g-bl,[data-k="bodies"]')) pop($('bodies'), bl, false); if (!e.target.closest('.e3g-lay')) pop($('layers'), lp, false); });
+  $('rs').onclick = e => { solar.realScale = !solar.realScale; press(e.currentTarget, solar.realScale); };
+  $('gd').onclick = e => { solar.guides = !solar.guides; press(e.currentTarget, solar.guides); };
+  $('sw').onclick = e => { solar.wind = !solar.wind; press(e.currentTarget, solar.wind); };
+  $('sf').onclick = e => { solar.field = !solar.field; press(e.currentTarget, solar.field); if (!solar.field) { solar.bare = false; press($('dw'), false); } };
+  $('dw').onclick = e => { solar.bare = !solar.bare; press(e.currentTarget, solar.bare); if (!solar.bare) return; solar.field = true; press($('sf'), true); flyToBody('Sun', 110 * 23481 / solar.bodies.Sun.R, null, true); };
+  // the wind + CME data come from the page (space3d: ENLIL at Earth + DONKI); a CME reaching the Earth squeezes the shield once
+  let wSeen = null, cSeen = null, feedAt = 0, hitC = null;
+  function feed(t) { if (performance.now() - feedAt > 1000) { feedAt = performance.now();
+      const w = opts.wind && opts.wind(), c = opts.cmes && opts.cmes(); if (w && w !== wSeen) { wSeen = w; solar.setWind(w); } if (c && c !== cSeen) { cSeen = c; solar.setCmes(c); } }
+    const st = solar.cmeAtEarth(t); if (st.hit && st.f > .3 && st.hit !== hitC) { hitC = st.hit; if (MSH.on) MSH.impact(); } }
+  $('ms').onclick = () => { if (MSH.on && rng >= 20) { MSH.on = false; press($('ms'), false); } else shield(); };
+  $('cme').onclick = () => { const far = rng >= 20; shield(); setTimeout(() => MSH.impact(), far ? 0 : 2600); };
   const pad = v => String(v).padStart(2, '0'), localStr = t => { const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
   const di = $('date'); di.onchange = () => { const t = Date.parse(di.value); if (isFinite(t)) tOver = t; };
   $('now').onclick = () => { tOver = null; di.value = localStr(now()); };
@@ -526,7 +755,7 @@ ${SUNLIB}
   function goTo(lat, lon, km, name) { const b = nrmOf(lat * D2R, lon * D2R).applyQuaternion(earth.quaternion), a = tgt.clone(), ang = a.angleTo(b);
     const ax = b.clone().addScaledVector(a, -a.dot(b)); if (ax.lengthSq() < 1e-9) ax.copy(cE); ax.normalize();
     goal = { a, b, ax, ang, u: 0, r0: rng, r1: Math.max(RMIN * 4, km / 6371), hop: Math.min(2.2, ang * .9) * Math.min(1, ang * 6), dur: 1.6 + Math.min(3, ang * 1.6) };
-    spinOff(); vel = [0, 0]; headTo = 0; tkTo = 1; if (want2d) $('2d').click(); plN = name; plT = performance.now() + 9000; }
+    spinOff(); vel = [0, 0]; headTo = 0; tkTo = 1; plN = name; plT = performance.now() + 9000; }
   { const fi = $('find'), ul = fi.nextElementSibling; let hits = [], sel = -1, qn = 0, tmr = 0;
     const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
     const draw = () => { ul.innerHTML = hits.map((h, i) => `<li role="option" data-i="${i}" aria-selected="${i === sel}">${esc(h.name)}<small>${esc([h.admin1, h.country].filter(Boolean).join(', '))}${h.elevation != null ? ' · ' + Math.round(h.elevation) + ' m' : ''}</small></li>`).join(''); };
@@ -549,85 +778,102 @@ ${SUNLIB}
     b.onpointerup = b.onpointercancel = b.onlostpointercapture = stop;
     b.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); n = 0; step(); } }; }
   const todShow = t => { const m = solarMin(t); if (!todDrag) tod.value = Math.round(m / 5) * 5; todL.textContent = hm(m) + ' ' + tr('Sun time'); };
-  let from = null, fly = 1; const flat = new THREE.Vector3(0, 0, 6.2), lm = new THREE.Matrix4(), O3 = new THREE.Vector3();
-  function resize() { const r = host.getBoundingClientRect(); W = Math.max(200, r.width); H = Math.max(200, r.height); PRMAX = prCap(); PR = Math.min(PR, PRMAX);
-    camera.aspect = W / H; camera.updateProjectionMatrix(); renderer.setPixelRatio(PR); renderer.setSize(W, H); composer.setPixelRatio(PR); composer.setSize(W, H); }
+  const lm = new THREE.Matrix4(), O3 = new THREE.Vector3();
+  function resize() { W = Math.max(200, host.clientWidth); H = Math.max(200, host.clientHeight); PRMAX = prCap(); PR = Math.min(PR, PRMAX);
+    camera.aspect = W / H; camera.updateProjectionMatrix(); renderer.setPixelRatio(PR); renderer.setSize(W, H); composer.setPixelRatio(PR); composer.setSize(W, H); pHold = Math.max(pHold, 3); }
   if (window.ResizeObserver) new ResizeObserver(() => visible && resize()).observe(host);
   mgr.onLoad = () => { readyAt = performance.now(); el.querySelector('.e3g-load').remove(); renderer.domElement.classList.add('on'); };
-  // zooming out past ~60 000 km leaves for the solar system
-  const DMAX = 1 + 60000 / 6371, out = () => { if (visible && opts.onOut && performance.now() - shownAt > 900) opts.onOut(); };
-  renderer.domElement.addEventListener('wheel', e => { if (e.deltaY > 0 && rngTo >= RMAX - .01) out(); }, { passive: true });
+  // zooming out past ~700 000 km leaves for the solar system
+  const out = () => { if (visible && opts.onOut && performance.now() - shownAt > 900) opts.onOut(); };
+  renderer.domElement.addEventListener('wheel', e => { if (e.deltaY > 0 && rngTo >= rMax() * .999) out(); }, { passive: true });
 
 
   const inv = new THREE.Matrix4();
-  let fpsN = 60, slow = 0, fast = 0, readyAt = 0; const PRMIN = Math.min(Q === "low" ? .6 : 1, prCap()); let PRMAX = prCap();
+  let fpsN = 60, slow = 0, fast = 0, readyAt = 0, msX = 0, hE = [0, 0, 0], Mprev = null, lookU = 1; const fc = new THREE.Vector3(), look = new THREE.Vector3(), look0 = new THREE.Vector3(); const PRMIN = Math.min(Q === "low" ? .6 : 1, prCap()); let PRMAX = prCap();
   function frame() {
-    if (opts.paused && opts.paused()) return;
+    if (startV && ++startN > 20) { const v = startV; startV = null; goStart(v); }
+    const P = !!(opts.paused && opts.paused());
+    if (P) { if (!wasP) { wasP = true; pHold = Math.max(pHold, 120); } if (pHold <= 0) return; pHold--; } else wasP = false;
     const dt0 = clock.getDelta(); fpsN += (1 / Math.max(dt0, 1e-3) - fpsN) * .05;
     // adaptive resolution: if frames run long for a while, render fewer pixels; give them back when it is smooth again
     if (readyAt && performance.now() - readyAt > 3000) { if (dt0 > .03) { slow++; fast = 0; } else if (dt0 < .016) { fast++; slow = Math.max(0, slow - 2); } }
     if (slow > 90 && PR > PRMIN) { PR = Math.max(PRMIN, PR - .1); resize(); slow = 0; }
     else if (fast > 180 && PR < PRMAX) { PR = Math.min(PR + .1, PRMAX); resize(); fast = 0; }
-    const dt = Math.min(.05, dt0), t = now();
-    U.morph.value += (want2d - U.morph.value) * Math.min(1, dt * 2.2);
-    if (want2d && fly < 1) { fly = Math.min(1, fly + dt * .8); const e = fly * fly * (3 - 2 * fly); camera.position.lerpVectors(from, flat, e); camera.lookAt(0, 0, 0); }
-    else if (!want2d) {
+    if (orbitWait && !goal) { orbitOn = orbitWait; orbitWait = 0; }
+    if (orbitOn) { tOver = now() + Math.min(.1, dt0) * orbitOn; if (performance.now() - infoAt > 250) di.value = localStr(tOver); }
+    const dt = Math.min(.05, dt0), t = now(); hE = solar.helio('Earth', t);
+    if (infoOf && performance.now() - infoAt > 250) { infoAt = performance.now(); liveInfo(t); }
+    {
       const kk = Math.min(1, dt * 6);
+      solar.eclToWorld(t); fc.copy(focus === 'Earth' ? O3 : solar.toWorld(solar.helio(focus, t).map((v, i) => v - hE[i])));
+      if (focus !== 'Earth' && Mprev) { const qd = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().setFromMatrix3(solar.eclToWorld(t).clone().multiply(Mprev.clone().invert()))); tgt.applyQuaternion(qd); if (goal) { goal.a.applyQuaternion(qd); goal.b.applyQuaternion(qd); goal.ax.applyQuaternion(qd); } }   // away from the Earth the view stays still among the stars
+      Mprev = solar.eclToWorld(t).clone();
       if (spin && rng > .4) tgt.applyAxisAngle(Yax, dt * .02 * Math.min(1, rng));   // a slow turn seen from far away
       if (!pins.size && (vel[0] || vel[1])) { panBy(vel[0], vel[1]); vel = vel.map(v => Math.abs(v *= Math.pow(.05, dt)) < .05 ? 0 : v); }   // the throw glides on
       if (goal) { goal.u = Math.min(1, goal.u + dt / goal.dur); const e = goal.u * goal.u * (3 - 2 * goal.u);   // fly: up, across, down (log range + a hop that grows with the distance)
         tgt.copy(goal.a).lerp(goal.b, e).normalize(); if (goal.ang > 3.1) tgt.copy(goal.a).multiplyScalar(Math.cos(e * goal.ang)).addScaledVector(goal.ax, Math.sin(e * goal.ang)).normalize();
         rng = rngTo = Math.exp(Math.log(goal.r0) * (1 - e) + Math.log(goal.r1) * e) + goal.hop * Math.sin(Math.PI * e); if (goal.u >= 1) goal = null; }
-      rng *= Math.pow(rngTo / rng, kk); head += (headTo - head) * kk; tk += (tkTo - tk) * kk; tilt = tk * maxTilt(rng);
+      rng *= Math.pow(rngTo / rng, kk); head += (headTo - head) * kk; tk += (tkTo - tk) * kk; tilt = tk * maxTilt(rng * Rf);
       frameAt(); const ct = Math.cos(tilt), st = Math.sin(tilt);
       // the camera looks at the ground itself (not the sea-level sphere under it) and never goes below 40 m over the drawn relief
-      const qi = earth.quaternion.clone().invert(), tO = tgt.clone().applyQuaternion(qi), gt = rng < .5 ? gMax(tO) : 0;
+      const qi = earth.quaternion.clone().invert(), tO = tgt.clone().applyQuaternion(qi), gt = focus === 'Earth' && rng < .5 ? gMax(tO) : 0;
       gT += (gt - gT) * (Math.abs(gt - gT) > 3e-4 ? 1 : Math.min(1, dt * 5));
-      const pos = new THREE.Vector3(), place = r => pos.copy(tgt).multiplyScalar(1 + gT + r * ct).addScaledVector(cF, -r * st), MARG = 40 / 6371000;
-      let gc = 0; for (let n = 0; n < 24; n++) { place(rng); gc = rng < .5 ? gMax(pos.clone().normalize().applyQuaternion(qi)) : 0; if (pos.length() - 1 >= gc + MARG) break; rng *= 1.12; rngTo = Math.max(rngTo, rng); }
+      const pos = new THREE.Vector3(), place = r => pos.copy(tgt).multiplyScalar(Rf * (1 + gT + r * ct)).addScaledVector(cF, -r * st * Rf).add(fc), MARG = 40 / 6371000;
+      let gc = 0; if (focus !== 'Earth') place(rng); else for (let n = 0; n < 24; n++) { place(rng); gc = rng < .5 ? gMax(pos.clone().normalize().applyQuaternion(qi)) : 0; if (pos.length() - 1 >= gc + MARG) break; rng *= 1.12; rngTo = Math.max(rngTo, rng); }
       hAG = Math.max(MARG * .5, pos.length() - 1 - gc);
-      camera.position.copy(pos); camera.up.copy(tgt).multiplyScalar(st).addScaledVector(cF, ct); camera.lookAt(pos.copy(tgt).multiplyScalar(1 + gT));
+      camera.position.copy(pos); camera.up.copy(tgt).multiplyScalar(st).addScaledVector(cF, ct); look.copy(tgt).multiplyScalar(Rf * (1 + gT)).add(fc);
+      if (lookU < 1) { lookU = Math.min(1, lookU + dt / 1.4); const e = lookU * lookU * (3 - 2 * lookU), dn = look.clone().sub(pos).normalize(); look.copy(pos).add(look0.clone().lerp(dn, e).normalize()); }   // after a change of focus the view turns smoothly to the new body
+      camera.lookAt(look);
       sH.value = Math.round((((head % (2 * Math.PI)) + 3 * Math.PI) % (2 * Math.PI) - Math.PI) / D2R); sT.value = Math.round(tkTo * 100);
       cmp.firstChild.style.transform = `rotate(${-head / D2R}deg)`; press(b3, tkTo > .05); }
     const D = camera.position.length();
-    air.visible = U.morph.value < .98; stars.visible = U.morph.value < .9;
+    air.visible = true;
     U.cloudFade.value = smooth(.02, .1, D - 1); cloudLayer.visible = !!U.cloudOn.value && U.cloudFade.value > 0;   // clouds clear away as you come down
     U.hdA.value = 1 - smooth(.4, .7, D - 1);
     stars.rotation.y = -gmst(t) - Math.PI;
-    const s = sunDir(t); U.rsun.value.copy(s);   // already in the Earth's own frame
+    solar.eclToWorld(t); const s = solar.toWorld(hE.map(v => -v)).normalize().applyQuaternion(earth.quaternion.clone().invert()); U.rsun.value.copy(s);   // in the Earth's own frame
     if (realSun) U.sun.value.copy(s);
     // studio light from the untilted view (looking at the centre), so tilting does not swing the light
-    else { camera.updateMatrixWorld(); const m = (want2d ? camera.matrixWorld : lm.lookAt(camera.position, O3, Math.abs(camera.position.clone().normalize().y) > .98 ? cF : Yax)).elements, R = new THREE.Vector3(m[0], m[1], m[2]), Up = new THREE.Vector3(m[4], m[5], m[6]), B = new THREE.Vector3(m[8], m[9], m[10]);
+    else { camera.updateMatrixWorld(); const m = lm.lookAt(camera.position, O3, Math.abs(camera.position.clone().normalize().y) > .98 ? cF : Yax).elements, R = new THREE.Vector3(m[0], m[1], m[2]), Up = new THREE.Vector3(m[4], m[5], m[6]), B = new THREE.Vector3(m[8], m[9], m[10]);
       const Lw = R.multiplyScalar(-.5).add(Up.multiplyScalar(.52)).add(B.multiplyScalar(.69)).normalize();   // studio light: mostly from the front, a little from the upper left
       U.sun.value.copy(Lw.applyQuaternion(earth.quaternion.clone().invert())); }
-    U.lightsOn.value += ((realSun ? 1 : 0) - U.lightsOn.value) * Math.min(1, dt * 3);
-    camera.near = Math.max(Math.min(D - 1, want2d ? D - 1 : hAG) * .3, 3e-7); camera.far = Math.max(D + 1.2, U.morph.value > .01 ? 20 : 0);   // the far side of the air and aurora shells too
-    camera.updateProjectionMatrix(); camera.updateMatrixWorld();
+    if (!realSun && MSH.S.fade > 0) U.sun.value.lerp(s, MSH.S.fade).normalize();   // the shield points at the real Sun: so does the light, out there
+    U.lightsOn.value += ((realSun ? 1 : MSH.S.fade) - U.lightsOn.value) * Math.min(1, dt * 3);
+    camera.near = Math.max(Math.min(D - 1, hAG, msX ? 1.5 : 1e9) * .3, 3e-7); camera.far = Math.max(D + 1.2, msX ? D + msX : 0);   // the far side of the air and aurora shells too
+    camera.updateProjectionMatrix(); camera.updateMatrixWorld(); msX = MSH.update(dt, t, D);
+    const pix = 2 * Math.tan(camera.fov * D2R / 2) / H, nearOn = 1 / (D * pix) > 2.5;   // the detailed Earth until it is a few pixels across
+    scene.visible = nearOn; el.classList.toggle('nf', focus !== 'Earth');
+    { const ch = solar.fromWorld(camera.position); solar.update(t, [hE[0] + ch.x, hE[1] + ch.y, hE[2] + ch.z], W, H, nearOn, renderer.getPixelRatio()); feed(t); }
+    { const k = solar.cam.far * .45 / 900; stars.scale.set(-k, k, k); }
     inv.copy(earth.matrixWorld).invert(); U.camO.value.copy(camera.position).applyMatrix4(inv);
-    sunQ.visible = sunD.visible = realSun && U.morph.value < .01;
+    sunQ.visible = sunD.visible = realSun;
     { const up = U.camO.value.clone().normalize(), dayK = realSun ? smooth(-.12, .06, up.dot(U.sun.value)) * (1 - smooth(25, 110, (D - 1) * 6371)) : 0;   // no stars in a daytime sky
       stars.material.color.setRGB(.5, .5, .52).multiplyScalar(1 - .97 * dayK); }
     if (sunQ.visible) { const dd = camera.far - .05;   // just beyond the far side of the Earth, so the globe hides it
       sunW.copy(U.sun.value).applyQuaternion(earth.quaternion); sunQ.position.copy(camera.position).addScaledVector(sunW, dd);
       sunQ.quaternion.copy(camera.quaternion); sunQ.scale.setScalar(dd * Math.tan(SUNA));
       sunD.position.copy(sunQ.position); sunD.quaternion.copy(camera.quaternion); sunD.scale.setScalar(dd * Math.tan(.0075)); sunQ.material.uniforms.toObj.value.setFromMatrix4(inv); }
-    stars.position.copy(U.camO.value); { const k = camera.far * .5 / 900; stars.scale.set(-k, k, k); }
-    hd.visible = U.hdA.value > 0 && U.morph.value < .01; if (hd.visible) hdUpdate(D); U.pxk.value = pxK; U.wtime.value += dt;
+    hd.visible = U.hdA.value > 0; if (hd.visible) hdUpdate(D); U.pxk.value = pxK; U.wtime.value += dt;
     U.cloudShift.value = (t % 864e5) / 864e5 * .002;   // a slow drift so the clouds feel alive
     auMat.uniforms.time.value += dt;
-    const km = (D - 1) * 6371, cl = U.camO.value.clone().normalize();
+    const km = focus === 'Earth' ? (D - 1) * 6371 : rng * Rf * 6371, cl = U.camO.value.clone().normalize();
     todShow(t);
-    el.querySelector('.e3g-alt').innerHTML = `${tr('Altitude')} ${km >= 1000 ? Math.round(km).toLocaleString(window.LOC || 'en-GB') : km.toFixed(km < 10 ? 1 : 0)} km${!want2d && hAG * 6371 < 3 ? ' · ' + Math.round(hAG * 6371000) + ' m ' + tr('above the ground') : ''}<small>${plN && performance.now() < plT ? '<b style="color:#39FF9E">' + plN + '</b> · ' : ''}${(Math.asin(cl.y) / D2R).toFixed(2)}°, ${(Math.atan2(-cl.z, cl.x) / D2R).toFixed(2)}° · ${new Date(t).toLocaleString(window.LOC || 'en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}${tOver != null ? '' : ' · ' + tr('live')}</small>`;
-    airPass.uniforms.projInv.value.copy(camera.projectionMatrixInverse); airPass.uniforms.camW.value.copy(camera.matrixWorld); airPass.uniforms.toObj.value.setFromMatrix4(inv); airPass.uniforms.cn.value.set(camera.near, camera.far); airPass.enabled = air.visible;
+    el.querySelector('.e3g-alt').innerHTML = `${focus !== 'Earth' ? tr(focus) + ' · ' : ''}${tr('Altitude')} ${km >= 1000 ? Math.round(km).toLocaleString(window.LOC || 'en-GB') : km.toFixed(km < 10 ? 1 : 0)} km${focus === 'Earth' && hAG * 6371 < 3 ? ' · ' + Math.round(hAG * 6371000) + ' m ' + tr('above the ground') : ''}<small>${plN && performance.now() < plT ? '<b style="color:#39FF9E">' + plN + '</b> · ' : ''}${(Math.asin(cl.y) / D2R).toFixed(2)}°, ${(Math.atan2(-cl.z, cl.x) / D2R).toFixed(2)}° · ${new Date(t).toLocaleString(window.LOC || 'en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}${tOver != null ? '' : ' · ' + tr('live')}</small>`;
+    airPass.uniforms.projInv.value.copy(camera.projectionMatrixInverse); airPass.uniforms.camW.value.copy(camera.matrixWorld); airPass.uniforms.toObj.value.setFromMatrix4(inv); airPass.uniforms.cn.value.set(camera.near, camera.far); airPass.enabled = air.visible && scene.visible;
     composer.render();
+    if (P && pHold === 0 && readyAt) try { localStorage.setItem('aurora.s3dsnap', renderer.domElement.toDataURL('image/jpeg', .7)); } catch (e) {}
   }
+  let wasP = false, pHold = 0;
   const api = {
     show(lat, lon, far) { shownAt = performance.now(); el.classList.add('on'); visible = true; resize(); di.value = localStr(now()); clock.getDelta();
       const p = nrmOf((lat ?? 45.6) * D2R, (lon ?? 25.6) * D2R).applyQuaternion(earth.quaternion);
-      tgt.copy(p); head = headTo = 0; vel = [0, 0]; rng = far ? RMAX - .2 : 3.2; rngTo = 3.2;   // arriving from the solar system: come down to the globe
+      focus = 'Earth'; Rf = 1; Mprev = null; tgt.copy(p); head = headTo = 0; vel = [0, 0]; rng = far ? 110 : 3.2; rngTo = 3.2;   // arriving from the solar system: come down to the globe
       renderer.setAnimationLoop(frame); },
     hide() { el.classList.remove('on'); visible = false; renderer.setAnimationLoop(null); },
-    setTime() {}, flyTo() {}, setPlaces(p) { opts.places = p; } };
+    setTime() {}, flyTo() {}, setPlaces(p) { opts.places = p; }, shield() { shield(); },
+    start(v) { startV = v; startN = 0; } };
+  let startV = null, startN = 0;
+  function goStart(v) { if (v === 'shield') shield(); else if (v === 'sys') flyToBody('Sun', undefined, null, true); else if (v && v !== 'Earth' && v !== 'earth' && solar.bodies[v]) flyToBody(v, undefined, null, true); }
   return api;
 }
 window.Earth3D = { create, sunDir: t => { const v = sunDir(t); return [v.x, v.y, v.z]; } };
