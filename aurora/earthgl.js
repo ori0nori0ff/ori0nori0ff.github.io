@@ -453,6 +453,7 @@ ${SUNLIB}
   let PR = renderer.getPixelRatio(); const rt = new THREE.WebGLRenderTarget(W * renderer.getPixelRatio(), H * renderer.getPixelRatio(), { type: THREE.HalfFloatType, samples: Q === "high" && renderer.getPixelRatio() <= 1.05 ? 4 : 0 });   // MSAA only when pixels are big
   rt.depthTexture = new THREE.DepthTexture(rt.width, rt.height);   // the air pass reads how far the ground is in each pixel
   const composer = new EffectComposer(renderer, rt); composer.addPass(new RenderPass(scene, camera));
+  composer.renderTarget2.depthTexture = new THREE.DepthTexture(rt.width, rt.height);   // its own depth: a clone shares one GL texture, and without MSAA the air pass would read the depth it is drawing into (black screen)
   const airPass = new ShaderPass({ uniforms: { tDiffuse: { value: null }, tDepth: { value: null }, projInv: { value: camera.projectionMatrixInverse }, camW: { value: camera.matrixWorld },
       toObj: { value: new THREE.Matrix3() }, cn: { value: new THREE.Vector2() }, camO: U.camO, sun: U.sun, morph: U.morph },
     vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`, fragmentShader: AIRFS });
