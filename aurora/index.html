@@ -1498,22 +1498,23 @@ function syStart() {
 }
 // one control for everything: any play button plays the shared clock, any slider moves every view
 const revLabel = () => $('syRev').setAttribute('aria-pressed', sy.dir < 0);
-const syToggle = () => { if (sy.timer && sy.dir < 0) { sy.dir = 1; revLabel(); return; } sy.dir = 1; revLabel(); sy.timer ? syStop() : syStart(); };
-$('syRev').onclick = () => { sy.dir = sy.dir < 0 && sy.timer ? 1 : -1; revLabel(); if (!sy.timer) syStart(); };
-const syStep = d => { syStop(); sy.on = true; if (syRange()) syShow((sy.t || Date.now()) + d); };
+// sy.held = the user stopped the clock (pause, NOW, a step, a date): nothing starts it again by itself until they press play
+const syToggle = () => { if (sy.timer && sy.dir < 0) { sy.dir = 1; revLabel(); return; } sy.dir = 1; revLabel(); sy.held = !!sy.timer; sy.timer ? syStop() : syStart(); };
+$('syRev').onclick = () => { sy.held = false; sy.dir = sy.dir < 0 && sy.timer ? 1 : -1; revLabel(); if (!sy.timer) syStart(); };
+const syStep = d => { sy.held = true; syStop(); sy.on = true; if (syRange()) syShow((sy.t || Date.now()) + d); };
 $('syPrev').onclick = () => syStep(-3600e3); $('syNext').onclick = () => syStep(3600e3);
 const pad2 = v => String(v).padStart(2, '0'), locStr = t => { const d = new Date(t); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`; };
-$('syDate').onchange = e => { const t = Date.parse(e.target.value); if (isFinite(t)) { syStop(); sy.on = true; if (syRange()) syShow(t); } };
+$('syDate').onchange = e => { const t = Date.parse(e.target.value); if (isFinite(t)) { sy.held = true; syStop(); sy.on = true; if (syRange()) syShow(t); } };
 PLAYS.forEach(id => { const b = $(id); if (b) b.onclick = syToggle; });
 // autoplay: the shared clock starts by itself (PC at load, the Sun / ENLIL full screen, the Sun window of the board) — not under reduced motion or animations off
-window.syAuto = fromStart => { let off = false; try { off = localStorage.getItem('aurora.motion') === 'off'; } catch (e) {} if (REDUCED || off || sy.timer) return;
+window.syAuto = fromStart => { let off = false; try { off = localStorage.getItem('aurora.motion') === 'off'; } catch (e) {} if (REDUCED || off || sy.timer || sy.held) return;
   let n = 0; const go = () => { if (sy.timer) return; if (syRange()) { if (fromStart) { sy.dir = 1; sy.t = sy.a; } syStart(); } else if (n++ < 40) setTimeout(go, 1500); }; go(); };
 if (innerWidth >= 1000 && !document.documentElement.classList.contains('lite')) setTimeout(() => syAuto(true), 2500);   // on opening the page the clock plays from the start of the loop
 // the Sun viewer moves to the next filter by itself every 45 s (⚙ → off: aurora.sunauto=off); a pick by hand pauses it for 3 minutes
 (() => { let hold = 0; const off = () => { try { return localStorage.getItem('aurora.sunauto') === 'off'; } catch (e) { return false; } };
   $('sunChips').addEventListener('click', e => { if (e.isTrusted) hold = Date.now() + 180e3; });
   setInterval(() => { if (innerWidth < 1000 || document.documentElement.classList.contains('lite') || off() || document.hidden || Date.now() < hold || !sun.started || $('sunFull').classList.contains('on')) return; sunPick(sun.k + 1); }, 45000); })();   // only the setting turns it off (it is a change of picture, not motion)
-window.syNow = () => { syStop(); sy.on = true; if (syRange()) syShow(Math.min(sy.b, Math.max(sy.a, Date.now()))); };   // stop and come back to the present
+window.syNow = () => { sy.held = true; syStop(); sy.on = true; if (syRange()) syShow(Math.min(sy.b, Math.max(sy.a, Date.now()))); };   // stop and come back to the present
 const sySpeed = () => { sy.spd = sy.spd === 1 ? 2 : sy.spd === 2 ? 4 : 1; document.querySelectorAll('#sySpd, .spd').forEach(o => o.textContent = sy.spd + '×'); };
 $('sySpd').onclick = sySpeed; document.querySelectorAll('.spd').forEach(o => o.onclick = sySpeed);
 SLIDES.forEach(id => { const el = $(id); if (el) el.oninput = e => { syStop(); sy.on = true; if (syRange()) syShow(toTime(+e.target.value)); }; });
