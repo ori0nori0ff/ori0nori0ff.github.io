@@ -1462,7 +1462,8 @@ function syShow(t) {
   $('sunLbl').textContent = SUNF[sun.k][1] + (after ? ' · ' + T('LATEST') : '');
   if (enl.frames.length) { const k = nearestIdx(enl.frames.length, m => enl.frames[m].t, sy.t); if (k !== enl.i) { clearInterval(enl.play); enl.play = null; enlShow(k); } }
   if (sy.timer) playLabel(true);
-  if (window.space3d) space3d.setTime(sy.t);
+  // the 3D keeps its own clock (⏸ / NOW / speed); the page clock moves it only when set by hand, not while it plays the Sun loop
+  if (window.space3d && !sy.timer) space3d.setTime(sy.t);
   const di = $('syDate'); if (di && document.activeElement !== di) { di.min = locStr(sy.a); di.max = locStr(sy.b); di.value = locStr(sy.t); }
   const pos = Math.round((sy.t - sy.a) / (sy.b - sy.a) * 1000); SLIDES.forEach(id => { const el = $(id); if (el) { el.max = 1000; el.value = pos; } });
   tcursor();
