@@ -9,6 +9,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 
 const tr = (s, o) => window.T ? window.T(s, o) : String(s).replace(/\{(\w+)\}/g, (m, k) => o && o[k] != null ? o[k] : m);
 const D2R = Math.PI / 180, BASE = new URL('./', import.meta.url).href, T = BASE + 'img/earth/';
@@ -16,6 +17,8 @@ const CSS = `.e3g{position:absolute;inset:0;display:none;background:#000;overflo
 .e3g-ui{position:absolute;z-index:2;left:10px;bottom:26px;display:flex;gap:6px;flex-wrap:wrap;max-width:calc(100% - 260px)}
 .e3g-ui button,.e3g-nav button,.e3g-pnl button,.e3g-date{border:1px solid rgba(255,255,255,.18);background:rgba(10,14,20,.78);color:#E6EBF1;border-radius:999px;padding:7px 12px;min-height:36px;font:600 12px Inter,system-ui,sans-serif;cursor:pointer}
 .e3g-date{padding:6px 10px;color-scheme:dark}.e3g-ui button[aria-pressed=true],.e3g-nav button[aria-pressed=true]{border-color:#39FF9E;color:#39FF9E}
+.e3g-tod{display:flex;align-items:center;gap:8px;border:1px solid rgba(255,255,255,.18);background:rgba(10,14,20,.78);color:#FFE600;border-radius:999px;padding:0 12px;min-height:36px;font:600 12px Inter,system-ui,sans-serif}
+.e3g-tod input{width:170px;accent-color:#FFB020}.e3g-tod button{border:0;background:none;color:#E6EBF1;font:700 16px Inter,system-ui,sans-serif;padding:0 4px;min-height:30px;cursor:pointer;user-select:none;touch-action:none}.e3g-tod button:hover{color:#FFE600}.e3g-tod span{color:#E6EBF1;min-width:86px;font-variant-numeric:tabular-nums}
 .e3g-alt{position:absolute;z-index:2;left:12px;top:56px;font:700 15px Inter,system-ui,sans-serif;color:#FFE600;text-shadow:0 1px 3px #000;pointer-events:none}
 .e3g-alt small{display:block;font:500 12px Inter,system-ui,sans-serif;color:#C9D1DB}
 .e3g-load{position:absolute;z-index:2;inset:0;display:grid;place-items:center;color:#8B9BAE;font:600 12px 'JetBrains Mono',monospace;letter-spacing:.08em;pointer-events:none}
@@ -35,7 +38,8 @@ function create(host, opts) {
   const el = document.createElement('div'); el.className = 'e3g'; host.appendChild(el);
   el.innerHTML = `<div class="e3g-load">${tr('Loading the Earth…')} 0%</div><div class="e3g-alt">–</div>
     <div class="e3g-ui"><button data-k="back">‹ ${tr('Solar system')}</button><button data-k="cl" aria-pressed="true">${tr('Clouds')}</button><button data-k="cn" aria-pressed="false">${tr('Clouds: NASA')}</button><button data-k="au" aria-pressed="true">${tr('Aurora')}</button><button data-k="sun" aria-pressed="false">${tr('Real Sun')}</button><button data-k="sp" aria-pressed="true">${tr('Auto-rotate')}</button><button data-k="2d" aria-pressed="false">${tr('2D map')}</button>
-      <input type="datetime-local" class="e3g-date" data-k="date" aria-label="${tr('Date and time')}"><button data-k="now">${tr('Now')}</button></div>
+      <input type="datetime-local" class="e3g-date" data-k="date" aria-label="${tr('Date and time')}"><button data-k="now">${tr('Now')}</button>
+      <div class="e3g-tod" title="${tr('Time of day here (local Sun time)')}">☀<button data-k="todB" aria-label="${tr('Earlier')}">‹</button><input type="range" data-k="tod" min="0" max="1435" step="5" aria-label="${tr('Time of day here (local Sun time)')}"><button data-k="todF" aria-label="${tr('Later')}">›</button><span></span></div></div>
     <div class="e3g-nav"><button data-k="ang" aria-pressed="false" aria-label="${tr('Tilt')} / ${tr('Heading')}">∠</button><button data-k="cmp" aria-label="${tr('Reset to north')}"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 3l4 9h-8z" fill="#FF4D4D"/><path d="M12 21l-4-9h8z" fill="#E6EBF1"/></svg></button><button data-k="3d" aria-pressed="true" aria-label="${tr('3D view')}">3D</button><button data-k="zout" aria-label="${tr('Zoom out')}">−</button><button data-k="zin" aria-label="${tr('Zoom in')}">+</button></div>
     <div class="e3g-pnl" hidden><label>${tr('Tilt')}<input type="range" data-s="tilt" min="0" max="100" value="100"></label><label>${tr('Heading')}<input type="range" data-s="head" min="-180" max="180" value="0"></label><button data-k="north">${tr('Reset to north')}</button><small>${tr('Shift + drag or right-drag: tilt and turn')}</small></div>
     <div class="e3g-attr">NASA Blue Marble · Black Marble · SVS star map · NOAA GMGSI · OVATION · ${tr('close-up')}: Sentinel-2 cloudless 2023 by EOX (CC BY-NC-SA 4.0) · Mapzen Terrarium / AWS</div>`;
@@ -86,8 +90,14 @@ function create(host, opts) {
     cloudFade: { value: 1 }, aumap: { value: null }, auOn: { value: 1 }, hdA: { value: 0 }, pxk: { value: 1000 }, wtime: { value: 0 } };
   // one light model for the globe and the close-up tiles: n = up, P = the point, N = relief normal, Nw = water-surface normal, rough = wave slope variance,
   // d = colour, w = water 0…1, g = map uv, rk = how strongly the relief shades
-  const SHADE = /* glsl */`
-    uniform sampler2D night, clouds, aumap; uniform vec3 sun, camO; uniform float lightsOn, morph, cloudOn, cloudShift, cloudFade, auOn;
+  // the sunlight that reaches the ground through the air (Rayleigh + Mie, the same air as the shell): white at noon, gold then red at sunrise / sunset.
+  // Real Sun only (lightsOn): with the studio light the Sun is a lamp, not low in anyone's sky
+  const SUNT = /* glsl */`
+    uniform float lightsOn;
+    vec3 sunT(float mu) { float m = max(mu, 0.) + .035; vec3 t = exp(-(vec3(12.3, 28.8, 70.6) * .0042 + 21. * 1.1 * .0011) * (1. / m - 1. / 1.035));
+      return mix(vec3(1.), t * smoothstep(-.03, .02, mu) + vec3(.02, .01, .005) * (1. - smoothstep(-.03, .02, mu)), lightsOn); }`;
+  const SHADE = /* glsl */`${SUNT}
+    uniform sampler2D night, clouds, aumap; uniform vec3 sun, camO; uniform float morph, cloudOn, cloudShift, cloudFade, auOn;
     vec3 shade(vec3 n, vec3 P, vec3 N, vec3 Nw, float rough, vec3 d, float w, vec2 g, float rk) {
       vec3 ea = normalize(vec3(n.z, 0., -n.x) + vec3(1e-5)), no = cross(n, ea);
       vec3 Vd = camO - P; float dist = length(Vd); vec3 V = Vd / dist;
@@ -96,18 +106,18 @@ function create(host, opts) {
       float zen = clamp(sqrt(max(1. - mu * mu, 0.)) / max(mu, .08), 0., 9.);   // tan of the Sun's zenith angle
       float cs = smoothstep(.1, .8, texture2D(clouds, cu - vec2(dot(sun, ea), dot(sun, no)) * (.0006 + .00035 * zen), 2.5).r) * cf * smoothstep(-.05, .25, mu);
       float dif = dl * clamp(1. + (dot(N, sun) - mu) * rk, 1. - .5 * rk, 1. + .45 * rk);
-      vec3 col = d * dif * 1.6 * (1. - .72 * cs);
+      vec3 sT = sunT(mu), col = d * dif * 1.6 * (1. - .72 * cs) * sT;
       if (w > .001) {   // water: the sky mirrored in it (Fresnel) + the Sun's glint, spread by the wave slopes (Beckmann / Cox–Munk)
         vec3 Hh = normalize(sun + V); float nh = max(dot(Nw, Hh), .01), nv = max(dot(Nw, V), .03), nl = dot(Nw, sun);
         float F = .02 + .98 * pow(1. - max(dot(V, Hh), 0.), 5.), Fv = .02 + .98 * pow(1. - nv, 5.), c2 = nh * nh;
         float Dm = exp((c2 - 1.) / (c2 * rough)) / (3.1416 * rough * c2 * c2);
         vec3 skyc = vec3(.22, .42, .9) * smoothstep(-.04, .35, mu) * .45;   // no sky to mirror at night
         col = mix(col, col * (1. - Fv) + skyc * Fv, w);
-        col += vec3(1., .94, .82) * min(5. * F * Dm / (4. * nv), 6.) * smoothstep(0., .06, nl) * w * (1. - c) * (1. - .8 * cs) * (.35 + .65 * lightsOn) * smoothstep(-.02, .1, mu);
+        col += vec3(1., .94, .82) * sT * min(5. * F * Dm / (4. * nv), 6.) * smoothstep(0., .06, nl) * w * (1. - c) * (1. - .8 * cs) * (.35 + .65 * lightsOn) * smoothstep(-.02, .1, mu);
       }
       // aerial perspective: a blue veil, thicker toward the edge and with distance (Google-Earth look); clear right under you
       float hz = (.08 + .3 * pow(1. - vn, 2.)) * (1. - exp(-dist * 40.));
-      col = mix(col, vec3(.36, .58, 1.) * 1.05 * max(mu * .9 + .1, 0.), hz * dl * (1. - morph * .7));
+      col = mix(col, vec3(.36, .58, 1.) * 1.05 * max(mu * .9 + .1, 0.) * mix(vec3(1.), sT * vec3(1.6, 1.2, 1.), lightsOn * (1. - smoothstep(.1, .5, mu))), hz * dl * (1. - morph * .7));   // the veil turns warm at dusk
       float deep = 1. - smoothstep(-.32, -.05, mu);   // city lights only where it is really night, not at dusk
       vec3 lights = pow(texture2D(night, g).rgb, vec3(1.35)) * vec3(1., .8, .55) * 1.5 * deep * lightsOn * (1. - c * .75);
       // the aurora above lights the ground and the clouds under it a little — green, only in the dark
@@ -133,7 +143,7 @@ function create(host, opts) {
   scene.add(earth);
   // clouds: their own layer just above the ground — puffy relief from the cloud density, bright tops toward the Sun, dark undersides
   const cloudMat = new THREE.ShaderMaterial({ uniforms: U, vertexShader: VS, transparent: true, depthWrite: false, fragmentShader: /* glsl */`
-    uniform sampler2D clouds, aumap; uniform vec3 sun, camO; uniform float morph, cloudOn, cloudShift, cloudFade, auOn; varying vec2 vUv; varying vec3 vO;
+    uniform sampler2D clouds, aumap; uniform vec3 sun, camO; uniform float morph, cloudOn, cloudShift, cloudFade, auOn; varying vec2 vUv; varying vec3 vO; ${SUNT}
     float C(vec2 u) { return smoothstep(.1, .85, texture2D(clouds, u).r); }
     float h2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
     float n2(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f); return mix(mix(h2(i), h2(i + vec2(1, 0)), f.x), mix(h2(i + vec2(0, 1)), h2(i + vec2(1, 1)), f.x), f.y); }
@@ -147,7 +157,7 @@ function create(host, opts) {
       vec3 N = normalize(n - (ea * gx + no * gy) * 4.5);
       float self = smoothstep(.1, .85, texture2D(clouds, u + vec2(dot(sun, ea), dot(sun, no)) * .0012, 1.5).r) * cloudOn; float mu = dot(n, sun), lit = pow(smoothstep(-.02, .62, mu), 1.5) * clamp(1. + (dot(N, sun) - mu) * .7, .6, 1.3) * (1. - .35 * max(self - c, 0.) - .2 * c * c), V = max(dot(n, normalize(camO - n)), 0.);
       lit *= 1. + cd * .45;   // puffy light and shade inside the clouds
-      vec3 col = mix(vec3(.5, .56, .68), vec3(1.04, 1.03, 1.), lit) * (lit * 1.25 + .002);
+      vec3 col = mix(vec3(.5, .56, .68), vec3(1.04, 1.03, 1.) * sunT(mu), lit) * (lit * 1.25 + .002);   // pink and gold clouds at sunrise
       col = mix(col, vec3(.36, .58, 1.) * 1.05 * max(mu * .9 + .1, 0.), (.06 + .25 * pow(1. - V, 2.)) * smoothstep(-.3, .45, mu));
       col += vec3(.1, 1., .35) * texture2D(aumap, vec2(fract(vUv.x + .5), vUv.y), 2.).r * auOn * (1. - smoothstep(-.2, .05, mu)) * .07;   // lit green from the aurora above
       gl_FragColor = vec4(col * c, c * (1. - morph * .2)); }` });
@@ -156,8 +166,9 @@ function create(host, opts) {
   
   // the air: single-scattering Rayleigh + Mie, ray-marched through a shell (the real reason the limb is blue and dusk is orange)
   const AIR_R = 1.025, STEPS = Q === 'low' ? 6 : Q === 'medium' ? 8 : 10;
-  const air = new THREE.Mesh(new THREE.SphereGeometry(AIR_R, 160, 80), new THREE.ShaderMaterial({ uniforms: U, vertexShader: VS, transparent: true, side: THREE.BackSide, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, fragmentShader: /* glsl */`
-    uniform vec3 sun, camO; uniform float morph; varying vec3 vO;
+  const air = { visible: true };   // the air is a full-screen pass after the scene (see airPass), so it can stop at the real ground
+  const AIRFS = /* glsl */`
+    uniform sampler2D tDiffuse, tDepth; uniform mat4 projInv, camW; uniform mat3 toObj; uniform vec2 cn; uniform vec3 sun, camO; uniform float morph; varying vec2 vUv;
     const float RA = ${AIR_R.toFixed(4)}, HR = .0042, HM = .0011, G = .76;
     const vec3 BR = vec3(12.3, 28.8, 70.6); const float BM = 21.;
     vec2 hit(vec3 o, vec3 d, float r) { float b = dot(o, d), c = dot(o, o) - r * r, h = b * b - c; if (h < 0.) return vec2(1e9, -1e9); h = sqrt(h); return vec2(-b - h, -b + h); }
@@ -165,18 +176,66 @@ function create(host, opts) {
       float h = max(length(p) - 1., 0.), c = dot(normalize(p), sun); vec2 H = vec2(HR, HM);
       return H * exp(-h / H) / (max(c, 0.) + .035); }
     void main() {
-      vec3 o = camO, d = normalize(vO * RA - camO); vec2 a = hit(o, d, RA); if (a.x > a.y) discard;
-      vec2 g = hit(o, d, 1.); float t0 = max(a.x, 0.), t1 = g.x > 0. && g.x < a.y ? g.x : a.y, L = (t1 - t0) / float(${STEPS});
+      vec4 base = texture2D(tDiffuse, vUv); vec4 v = projInv * vec4(vUv * 2. - 1., 1., 1.); vec3 dv = normalize(v.xyz / v.w);
+      vec3 o = camO, d = normalize(toObj * (mat3(camW) * dv)); vec2 a = hit(o, d, RA); if (a.x > a.y || a.y < 0.) { gl_FragColor = base; return; }
+      // the air ends where the picture's ground is (mountains included), not at the sea-level ball: from the depth of the pixel
+      float z = texture2D(tDepth, vUv).x, ts = 1e9; if (z < 1.) { float vz = 2. * cn.x * cn.y / ((cn.y + cn.x) - (z * 2. - 1.) * (cn.y - cn.x)); ts = vz / max(-dv.z, 1e-4); }
+      vec2 g = hit(o, d, 1.); float t0 = max(a.x, 0.), t1 = min(g.x > 0. && g.x < a.y ? g.x : a.y, ts); if (t1 <= t0) { gl_FragColor = base; return; }
+      float L = (t1 - t0) / float(${STEPS});
       vec3 sr = vec3(0.), sm = vec3(0.); vec2 odC = vec2(0.);
-      for (int i = 0; i < ${STEPS}; i++) { vec3 p = o + d * (t0 + (float(i) + .5) * L); float h = max(length(p) - 1., 0.);
+      float j = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(.06711056, .00583715))));   // a different start in each pixel: no steps that line up into bands
+      for (int i = 0; i < ${STEPS}; i++) { vec3 p = o + d * (t0 + (float(i) + j) * L); float h = max(length(p) - 1., 0.);
         vec2 den = exp(-h / vec2(HR, HM)) * L; odC += den;
-        if (hit(p, sun, 1.).x > 0.) continue;   // the Earth's own shadow
+        // the Earth's shadow, soft and continuous: the Sun's height seen from that point against its horizon (lower the higher you are; refraction + the
+        // Sun's disc blur the edge ±0.7°); and since our air is
+        // ~3× thicker than the real one (so the limb shows), its light also fades over ~10° past the day-night line instead of ending in a hard band
+        float rp = length(p), el = asin(clamp(dot(p, sun) / rp, -1., 1.)), dip = acos(min(1. / rp, 1.)), lit = smoothstep(-dip - .012, -dip + .012, el) * smoothstep(-.17, .03, el);
+        if (lit <= 0.) continue;
+        den *= vec2(lit, lit);
         vec2 odS = depthTo(p); vec3 tr = exp(-(BR * (odC.x + odS.x) + BM * 1.1 * (odC.y + odS.y)));
         sr += tr * den.x; sm += tr * den.y; }
       float mu = dot(d, sun), pr = .0596831 * (1. + mu * mu), pm = .1193662 * (1. - G * G) * (1. + mu * mu) / ((2. + G * G) * pow(1. + G * G - 2. * G * mu, 1.5));
+      pm = pm * .88 + .12 * .0795775 * (1. - .9409) / pow(1. + .9409 - 1.94 * mu, 1.5);   // + the aerosols' narrow forward peak: the limb lights up round the Sun like in orbit photos
       vec3 col = 7. * (sr * BR * pr + sm * BM * pm);
-      gl_FragColor = vec4(col * (1. - morph), 1.); }` }));
-  air.rotation.y = -Math.PI / 2; air.renderOrder = 3; scene.add(air);
+      gl_FragColor = vec4(base.rgb + col * (1. - morph), 1.); }`;
+  // the Sun itself (Real Sun only): a disc 0.53° wide with limb darkening + a soft glow, seen through the air in front of it — white from space, orange
+  // to red at sunset; hidden behind the Earth only a faint glow round the limb is left. A quad 16° wide far away, facing the camera; the Earth hides it by depth.
+  const SUNLIB = `
+      const float RA = ${AIR_R.toFixed(4)}, HR = .0042, HM = .0011, RD = .004653; const vec3 BR = vec3(12.3, 28.8, 70.6); const float BM = 21.;
+      vec2 hit(vec3 o, vec3 d, float r) { float b = dot(o, d), c = dot(o, o) - r * r, h = b * b - c; if (h < 0.) return vec2(1e9, -1e9); h = sqrt(h); return vec2(-b - h, -b + h); }
+      vec3 trans(vec3 o, vec3 d) { vec2 a = hit(o, d, RA); if (a.y <= 0.) return vec3(1.); float t0 = max(a.x, 0.), L = (a.y - t0) / 12.; vec2 od = vec2(0.);
+        for (int i = 0; i < 12; i++) { vec3 p = o + d * (t0 + (float(i) + .5) * L); od += exp(-max(length(p) - 1., 0.) / vec2(HR, HM)) * L; }
+        return exp(-(BR * od.x + BM * 1.1 * od.y)); }`;
+  const SUNA = 8 * D2R, sunQ = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ uniforms: { sun: U.sun, camO: U.camO, toObj: { value: new THREE.Matrix3() } },
+    vertexShader: `varying vec3 vW; varying vec2 vQ; void main() { vQ = position.xy; vW = (modelMatrix * vec4(position, 1.)).xyz; gl_Position = projectionMatrix * viewMatrix * vec4(vW, 1.); }`,
+    fragmentShader: `uniform vec3 sun, camO; uniform mat3 toObj; varying vec3 vW; varying vec2 vQ;
+${SUNLIB}
+      void main() { vec3 d = normalize(toObj * normalize(vW - cameraPosition)); float r = acos(clamp(dot(d, sun), -1., 1.)), x = r / RD;
+        float disc = smoothstep(1.08, .92, x) * (1. - .6 * (1. - sqrt(max(1. - x * x, 0.))));
+        float ang = acos(clamp(dot(sun, -normalize(camO)), -1., 1.)), er = asin(min(1. / length(camO), 1.)), vis = smoothstep(er - RD, er + RD, ang);   // how much of the disc clears the Earth
+        // a tight glare like a camera sees it: bright close to the disc, falling fast, + six faint rays (camera-aligned); no wide grey fog in a vacuum
+        float ph = atan(vQ.y, vQ.x), k = floor(ph * 1.9099 + .5), ln = .008 + .03 * fract(sin(k * 12.9898 + 4.1) * 43758.55);   // 12 thin rays, each its own length
+        float ray = pow(abs(cos(6. * ph)), 220.) * exp(-r / ln) * .45 * vis * vis;
+        float glow = (1.4 * exp(-r / .0022) + .22 * exp(-r / .009) + .035 * exp(-r / .04) + ray) * mix(.1, 1., vis) * smoothstep(${SUNA.toFixed(4)}, ${(SUNA * .5).toFixed(4)}, r);
+        // the disc is ~100 000× brighter than the sky: even through the thick air at sunset (a few % gets through, mostly red) it stays a clear red-orange disc;
+        // the clean pass caps the brightness keeping the colour. The glare is light already scattered, so it dims less (sqrt)
+        vec3 tr = trans(camO, d), c = vec3(1., .98, .95) * disc * 400. * tr + vec3(1., .9, .76) * glow * sqrt(tr);
+        gl_FragColor = vec4(c, 1.); }`, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  sunQ.renderOrder = 2; sunQ.frustumCulled = false; scene.add(sunQ);
+  // the crisp disc on top of the finished picture (after the bloom, which would melt a 0.5° disc into a blob): red-orange through the air at the horizon,
+  // white from space, limb-darkened; hidden by the Earth's ball (mountains do not hide it)
+  const sunDepth = { value: null }, sunRes = { value: new THREE.Vector2(1, 1) };   // the scene's depth (filled by the air pass each frame): mountains hide the disc too
+  const sunScene = new THREE.Scene(), sunD = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ uniforms: { ...sunQ.material.uniforms, tDepth: sunDepth, res: sunRes },
+    vertexShader: sunQ.material.vertexShader, fragmentShader: `uniform vec3 sun, camO; uniform mat3 toObj; uniform sampler2D tDepth; uniform vec2 res; varying vec3 vW; varying vec2 vQ; ${SUNLIB}
+      void main() { if (texture2D(tDepth, gl_FragCoord.xy / res).r > .5) discard; vec3 d = normalize(toObj * normalize(vW - cameraPosition)); float x = acos(clamp(dot(d, sun), -1., 1.)) / RD, px = max(fwidth(x), .02);
+        float cov = smoothstep(1. + px, 1. - px, x); if (cov <= 0.) discard;
+        float b = dot(camO, d), cd = sqrt(max(dot(camO, camO) - b * b, 0.)), vis = b < 0. ? smoothstep(1.00005, 1.0004, cd) : 1.;
+        vec3 tr = trans(camO, d); float m = max(tr.r, max(tr.g, tr.b)), a = cov * vis * clamp(m * 300., 0., 1.);
+        float ld = 1. - .4 * (1. - sqrt(max(1. - x * x, 0.)));
+        vec3 hue = pow(tr / max(m, 1e-6), vec3(1. / 2.2)), col = mix(hue, vec3(1., .97, .9), .55 * ld * ld) * ld;   // white-gold middle, the air's colour toward the rim
+        gl_FragColor = vec4(col * a, 1.); }`, transparent: true, blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false }));   // added on top: always the brightest thing
+  sunD.frustumCulled = false; sunScene.add(sunD);
+  const sunW = new THREE.Vector3();
   
   // aurora, from NOAA OVATION (both hemispheres): (1) a diffuse plasma glow painted from the probability map, shimmering,
   // (2) continuous curtains along the oval — a sharp bright green lower edge ~100 km, rays, folds that drift, red tops
@@ -384,12 +443,33 @@ function create(host, opts) {
   
   // bloom: city lights, the glint and the aurora glow a little (off on low)
   let PR = renderer.getPixelRatio(); const rt = new THREE.WebGLRenderTarget(W * renderer.getPixelRatio(), H * renderer.getPixelRatio(), { type: THREE.HalfFloatType, samples: Q === "high" && renderer.getPixelRatio() <= 1.05 ? 4 : 0 });   // MSAA only when pixels are big
+  rt.depthTexture = new THREE.DepthTexture(rt.width, rt.height);   // the air pass reads how far the ground is in each pixel
   const composer = new EffectComposer(renderer, rt); composer.addPass(new RenderPass(scene, camera));
+  const airPass = new ShaderPass({ uniforms: { tDiffuse: { value: null }, tDepth: { value: null }, projInv: { value: camera.projectionMatrixInverse }, camW: { value: camera.matrixWorld },
+      toObj: { value: new THREE.Matrix3() }, cn: { value: new THREE.Vector2() }, camO: U.camO, sun: U.sun, morph: U.morph },
+    vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`, fragmentShader: AIRFS });
+  { const r0 = airPass.render.bind(airPass); airPass.render = (r, w, rb, dt, m) => { airPass.uniforms.tDepth.value = rb.depthTexture; r0(r, w, rb, dt, m); }; }
+  // a mask "ground here" saved right after the scene (the disc of the Sun reads it at the very end of the frame, when that depth may have changed)
+  { const maskRT = new THREE.WebGLRenderTarget(rt.width, rt.height, { type: THREE.UnsignedByteType, depthBuffer: false });
+    const q = new FullScreenQuad(new THREE.ShaderMaterial({ uniforms: { tDepth: { value: null } }, depthTest: false, depthWrite: false,
+      vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }`,
+      fragmentShader: `uniform sampler2D tDepth; varying vec2 vUv; void main() { gl_FragColor = vec4(texture2D(tDepth, vUv).x < 1. ? 1. : 0., 0., 0., 1.); }` }));
+    sunDepth.value = maskRT.texture;
+    composer.addPass({ enabled: true, needsSwap: false, clear: false, renderToScreen: false, setSize(w, h) { maskRT.setSize(w, h); sunRes.value.set(w, h); }, dispose() {},
+      render(r, w, rb) { q.material.uniforms.tDepth.value = rb.depthTexture; const o = r.getRenderTarget(); r.setRenderTarget(maskRT); q.render(r); r.setRenderTarget(o); } }); }
+  { }   // the buffer the scene went into this frame
+  Object.assign(airPass.uniforms, { camO: U.camO, sun: U.sun, morph: U.morph });   // ShaderPass copies its uniforms: hand it the live ones
+  composer.addPass(airPass);
   // a safety net: a single NaN / Inf pixel from any shader would be smeared by the bloom into black blocks and a whole-screen flicker — clean it first
   composer.addPass(new ShaderPass({ uniforms: { tDiffuse: { value: null } }, vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`,
-    fragmentShader: `uniform sampler2D tDiffuse; varying vec2 vUv; void main() { vec4 c = texture2D(tDiffuse, vUv); vec3 k = any(isnan(c.rgb)) || any(isinf(c.rgb)) ? vec3(0.) : clamp(c.rgb, 0., 64.); gl_FragColor = vec4(k, 1.); }` }));
+    fragmentShader: `uniform sampler2D tDiffuse; varying vec2 vUv; void main() { vec4 c = texture2D(tDiffuse, vUv); vec3 k = any(isnan(c.rgb)) || any(isinf(c.rgb)) ? vec3(0.) : max(c.rgb, 0.); k *= min(1., 4. / max(max(k.r, k.g), max(k.b, 1e-4))); gl_FragColor = vec4(k, 1.); }` }));
   if (Q !== 'low') composer.addPass(new UnrealBloomPass(new THREE.Vector2(W, H), .35, .6, .88));
   composer.addPass(new OutputPass());
+  { const sp = new RenderPass(sunScene, camera); sp.clear = false; composer.addPass(sp);   // the Sun's disc over the finished picture, then out to the screen
+    composer.addPass(new ShaderPass({ uniforms: { tDiffuse: { value: null } }, vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`,
+      fragmentShader: `uniform sampler2D tDiffuse; varying vec2 vUv; void main() { gl_FragColor = texture2D(tDiffuse, vUv); }` })); }
+  for (const p of composer.passes) if (p.material) { p.material.depthTest = false; p.material.depthWrite = false; }   // full-screen passes: never tested against an old depth
+
   
 
   // ── controls: the buttons of the Earth view
@@ -423,6 +503,21 @@ function create(host, opts) {
   const pad = v => String(v).padStart(2, '0'), localStr = t => { const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
   const di = $('date'); di.onchange = () => { const t = Date.parse(di.value); if (isFinite(t)) tOver = t; };
   $('now').onclick = () => { tOver = null; di.value = localStr(now()); };
+  // time of day at the place you look at: local Sun time (UTC + longitude / 15) on the same day; moving it switches the real Sun on
+  const tod = $('tod'), todL = el.querySelector('.e3g-tod span'), lonHere = () => { const o = tgt.clone().applyQuaternion(earth.quaternion.clone().invert()); return Math.atan2(-o.z, o.x) / D2R; };
+  const solarMin = t => ((t / 6e4 + lonHere() * 4) % 1440 + 1440) % 1440, hm = m => pad(Math.floor(m / 60) % 24) + ':' + pad(Math.floor(m % 60));
+  let todDrag = false;
+  tod.oninput = () => { todDrag = true; const base = now(), want = +tod.value; let t = base + ((want - solarMin(base) + 2160) % 1440 - 720) * 6e4;   // the nearest moment with that Sun time
+    tOver = t; di.value = localStr(t); if (!realSun) { realSun = true; press($('sun'), true); } };
+  tod.onchange = () => { todDrag = false; };
+  // ‹ › : a click = 10 minutes; held, the time runs, faster the longer you hold
+  for (const [k, dir] of [['todB', -1], ['todF', 1]]) { const b = $(k); let iv = null, n = 0;
+    const step = () => { const t = now() + dir * 6e5 * (n < 8 ? 1 : n < 30 ? 2 : 4); tOver = t; di.value = localStr(t); n++; if (!realSun) { realSun = true; press($('sun'), true); } };
+    const stop = () => { clearInterval(iv); iv = null; };
+    b.onpointerdown = e => { e.preventDefault(); b.setPointerCapture(e.pointerId); n = 0; step(); stop(); iv = setInterval(step, 90); };
+    b.onpointerup = b.onpointercancel = b.onlostpointercapture = stop;
+    b.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); n = 0; step(); } }; }
+  const todShow = t => { const m = solarMin(t); if (!todDrag) tod.value = Math.round(m / 5) * 5; todL.textContent = hm(m) + ' ' + tr('Sun time'); };
   let from = null, fly = 1; const flat = new THREE.Vector3(0, 0, 6.2), lm = new THREE.Matrix4(), O3 = new THREE.Vector3();
   function resize() { const r = host.getBoundingClientRect(); W = Math.max(200, r.width); H = Math.max(200, r.height); PRMAX = prCap(); PR = Math.min(PR, PRMAX);
     camera.aspect = W / H; camera.updateProjectionMatrix(); renderer.setPixelRatio(PR); renderer.setSize(W, H); composer.setPixelRatio(PR); composer.setSize(W, H); }
@@ -473,12 +568,21 @@ function create(host, opts) {
     camera.near = Math.max((D - 1) * .25, 1.5e-6); camera.far = Math.max(D + 1.2, U.morph.value > .01 ? 20 : 0);   // the far side of the air and aurora shells too
     camera.updateProjectionMatrix(); camera.updateMatrixWorld();
     inv.copy(earth.matrixWorld).invert(); U.camO.value.copy(camera.position).applyMatrix4(inv);
+    sunQ.visible = sunD.visible = realSun && U.morph.value < .01;
+    { const up = U.camO.value.clone().normalize(), dayK = realSun ? smooth(-.12, .06, up.dot(U.sun.value)) * (1 - smooth(25, 110, (D - 1) * 6371)) : 0;   // no stars in a daytime sky
+      stars.material.color.setRGB(.5, .5, .52).multiplyScalar(1 - .97 * dayK); }
+    if (sunQ.visible) { const dd = camera.far - .05;   // just beyond the far side of the Earth, so the globe hides it
+      sunW.copy(U.sun.value).applyQuaternion(earth.quaternion); sunQ.position.copy(camera.position).addScaledVector(sunW, dd);
+      sunQ.quaternion.copy(camera.quaternion); sunQ.scale.setScalar(dd * Math.tan(SUNA));
+      sunD.position.copy(sunQ.position); sunD.quaternion.copy(camera.quaternion); sunD.scale.setScalar(dd * Math.tan(.0075)); sunQ.material.uniforms.toObj.value.setFromMatrix4(inv); }
     stars.position.copy(U.camO.value); { const k = camera.far * .5 / 900; stars.scale.set(-k, k, k); }
     hd.visible = U.hdA.value > 0 && U.morph.value < .01; if (hd.visible) hdUpdate(D); U.pxk.value = pxK; U.wtime.value += dt;
     U.cloudShift.value = (t % 864e5) / 864e5 * .002;   // a slow drift so the clouds feel alive
     auMat.uniforms.time.value += dt;
     const km = (D - 1) * 6371, cl = U.camO.value.clone().normalize();
+    todShow(t);
     el.querySelector('.e3g-alt').innerHTML = `${tr('Altitude')} ${km >= 1000 ? Math.round(km).toLocaleString(window.LOC || 'en-GB') : km.toFixed(km < 10 ? 1 : 0)} km<small>${(Math.asin(cl.y) / D2R).toFixed(2)}°, ${(Math.atan2(-cl.z, cl.x) / D2R).toFixed(2)}° · ${new Date(t).toLocaleString(window.LOC || 'en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}${tOver != null ? '' : ' · ' + tr('live')}</small>`;
+    airPass.uniforms.projInv.value.copy(camera.projectionMatrixInverse); airPass.uniforms.camW.value.copy(camera.matrixWorld); airPass.uniforms.toObj.value.setFromMatrix4(inv); airPass.uniforms.cn.value.set(camera.near, camera.far); airPass.enabled = air.visible;
     composer.render();
   }
   const api = {

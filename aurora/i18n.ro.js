@@ -1195,5 +1195,9 @@ window.I18N_DICT.ro = {
   "Heading": "Direcție",
   "Reset to north": "Nordul în sus",
   "3D view": "Vedere 3D",
-  "Shift + drag or right-drag: tilt and turn": "Shift + trage sau click dreapta + trage: înclini și rotești"
+  "Shift + drag or right-drag: tilt and turn": "Shift + trage sau click dreapta + trage: înclini și rotești",
+  "Time of day here (local Sun time)": "Ora zilei aici (ora solară locală)",
+  "Sun time": "ora solară",
+  "Earlier": "Mai devreme",
+  "Later": "Mai târziu"
 };

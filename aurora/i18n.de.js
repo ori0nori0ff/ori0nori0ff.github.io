@@ -1195,5 +1195,9 @@ window.I18N_DICT.de = {
   "Heading": "Richtung",
   "Reset to north": "Norden nach oben",
   "3D view": "3D-Ansicht",
-  "Shift + drag or right-drag: tilt and turn": "Umschalt + ziehen oder rechts ziehen: neigen und drehen"
+  "Shift + drag or right-drag: tilt and turn": "Umschalt + ziehen oder rechts ziehen: neigen und drehen",
+  "Time of day here (local Sun time)": "Tageszeit hier (Ortssonnenzeit)",
+  "Sun time": "Sonnenzeit",
+  "Earlier": "Früher",
+  "Later": "Später"
 };
