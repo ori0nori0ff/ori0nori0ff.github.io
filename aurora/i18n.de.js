@@ -1181,5 +1181,14 @@ window.I18N_DICT.de = {
   "NASA CCMC run of 11 May 06:00 UTC (with the CME of the X5.8 flare). Sun in the centre, Earth = the yellow dot on the right.": "NASA-CCMC-Lauf vom 11. Mai 06:00 UTC (mit dem CME des X5.8-Flares). Sonne in der Mitte, Erde = der gelbe Punkt rechts.",
   "The G5 storm of May 2024, step by step": "Der G5-Sturm vom Mai 2024, Schritt für Schritt",
   "Light mode for slower PCs": "Leichter Modus für langsamere PCs",
-  "Slower clock steps, no autoplay, no blur or animations, fewer Sun frames loaded, the 3D model paused while it is a small tile. The page reloads.": "Seltenere Uhrschritte, kein Autoplay, keine Unschärfe oder Animationen, weniger Sonnenbilder geladen, das 3D-Modell pausiert als kleine Kachel. Die Seite lädt neu."
+  "Slower clock steps, no autoplay, no blur or animations, fewer Sun frames loaded, the 3D model paused while it is a small tile. The page reloads.": "Seltenere Uhrschritte, kein Autoplay, keine Unschärfe oder Animationen, weniger Sonnenbilder geladen, das 3D-Modell pausiert als kleine Kachel. Die Seite lädt neu.",
+  "2D map": "2D-Karte",
+  "3D globe": "3D-Globus",
+  "Auto-rotate": "Automatisch drehen",
+  "Clouds: NASA": "Wolken: NASA",
+  "Clouds: today": "Wolken: heute",
+  "Loading the Earth…": "Die Erde wird geladen…",
+  "Real Sun": "Echte Sonne",
+  "close-up": "Nahansicht",
+  "live": "live"
 };

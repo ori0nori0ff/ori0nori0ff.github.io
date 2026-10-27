@@ -13,16 +13,16 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 
 const tr = (s, o) => window.T ? window.T(s, o) : String(s).replace(/\{(\w+)\}/g, (m, k) => o && o[k] != null ? o[k] : m);
 const D2R = Math.PI / 180, BASE = new URL('./', import.meta.url).href, T = BASE + 'img/earth/';
-const CSS = `.e3g{position:absolute;inset:0;display:none;background:#000;overflow:hidden}.e3g.on{display:block}.e3g canvas{position:absolute;left:0;top:0;display:block;touch-action:none;opacity:0;transition:opacity 1s}.e3g canvas.on{opacity:1}
-.e3g-ui{position:absolute;left:10px;bottom:10px;display:flex;gap:6px;flex-wrap:wrap;max-width:calc(100% - 70px)}
+const CSS = `.e3g{position:absolute;inset:0;display:none;background:#000;overflow:hidden}.e3g.on{display:block}.e3g canvas{position:absolute;left:0;top:0;z-index:0;display:block;touch-action:none;opacity:0;transition:opacity 1s}.e3g canvas.on{opacity:1}
+.e3g-ui{position:absolute;z-index:2;left:10px;bottom:26px;display:flex;gap:6px;flex-wrap:wrap;max-width:calc(100% - 70px)}
 .e3g-ui button,.e3g-date{border:1px solid rgba(255,255,255,.18);background:rgba(10,14,20,.78);color:#E6EBF1;border-radius:999px;padding:7px 12px;min-height:36px;font:600 12px Inter,system-ui,sans-serif;cursor:pointer}
 .e3g-date{padding:6px 10px;color-scheme:dark}.e3g-ui button[aria-pressed=true]{border-color:#39FF9E;color:#39FF9E}
-.e3g-alt{position:absolute;left:12px;top:10px;font:700 15px Inter,system-ui,sans-serif;color:#FFE600;text-shadow:0 1px 3px #000;pointer-events:none}
+.e3g-alt{position:absolute;z-index:2;left:12px;top:56px;font:700 15px Inter,system-ui,sans-serif;color:#FFE600;text-shadow:0 1px 3px #000;pointer-events:none}
 .e3g-alt small{display:block;font:500 12px Inter,system-ui,sans-serif;color:#C9D1DB}
-.e3g-load{position:absolute;inset:0;display:grid;place-items:center;color:#8B9BAE;font:600 12px 'JetBrains Mono',monospace;letter-spacing:.08em;pointer-events:none}
-.e3g-pin{position:absolute;left:0;top:0;pointer-events:none;display:flex;align-items:center;gap:6px;margin:-5px 0 0 -5px;font:600 12px Inter,system-ui,sans-serif;color:#fff;text-shadow:0 1px 3px #000}
+.e3g-load{position:absolute;z-index:2;inset:0;display:grid;place-items:center;color:#8B9BAE;font:600 12px 'JetBrains Mono',monospace;letter-spacing:.08em;pointer-events:none}
+.e3g-pin{position:absolute;z-index:1;left:0;top:0;pointer-events:none;display:flex;align-items:center;gap:6px;margin:-5px 0 0 -5px;font:600 12px Inter,system-ui,sans-serif;color:#fff;text-shadow:0 1px 3px #000}
 .e3g-pin i{width:10px;height:10px;border-radius:50%;background:#FFE600;box-shadow:0 0 0 2px rgba(0,0,0,.6),0 0 10px #FFE600}
-.e3g-attr{position:absolute;right:10px;bottom:6px;font:500 10px Inter,system-ui,sans-serif;color:rgba(220,227,235,.7);text-shadow:0 1px 2px #000;pointer-events:none;max-width:55%;text-align:right}`;
+.e3g-attr{position:absolute;z-index:2;right:10px;bottom:6px;font:500 10px Inter,system-ui,sans-serif;color:rgba(220,227,235,.7);text-shadow:0 1px 2px #000;pointer-events:none;max-width:55%;text-align:right}`;
 
 // sub-solar point (low precision is plenty for day / night) → direction in the Earth's own frame (x = lon 0, y = north, z = lon −90°)
 function sunDir(t) { const d = new Date(t), doy = (t - Date.UTC(d.getUTCFullYear(), 0, 0)) / 864e5, dec = 23.44 * Math.sin(2 * Math.PI * (doy - 81) / 365.25);
