@@ -82,7 +82,7 @@ function create(host, opts) {
     <div class="e3g-pnl" hidden><label>${tr('Tilt')}<input type="range" data-s="tilt" min="0" max="100" value="100"></label><label>${tr('Heading')}<input type="range" data-s="head" min="-180" max="180" value="0"></label><button data-k="north">${tr('Reset to north')}</button><small>${tr('Shift + drag or right-drag: tilt and turn')}</small></div>
     <div class="e3g-attr">NASA Blue Marble · Black Marble · SVS star map · NOAA GMGSI · OVATION · ${tr('close-up')}: Sentinel-2 cloudless 2023 by EOX (CC BY-NC-SA 4.0) · Mapzen Terrarium / AWS · ${tr('Moon')}: JAXA Kaguya TC · NASA LRO LOLA (Moon Trek) · ${tr('Mars')}: MRO CTX (NASA/JPL/MSSS/Caltech Murray Lab/Esri) · Viking · MOLA / HRSC (Mars Trek)</div>`;
   let W = 800, H = 600;
-  const Q = opts.quality || (document.documentElement.classList.contains('lite') ? 'low' : 'high');   // low | medium | high (light mode → low)
+  const Q = opts.quality || (() => { try { const v = localStorage.getItem('aurora.q3d'); if (/^(low|medium|high)$/.test(v || '')) return v; } catch (e) {} return null; })() || (document.documentElement.classList.contains('lite') ? 'low' : 'high');   // low | medium | high (light mode → low)
   const renderer = new THREE.WebGLRenderer({ antialias: Q !== 'low', powerPreference: 'high-performance' });
   // a pixel budget: big / high-dpi screens would otherwise shade 8–15 M pixels a frame through the air and aurora ray-marches
   const PXB = Q === "high" ? 4.2e6 : Q === "medium" ? 2.6e6 : 1.4e6, prCap = () => Math.min(devicePixelRatio || 1, Q === "high" ? 1.5 : 1, Math.sqrt(PXB / (W * H)));
@@ -898,11 +898,16 @@ ${SUNLIB}
   window.addEventListener('keyup', e => keys.delete(e.code)); window.addEventListener('blur', () => keys.clear());
   const qT = new THREE.Quaternion(), vT = new THREE.Vector3();
   const flyLook = (dx, dy) => { fly.q.multiply(qT.setFromAxisAngle(vT.set(0, 1, 0), -dx * .003)).multiply(qT.setFromAxisAngle(vT.set(1, 0, 0), -dy * .003)).normalize(); };
-  function flyStep(dt) { const k = keys, h = Math.max(fly.off.length() / Rf - 1, .003) * Rf, sp = h * .7 * fly.sp * (k.has('ShiftLeft') || k.has('ShiftRight') ? 5 : 1) * dt, ax = new THREE.Vector3();
+  // ground under the free-flight camera (fraction of the body radius): drawn relief on Earth / HD bodies, else a ~2 km floor
+  const flyGround = () => { const dW = fly.off.clone().normalize(), a = fly.off.length() / Rf - 1;
+    if (focus === 'Earth') return a < .5 ? gMax(dW.applyQuaternion(earth.quaternion.clone().invert())) : 0;
+    return solar.hdOn(focus) ? solar.hdGround(focus, dW) : Math.max(.0015, 2000 / (Rf * 6371000)) - 30 / (Rf * 6371000); };
+  function flyStep(dt) { const k = keys, g0 = flyGround(), h = Math.max(fly.off.length() / Rf - 1 - g0, 25 / (Rf * 6371000)) * Rf, sp = h * .7 * fly.sp * (k.has('ShiftLeft') || k.has('ShiftRight') ? 5 : 1) * dt, ax = new THREE.Vector3();
     if (k.has('KeyW')) ax.z -= 1; if (k.has('KeyS')) ax.z += 1; if (k.has('KeyA')) ax.x -= 1; if (k.has('KeyD')) ax.x += 1; if (k.has('KeyR')) ax.y += 1; if (k.has('KeyF')) ax.y -= 1;
     if (ax.lengthSq()) fly.off.add(ax.normalize().applyQuaternion(fly.q).multiplyScalar(sp));
     if (k.has('KeyQ')) fly.q.multiply(qT.setFromAxisAngle(vT.set(0, 0, 1), 1.2 * dt)); if (k.has('KeyE')) fly.q.multiply(qT.setFromAxisAngle(vT.set(0, 0, 1), -1.2 * dt));
-    const mn = Rf * (1 + Math.max(.0015, 2000 / (Rf * 6371000))); if (fly.off.length() < mn) fly.off.setLength(mn);
+    const g = flyGround(), mn = Rf * (1 + g + 30 / (Rf * 6371000)); if (fly.off.length() < mn) fly.off.setLength(mn);
+    if (focus === 'Earth') hAG = Math.max(15 / 6371000, fly.off.length() - 1 - g);
     camera.position.copy(fc).add(fly.off); camera.quaternion.copy(fly.q); tgt.copy(fly.off).normalize(); rng = rngTo = fly.off.length() / Rf - 1; }
   let fhAt = 0;
   function flyHud() { if (performance.now() - fhAt < 200) return; fhAt = performance.now(); const qi = camera.quaternion.clone().invert(); let best = null;
