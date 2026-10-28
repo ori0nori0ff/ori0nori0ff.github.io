@@ -7,7 +7,7 @@
 <script>try { const q = new URLSearchParams(location.search).get('lite'); if (q === '1' || (q !== '0' && localStorage.getItem('aurora.lite') === 'on')) document.documentElement.classList.add('lite'); } catch (e) {}   // light mode for slower PCs</script>
 <script>if (innerWidth >= 1000 && new URLSearchParams(location.search).get('tiles') !== '0') { document.documentElement.classList.add('tpre'); setTimeout(() => document.documentElement.classList.remove('tpre'), 6000); }</script>
 <script>try { const t = new URLSearchParams(location.search).get('theme') || localStorage.getItem('aurora.theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}</script>
-<script src="storm.js?v=b0a3577b"></script>
+<script src="storm.js?v=bb408f43"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Orion's Space Observer</title>
 <meta name="description" content="Can we see the northern lights tonight? Live aurora forecast, the Sun right now, the solar wind and Kp — hour by hour.">
@@ -980,15 +980,15 @@
   <div class="fctl"><div class="pbtn" id="enlFPlay">▶</div><div class="pbtn spd" style="font:700 10px 'JetBrains Mono',monospace">1×</div><input type="range" id="enlFSlide" min="0" max="0" value="0"><span class="lbl" id="enlFT" style="min-width:150px;text-align:right">–</span><span class="lbl">PINCH · DRAG</span><div class="x" id="enlX">✕</div></div></div></div>
 <div id="toast"></div>
 <script src="i18n.js?v=b936034a"></script>
-<script src="i18n.ro.js?v=43dad05a"></script>
-<script src="i18n.de.js?v=be8a4ebc"></script>
-<script src="land.js?v=a8b7e715"></script>
+<script src="i18n.ro.js?v=42bb1a9a"></script>
+<script src="i18n.de.js?v=f5e08a14"></script>
+<script src="land.js?v=d495927a"></script>
 <script src="globe.js?v=fa6d06d5"></script>
-<script src="tonight.js?v=8f552af5"></script>
-<script src="regions.js?v=207ad730"></script>
+<script src="tonight.js?v=91a2449f"></script>
+<script src="regions.js?v=09151bc5"></script>
 <script src="space3d.js?v=c2408d09"></script>
 <script type="importmap">{ "imports": { "three": "./lib/three/three.module.min.js", "three/addons/": "./lib/three/addons/" } }</script>
-<script src="earthgl.js?v=5f31e518" type="module"></script>   <!-- the Earth view of the 3D module (three.js); the app keeps earth3d.js -->
+<script src="earthgl.js?v=7cc1c4b6" type="module"></script>   <!-- the Earth view of the 3D module (three.js); the app keeps earth3d.js -->
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
@@ -2330,7 +2330,7 @@ window.earthReport = () => ({ dst: $('dstChart'), cr: $('secCr').style.display =
   document.addEventListener('focusin', e => { if (!on) return; const el = e.target.closest('#sunChips button, [data-xp]'); if (!el) return; const b = el.getBoundingClientRect(); show(el, b.left, b.bottom); });
 })();</script>
 <script>/* storm replay: lazy-loaded, opened from the guide / the explain bar / #replay */
-window.openReplay = n => { if (window.StormReplay) return StormReplay.open(n); const s = document.createElement('script'); s.src = 'replay.js?v=e4c0bcf4'; s.onload = () => StormReplay.open(n); document.body.appendChild(s); };
+window.openReplay = n => { if (window.StormReplay) return StormReplay.open(n); const s = document.createElement('script'); s.src = 'replay.js?v=4de6569f'; s.onload = () => StormReplay.open(n); document.body.appendChild(s); };
 { const m = location.hash.match(/^#replay(?:-(\d+))?$/); if (m) setTimeout(() => openReplay(m[1] ? m[1] - 1 : 0), 0); }   // #replay / #replay-9 = open at that step
 document.addEventListener('click', e => { const b = e.target.closest('[data-replay]'); if (!b) return; e.preventDefault(); const o = document.getElementById('xpOv'); if (o) o.classList.remove('on'); openReplay(); });</script>
 <script>/* calm / storm switch: storm = ?storm=may2024 (storm.js answers every feed with the 10 May 2024 data) */

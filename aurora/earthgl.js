@@ -10,7 +10,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
-import { createSolar } from './solar.js';
+import { createSolar } from './solar.js?v=c86a49e5';
 
 const tr = (s, o) => window.T ? window.T(s, o) : String(s).replace(/\{(\w+)\}/g, (m, k) => o && o[k] != null ? o[k] : m);
 const D2R = Math.PI / 180, BASE = new URL('./', import.meta.url).href, T = BASE + 'img/earth/';
@@ -22,7 +22,12 @@ const CSS = `.e3g{position:absolute;inset:0;display:none;background:#000;overflo
 .e3g-lay{position:absolute;z-index:3;left:10px;bottom:30px}.e3g-lp{position:absolute;left:48px;bottom:0;width:250px;padding:8px;border:1px solid rgba(255,255,255,.18);border-radius:12px;background:rgba(10,14,20,.92);display:flex;flex-direction:column;gap:6px}.e3g-lp[hidden]{display:none}
 .e3g-lp>button,.e3g-row button{text-align:left}.e3g-row{display:flex;gap:6px}.e3g-row button{flex:1}
 .e3g-time{position:absolute;z-index:2;left:50%;bottom:30px;transform:translateX(-50%);width:max-content;display:flex;gap:6px;align-items:center;max-width:calc(100% - 140px);flex-wrap:wrap;justify-content:center}
-.e3g.nf .eo{display:none}
+.e3g.nf .eo,.e3g.sy .eo{display:none}.e3g:not(.sy):not(.mso) .so{display:none}
+.e3g-fh{position:absolute;z-index:3;left:50%;top:58px;transform:translateX(-50%);max-width:calc(100% - 140px);text-align:center;padding:6px 14px;border:1px solid rgba(255,255,255,.18);border-radius:999px;background:rgba(10,14,20,.78);color:#E6EBF1;font:600 12px Inter,system-ui,sans-serif;pointer-events:none}
+.e3g-fh b{color:#39FF9E;font-weight:700}.e3g-fh small{display:block;color:#9AA4B2;font-weight:500;font-size:11px;margin-top:2px}
+.e3g-dw{position:relative;display:flex;align-items:center}.e3g-dw input{width:220px}.e3g-mk{position:absolute;left:7px;right:7px;top:-5px;height:5px;pointer-events:none}
+.e3g-mk b{position:absolute;top:0;width:3px;height:5px;margin-left:-1.5px;border-radius:1px;background:#FFB020}.e3g-mk b.e{background:#FF4D4D}.e3g-mk b.n{background:#E6EBF1;width:1px;margin-left:-.5px;height:9px;top:-2px}
+@media (max-width:640px){.e3g-dw input{width:120px}}
 .e3g button,.e3g-date{border:1px solid rgba(255,255,255,.18);background:rgba(10,14,20,.78);color:#E6EBF1;border-radius:999px;padding:7px 12px;min-height:36px;font:600 12px Inter,system-ui,sans-serif;cursor:pointer}
 .e3g-date{padding:6px 10px;color-scheme:dark}.e3g button[aria-pressed=true]{border-color:#39FF9E;color:#39FF9E}
 .e3g-tod{display:flex;align-items:center;gap:8px;border:1px solid rgba(255,255,255,.18);background:rgba(10,14,20,.78);color:#FFE600;border-radius:999px;padding:0 12px;min-height:36px;font:600 12px Inter,system-ui,sans-serif}
@@ -63,8 +68,9 @@ function create(host, opts) {
       <div class="e3g-row eo"><button data-k="ms" aria-pressed="false">🧲 ${tr('Magnetic shield')}</button><button data-k="cme">💥 ${tr('CME impact')}</button></div>
       <button data-k="sun" aria-pressed="false">${tr('Real Sun')}</button><button data-k="sp" aria-pressed="true">${tr('Auto-rotate')}</button><button data-k="rs" aria-pressed="false">${tr('Real scale')}</button><button data-k="gd" aria-pressed="false">${tr('Names and orbits')}</button><button data-k="sw" aria-pressed="false">${tr('Solar wind + CMEs')}</button><div class="e3g-row"><button data-k="sf" aria-pressed="false">${tr('Sun’s magnetic field')}</button><button data-k="dw" aria-pressed="false">🌀 ${tr('Without the solar wind')}</button></div></div></div>
     <div class="e3g-time"><input type="datetime-local" class="e3g-date" data-k="date" aria-label="${tr('Date and time')}"><button data-k="now">${tr('Now')}</button>
-      <div class="e3g-tod eo" title="${tr('Time of day here (local Sun time)')}">☀<button data-k="todB" aria-label="${tr('Earlier')}">‹</button><input type="range" data-k="tod" min="0" max="1435" step="5" aria-label="${tr('Time of day here (local Sun time)')}"><button data-k="todF" aria-label="${tr('Later')}">›</button><span></span></div></div>
-    <div class="e3g-nav"><button data-k="ang" aria-pressed="false" aria-label="${tr('Tilt')} / ${tr('Heading')}">∠</button><button data-k="cmp" aria-label="${tr('Reset to north')}"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 3l4 9h-8z" fill="#FF4D4D"/><path d="M12 21l-4-9h8z" fill="#E6EBF1"/></svg></button><button data-k="3d" aria-pressed="true" aria-label="${tr('3D view')}">3D</button><button data-k="zout" aria-label="${tr('Zoom out')}">−</button><button data-k="zin" aria-label="${tr('Zoom in')}">+</button></div>
+      <div class="e3g-tod eo" title="${tr('Time of day here (local Sun time)')}">☀<button data-k="todB" aria-label="${tr('Earlier')}">‹</button><input type="range" data-k="tod" min="0" max="1435" step="5" aria-label="${tr('Time of day here (local Sun time)')}"><button data-k="todF" aria-label="${tr('Later')}">›</button><span></span></div>
+      <div class="e3g-tod so" title="${tr('Move the clock (±10 days): orange = a CME leaves the Sun, red = it reaches the Earth')}">☄<button data-k="dyB" aria-label="${tr('Earlier')}">‹</button><div class="e3g-dw"><i class="e3g-mk"></i><input type="range" data-k="dy" min="-14400" max="14400" step="30" aria-label="${tr('Move the clock (±10 days): orange = a CME leaves the Sun, red = it reaches the Earth')}"></div><button data-k="dyF" aria-label="${tr('Later')}">›</button><button data-k="dyP" aria-label="${tr('Play')}" aria-pressed="false">▶</button><span></span></div></div>
+    <div class="e3g-nav"><button data-k="fly" aria-pressed="false" title="${tr('Free flight: W A S D, drag to look, Esc to stop')}" aria-label="${tr('Free flight: W A S D, drag to look, Esc to stop')}">✈</button><button data-k="ang" aria-pressed="false" aria-label="${tr('Tilt')} / ${tr('Heading')}">∠</button><button data-k="cmp" aria-label="${tr('Reset to north')}"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 3l4 9h-8z" fill="#FF4D4D"/><path d="M12 21l-4-9h8z" fill="#E6EBF1"/></svg></button><button data-k="3d" aria-pressed="true" aria-label="${tr('3D view')}">3D</button><button data-k="zout" aria-label="${tr('Zoom out')}">−</button><button data-k="zin" aria-label="${tr('Zoom in')}">+</button></div>
     <div class="e3g-info" hidden aria-live="polite"></div>
     <div class="e3g-pnl" hidden><label>${tr('Tilt')}<input type="range" data-s="tilt" min="0" max="100" value="100"></label><label>${tr('Heading')}<input type="range" data-s="head" min="-180" max="180" value="0"></label><button data-k="north">${tr('Reset to north')}</button><small>${tr('Shift + drag or right-drag: tilt and turn')}</small></div>
     <div class="e3g-attr">NASA Blue Marble · Black Marble · SVS star map · NOAA GMGSI · OVATION · ${tr('close-up')}: Sentinel-2 cloudless 2023 by EOX (CC BY-NC-SA 4.0) · Mapzen Terrarium / AWS · ${tr('Moon')}: JAXA Kaguya TC · NASA LRO LOLA (Moon Trek) · ${tr('Mars')}: MRO CTX (NASA/JPL/MSSS/Caltech Murray Lab/Esri) · Viking · MOLA / HRSC (Mars Trek)</div>`;
@@ -81,7 +87,7 @@ function create(host, opts) {
   // ── the camera, like Google Earth: it looks at a point on the ground (tgt, world frame) from `rng` Earth radii away,
   // tilted `tilt` from straight down, turned `head` from north. In 3D mode the tilt grows as you come down (tk = how much of the allowed tilt).
   const Yax = new THREE.Vector3(0, 1, 0), tgt = new THREE.Vector3(0, 0, 1), cE = new THREE.Vector3(), cN = new THREE.Vector3(), cF = new THREE.Vector3(), cR = new THREE.Vector3();
-  let rng = 3.2, rngTo = 3.2, head = 0, headTo = 0, tk = 1, tkTo = 1, tilt = 0, vel = [0, 0], dragAt = 0;
+  let fly = null, rng = 3.2, rngTo = 3.2, head = 0, headTo = 0, tk = 1, tkTo = 1, tilt = 0, vel = [0, 0], dragAt = 0;
   const RMIN = .12 / 6371, RFAR = 5e7;   // R⊕: down to 120 m over the Earth, out to ~2 100 AU (room for the Oort cloud later)
   let focus = 'Earth', Rf = 1;   // the body the camera turns around (its radius in R⊕); ranges are in its radii
   const rMin = () => focus === 'Earth' ? RMIN : solar.hdHas(focus) ? 2000 / (Rf * 6371000) : .015, rMax = () => RFAR / Rf;
@@ -93,7 +99,7 @@ function create(host, opts) {
     tgt.addScaledVector(cR, -dx * k).addScaledVector(cF, dy * k / Math.max(.35, Math.cos(tilt))).normalize();
     if (Math.abs(tgt.y) > .9999) { tgt.y = Math.sign(tgt.y) * .9999; tgt.normalize(); } };
   const turnBy = (dx, dy) => { headTo += dx * .006; tkTo = Math.max(0, Math.min(1, tkTo - dy * .004)); };
-  renderer.domElement.addEventListener('wheel', e => { e.preventDefault(); goal = null; zoomBy(Math.exp(Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 150) * .0022)); }, { passive: false });
+  renderer.domElement.addEventListener('wheel', e => { e.preventDefault(); if (fly) { fly.sp = Math.max(.05, Math.min(20, fly.sp * Math.exp(-Math.sign(e.deltaY) * .25))); fhAt = 0; return; } goal = null; zoomBy(Math.exp(Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 150) * .0022)); }, { passive: false });
   renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
   const pins = new Map(); let pinch = 0, twist = 0, midY = 0, mode = '';
   renderer.domElement.addEventListener('mousedown', e => { if (e.button === 1) e.preventDefault(); });   // middle button = tilt + turn, not the browser's autoscroll
@@ -103,6 +109,7 @@ function create(host, opts) {
   renderer.domElement.addEventListener('pointermove', e => { const o = pins.get(e.pointerId); if (!o) return; const dx = e.clientX - o[0], dy = e.clientY - o[1]; pins.set(e.pointerId, [e.clientX, e.clientY]);
     if (pins.size === 2) { const [a, b] = [...pins.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), an = Math.atan2(b[1] - a[1], b[0] - a[0]), my = (a[1] + b[1]) / 2;
       if (pinch) { zoomBy(pinch / d); let da = an - twist; da = Math.atan2(Math.sin(da), Math.cos(da)); headTo -= da; turnBy(0, (my - midY) * 1.4); } pinch = d; twist = an; midY = my; return; }   // pinch = zoom, twist = turn, both fingers up / down = tilt
+    if (fly) { flyLook(dx, dy); return; }
     if (mode === 'turn') turnBy(dx, dy); else if (mode === 'pan') { panBy(dx, dy); vel = [dx, dy]; dragAt = performance.now(); } });
   const unpin = e => { pins.delete(e.pointerId); pinch = 0; if (!pins.size) { if (mode !== 'pan' || performance.now() - dragAt > 80) vel = [0, 0]; mode = ''; } }; renderer.domElement.addEventListener('pointerup', unpin); renderer.domElement.addEventListener('pointercancel', unpin);
   const smooth = (a, b, x) => { const k = Math.max(0, Math.min(1, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
@@ -571,23 +578,30 @@ ${SUNLIB}
       const m = new THREE.Mesh(new THREE.LatheGeometry(P, 72), shellMat(col, k, 0, 0)); m.renderOrder = 4; dip.add(m); return m; };
     const belts = [belt(1.6, [1, .55, .35], .3), belt(2.1, [1, .55, .35], .15), belt(3.8, [.6, .5, 1], .25), belt(5, [.6, .5, 1], .18)];
     // the solar wind: particles from the Sun's side, sliding round the magnetopause and down the tail (sped up; the real speed sets the pace)
-    const NP = Q === 'low' ? 1800 : 4000, pa = new Float32Array(NP * 3);
-    for (let i = 0; i < NP; i++) { pa[i * 3] = Math.sqrt(Math.random()) * 22; pa[i * 3 + 1] = Math.random() * 6.2832; pa[i * 3 + 2] = Math.random(); }
+    const NP = Q === 'low' ? 3000 : 8000, pa = new Float32Array(NP * 3);
+    for (let i = 0; i < NP; i++) { pa[i * 3] = Math.sqrt(Math.random()) * 44; pa[i * 3 + 1] = Math.random() * 6.2832; pa[i * 3 + 2] = Math.random(); }
     const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(NP * 3), 3)); pg.setAttribute('pr', new THREE.Float32BufferAttribute(pa, 3));
-    const U3 = { ...U2, spd: { value: 7 }, dpr: { value: 1 } };
+    const U3 = { ...U2, spd: { value: 7 }, dpr: { value: 1 }, pf: { value: 1 } };   // pf: the local wind fades from afar (the big solar wind takes over)
     const pts = new THREE.Points(pg, new THREE.ShaderMaterial({ ...add, uniforms: U3,
       vertexShader: `attribute vec3 pr; uniform float R0, al, time, spd, dpr, cme; varying float vA;
         float rho(float x, float R) { float lo = 0., hi = 2.95; for (int i = 0; i < 14; i++) { float th = .5 * (lo + hi), r = R * pow(2. / (1. + cos(th)), al); if (r * cos(th) > x) lo = th; else hi = th; }
           float th = .5 * (lo + hi); return R * pow(2. / (1. + cos(th)), al) * sin(th); }
-        void main() { float x = 32. - mod(pr.z * 85. + time * spd, 85.), R = R0 * 1.12, rr = x > R ? pr.x : sqrt(pr.x * pr.x + pow(rho(x, R) * 1.04, 2.));
-          vec3 p = vec3(x, rr * sin(pr.y), rr * cos(pr.y)); vA = smoothstep(32., 26., x) * smoothstep(-53., -40., x);
+        void main() { float x = 64. - mod(pr.z * 150. + time * spd, 150.), R = R0 * 1.12, rr = x > R ? pr.x : sqrt(pr.x * pr.x + pow(rho(x, R) * 1.04, 2.));
+          vec3 p = vec3(x, rr * sin(pr.y), rr * cos(pr.y)); vA = smoothstep(64., 44., x) * smoothstep(-86., -60., x) * (1. - smoothstep(20., 44., pr.x));
           gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(p, 1.); gl_PointSize = dpr * (1.6 + cme * .8); }`,
-      fragmentShader: `uniform float fade, cme; varying float vA; void main() { float d = 1. - smoothstep(.2, .5, length(gl_PointCoord - .5));
-        gl_FragColor = vec4(mix(vec3(.55, .76, 1.), vec3(1., .74, .45), cme) * d * vA * fade * .75, 1.); }` }));
+      fragmentShader: `uniform float fade, cme, pf; varying float vA; void main() { float d = 1. - smoothstep(.2, .5, length(gl_PointCoord - .5));
+        gl_FragColor = vec4(mix(vec3(.55, .76, 1.), vec3(1., .74, .45), cme) * d * vA * fade * pf * .75, 1.); }` }));
     pts.renderOrder = 4; pts.frustumCulled = false; sw.add(pts);
     // the CME: a bright curved front sweeping in from the Sun; it hits, squeezes the shield and lights the aurora
-    const front = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 24, 0, Math.PI * 2, 0, .9), shellMat([1, .78, .5], 1.4, 1, 0));
-    front.geometry.rotateZ(Math.PI / 2); front.renderOrder = 4; front.visible = false; sw.add(front);   // the cap faces −x, toward the Earth
+    // made of particles like the CMEs of the solar-system view (one look at every scale): a thick cap facing −x, toward the Earth
+    const NF = Q === 'low' ? 1500 : 3500, fpa = new Float32Array(NF * 3);
+    for (let i = 0; i < NF; i++) { const th = Math.acos(1 - Math.random() * (1 - Math.cos(.9))), ph = Math.random() * 6.2832, r = 1 - Math.pow(Math.random(), 2) * .18;
+      fpa.set([-Math.cos(th) * r, Math.sin(th) * Math.cos(ph) * r, Math.sin(th) * Math.sin(ph) * r], i * 3); }
+    const fgeo = new THREE.BufferGeometry(); fgeo.setAttribute('position', new THREE.Float32BufferAttribute(fpa, 3));
+    const front = new THREE.Points(fgeo, new THREE.ShaderMaterial({ ...add, uniforms: { gate: { value: 0 }, fade: U2.fade, dpr: U3.dpr },
+      vertexShader: `uniform float dpr; void main() { gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); gl_PointSize = dpr * 2.5; }`,
+      fragmentShader: `uniform float gate, fade; void main() { float d = 1. - smoothstep(.2, .5, length(gl_PointCoord - .5)); gl_FragColor = vec4(vec3(1., .96, .88) * d * gate * fade * .9, 1.); }` }));
+    front.renderOrder = 4; front.frustumCulled = false; front.visible = false; sw.add(front);   // the cap faces −x, toward the Earth
     // the Moon at its true place and size (low-precision Meeus), lit by the real Sun; grey with maria-like patches
     const moon = new THREE.Mesh(new THREE.SphereGeometry(.2727, 48, 24), new THREE.ShaderMaterial({ uniforms: { rsun: U.rsun, fade: U2.fade },
       vertexShader: `varying vec3 vN; void main() { vN = normal; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`,
@@ -605,15 +619,25 @@ ${SUNLIB}
     const hidden = p => { const d = pv.copy(p).sub(camera.position), len = d.length(); d.divideScalar(len); const b = camera.position.dot(d), h = b * b - camera.position.lengthSq() + 1; if (h <= 0) return false; const t0 = -b - Math.sqrt(h); return t0 > 0 && t0 < len; };
     const put = (s, obj, x, y, z, txt) => { wp.set(x, y, z).applyMatrix4(obj.matrixWorld); pv.copy(wp).project(camera);
       if (pv.z > 1 || Math.abs(pv.x) > 1.05 || Math.abs(pv.y) > 1.05 || hidden(wp)) { s.style.opacity = 0; return; }
-      s.style.opacity = S.fade; s.style.transform = `translate(${Math.round((pv.x * .5 + .5) * W + 8)}px, ${Math.round((.5 - pv.y * .5) * H - 9)}px)`; if (s.textContent !== txt) s.textContent = txt; };
+      s.style.opacity = S.fade * lblK; s.style.transform = `translate(${Math.round((pv.x * .5 + .5) * W + 8)}px, ${Math.round((.5 - pv.y * .5) * H - 9)}px)`; if (s.textContent !== txt) s.textContent = txt; };
+    // the CME that matters at time t: the latest one arrived within 30 h, else the next one due within 72 h (hrs = hours since its arrival)
+    const realCme = t => { let best = null; for (const m of (solar.cmeMarks ? solar.cmeMarks() : [])) { if (m.tE == null) continue; const hrs = (t - m.tE) / 36e5; if (hrs < -72 || hrs > 30) continue;
+        if (!best || (hrs >= 0 ? best.hrs < 0 || hrs < best.hrs : best.hrs < 0 && hrs > best.hrs)) best = { v: m.v, hrs }; } return best; };
+    let lblK = 1;   // the labels fade out from afar (they would pile up)
     let on = false;   // off until 🧲 (or the "3D starts on: shield" setting)
     function update(dt, t, D) {
-      const want = on ? smooth(5, 12, D - 1) * (1 - smooth(250, 500, D)) : 0; S.fade += (want - S.fade) * Math.min(1, dt * 3); U2.fade.value = S.fade;
+      const want = on ? smooth(5, 12, D - 1) * (1 - smooth(250, 500, D)) : 0; S.fade += (want - S.fade) * Math.min(1, dt * 3); U2.fade.value = S.fade; lblK = 1 - smooth(70, 140, D); U3.pf.value = 1 - smooth(60, 120, D);
       g.visible = S.fade > .003; lab.style.display = g.visible ? '' : 'none'; if (!g.visible) { AU.auB.value = 1; return 0; }
       const ex = U.rsun.value.clone().normalize(), ey = Mg.clone().addScaledVector(ex, -Mg.dot(ex)).normalize(), ez = new THREE.Vector3().crossVectors(ex, ey);
       sw.matrix.makeBasis(ex, ey, ez); dip.quaternion.setFromUnitVectors(Yax, Mg);
-      // CME impact: 0–3 s the front sweeps in, then the shield is squeezed, holds, and relaxes
-      let c = 0, R = S.Rw, al = S.alw;
+      // a real CME aimed at the Earth (solar.js arrival times) follows the clock: the front sweeps in over the last 1.5 h (distance not to
+      // scale in time), then the shield is squeezed by its speed, holds ~12 h and relaxes by ~30 h; dragging the clock back undoes it
+      let c = 0, R = S.Rw, al = S.alw; const rc = realCme(t);
+      if (S.cme < 0 && rc) { const h = rc.hrs, u = h < 0 ? (h + 1.5) * 2 : 3 + h / .3 * 1.2; front.visible = h > -1.5 && u < 4.2;
+        if (front.visible) { front.position.set(45 - u * 15 + 14, 0, 0); front.scale.setScalar(14 + u * 3); front.material.uniforms.gate.value = Math.min(1, u * 2) * (1 - smooth(3, 4.2, u)); }
+        c = smooth(-.1, .6, h) * (1 - smooth(12, 30, h)); const hs = shue(10 + rc.v / 40, rc.v, -Math.min(30, 5 + rc.v / 50)); R = S.Rw + (hs.R - S.Rw) * c; al = S.alw + (hs.al - S.alw) * c; c *= Math.min(1, rc.v / 1100); }
+      else if (S.cme < 0) front.visible = false;
+      // the 💥 demo (no real CME near): 0–3 s the front sweeps in, then the shield is squeezed, holds, and relaxes
       if (S.cme >= 0) { S.cme += dt; const u = S.cme; front.visible = u < 4.2;
         if (front.visible) { const x = 45 - u * 15; front.position.set(x + 14, 0, 0); front.scale.setScalar(14 + u * 3); front.material.uniforms.gate.value = Math.min(1, u * 2) * (1 - smooth(3, 4.2, u)); }
         c = smooth(2.6, 3.4, u) * (1 - smooth(16, 24, u)); if (u > 24) S.cme = -1;
@@ -621,12 +645,12 @@ ${SUNLIB}
       S.R0 += (R - S.R0) * Math.min(1, dt * (S.cme >= 0 ? 4 : 1.5)); U2.R0.value = S.R0; U2.cme.value = c; U2.al.value = al;
       if (Math.abs(al - alBuilt) > .02) { mp.geometry.dispose(); mp.geometry = lathe(al, 1); alBuilt = al; }
       mp.scale.setScalar(S.R0); bs.scale.setScalar(S.R0);
-      U2.px.value = 1.1 * Math.tan(camera.fov * D2R / 2) * 2 / H; U3.dpr.value = renderer.getPixelRatio(); U3.spd.value = (c > .2 ? 1500 : S.v) / 60;
+      U2.px.value = 1.1 * Math.tan(camera.fov * D2R / 2) * 2 / H; U3.dpr.value = renderer.getPixelRatio(); U3.spd.value = (c > .2 ? (S.cme < 0 && rc ? rc.v : 1500) : S.v) / 60;
       AU.auB.value = 1 + 3.5 * c; belts[2].material.uniforms.k.value = .25 + .5 * c;
       g.updateMatrixWorld(true);
       put(LB[0], sw, S.R0 * 1.34, -1.6, 0, tr('Bow shock')); put(LB[1], sw, S.R0 * .2, S.R0 * 1.28, 0, tr('Magnetopause · {r} Earth radii', { r: S.R0.toFixed(1) }));
       put(LB[2], sw, -40, 8.5 * S.R0 / 10.5, 0, tr('Magnetic tail')); put(LB[3], dip, 0, 0, 4.4, tr('Van Allen belts'));
-      put(LB[4], sw, 26, -8, 0, (c > .2 ? 'CME 1500 km/s' : tr('solar wind') + ' ' + Math.round(S.v) + ' km/s') + ' ← ' + tr('from the Sun'));
+      put(LB[4], sw, 26, -8, 0, (S.cme >= 0 && c > .2 ? 'CME 1500 km/s' : rc && S.cme < 0 ? 'CME ' + Math.round(rc.v) + ' km/s' + (rc.hrs < 0 ? ' · ' + tr('arrives in {h} h', { h: Math.ceil(-rc.hrs) }) : '') : tr('solar wind') + ' ' + Math.round(S.v) + ' km/s') + ' ← ' + tr('from the Sun'));
       put(LB[6], sw, -10, -13, 0, tr('to scale · particle flow sped up ~100×'));
       return 75; }   // how far past the Earth the camera must see (the Moon, the tail)
     return { update, S, get on() { return on; }, set on(v) { on = v; }, impact() { S.cme = 0; } };
@@ -663,7 +687,8 @@ ${SUNLIB}
   const saveView = v => { try { localStorage.setItem('aurora.s3dlast', v); } catch (e) {} };
   const shield = () => { saveView('shield'); MSH.on = true; press($('ms'), true); if (focus !== 'Earth') flyToBody('Earth', 48); else if (rng < 20) shieldView(); };
   // fly to another body: the focus changes at once (the camera stays where it is), then it comes in to a sunlit side
-  function flyToBody(name, r1, dir, keep) { const B = solar.bodies[name]; if (!B) return; const t = now(); solar.eclToWorld(t);
+  // going to a body stops ▶ (its clock would run on unseen)
+  function flyToBody(name, r1, dir, keep) { const B = solar.bodies[name]; if (!B) return; playSet(false); flyOff(); const t = now(); solar.eclToWorld(t);
     const c = name === 'Earth' ? O3.clone() : solar.toWorld(solar.helio(name, t).map((v, i) => v - hE[i])), off = camera.position.clone().sub(c), d = off.length();
     look0.copy(camera.getWorldDirection(new THREE.Vector3())); lookU = 0;
     focus = name; Rf = B.R; Mprev = solar.eclToWorld(t).clone(); headTo = 0; if (name !== 'Earth') tkTo = 0;
@@ -735,12 +760,14 @@ ${SUNLIB}
   let wSeen = null, cSeen = null, feedAt = 0, hitC = null;
   function feed(t) { if (performance.now() - feedAt > 1000) { feedAt = performance.now();
       const w = opts.wind && opts.wind(), c = opts.cmes && opts.cmes(); if (w && w !== wSeen) { wSeen = w; solar.setWind(w); } if (c && c !== cSeen) { cSeen = c; solar.setCmes(c); } }
-    const st = solar.cmeAtEarth(t); if (st.hit && st.f > .3 && st.hit !== hitC) { hitC = st.hit; if (MSH.on) MSH.impact(); } }
+    }
   $('ms').onclick = () => { if (MSH.on && rng >= 20) { MSH.on = false; press($('ms'), false); } else shield(); };
-  $('cme').onclick = () => { const far = rng >= 20; shield(); setTimeout(() => MSH.impact(), far ? 0 : 2600); };
+  $('cme').onclick = () => { const far = rng >= 20, r = real(), m = (solar.cmeMarks ? solar.cmeMarks() : []).filter(c => c.tE != null && Math.abs(c.tE - r) < 864e6).sort((a, b) => Math.abs(a.tE - r) - Math.abs(b.tE - r))[0];
+    shield(); if (m) { setT(m.tE - 2 * 36e5); playSet(true); } else setTimeout(() => MSH.impact(), far ? 0 : 2600); };
   const pad = v => String(v).padStart(2, '0'), localStr = t => { const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+  $('fly').onclick = () => fly ? flyOff() : flyOn();
   const di = $('date'); di.onchange = () => { const t = Date.parse(di.value); if (isFinite(t)) tOver = t; };
-  $('now').onclick = () => { tOver = null; di.value = localStr(now()); };
+  $('now').onclick = () => { playSet(false); tOver = null; di.value = localStr(now()); };
   // time of day at the place you look at: local Sun time (UTC + longitude / 15) on the same day; moving it switches the real Sun on
   const tod = $('tod'), todL = el.querySelector('.e3g-tod span'), lonHere = () => { const o = tgt.clone().applyQuaternion(earth.quaternion.clone().invert()); return Math.atan2(-o.z, o.x) / D2R; };
   const solarMin = t => ((t / 6e4 + lonHere() * 4) % 1440 + 1440) % 1440, hm = m => pad(Math.floor(m / 60) % 24) + ':' + pad(Math.floor(m % 60));
@@ -752,7 +779,7 @@ ${SUNLIB}
   // ── search any place (Open-Meteo geocoding = GeoNames) or type "lat, lon"; the camera flies there
   let goal = null, plN = '', plT = 0;
   const kmFor = c => /^PCL/.test(c) ? 2600 : /^ADM1/.test(c) ? 700 : /^ADM2/.test(c) ? 250 : /^(MT|PK|VLC|HLL|PASS|CNYN|GLCR)/.test(c) ? 9 : /^PPLC|PPLA$/.test(c) ? 35 : 22;
-  function goTo(lat, lon, km, name) { const b = nrmOf(lat * D2R, lon * D2R).applyQuaternion(earth.quaternion), a = tgt.clone(), ang = a.angleTo(b);
+  function goTo(lat, lon, km, name) { flyOff(); const b = nrmOf(lat * D2R, lon * D2R).applyQuaternion(earth.quaternion), a = tgt.clone(), ang = a.angleTo(b);
     const ax = b.clone().addScaledVector(a, -a.dot(b)); if (ax.lengthSq() < 1e-9) ax.copy(cE); ax.normalize();
     goal = { a, b, ax, ang, u: 0, r0: rng, r1: Math.max(RMIN * 4, km / 6371), hop: Math.min(2.2, ang * .9) * Math.min(1, ang * 6), dur: 1.6 + Math.min(3, ang * 1.6) };
     spinOff(); vel = [0, 0]; headTo = 0; tkTo = 1; plN = name; plT = performance.now() + 9000; }
@@ -777,6 +804,27 @@ ${SUNLIB}
     b.onpointerdown = e => { e.preventDefault(); b.setPointerCapture(e.pointerId); n = 0; step(); stop(); iv = setInterval(step, 90); };
     b.onpointerup = b.onpointercancel = b.onlostpointercapture = stop;
     b.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); n = 0; step(); } }; }
+  // solar system view: the clock ±10 days around now, ‹ › hold to run (CME marks above the slider); moving it switches the solar wind + CMEs on
+  const dy = $('dy'), dyL = el.querySelector('.so span'), mk = el.querySelector('.e3g-mk'), real = () => opts.time ? opts.time() : Date.now(); let dyDrag = false, mkAt = 0, mkSeen = null;
+  const windOn = () => { if (!solar.wind) { solar.wind = true; press($('sw'), true); } };
+  const setT = t => { tOver = t; di.value = localStr(tOver); windOn(); };
+  // ▶ / ⏸: the clock runs on at 6 hours a second until paused (the slider stays at its end, the label keeps counting)
+  var dyPlay = false;   // var + function: flyToBody may stop it before this line has run
+  function playSet(on) { dyPlay = on; const b = $('dyP'); b.textContent = on ? '⏸' : '▶'; b.setAttribute('aria-label', tr(on ? 'Pause' : 'Play')); b.setAttribute('aria-pressed', !!on); }
+  const dyP = $('dyP'); dyP.onclick = () => playSet(!dyPlay);
+  dy.oninput = () => { dyDrag = true; setT(real() + +dy.value * 6e4); }; dy.onchange = () => { dyDrag = false; };
+  for (const [k, dir] of [['dyB', -1], ['dyF', 1]]) { const b = $(k); let iv = null, n = 0;
+    const step = () => { setT(now() + dir * 6e4 * (n < 8 ? 60 : n < 30 ? 180 : 360)); n++; };
+    const stop = () => { clearInterval(iv); iv = null; };
+    b.onpointerdown = e => { e.preventDefault(); b.setPointerCapture(e.pointerId); n = 0; step(); stop(); iv = setInterval(step, 90); };
+    b.onpointerup = b.onpointercancel = b.onlostpointercapture = stop;
+    b.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); n = 0; step(); } }; }
+  const dyShow = t => { const r = real(), off = (t - r) / 6e4; if (!dyDrag) dy.value = Math.round(off / 30) * 30;
+    const h = Math.round(Math.abs(off) / 60), d = Math.floor(h / 24);
+    dyL.textContent = Math.abs(off) < 30 ? tr('Now') : (off < 0 ? '−' : '+') + (d ? d + ' ' + tr('d') + ' ' : '') + (h % 24) + ' h';
+    const ms = solar.cmeMarks ? solar.cmeMarks() : []; if (ms === mkSeen && performance.now() - mkAt < 6e4) return; mkSeen = ms; mkAt = performance.now();
+    const pc = x => ((x - r) / 864e6 + 1) * 50, inR = x => x != null && Math.abs(x - r) <= 864e6;
+    mk.innerHTML = '<b class="n" style="left:50%"></b>' + ms.flatMap(c => [inR(c.t0) ? `<b style="left:${pc(c.t0).toFixed(2)}%"></b>` : '', inR(c.tE) ? `<b class="e" style="left:${pc(c.tE).toFixed(2)}%"></b>` : '']).join(''); };
   const todShow = t => { const m = solarMin(t); if (!todDrag) tod.value = Math.round(m / 5) * 5; todL.textContent = hm(m) + ' ' + tr('Sun time'); };
   const lm = new THREE.Matrix4(), O3 = new THREE.Vector3();
   function resize() { W = Math.max(200, host.clientWidth); H = Math.max(200, host.clientHeight); PRMAX = prCap(); PR = Math.min(PR, PRMAX);
@@ -789,8 +837,44 @@ ${SUNLIB}
 
 
   const inv = new THREE.Matrix4();
-  let qBprev = null, qBname = null;
+  let qBprev = null, qBname = null, sunL = null;
+  // turn the camera with the ground under it (a body's rotation, the Sun-fixed shield view), keeping where it looks
+  const turnView = qd => { frameAt(); const F = cF.clone().applyQuaternion(qd), h0 = head; tgt.applyQuaternion(qd);
+    head = 0; frameAt(); let dh = Math.atan2(F.dot(cE), F.dot(cN)) - h0; dh -= 2 * Math.PI * Math.round(dh / (2 * Math.PI)); head = h0 + dh; headTo += dh;
+    if (goal) { goal.a.applyQuaternion(qd); goal.b.applyQuaternion(qd); goal.ax.applyQuaternion(qd); }
+    if (fly) { fly.off.applyQuaternion(qd); fly.q.premultiply(qd); } };
+  // ✈ free flight: the camera flies on its own (W A S D, R / F up / down, Q / E roll, Shift faster, drag = look, wheel = speed), Esc / ✈ = back;
+  // the speed grows with the height over the focus body; the HUD says which body is ahead (a compass)
+  const keys = new Set(), KM = ['KeyW', 'KeyS', 'KeyA', 'KeyD', 'KeyQ', 'KeyE', 'KeyR', 'KeyF', 'ShiftLeft', 'ShiftRight'];
+  const fh = document.createElement('div'); fh.className = 'e3g-fh'; fh.hidden = true; el.appendChild(fh);
+  function flyOn() { if (fly) return; fly = { off: camera.position.clone().sub(fc), q: camera.quaternion.clone(), sp: 1 }; spinOff(); goal = null; vel = [0, 0]; press($('fly'), true); fh.hidden = false; }
+  function flyOff() { if (!fly) return; const o = fly.off; tgt.copy(o).normalize(); rng = rngTo = Math.max(rMin(), o.length() / Rf - 1); tkTo = 0;
+    look0.copy(camera.getWorldDirection(new THREE.Vector3())); lookU = 0; fly = null; keys.clear(); press($('fly'), false); fh.hidden = true; }
+  window.addEventListener('keydown', e => { if (!visible || e.ctrlKey || e.metaKey || e.altKey || e.target.closest?.('input,textarea,select,[contenteditable]')) return;
+    if (e.code === 'Escape' && fly) { e.preventDefault(); flyOff(); return; } if (!KM.includes(e.code)) return; if (!fly && e.code.startsWith('Shift')) return; e.preventDefault(); flyOn(); keys.add(e.code); });
+  window.addEventListener('keyup', e => keys.delete(e.code)); window.addEventListener('blur', () => keys.clear());
+  const qT = new THREE.Quaternion(), vT = new THREE.Vector3();
+  const flyLook = (dx, dy) => { fly.q.multiply(qT.setFromAxisAngle(vT.set(0, 1, 0), -dx * .003)).multiply(qT.setFromAxisAngle(vT.set(1, 0, 0), -dy * .003)).normalize(); };
+  function flyStep(dt) { const k = keys, h = Math.max(fly.off.length() / Rf - 1, .003) * Rf, sp = h * .7 * fly.sp * (k.has('ShiftLeft') || k.has('ShiftRight') ? 5 : 1) * dt, ax = new THREE.Vector3();
+    if (k.has('KeyW')) ax.z -= 1; if (k.has('KeyS')) ax.z += 1; if (k.has('KeyA')) ax.x -= 1; if (k.has('KeyD')) ax.x += 1; if (k.has('KeyR')) ax.y += 1; if (k.has('KeyF')) ax.y -= 1;
+    if (ax.lengthSq()) fly.off.add(ax.normalize().applyQuaternion(fly.q).multiplyScalar(sp));
+    if (k.has('KeyQ')) fly.q.multiply(qT.setFromAxisAngle(vT.set(0, 0, 1), 1.2 * dt)); if (k.has('KeyE')) fly.q.multiply(qT.setFromAxisAngle(vT.set(0, 0, 1), -1.2 * dt));
+    const mn = Rf * (1 + Math.max(.0015, 2000 / (Rf * 6371000))); if (fly.off.length() < mn) fly.off.setLength(mn);
+    camera.position.copy(fc).add(fly.off); camera.quaternion.copy(fly.q); tgt.copy(fly.off).normalize(); rng = rngTo = fly.off.length() / Rf - 1; }
+  let fhAt = 0;
+  function flyHud() { if (performance.now() - fhAt < 200) return; fhAt = performance.now(); const qi = camera.quaternion.clone().invert(); let best = null;
+    for (const b of Object.values(solar.bodies)) { if (b.name === focus && fly.off.length() / Rf < 3) continue; const v = b.rel.clone().applyQuaternion(qi), a = Math.acos(Math.max(-1, Math.min(1, -v.z / v.length())));
+      if (!best || a < best.a) best = { b, a, v }; }
+    const km = d => { const k = d * 6371; return k >= 1e6 ? (k / 1e6).toLocaleString(window.LOC || 'en-GB', { maximumFractionDigits: 1 }) + ' ' + tr('million km') : Math.round(k).toLocaleString(window.LOC || 'en-GB') + ' km'; };
+    let line = '';
+    if (best) { const n = tr(best.b.name), dist = km(Math.max(0, best.b.d - best.b.rs)), deg = Math.round(best.a / D2R);
+      if (deg <= 3) line = `${tr('Heading to')} <b>${n}</b> · ${dist}`;
+      else { const hx = Math.atan2(best.v.x, -best.v.z), hy = Math.atan2(best.v.y, Math.hypot(best.v.x, best.v.z)), ar = Math.abs(hx) > Math.abs(hy) * 1.5 || best.v.z > 0 ? (hx < 0 ? '←' : '→') : (hy > 0 ? '↑' : '↓');
+        line = `${ar} <b>${n}</b> ${deg}° · ${dist}`; } }
+    fh.innerHTML = `✈ ${line}<small>W A S D · R / F ${tr('up / down')} · Q / E ${tr('roll')} · ${tr('drag = look')} · ${tr('wheel = speed')} ×${fly.sp < 1 ? fly.sp.toFixed(2) : fly.sp.toFixed(1)} · Shift · Esc</small>`; }
   let fpsN = 60, slow = 0, fast = 0, readyAt = 0, msX = 0, hE = [0, 0, 0], Mprev = null, lookU = 1; const fc = new THREE.Vector3(), look = new THREE.Vector3(), look0 = new THREE.Vector3(); const PRMIN = Math.min(Q === "low" ? .6 : 1, prCap()); let PRMAX = prCap();
+  // three.js asks for the next frame only after this one returns: an error would freeze the picture, so it is caught (and logged once)
+  let frameErr = false; const safeFrame = () => { try { frame(); } catch (e) { if (!frameErr) { frameErr = true; console.error('3D frame', e); } } };
   function frame() {
     if (startV && ++startN > 20) { const v = startV; startV = null; goStart(v); }
     const P = !!(opts.paused && opts.paused());
@@ -801,6 +885,8 @@ ${SUNLIB}
     if (slow > 90 && PR > PRMIN) { PR = Math.max(PRMIN, PR - .1); resize(); slow = 0; }
     else if (fast > 180 && PR < PRMAX) { PR = Math.min(PR + .1, PRMAX); resize(); fast = 0; }
     if (orbitWait && !goal) { orbitOn = orbitWait; orbitWait = 0; }
+    if (dyPlay) { const tn = now(); let k = 1; for (const m of (solar.cmeMarks ? solar.cmeMarks() : [])) if (m.tE != null) { const d = Math.abs(tn - m.tE) / 36e5; k = Math.min(k, d < 2 ? 1 / 24 : d < 6 ? 1 / 4 : 1); }
+      setT(tn + Math.min(.1, dt0) * 216e5 * k); }
     if (orbitOn) { tOver = now() + Math.min(.1, dt0) * orbitOn; if (performance.now() - infoAt > 250) di.value = localStr(tOver); }
     const dt = Math.min(.05, dt0), t = now(); hE = solar.helio('Earth', t);
     if (infoOf && performance.now() - infoAt > 250) { infoAt = performance.now(); liveInfo(t); }
@@ -808,13 +894,13 @@ ${SUNLIB}
       const kk = Math.min(1, dt * 6);
       solar.eclToWorld(t); fc.copy(focus === 'Earth' ? O3 : solar.toWorld(solar.helio(focus, t).map((v, i) => v - hE[i])));
       const fB = focus !== 'Earth' && rng < 2 && solar.bodies[focus];   // close to a body: it alone turns the camera (its rotation already holds the frame's)
-      if (focus !== 'Earth' && Mprev && !(fB && qBname === focus)) { const qd = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().setFromMatrix3(solar.eclToWorld(t).clone().multiply(Mprev.clone().invert()))); tgt.applyQuaternion(qd); if (goal) { goal.a.applyQuaternion(qd); goal.b.applyQuaternion(qd); goal.ax.applyQuaternion(qd); } }   // away from the Earth the view stays still among the stars
+      if (focus !== 'Earth' && Mprev && !(fB && qBname === focus)) { const qd = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().setFromMatrix3(solar.eclToWorld(t).clone().multiply(Mprev.clone().invert()))); tgt.applyQuaternion(qd); if (fly) { fly.off.applyQuaternion(qd); fly.q.premultiply(qd); } if (goal) { goal.a.applyQuaternion(qd); goal.b.applyQuaternion(qd); goal.ax.applyQuaternion(qd); } }   // away from the Earth the view stays still among the stars
       Mprev = solar.eclToWorld(t).clone();
       // close to another body (within 2 radii) the camera turns with it, so its ground doesn't slide away under you
-      { const B = fB; if (B) { if (qBprev && qBname === focus) { const qd = B.mesh.quaternion.clone().multiply(qBprev.clone().invert());
-            frameAt(); const F = cF.clone().applyQuaternion(qd), h0 = head; tgt.applyQuaternion(qd);
-            head = 0; frameAt(); let dh = Math.atan2(F.dot(cE), F.dot(cN)) - h0; dh -= 2 * Math.PI * Math.round(dh / (2 * Math.PI)); head = h0 + dh; headTo += dh; if (goal) { goal.a.applyQuaternion(qd); goal.b.applyQuaternion(qd); goal.ax.applyQuaternion(qd); } }
+      { const B = fB; if (B) { if (qBprev && qBname === focus) turnView(B.mesh.quaternion.clone().multiply(qBprev.clone().invert()));
           qBprev = (qBprev || new THREE.Quaternion()).copy(B.mesh.quaternion); qBname = focus; } else qBname = null; }
+      // the magnetic shield view stays fixed toward the Sun (the shield points at it), so the clock can run fast without the view spinning
+      if (focus === 'Earth' && MSH.on) { const sl = Math.atan2(-U.rsun.value.z, U.rsun.value.x); if (sunL != null) { let d = sl - sunL; d -= 2 * Math.PI * Math.round(d / (2 * Math.PI)); if (d) turnView(new THREE.Quaternion().setFromAxisAngle(Yax.clone().applyQuaternion(earth.quaternion), d)); } sunL = sl; } else sunL = null;
       if (spin && rng > .4) tgt.applyAxisAngle(Yax, dt * .02 * Math.min(1, rng));   // a slow turn seen from far away
       if (!pins.size && (vel[0] || vel[1])) { panBy(vel[0], vel[1]); vel = vel.map(v => Math.abs(v *= Math.pow(.05, dt)) < .05 ? 0 : v); }   // the throw glides on
       if (goal) { goal.u = Math.min(1, goal.u + dt / goal.dur); const e = goal.u * goal.u * (3 - 2 * goal.u);   // fly: up, across, down (log range + a hop that grows with the distance)
@@ -834,6 +920,7 @@ ${SUNLIB}
       camera.position.copy(pos); camera.up.copy(tgt).multiplyScalar(st).addScaledVector(cF, ct); look.copy(tgt).multiplyScalar(Rf * (1 + gT)).add(fc);
       if (lookU < 1) { lookU = Math.min(1, lookU + dt / 1.4); const e = lookU * lookU * (3 - 2 * lookU), dn = look.clone().sub(pos).normalize(); look.copy(pos).add(look0.clone().lerp(dn, e).normalize()); }   // after a change of focus the view turns smoothly to the new body
       camera.lookAt(look);
+      if (fly) flyStep(dt);
       sH.value = Math.round((((head % (2 * Math.PI)) + 3 * Math.PI) % (2 * Math.PI) - Math.PI) / D2R); sT.value = Math.round(tkTo * 100);
       cmp.firstChild.style.transform = `rotate(${-head / D2R}deg)`; press(b3, tkTo > .05); }
     const D = camera.position.length();
@@ -852,7 +939,7 @@ ${SUNLIB}
     camera.near = Math.max(Math.min(D - 1, hAG, msX ? 1.5 : 1e9) * .3, 3e-7); camera.far = Math.max(D + 1.2, msX ? D + msX : 0);   // the far side of the air and aurora shells too
     camera.updateProjectionMatrix(); camera.updateMatrixWorld(); msX = MSH.update(dt, t, D);
     const pix = 2 * Math.tan(camera.fov * D2R / 2) / H, nearOn = 1 / (D * pix) > 2.5;   // the detailed Earth until it is a few pixels across
-    scene.visible = nearOn; el.classList.toggle('nf', focus !== 'Earth');
+    scene.visible = nearOn; el.classList.toggle('nf', focus !== 'Earth'); el.classList.toggle('sy', focus !== 'Earth' || !nearOn || dyPlay); el.classList.toggle('mso', MSH.on && focus === 'Earth');
     { const ch = solar.fromWorld(camera.position); solar.update(t, [hE[0] + ch.x, hE[1] + ch.y, hE[2] + ch.z], W, H, nearOn, renderer.getPixelRatio()); feed(t); }
     { const k = solar.cam.far * .45 / 900; stars.scale.set(-k, k, k); }
     inv.copy(earth.matrixWorld).invert(); U.camO.value.copy(camera.position).applyMatrix4(inv);
@@ -868,7 +955,7 @@ ${SUNLIB}
     auMat.uniforms.time.value += dt;
     const km = focus === 'Earth' ? (D - 1) * 6371 : rng * Rf * 6371, cl = U.camO.value.clone().normalize();
     if (focus !== 'Earth' && solar.bodies[focus]) cl.copy(camera.position).sub(fc).applyQuaternion(solar.bodies[focus].mesh.quaternion.clone().invert()).normalize();   // another body: its own latitude / longitude
-    todShow(t);
+    todShow(t); if (el.classList.contains('sy') || el.classList.contains('mso')) dyShow(t); if (fly) flyHud();
     el.querySelector('.e3g-alt').innerHTML = `${focus !== 'Earth' ? tr(focus) + ' · ' : ''}${tr('Altitude')} ${km >= 1000 ? Math.round(km).toLocaleString(window.LOC || 'en-GB') : km.toFixed(km < 10 ? 1 : 0)} km${focus === 'Earth' && hAG * 6371 < 3 ? ' · ' + Math.round(hAG * 6371000) + ' m ' + tr('above the ground') : ''}<small>${plN && performance.now() < plT ? '<b style="color:#39FF9E">' + plN + '</b> · ' : ''}${(Math.asin(cl.y) / D2R).toFixed(2)}°, ${(Math.atan2(-cl.z, cl.x) / D2R).toFixed(2)}° · ${new Date(t).toLocaleString(window.LOC || 'en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}${tOver != null ? '' : ' · ' + tr('live')}</small>`;
     airPass.uniforms.projInv.value.copy(camera.projectionMatrixInverse); airPass.uniforms.camW.value.copy(camera.matrixWorld); airPass.uniforms.toObj.value.setFromMatrix4(inv); airPass.uniforms.cn.value.set(camera.near, camera.far); airPass.enabled = air.visible && scene.visible;
     composer.render();
@@ -879,7 +966,7 @@ ${SUNLIB}
     show(lat, lon, far) { shownAt = performance.now(); el.classList.add('on'); visible = true; resize(); di.value = localStr(now()); clock.getDelta();
       const p = nrmOf((lat ?? 45.6) * D2R, (lon ?? 25.6) * D2R).applyQuaternion(earth.quaternion);
       focus = 'Earth'; Rf = 1; Mprev = null; tgt.copy(p); head = headTo = 0; vel = [0, 0]; rng = far ? 110 : 3.2; rngTo = 3.2;   // arriving from the solar system: come down to the globe
-      renderer.setAnimationLoop(frame); },
+      renderer.setAnimationLoop(safeFrame); },
     hide() { el.classList.remove('on'); visible = false; renderer.setAnimationLoop(null); },
     setTime() {}, flyTo() {}, setPlaces(p) { opts.places = p; }, shield() { shield(); },
     start(v) { startV = v; startN = 0; } };

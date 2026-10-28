@@ -43,7 +43,7 @@ export function helio(name, t) { const T = (t / DAY + 2440587.5 - 2451545) / 365
   if (name === 'Moon') { const e = kepler('Earth', T), m = moonGeo(t); return [e[0] + m[0], e[1] + m[1], e[2] + m[2]]; }
   return kepler(name, T); }
 
-import { createBodyHD } from './bodyhd.js';
+import { createBodyHD } from './bodyhd.js?v=e199e9f2';
 
 export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, quatW, dayTex }) {
   const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(camera.fov, camera.aspect, 1, 1e8);
@@ -133,12 +133,28 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
       void main() { float k = a.y, r = .03 + b.x * (frac + k * ${DTW}), n = mod(nq - k, 100000.), s1 = hs(a.z * 17.13 + n * .731), s2 = hs(a.z * 3.7 + n * 1.913);
         float la = (s1 - .5) * .16, lon = a.x + ph0 - ${OMEGA} * k * ${DTW};
         vec4 mv = modelViewMatrix * vec4(AUr * r * vec3(cos(lon) * cos(la), sin(lon) * cos(la), sin(la)), 1.);
-        float fade = clamp((3.2 - r) / .8, 0., 1.) * clamp(r / .12, 0., 1.) * step(r, 3.2), near = smoothstep(.01 * AUr, .08 * AUr, -mv.z);
+        float fade = clamp((3.2 - r) / .8, 0., 1.) * clamp(r / .12, 0., 1.) * step(r, 3.2), near = smoothstep(.0004 * AUr, .004 * AUr, -mv.z);
         float cr = r > .25 ? a.w * min(1., (r - .25) / .3) : 0., pulse = .72 + .28 * sin(r * 55. - tsec * (1. + 3. * clamp((b.y - 300.) / 600., 0., 1.)) + s2 * 6.28);
         vC = vec4(mix(sc(b.y), vec3(1.), cr * .55), min(1., .42 * fade * b.w * b.z * (.8 + .2 * s2) * pulse * (1. + cr * .8) * gate * near));
         gl_PointSize = (1.7 + .9 * b.z + 1.3 * cr) * px; gl_Position = projectionMatrix * mv; if (vC.a < .004) gl_Position = vec4(2., 2., 2., 1.); }`,
     fragmentShader: PFS }));
   windP.frustumCulled = false; helioG.add(windP);
+  // the solar wind round the camera: a cloud anchored in space that wraps round you, so the wind stays a rain of particles between the
+  // Earth's shield (its own local wind) and the solar-system scale; it flows away from the Sun at the measured speed (sped up), soft edge
+  const NL = Q === 'low' ? 2500 : 6000, lsa = new Float32Array(NL * 4);
+  for (let i = 0; i < NL; i++) lsa.set([Math.random(), Math.random(), Math.random(), Math.random()], i * 4);
+  const lGeo = new THREE.BufferGeometry(); lGeo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(NL * 3), 3)); lGeo.setAttribute('s', new THREE.Float32BufferAttribute(lsa, 4));
+  const lU = { L: { value: 100 }, off: { value: new THREE.Vector3() }, ctr: { value: new THREE.Vector3() }, k: { value: 0 }, v: { value: 400 }, px: wU.px, gate: wU.gate };
+  const localW = new THREE.Points(lGeo, new THREE.ShaderMaterial({ uniforms: lU, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    vertexShader: `uniform float L, k, v, px, gate; uniform vec3 off, ctr; attribute vec4 s; varying vec4 vC; ${SC}
+      void main() { vec3 q = fract(s.xyz + off) - .5; float e = 1. - smoothstep(.28, .5, length(q));
+        vC = vec4(sc(v), .6 * k * gate * e * (.6 + .4 * s.w)); gl_PointSize = (1.9 + .9 * s.w) * px;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(ctr + q * L, 1.); if (vC.a < .004) gl_Position = vec4(2., 2., 2., 1.); }`,
+    fragmentShader: PFS }));
+  localW.frustumCulled = false; localW.visible = false; scene.add(localW);
+  const sm = (a, b, x) => { const k = Math.max(0, Math.min(1, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
+  const lFlow = [0, 0, 0]; let lAt = 0;
+  const vNow = t => { let best = null, bd = Infinity; for (const p of wSeries) { if (!(p.v > 100)) continue; const d = Math.abs(p.t - t); if (d < bd) { bd = d; best = p.v; } } return best || 400; };
   let wSeries = [], cmes = [], donki = null;
   function setWind(series) { wSeries = series || [];
     const sum = new Float32Array(360), cnt = new Float32Array(360), nsum = new Float32Array(360), known = new Uint8Array(360), v = new Float32Array(360), n = new Float32Array(360);
@@ -158,6 +174,9 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
   function fromEnlil() { const out = []; let seg = null;
     wSeries.forEach(p => { if (p.cme) { if (!seg) seg = { t: p.t, v: p.v }; else seg.v = Math.max(seg.v, p.v); } else if (seg) { out.push(seg); seg = null; } }); if (seg) out.push(seg);
     return out.map(c => ({ t: c.t - (1 - 0.1) / kmsAU(c.v) * DAY, lat: 0, lon: 0, half: 35, v: c.v, est: true })); }
+  // the slider's marks: when each CME leaves the Sun and (if it is aimed at us) reaches the Earth
+  const cmeMarks = () => cmes.map(c => { const va = kmsAU(c.v), hit = Math.cos(c.lat * D2R) * Math.cos(c.lon * D2R) >= Math.cos(Math.max(5, c.half) * D2R);
+    return { t0: c.t - .1 / va * DAY, tE: hit ? c.t + .9 / va * DAY : null, v: c.v, est: !!c.est }; });
   function setCmes(list) { if (list) donki = list.filter(c => c.v > 0); cmes = donki && donki.length ? donki : fromEnlil(); }
   const CP = 1600, NC = 12, cGeo = new THREE.BufferGeometry(), ca = new Float32Array(CP * 4);
   for (let i = 0; i < CP; i++) { const sh = i < 1100; ca.set(sh ? [(i + .5) / 1100, i * 2.39996, 1, Math.random()] : [Math.random(), Math.random() * 6.283, 0, Math.random()], i * 4); }
@@ -170,7 +189,7 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
           float front = r * (1. - .1 * e * e + .04 * cos(2. * ph) * e), rr = c.z > .5 ? front * (.985 + .03 * c.w) : front * (.62 + .33 * pow(c.w, .6)), q = rr / front;
           vec4 mv = modelViewMatrix * vec4(d * rr * AUr, 1.);
           vC = c.z > .5 ? vec4(1., .82 + .18 * (1. - e), .62 + .38 * (1. - e), min(1., .55 + .6 * e) * fade) : vec4(1., .6 + .25 * q, .4 + .3 * q, .3 * fade * q);
-          vC.a *= gate * smoothstep(.004 * AUr, .04 * AUr, -mv.z); gl_PointSize = (c.z > .5 ? 2.3 : 2.8) * px; gl_Position = projectionMatrix * mv; }`,
+          vC.a *= gate * smoothstep(.0003 * AUr, .003 * AUr, -mv.z); gl_PointSize = (c.z > .5 ? 2.3 : 2.8) * px; gl_Position = projectionMatrix * mv; }`,
       fragmentShader: PFS }));
     p.frustumCulled = false; p.visible = false; helioG.add(p); cmeP.push(p); }
   let active = [];
@@ -312,15 +331,28 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
     glow.position.copy(S); glow.scale.setScalar(Math.max(bodies.Sun.rs * 9, 40 * pix * bodies.Sun.d));
     orbits.position.copy(S); orbits.quaternion.setFromRotationMatrix(new THREE.Matrix4().setFromMatrix3(M));
     helioG.position.copy(S); helioG.quaternion.copy(orbits.quaternion); windP.visible = windOn; wU.px.value = pxr || 1;
+    { // the wind round the camera: its size follows the nearest body's distance; it hands over to the Earth's shield wind below ~120 R⊕,
+      // stays off close to the other bodies, and leaves the far view to the big wind beyond ~0.1 AU
+      let dN = Infinity, kB = 1; for (const b of Object.values(bodies)) { dN = Math.min(dN, b.d); if (b.name !== 'Earth' && b.name !== 'Sun') kB = Math.min(kB, sm(1.5 * b.R, 4 * b.R, b.d)); }
+      const K = windOn ? sm(80, 160, bodies.Earth.d) * kB * (1 - sm(.05 * AU, .15 * AU, dN)) : 0; localW.visible = K > .003;
+      const now = performance.now(), dt = lAt ? Math.min(.1, (now - lAt) / 1000) : 0; lAt = now;
+      // the cloud sits ahead of the camera, round what you look at (the camera's near plane would cut a cloud centred on it)
+      if (localW.visible) { const L = Math.max(100, Math.min(.15 * AU, dN)), v = vNow(t), r = Math.hypot(...camHelio) || 1, sp = L / 7 * v / 400 * dt;
+        const fw = camera.getWorldDirection(tmp).applyMatrix3(Mi).normalize().multiplyScalar(dN), cH = [camHelio[0] + fw.x, camHelio[1] + fw.y, camHelio[2] + fw.z];
+        for (let i = 0; i < 3; i++) lFlow[i] += camHelio[i] / r * sp;
+        const f = i => { const x = (lFlow[i] - cH[i]) / L; return x - Math.floor(x); };
+        lU.L.value = L; lU.k.value = K; lU.v.value = v; lU.ctr.value.copy(fw); lU.off.value.set(f(0), f(1), f(2)); localW.quaternion.copy(orbits.quaternion); } }
     if (windOn) windUpdate(t, pxr || 1); else { active = []; cmeP.forEach(p => p.visible = false); }
     fieldUpdate(t, pix, nearOn); helioG.updateMatrixWorld(true);
     cam.near = Math.max(hdR ? 1e-8 : 1e-3, nearest * .5); cam.far = Math.max(cam.near * 10, 4e6, bodies.Sun.d * 3); cam.updateProjectionMatrix(); cam.updateMatrixWorld();
     // labels: beside each body when it is small on screen, hidden when big or behind
     const qi = cam.quaternion.clone().invert(), occ = Object.values(bodies).filter(o => o.px > 60 || (o.name === 'Earth' && nearOn));   // big bodies hide the labels behind them
-    for (const b of Object.values(bodies)) { const s = b.lab; if ((b.name === 'Earth' && nearOn) || b.px > 60 || occ.some(o => o !== b && o.d < b.d && o.rel.angleTo(b.rel) < Math.asin(Math.min(1, o.rs / o.d)))) { s.style.opacity = 0; continue; }
+    const put = [];   // labels already placed this frame: a later one that would overlap is hidden (Earth before the Moon)
+    for (const b of Object.values(bodies)) { const s = b.lab; if (b.px > 60 || occ.some(o => o !== b && o.d < b.d && o.rel.angleTo(b.rel) < Math.asin(Math.min(1, o.rs / o.d)))) { s.style.opacity = 0; continue; }
       v3.copy(b.rel).applyQuaternion(qi); if (v3.z > 0) { s.style.opacity = 0; continue; }
       const x = (v3.x / (-v3.z * pix) + W / 2), y = (H / 2 - v3.y / (-v3.z * pix)); if (x < -50 || x > W + 50 || y < -20 || y > H + 20) { s.style.opacity = 0; continue; }
-      s.style.opacity = 1; s.style.transform = `translate(${Math.round(x + b.px + 6)}px, ${Math.round(y - 8)}px)`; }
+      const lx = x + b.px + 6, ly = y - 8, lw = s._w || (s._w = s.offsetWidth) || 60; if (put.some(p => lx < p[0] + p[2] && p[0] < lx + lw && Math.abs(ly - p[1]) < 16)) { s.style.opacity = 0; continue; }
+      put.push([lx, ly, lw]); s.style.opacity = 1; s.style.transform = `translate(${Math.round(lx)}px, ${Math.round(ly)}px)`; }
     helio2.forEach((o, i) => { const s = hLab[i]; if (!o.visible || bodies.Sun.d < 60 * AU) { s.style.opacity = 0; return; }
       v3.set(...hn).multiplyScalar(o.userData.R * AU).applyMatrix4(helioG.matrixWorld).applyQuaternion(qi).sub(tmp.copy(cam.position).applyQuaternion(qi)); if (v3.z > 0) { s.style.opacity = 0; return; }
       s.style.opacity = o.material.opacity; s.style.transform = `translate(${Math.round(v3.x / (-v3.z * pix) + W / 2 + 6)}px, ${Math.round(H / 2 - v3.y / (-v3.z * pix) - 8)}px)`; });
@@ -331,5 +363,5 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
       if (r < Math.max(14, b.px + 6) && b.d < bd) { best = b; bd = b.d; } } return best; }
   const hdHas = n => bhd.has(n), hdOn = n => bhd.on === n, hdGround = (n, dirW) => bhd.ground(n, bodies[n], dirW);
   orbits.visible = guides; lab.style.display = guides ? '' : 'none';   // start as the Layers panel says (off)
-  return { scene, cam, update, bodies, pick, hdHas, hdOn, hdGround, helio, eclToWorld, toWorld: p => toW(p, new THREE.Vector3()), fromWorld: v => v.clone().applyMatrix3(Mi), get realScale() { return realScale; }, set realScale(v) { realScale = v; }, setWind, setCmes, cmeAtEarth, get wind() { return windOn; }, set wind(v) { windOn = v; }, get field() { return fieldOn; }, set field(v) { fieldOn = v; }, get bare() { return fieldMode === 2; }, set bare(v) { fieldMode = v ? 2 : 1; }, get guides() { return guides; }, set guides(v) { guides = v; orbits.visible = v; lab.style.display = v ? '' : 'none'; } };
+  return { scene, cam, update, bodies, pick, hdHas, hdOn, hdGround, helio, eclToWorld, toWorld: p => toW(p, new THREE.Vector3()), fromWorld: v => v.clone().applyMatrix3(Mi), get realScale() { return realScale; }, set realScale(v) { realScale = v; }, setWind, setCmes, cmeAtEarth, cmeMarks, get wind() { return windOn; }, set wind(v) { windOn = v; }, get field() { return fieldOn; }, set field(v) { fieldOn = v; }, get bare() { return fieldMode === 2; }, set bare(v) { fieldMode = v ? 2 : 1; }, get guides() { return guides; }, set guides(v) { guides = v; orbits.visible = v; lab.style.display = v ? '' : 'none'; } };
 }
