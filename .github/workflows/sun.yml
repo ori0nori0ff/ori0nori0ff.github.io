@@ -25,6 +25,8 @@ jobs:
       - name: Earth data + daily journal
         env: { NASA_KEY: '${{ secrets.NASA_KEY }}' }   # optional free key from api.nasa.gov (the demo key is often over its limit)
         run: python3 tools/earth_data.py || true
+      - name: Spacecraft positions (JPL Horizons, once a day)
+        run: python3 tools/craft_pos.py aurora/data/craft.json || true
       - name: Publish frame list
         run: |
           git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
