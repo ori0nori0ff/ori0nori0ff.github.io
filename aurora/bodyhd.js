@@ -10,13 +10,13 @@
 const D2R = Math.PI / 180;
 const TREK = 'https://trek.nasa.gov/';
 const CFG = {
-  Moon: { R: 1737400, hMax: 11000, ZMAX: 10, ZT: 6,
+  Moon: { R: 1737400, hMax: 11000, fadeKm: [2300, 1700], ZMAX: 10, ZT: 6,
     img: (z, x, y) => `${TREK}tiles/Moon/EQ/Kaguya_TCortho_Mosaic_Global_4096ppd/1.0.0/default/default028mm/${z}/${y}/${x}.png`,
     dem: bb => `${TREK}moon/trekarcgis/rest/services/LRO_LOLA_DEM_Global_128ppd_v04/ImageServer/exportImage?bbox=${bb.join(',')}&bboxSR=104903&imageSR=104903&size=256,256&format=tiff&pixelType=F32&interpolation=RSP_BilinearInterpolation&f=image`,
     gdem: 'img/planets/moon_dem.bin', detail: .45,   // global heights 1024 x 512 (tools/build_body_dem.py)
     cal: 'img/planets/moon_hdcal.jpg',   // per place: far sphere colour / Kaguya (tools/build_moon_lo.py)
     gain: 1.25 },
-  Mars: { R: 3396190, hMax: 25000, ZMAX: 11, ZT: 7, TS: 512,
+  Mars: { R: 3396190, hMax: 25000, fadeKm: [4000, 3000], ZMAX: 11, ZT: 7, TS: 512,
     img: (z, x, y) => `https://astro.arcgis.com/arcgis/rest/services/OnMars/CTX/MapServer/tile/${z}/${y}/${x}`,
     dem: bb => `${TREK}mars/trekarcgis/rest/services/Mars_MOLA_blend200ppx_HRSC_DEM_clon0dd_200mpp_lzw/ImageServer/exportImage?bbox=${bb.join(',')}&bboxSR=104905&imageSR=104905&size=256,256&format=tiff&pixelType=F32&interpolation=RSP_BilinearInterpolation&f=image`,
     gdem: 'img/planets/mars_dem.bin', detail: 0, black: true,
@@ -189,9 +189,9 @@ export function createBodyHD({ THREE, renderer, Q }) {
   let on = null, need = [], drawn = [], pxK = 1000;
   // b: the body (solar.js), cam: the far camera (at the origin), sunDir: world direction from the body to the Sun
   function update(b, cam, sunDir) {
-    // the close-up fades in over the far sphere between 1.18 and 0.88 body radii of altitude (Mars: 4000 → 3000 km)
-    const s = b && CFG[b.name] ? state(b.name) : null, hA = b ? b.rel.length() / b.R - 1 : 9, want = s && b.rs <= b.R * 1.001 && hA < (on === b.name ? 1.2 : 1.18);
-    const op = 1 - smooth01((hA - .88) / .3);
+    // the close-up fades in over the far sphere between the body's fadeKm altitudes (Moon 2300 → 1700 km, Mars 4000 → 3000 km)
+    const s = b && CFG[b.name] ? state(b.name) : null, hA = b ? b.rel.length() / b.R - 1 : 9, fk = s && s.cfg.fadeKm.map(k => k * 1000 / s.cfg.R), want = s && b.rs <= b.R * 1.001 && hA < fk[0] * (on === b.name ? 1.02 : 1);
+    const op = want ? 1 - smooth01((hA - fk[1]) / (fk[0] - fk[1])) : 0;
     if (!want) { if (on) { group.visible = false; on = null; } return null; }
     on = b.name; group.visible = true; s.frame++; s.bmap = b.mesh.material.uniforms.map?.value;
     group.position.copy(b.rel); group.quaternion.copy(b.mesh.quaternion); group.scale.setScalar(b.R); group.updateMatrixWorld(true);
