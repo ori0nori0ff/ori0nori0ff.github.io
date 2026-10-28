@@ -67,7 +67,7 @@ function create(host, opts) {
     <div class="e3g-nav"><button data-k="ang" aria-pressed="false" aria-label="${tr('Tilt')} / ${tr('Heading')}">∠</button><button data-k="cmp" aria-label="${tr('Reset to north')}"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 3l4 9h-8z" fill="#FF4D4D"/><path d="M12 21l-4-9h8z" fill="#E6EBF1"/></svg></button><button data-k="3d" aria-pressed="true" aria-label="${tr('3D view')}">3D</button><button data-k="zout" aria-label="${tr('Zoom out')}">−</button><button data-k="zin" aria-label="${tr('Zoom in')}">+</button></div>
     <div class="e3g-info" hidden aria-live="polite"></div>
     <div class="e3g-pnl" hidden><label>${tr('Tilt')}<input type="range" data-s="tilt" min="0" max="100" value="100"></label><label>${tr('Heading')}<input type="range" data-s="head" min="-180" max="180" value="0"></label><button data-k="north">${tr('Reset to north')}</button><small>${tr('Shift + drag or right-drag: tilt and turn')}</small></div>
-    <div class="e3g-attr">NASA Blue Marble · Black Marble · SVS star map · NOAA GMGSI · OVATION · ${tr('close-up')}: Sentinel-2 cloudless 2023 by EOX (CC BY-NC-SA 4.0) · Mapzen Terrarium / AWS</div>`;
+    <div class="e3g-attr">NASA Blue Marble · Black Marble · SVS star map · NOAA GMGSI · OVATION · ${tr('close-up')}: Sentinel-2 cloudless 2023 by EOX (CC BY-NC-SA 4.0) · Mapzen Terrarium / AWS · ${tr('Moon')}: JAXA Kaguya TC · NASA LRO LOLA (Moon Trek)</div>`;
   let W = 800, H = 600;
   const Q = opts.quality || (document.documentElement.classList.contains('lite') ? 'low' : 'high');   // low | medium | high (light mode → low)
   const renderer = new THREE.WebGLRenderer({ antialias: Q !== 'low', powerPreference: 'high-performance' });
@@ -84,7 +84,7 @@ function create(host, opts) {
   let rng = 3.2, rngTo = 3.2, head = 0, headTo = 0, tk = 1, tkTo = 1, tilt = 0, vel = [0, 0], dragAt = 0;
   const RMIN = .12 / 6371, RFAR = 5e7;   // R⊕: down to 120 m over the Earth, out to ~2 100 AU (room for the Oort cloud later)
   let focus = 'Earth', Rf = 1;   // the body the camera turns around (its radius in R⊕); ranges are in its radii
-  const rMin = () => focus === 'Earth' ? RMIN : .015, rMax = () => RFAR / Rf;
+  const rMin = () => focus === 'Earth' ? RMIN : solar.hdHas(focus) ? 2000 / (Rf * 6371000) : .015, rMax = () => RFAR / Rf;
   const maxTilt = r => (1.36 + .12 * (1 - smooth(Math.log(1.5), Math.log(25), Math.log(r * 6371)))) * (1 - smooth(Math.log(250), Math.log(16000), Math.log(r * 6371)));   // ≈ 85° low over the ground, 78° at 25 km, 0 seen from far away
   const frameAt = () => { const t = tgt; cE.crossVectors(Yax, t); if (cE.lengthSq() < 1e-8) cE.set(1, 0, 0); cE.normalize(); cN.crossVectors(t, cE).normalize();
     cF.copy(cN).multiplyScalar(Math.cos(head)).addScaledVector(cE, Math.sin(head)); cR.copy(cE).multiplyScalar(Math.cos(head)).addScaledVector(cN, -Math.sin(head)); };
@@ -440,7 +440,7 @@ ${SUNLIB}
   const gR = (lat, lon) => (groundAt(lat, lon) * HD.EX + 400) / 6371000;   // the drawn ground, Earth radii above the sea-level sphere
   const gMax = v => { const la = Math.asin(Math.max(-1, Math.min(1, v.y))), lo = Math.atan2(-v.z, v.x), e = 9e-6; let m = gR(la, lo);   // a few metres around too: the mesh between its vertices
     for (const [a, b] of [[e, 0], [-e, 0], [0, e], [0, -e]]) m = Math.max(m, gR(la + a, lo + b / Math.max(.05, Math.cos(la)))); return m; };
-  let gT = 0, hAG = 1;   // ground height under the target (smoothed), camera height above the ground
+  let gT = 0, hAG = 1, gL = 0;   // ground height under the target (smoothed), camera height above the ground
   function meshOf(t) { if (t.mesh && t.mesh.material.uniforms.hmap.value === demOf(t).dem.ht) return t.mesh; t.mesh?.material.dispose(); const d = demOf(t), s = t.z > HD.ZT ? 1 / (1 << (t.z - HD.ZT)) : 1, m = t.z > HD.ZT ? 1 << (t.z - HD.ZT) : 1;
     const p = t.z > 2 ? tiles.get((t.z - 1) + '/' + (t.x >> 1) + '/' + (t.y >> 1)) : null, pok = p && p.img;
     const mat = new THREE.ShaderMaterial({ uniforms: { ...U, img: { value: t.img }, pimg: { value: pok ? p.img : t.img }, psub: { value: new THREE.Vector3(pok ? (t.x & 1) * .5 : 0, pok ? (t.y & 1) * .5 : 0, pok ? .5 : 1) },
@@ -816,10 +816,13 @@ ${SUNLIB}
       rng *= Math.pow(rngTo / rng, kk); head += (headTo - head) * kk; tk += (tkTo - tk) * kk; tilt = tk * maxTilt(rng * Rf);
       frameAt(); const ct = Math.cos(tilt), st = Math.sin(tilt);
       // the camera looks at the ground itself (not the sea-level sphere under it) and never goes below 40 m over the drawn relief
-      const qi = earth.quaternion.clone().invert(), tO = tgt.clone().applyQuaternion(qi), gt = focus === 'Earth' && rng < .5 ? gMax(tO) : 0;
-      gT += (gt - gT) * (Math.abs(gt - gT) > 3e-4 ? 1 : Math.min(1, dt * 5));
+      const qi = earth.quaternion.clone().invert(), tO = tgt.clone().applyQuaternion(qi), gt = focus === 'Earth' && rng < .5 ? gMax(tO) : rng < .5 && solar.hdOn(focus) ? solar.hdGround(focus, tgt) : 0;
+      gT += (gt - gT) * (focus === 'Earth' && Math.abs(gt - gT) > 3e-4 ? 1 : Math.min(1, dt * (focus === 'Earth' ? 5 : 3)));   // other bodies: always glide (steep relief)
       const pos = new THREE.Vector3(), place = r => pos.copy(tgt).multiplyScalar(Rf * (1 + gT + r * ct)).addScaledVector(cF, -r * st * Rf).add(fc), MARG = 40 / 6371000;
-      let gc = 0; if (focus !== 'Earth') place(rng); else for (let n = 0; n < 24; n++) { place(rng); gc = rng < .5 ? gMax(pos.clone().normalize().applyQuaternion(qi)) : 0; if (pos.length() - 1 >= gc + MARG) break; rng *= 1.12; rngTo = Math.max(rngTo, rng); }
+      let gc = 0; if (focus !== 'Earth') { place(rng);   // a body with an HD close-up: stay ~300 m over its relief
+        if (rng < .5 && solar.hdOn(focus)) { const dv = pos.clone().sub(fc), g = solar.hdGround(focus, dv.clone().normalize()), need = Rf * (1 + g + 300 / (Rf * 6371000));
+          gL = Math.max(gL - dt * Rf * 2e-3, need); if (dv.length() < gL) pos.copy(fc).addScaledVector(dv.normalize(), gL); } else gL = 0; }   // only lift the camera itself, smoothly down again
+      else for (let n = 0; n < 24; n++) { place(rng); gc = rng < .5 ? gMax(pos.clone().normalize().applyQuaternion(qi)) : 0; if (pos.length() - 1 >= gc + MARG) break; rng *= 1.12; rngTo = Math.max(rngTo, rng); }
       hAG = Math.max(MARG * .5, pos.length() - 1 - gc);
       camera.position.copy(pos); camera.up.copy(tgt).multiplyScalar(st).addScaledVector(cF, ct); look.copy(tgt).multiplyScalar(Rf * (1 + gT)).add(fc);
       if (lookU < 1) { lookU = Math.min(1, lookU + dt / 1.4); const e = lookU * lookU * (3 - 2 * lookU), dn = look.clone().sub(pos).normalize(); look.copy(pos).add(look0.clone().lerp(dn, e).normalize()); }   // after a change of focus the view turns smoothly to the new body
