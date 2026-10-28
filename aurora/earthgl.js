@@ -60,14 +60,14 @@ function create(host, opts) {
     <ul class="e3g-bl" hidden>${['Sun', 'Mercury', 'Venus', 'Earth', 'Moon', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune'].map(n => `<li><button data-b="${n}">${tr(n)}</button></li>`).join('')}</ul>
     <div class="e3g-lay"><button data-k="layers" aria-expanded="false">☰ ${tr('Layers')} ▾</button><div class="e3g-lp" hidden>
       <button class="eo" data-k="cl" aria-pressed="true">${tr('Clouds')}</button><button class="eo" data-k="cn" aria-pressed="false">${tr('Clouds: NASA')}</button><button class="eo" data-k="au" aria-pressed="true">${tr('Aurora')}</button>
-      <div class="e3g-row eo"><button data-k="ms" aria-pressed="true">🧲 ${tr('Magnetic shield')}</button><button data-k="cme">💥 ${tr('CME impact')}</button></div>
-      <button data-k="sun" aria-pressed="false">${tr('Real Sun')}</button><button data-k="sp" aria-pressed="true">${tr('Auto-rotate')}</button><button data-k="rs" aria-pressed="false">${tr('Real scale')}</button><button data-k="gd" aria-pressed="true">${tr('Names and orbits')}</button><button data-k="sw" aria-pressed="true">${tr('Solar wind + CMEs')}</button><div class="e3g-row"><button data-k="sf" aria-pressed="true">${tr('Sun’s magnetic field')}</button><button data-k="dw" aria-pressed="false">🌀 ${tr('Without the solar wind')}</button></div></div></div>
+      <div class="e3g-row eo"><button data-k="ms" aria-pressed="false">🧲 ${tr('Magnetic shield')}</button><button data-k="cme">💥 ${tr('CME impact')}</button></div>
+      <button data-k="sun" aria-pressed="false">${tr('Real Sun')}</button><button data-k="sp" aria-pressed="true">${tr('Auto-rotate')}</button><button data-k="rs" aria-pressed="false">${tr('Real scale')}</button><button data-k="gd" aria-pressed="false">${tr('Names and orbits')}</button><button data-k="sw" aria-pressed="false">${tr('Solar wind + CMEs')}</button><div class="e3g-row"><button data-k="sf" aria-pressed="false">${tr('Sun’s magnetic field')}</button><button data-k="dw" aria-pressed="false">🌀 ${tr('Without the solar wind')}</button></div></div></div>
     <div class="e3g-time"><input type="datetime-local" class="e3g-date" data-k="date" aria-label="${tr('Date and time')}"><button data-k="now">${tr('Now')}</button>
       <div class="e3g-tod eo" title="${tr('Time of day here (local Sun time)')}">☀<button data-k="todB" aria-label="${tr('Earlier')}">‹</button><input type="range" data-k="tod" min="0" max="1435" step="5" aria-label="${tr('Time of day here (local Sun time)')}"><button data-k="todF" aria-label="${tr('Later')}">›</button><span></span></div></div>
     <div class="e3g-nav"><button data-k="ang" aria-pressed="false" aria-label="${tr('Tilt')} / ${tr('Heading')}">∠</button><button data-k="cmp" aria-label="${tr('Reset to north')}"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 3l4 9h-8z" fill="#FF4D4D"/><path d="M12 21l-4-9h8z" fill="#E6EBF1"/></svg></button><button data-k="3d" aria-pressed="true" aria-label="${tr('3D view')}">3D</button><button data-k="zout" aria-label="${tr('Zoom out')}">−</button><button data-k="zin" aria-label="${tr('Zoom in')}">+</button></div>
     <div class="e3g-info" hidden aria-live="polite"></div>
     <div class="e3g-pnl" hidden><label>${tr('Tilt')}<input type="range" data-s="tilt" min="0" max="100" value="100"></label><label>${tr('Heading')}<input type="range" data-s="head" min="-180" max="180" value="0"></label><button data-k="north">${tr('Reset to north')}</button><small>${tr('Shift + drag or right-drag: tilt and turn')}</small></div>
-    <div class="e3g-attr">NASA Blue Marble · Black Marble · SVS star map · NOAA GMGSI · OVATION · ${tr('close-up')}: Sentinel-2 cloudless 2023 by EOX (CC BY-NC-SA 4.0) · Mapzen Terrarium / AWS · ${tr('Moon')}: JAXA Kaguya TC · NASA LRO LOLA (Moon Trek)</div>`;
+    <div class="e3g-attr">NASA Blue Marble · Black Marble · SVS star map · NOAA GMGSI · OVATION · ${tr('close-up')}: Sentinel-2 cloudless 2023 by EOX (CC BY-NC-SA 4.0) · Mapzen Terrarium / AWS · ${tr('Moon')}: JAXA Kaguya TC · NASA LRO LOLA (Moon Trek) · ${tr('Mars')}: MRO CTX (NASA/JPL/MSSS/Caltech Murray Lab/Esri) · Viking · MOLA / HRSC (Mars Trek)</div>`;
   let W = 800, H = 600;
   const Q = opts.quality || (document.documentElement.classList.contains('lite') ? 'low' : 'high');   // low | medium | high (light mode → low)
   const renderer = new THREE.WebGLRenderer({ antialias: Q !== 'low', powerPreference: 'high-performance' });
@@ -606,7 +606,7 @@ ${SUNLIB}
     const put = (s, obj, x, y, z, txt) => { wp.set(x, y, z).applyMatrix4(obj.matrixWorld); pv.copy(wp).project(camera);
       if (pv.z > 1 || Math.abs(pv.x) > 1.05 || Math.abs(pv.y) > 1.05 || hidden(wp)) { s.style.opacity = 0; return; }
       s.style.opacity = S.fade; s.style.transform = `translate(${Math.round((pv.x * .5 + .5) * W + 8)}px, ${Math.round((.5 - pv.y * .5) * H - 9)}px)`; if (s.textContent !== txt) s.textContent = txt; };
-    let on = true;
+    let on = false;   // off until 🧲 (or the "3D starts on: shield" setting)
     function update(dt, t, D) {
       const want = on ? smooth(5, 12, D - 1) * (1 - smooth(250, 500, D)) : 0; S.fade += (want - S.fade) * Math.min(1, dt * 3); U2.fade.value = S.fade;
       g.visible = S.fade > .003; lab.style.display = g.visible ? '' : 'none'; if (!g.visible) { AU.auB.value = 1; return 0; }
@@ -789,6 +789,7 @@ ${SUNLIB}
 
 
   const inv = new THREE.Matrix4();
+  let qBprev = null, qBname = null;
   let fpsN = 60, slow = 0, fast = 0, readyAt = 0, msX = 0, hE = [0, 0, 0], Mprev = null, lookU = 1; const fc = new THREE.Vector3(), look = new THREE.Vector3(), look0 = new THREE.Vector3(); const PRMIN = Math.min(Q === "low" ? .6 : 1, prCap()); let PRMAX = prCap();
   function frame() {
     if (startV && ++startN > 20) { const v = startV; startV = null; goStart(v); }
@@ -806,8 +807,14 @@ ${SUNLIB}
     {
       const kk = Math.min(1, dt * 6);
       solar.eclToWorld(t); fc.copy(focus === 'Earth' ? O3 : solar.toWorld(solar.helio(focus, t).map((v, i) => v - hE[i])));
-      if (focus !== 'Earth' && Mprev) { const qd = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().setFromMatrix3(solar.eclToWorld(t).clone().multiply(Mprev.clone().invert()))); tgt.applyQuaternion(qd); if (goal) { goal.a.applyQuaternion(qd); goal.b.applyQuaternion(qd); goal.ax.applyQuaternion(qd); } }   // away from the Earth the view stays still among the stars
+      const fB = focus !== 'Earth' && rng < 2 && solar.bodies[focus];   // close to a body: it alone turns the camera (its rotation already holds the frame's)
+      if (focus !== 'Earth' && Mprev && !(fB && qBname === focus)) { const qd = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().setFromMatrix3(solar.eclToWorld(t).clone().multiply(Mprev.clone().invert()))); tgt.applyQuaternion(qd); if (goal) { goal.a.applyQuaternion(qd); goal.b.applyQuaternion(qd); goal.ax.applyQuaternion(qd); } }   // away from the Earth the view stays still among the stars
       Mprev = solar.eclToWorld(t).clone();
+      // close to another body (within 2 radii) the camera turns with it, so its ground doesn't slide away under you
+      { const B = fB; if (B) { if (qBprev && qBname === focus) { const qd = B.mesh.quaternion.clone().multiply(qBprev.clone().invert());
+            frameAt(); const F = cF.clone().applyQuaternion(qd), h0 = head; tgt.applyQuaternion(qd);
+            head = 0; frameAt(); let dh = Math.atan2(F.dot(cE), F.dot(cN)) - h0; dh -= 2 * Math.PI * Math.round(dh / (2 * Math.PI)); head = h0 + dh; headTo += dh; if (goal) { goal.a.applyQuaternion(qd); goal.b.applyQuaternion(qd); goal.ax.applyQuaternion(qd); } }
+          qBprev = (qBprev || new THREE.Quaternion()).copy(B.mesh.quaternion); qBname = focus; } else qBname = null; }
       if (spin && rng > .4) tgt.applyAxisAngle(Yax, dt * .02 * Math.min(1, rng));   // a slow turn seen from far away
       if (!pins.size && (vel[0] || vel[1])) { panBy(vel[0], vel[1]); vel = vel.map(v => Math.abs(v *= Math.pow(.05, dt)) < .05 ? 0 : v); }   // the throw glides on
       if (goal) { goal.u = Math.min(1, goal.u + dt / goal.dur); const e = goal.u * goal.u * (3 - 2 * goal.u);   // fly: up, across, down (log range + a hop that grows with the distance)
@@ -860,6 +867,7 @@ ${SUNLIB}
     U.cloudShift.value = (t % 864e5) / 864e5 * .002;   // a slow drift so the clouds feel alive
     auMat.uniforms.time.value += dt;
     const km = focus === 'Earth' ? (D - 1) * 6371 : rng * Rf * 6371, cl = U.camO.value.clone().normalize();
+    if (focus !== 'Earth' && solar.bodies[focus]) cl.copy(camera.position).sub(fc).applyQuaternion(solar.bodies[focus].mesh.quaternion.clone().invert()).normalize();   // another body: its own latitude / longitude
     todShow(t);
     el.querySelector('.e3g-alt').innerHTML = `${focus !== 'Earth' ? tr(focus) + ' · ' : ''}${tr('Altitude')} ${km >= 1000 ? Math.round(km).toLocaleString(window.LOC || 'en-GB') : km.toFixed(km < 10 ? 1 : 0)} km${focus === 'Earth' && hAG * 6371 < 3 ? ' · ' + Math.round(hAG * 6371000) + ' m ' + tr('above the ground') : ''}<small>${plN && performance.now() < plT ? '<b style="color:#39FF9E">' + plN + '</b> · ' : ''}${(Math.asin(cl.y) / D2R).toFixed(2)}°, ${(Math.atan2(-cl.z, cl.x) / D2R).toFixed(2)}° · ${new Date(t).toLocaleString(window.LOC || 'en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}${tOver != null ? '' : ' · ' + tr('live')}</small>`;
     airPass.uniforms.projInv.value.copy(camera.projectionMatrixInverse); airPass.uniforms.camW.value.copy(camera.matrixWorld); airPass.uniforms.toObj.value.setFromMatrix4(inv); airPass.uniforms.cn.value.set(camera.near, camera.far); airPass.enabled = air.visible && scene.visible;

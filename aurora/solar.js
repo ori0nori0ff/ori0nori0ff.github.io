@@ -251,7 +251,7 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
       for (let th = .03; th < Math.PI - .03; th += .03) { const r = L * AU * Math.sin(th) ** 2; p.push([r * Math.sin(th) * Math.cos(ps), r * Math.sin(th) * Math.sin(ps), r * Math.cos(th)]); }
       dipP.push({ p, c: m % 2 ? BL : VI, a: .22 }); } });
   const dip = lines(dipP); dip.visible = false; fieldG.add(dip);
-  let fieldOn = true, fieldMode = 1;
+  let fieldOn = false, fieldMode = 1;
   function fieldUpdate(t, pix, nearOn) {
     const d = t / DAY, rot = (OMEGA * d) % (2 * Math.PI), dSun = bodies.Sun.d, amax = Math.min(125, Math.max(2.5, dSun / AU * 1.6)), real = fieldOn && fieldMode === 1;
     fieldG.rotation.set(0, 0, rot); fieldG.visible = fieldOn;
@@ -287,9 +287,9 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
   for (const b of Object.values(bodies)) { b.lab = lab.appendChild(document.createElement('span')); b.lab.textContent = tr(b.name); b.lab.style.color = b.col || '#FFE6B0'; }
   hLab.forEach((sp, i) => { sp.textContent = i ? tr('heliopause · 121 AU (Voyager 1, 2012)') : tr('termination shock · 94 AU'); lab.appendChild(sp); });
   const sunW = new THREE.Vector3();
-  let realScale = false, guides = true;   // guides = names + orbit lines
+  let realScale = false, guides = false;   // guides = names + orbit lines
   // camHelio: the camera's heliocentric ecliptic position (R⊕, doubles) · camW: the camera's world position (in the Earth view's frame)
-  let windOn = true;
+  let windOn = false;
   function update(t, camHelio, W, H, nearOn, pxr) {
     eclToWorld(t); if (Math.abs(t - orbT) > 5 * DAY) buildOrbits(t);
     cam.quaternion.copy(camera.quaternion); cam.fov = camera.fov; cam.aspect = camera.aspect;
@@ -316,8 +316,8 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
     fieldUpdate(t, pix, nearOn); helioG.updateMatrixWorld(true);
     cam.near = Math.max(hdR ? 1e-8 : 1e-3, nearest * .5); cam.far = Math.max(cam.near * 10, 4e6, bodies.Sun.d * 3); cam.updateProjectionMatrix(); cam.updateMatrixWorld();
     // labels: beside each body when it is small on screen, hidden when big or behind
-    const qi = cam.quaternion.clone().invert();
-    for (const b of Object.values(bodies)) { const s = b.lab; if ((b.name === 'Earth' && nearOn) || b.px > 60) { s.style.opacity = 0; continue; }
+    const qi = cam.quaternion.clone().invert(), occ = Object.values(bodies).filter(o => o.px > 60 || (o.name === 'Earth' && nearOn));   // big bodies hide the labels behind them
+    for (const b of Object.values(bodies)) { const s = b.lab; if ((b.name === 'Earth' && nearOn) || b.px > 60 || occ.some(o => o !== b && o.d < b.d && o.rel.angleTo(b.rel) < Math.asin(Math.min(1, o.rs / o.d)))) { s.style.opacity = 0; continue; }
       v3.copy(b.rel).applyQuaternion(qi); if (v3.z > 0) { s.style.opacity = 0; continue; }
       const x = (v3.x / (-v3.z * pix) + W / 2), y = (H / 2 - v3.y / (-v3.z * pix)); if (x < -50 || x > W + 50 || y < -20 || y > H + 20) { s.style.opacity = 0; continue; }
       s.style.opacity = 1; s.style.transform = `translate(${Math.round(x + b.px + 6)}px, ${Math.round(y - 8)}px)`; }
@@ -330,5 +330,6 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
     for (const b of Object.values(bodies)) { v3.copy(b.rel).applyQuaternion(qi); if (v3.z > 0) continue; const sx = v3.x / (-v3.z * pix) + W / 2, sy = H / 2 - v3.y / (-v3.z * pix), r = Math.hypot(sx - x, sy - y);
       if (r < Math.max(14, b.px + 6) && b.d < bd) { best = b; bd = b.d; } } return best; }
   const hdHas = n => bhd.has(n), hdOn = n => bhd.on === n, hdGround = (n, dirW) => bhd.ground(n, bodies[n], dirW);
+  orbits.visible = guides; lab.style.display = guides ? '' : 'none';   // start as the Layers panel says (off)
   return { scene, cam, update, bodies, pick, hdHas, hdOn, hdGround, helio, eclToWorld, toWorld: p => toW(p, new THREE.Vector3()), fromWorld: v => v.clone().applyMatrix3(Mi), get realScale() { return realScale; }, set realScale(v) { realScale = v; }, setWind, setCmes, cmeAtEarth, get wind() { return windOn; }, set wind(v) { windOn = v; }, get field() { return fieldOn; }, set field(v) { fieldOn = v; }, get bare() { return fieldMode === 2; }, set bare(v) { fieldMode = v ? 2 : 1; }, get guides() { return guides; }, set guides(v) { guides = v; orbits.visible = v; lab.style.display = v ? '' : 'none'; } };
 }
