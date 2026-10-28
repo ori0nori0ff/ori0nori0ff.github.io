@@ -37,9 +37,35 @@ const kepler = (name, T) => { const [e0, r] = EL[name], el = e0.map((v, i) => v 
 const moonGeo = t => { const d = t / DAY - 10957.5, L = (218.316 + 13.176396 * d) * D2R, M = (134.963 + 13.064993 * d) * D2R, F = (93.272 + 13.229350 * d) * D2R;
   const l = L + 6.289 * D2R * Math.sin(M), b = 5.128 * D2R * Math.sin(F), r = (385001 - 20905 * Math.cos(M)) / 6371;
   return [r * Math.cos(b) * Math.cos(l), r * Math.cos(b) * Math.sin(l), r * Math.sin(b)]; };
+// small bodies: osculating elements [a, e, i, Ω, ω, M, n (°/day), epoch JD] from NASA/JPL SBDB (img/planets/sb.json), filled when loaded
+const SB = {}, JD = t => t / DAY + 2440587.5;
+const kepE = (el, E) => { const [a, e, I, Om, wa] = el, w = wa * D2R, i = I * D2R, O = Om * D2R;
+  const xp = a * (Math.cos(E) - e), yp = a * Math.sqrt(1 - e * e) * Math.sin(E), cw = Math.cos(w), sw = Math.sin(w), cO = Math.cos(O), sO = Math.sin(O), ci = Math.cos(i), si = Math.sin(i);
+  return [((cw * cO - sw * sO * ci) * xp + (-sw * cO - cw * sO * ci) * yp) * AU, ((cw * sO + sw * cO * ci) * xp + (-sw * sO + cw * cO * ci) * yp) * AU, ((sw * si) * xp + (cw * si) * yp) * AU]; };
+const kepSB = (el, t) => { const e = el[1], M = (((el[5] + el[6] * (JD(t) - el[7])) % 360 + 360) % 360) * D2R; let E = e > .8 ? Math.PI : M;
+  for (let k = 0; k < 40; k++) { const d = (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E)); E -= d; if (Math.abs(d) < 1e-12) break; } return kepE(el, E); };
+function eqToEcl(ra, de) { const a = ra * D2R, d = de * D2R, x = Math.cos(d) * Math.cos(a), y = Math.cos(d) * Math.sin(a), z = Math.sin(d);
+  return [x, y * Math.cos(EPS) + z * Math.sin(EPS), -y * Math.sin(EPS) + z * Math.cos(EPS)]; }
+// Charon: 19 591 km from Pluto in its equator, always over Pluto's prime meridian (Pluto's 0° is defined as the sub-Charon point)
+const charon = t => { const p = kepSB(SB.Pluto, t), P = eqToEcl(132.993, -6.163), N = eqToEcl(222.993, 0), W = (302.695 + 56.3625225 * (t / DAY - 10957.5)) * D2R;
+  const C = [P[1] * N[2] - P[2] * N[1], P[2] * N[0] - P[0] * N[2], P[0] * N[1] - P[1] * N[0]], r = 19591 / 6371;
+  return [0, 1, 2].map(i => p[i] + r * (N[i] * Math.cos(W) + C[i] * Math.sin(W))); };
+// spacecraft (NASA/JPL Horizons, data/craft.json by the Pages bot): tables of J2000 ecliptic km, from the Earth ('E') or the Sun ('S');
+// SDO repeats every sidereal day outside its 6-day table (geosynchronous: the same inertial spot); GOES-19 = geostationary at 75.2° W
+const CR = {}, SIDE = 86164090.5;
+function craftPos(name, t) {
+  if (name === 'GOES-19') { const g = (280.46061837 + 360.98564736629 * (JD(t) - 2451545) - 75.2) * D2R, r = 42164 / 6371, E = helio('Earth', t);
+    return [E[0] + r * Math.cos(g), E[1] + r * Math.sin(g) * Math.cos(EPS), E[2] - r * Math.sin(g) * Math.sin(EPS)]; }
+  const c = CR[name], n = c.p.length / 3, st = c.s * 6e4; let tt = t;
+  if (name === 'SDO' && (t < c.t0 || t > c.t0 + (n - 1) * st)) tt = c.t0 + (((t - c.t0) % SIDE) + SIDE) % SIDE;
+  const u = Math.max(0, Math.min(n - 1, (tt - c.t0) / st)), i = Math.min(n - 2, Math.floor(u)), f = u - i, q = [0, 1, 2].map(k => (c.p[i * 3 + k] * (1 - f) + c.p[i * 3 + 3 + k] * f) / 6371);
+  if (c.c !== 'E') return q; const E = helio('Earth', t); return [E[0] + q[0], E[1] + q[1], E[2] + q[2]]; }
 // heliocentric ecliptic position (R⊕, astronomical x / y / z) of any body
 export function helio(name, t) { const T = (t / DAY + 2440587.5 - 2451545) / 36525;
   if (name === 'Sun') return [0, 0, 0];
+  if (name === 'Charon') return SB.Pluto ? charon(t) : [0, 0, 0];
+  if (SB[name]) return kepSB(SB[name], t);
+  if (CR[name] || name === 'GOES-19') return craftPos(name, t);
   if (name === 'Moon') { const e = kepler('Earth', T), m = moonGeo(t); return [e[0] + m[0], e[1] + m[1], e[2] + m[2]]; }
   return kepler(name, T); }
 
@@ -63,8 +89,6 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
   const toW = (p, out) => out.set(p[0], p[1], p[2]).applyMatrix3(M);
   // IAU orientation → a world quaternion (x = prime meridian, y = north pole)
   const eqW = (ra, de) => toW(eqToEcl(ra, de), new THREE.Vector3());
-  function eqToEcl(ra, de) { const a = ra * D2R, d = de * D2R, x = Math.cos(d) * Math.cos(a), y = Math.cos(d) * Math.sin(a), z = Math.sin(d);
-    return [x, y * Math.cos(EPS) + z * Math.sin(EPS), -y * Math.sin(EPS) + z * Math.cos(EPS)]; }
   function orient(b, t) { const P = eqW(b[1], b[2]).normalize(), N = eqW(b[1] + 90, 0).normalize(), W = (b[3] + b[4] * (t / DAY - 10957.5)) * D2R;
     const X = N.clone().multiplyScalar(Math.cos(W)).addScaledVector(new THREE.Vector3().crossVectors(P, N), Math.sin(W)).normalize(), Z = new THREE.Vector3().crossVectors(X, P);
     return new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(X, P, Z)); }
@@ -77,20 +101,30 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
         ${gas ? 'c *= .55 + .45 * pow(mu, .35);' : ''}
         vec3 col = c * (max(l, 0.) * 1.25 + .012) + rim * pow(1. - mu, 3.) * smoothstep(-.25, .3, l);
         gl_FragColor = vec4(col, 1.); }` });
-  const sphere = new THREE.SphereGeometry(1, 96, 48), bodies = {};
+  const sphere = new THREE.SphereGeometry(1, 96, 48), bodies = {}; let labHost = null;
   const bhd = createBodyHD({ THREE, renderer, Q }); scene.add(bhd.group);   // HD close-ups (the Moon) when a body fills the view
-  for (const [name, b] of Object.entries(BODY)) {
+  // bodies without a real map (small asteroids, far dwarf planets, comet nuclei): a grey cratered look, shared
+  let greyT = null; const grey = () => greyT || (greyT = (() => { const c = document.createElement('canvas'); c.width = 512; c.height = 256; const g = c.getContext('2d');
+    g.fillStyle = '#8a8580'; g.fillRect(0, 0, 512, 256); let sd = 7; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+    for (let k = 0; k < 900; k++) { const x = rnd() * 512, y = 20 + rnd() * 216, r = 1 + Math.pow(rnd(), 3) * 14, l = 100 + rnd() * 70;
+      g.fillStyle = `rgba(${l * .55 | 0},${l * .53 | 0},${l * .5 | 0},.55)`; g.beginPath(); g.ellipse(x, y, r / Math.max(.3, Math.sin(y / 256 * Math.PI)), r, 0, 0, 7); g.fill();
+      g.fillStyle = 'rgba(200,195,185,.25)'; g.beginPath(); g.ellipse(x - r * .25, y - r * .25, r * .6 / Math.max(.3, Math.sin(y / 256 * Math.PI)), r * .6, 0, 0, 7); g.fill(); }
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })());
+  function mkBody(name, b, x = {}) {
     let mat;
     if (name === 'Sun') mat = new THREE.ShaderMaterial({ uniforms: { map: { value: tex(TP + 'sun_2k.jpg') } },
       vertexShader: `varying vec2 vUv; varying vec3 vN, vV; void main() { vUv = uv; vec4 w = modelMatrix * vec4(position, 1.); vN = normalize(mat3(modelMatrix) * normal); vV = normalize(cameraPosition - w.xyz); gl_Position = projectionMatrix * viewMatrix * w; }`,
       fragmentShader: `uniform sampler2D map; varying vec2 vUv; varying vec3 vN, vV; void main() { float mu = max(dot(normalize(vN), vV), 0.);
         vec3 c = texture2D(map, vUv).rgb * vec3(1.6, 1.25, .8) * (.45 + .55 * pow(mu, .5)); gl_FragColor = vec4(c * 2.2, 1.); }` });
     else if (name === 'Earth') mat = pMat(dayTex, [.35, .6, 1]);
+    else if (!b[5]) mat = pMat(grey());
     else { const tx = tex(TP + b[5] + '_2k.jpg');
       mat = pMat(tx, name === 'Venus' ? [1, .85, .6] : name === 'Mars' ? [.9, .55, .4] : null, /Jupiter|Saturn|Uranus|Neptune/.test(name)); }
     const m = new THREE.Mesh(sphere, mat); m.frustumCulled = false; scene.add(m);
-    bodies[name] = { name, R: b[0] / 6371, b, mesh: m, minPx: b[6], col: b[7], rel: new THREE.Vector3(), d: 1, px: 0 };
-  }
+    const o = bodies[name] = { name, R: b[0] / 6371, b, mesh: m, minPx: b[6], col: b[7], rel: new THREE.Vector3(), d: 1, px: 0, ...x };
+    if (labHost) { o.lab = labHost.appendChild(document.createElement('span')); o.lab.textContent = tr(name); o.lab.style.color = o.col || '#FFE6B0'; o.lab.classList.add('e3g-sb'); }
+    return o; }
+  for (const [name, b] of Object.entries(BODY)) mkBody(name, b);
   // the Sun's glow (always faces the camera)
   const gc = document.createElement('canvas'); gc.width = gc.height = 256; { const g = gc.getContext('2d'), gr = g.createRadialGradient(128, 128, 0, 128, 128, 128);
     gr.addColorStop(0, 'rgba(255,240,210,1)'); gr.addColorStop(.12, 'rgba(255,220,160,.55)'); gr.addColorStop(.35, 'rgba(255,170,90,.14)'); gr.addColorStop(1, 'rgba(255,150,60,0)'); g.fillStyle = gr; g.fillRect(0, 0, 256, 256); }
@@ -111,11 +145,72 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
     for (const n of Object.keys(EL)) { const P = [];
       for (let k = 0; k <= 360; k++) { const x = kepler(n, T + k / EL[n][1][3]); P.push(x[0], x[1], x[2]); }   // one turn of mean longitude
       const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
-      orbits.add(new THREE.Line(g, new THREE.LineBasicMaterial({ color: BODY[n][7], transparent: true, opacity: .35, depthWrite: false }))); } orbT = t; }
+      orbits.add(new THREE.Line(g, new THREE.LineBasicMaterial({ color: BODY[n][7], transparent: true, opacity: .35, depthWrite: false }))); }
+    for (const [n, el] of Object.entries(SB)) { if (!bodies[n]) continue; const P = [];
+      for (let k = 0; k <= 720; k++) { const x = kepE(el, k / 720 * 2 * Math.PI); P.push(x[0], x[1], x[2]); }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+      orbits.add(new THREE.Line(g, new THREE.LineBasicMaterial({ color: bodies[n].col, transparent: true, opacity: .2, depthWrite: false }))); }
+    orbT = t; }
 
   // ── the solar wind + CMEs, drawn on the GPU (same model as space3d: the wind measured / forecast at Earth is traced back
   //    to the solar longitude it left from; each source longitude emits a particle every hour that flies straight out while
   //    the Sun turns under it → the Parker spiral; CMEs = cone model, a cap at r(t) = 0.1 AU + v·(t − t0))
+  // ── real small bodies (NASA/JPL SBDB): radius km, IAU pole RA / Dec, W0, °/day, map, min px, colour · extra: kind, shape (x, pole, z)
+  const SBB = {
+    Ceres: [[469.7, 291.418, 66.764, 170.65, 952.1532, 'ceres', 2, '#C9B8E8'], { kind: 'dwarf' }],
+    Pluto: [[1188.3, 132.993, -6.163, 302.695, 56.3625225, 'pluto', 2.2, '#C9B8E8'], { kind: 'dwarf' }],
+    Charon: [[606, 132.993, -6.163, 122.695, 56.3625225, '', 1.4, '#B9B2C9'], { kind: 'moon' }],
+    Eris: [[1163, 0, 90, 0, 22.8, '', 1.8, '#C9B8E8'], { kind: 'dwarf' }],
+    Haumea: [[1161, 285, 13, 0, 2206.6, '', 1.8, '#C9B8E8'], { kind: 'dwarf', shp: [1, .442, .734] }],
+    Makemake: [[715, 0, 90, 0, 378.4, '', 1.8, '#C9B8E8'], { kind: 'dwarf' }],
+    Vesta: [[262.7, 309.031, 42.235, 285.39, 1617.3329428, 'vesta', 1.8, '#C7BBA6'], { kind: 'ast' }],
+    Pallas: [[256, 33, -3, 38, 1105.8036, '', 1.6, '#C7BBA6'], { kind: 'ast' }],
+    Hygiea: [[217, 100, 52, 0, 624.7, '', 1.6, '#C7BBA6'], { kind: 'ast' }],
+    Psyche: [[113, 32, 69, 0, 2059, '', 1.6, '#C7BBA6'], { kind: 'ast' }],
+    Bennu: [[.245, 85.65, -60.17, 0, 2011.1, '', 1.5, '#FFB07A'], { kind: 'nea' }],
+    Ryugu: [[.448, 96.4, -66.4, 0, 1131.9, '', 1.5, '#FFB07A'], { kind: 'nea' }],
+    Apophis: [[.17, 0, 90, 0, 282.7, '', 1.5, '#FFB07A'], { kind: 'nea' }],
+    Halley: [[5.5, 0, 90, 0, 166.3, '', 1.5, '#8FE3FF'], { kind: 'comet', shp: [1.36, .73, .73] }],
+    Encke: [[2.4, 0, 90, 0, 389, '', 1.5, '#8FE3FF'], { kind: 'comet' }],
+    '67P': [[2, 52, 69, 0, 696, '', 1.5, '#8FE3FF'], { kind: 'comet', shp: [1.3, .8, .9] }] };
+  // comet tails: an ion tail straight away from the Sun (blue) + a curved dust tail lagging behind (cream), within ~5 AU
+  const TN = 9, TS = 8, tailG = new THREE.BufferGeometry(), tailP = new Float32Array(3 * 2 * TN * TS * 2 * 3), tailC = new Float32Array(tailP.length);
+  tailG.setAttribute('position', new THREE.BufferAttribute(tailP, 3)); tailG.setAttribute('color', new THREE.BufferAttribute(tailC, 3));
+  const tails = new THREE.LineSegments(tailG, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+  tails.frustumCulled = false; scene.add(tails);
+  function tailUpdate(t) { let v = 0; const tv = new THREE.Vector3(), sd = new THREE.Vector3(), vd = new THREE.Vector3(), q = new THREE.Vector3(), up = new THREE.Vector3(), sx = new THREE.Vector3();
+    for (const b of Object.values(bodies)) { if (b.kind !== 'comet') continue; const h = helio(b.name, t), r = Math.hypot(...h) / AU; if (r > 5) continue;
+      const h2 = helio(b.name, t + DAY), L0 = Math.min(.5, .1 / (r * r)) * AU * (1 - sm(3, 5, r)), I = Math.min(1, .6 / (r * r)) * (1 - sm(3.5, 5, r));
+      sd.copy(b.rel).sub(bodies.Sun.rel).normalize(); toW([h2[0] - h[0], h2[1] - h[1], h2[2] - h[2]], vd).normalize();
+      up.crossVectors(sd, vd).normalize(); sx.crossVectors(up, sd).normalize();
+      for (const dust of [0, 1]) for (let k = 0; k < TN; k++) { const sp = (k / (TN - 1) - .5) * (dust ? .2 : .05), L = L0 * (dust ? .7 : 1) * (1 - Math.abs(sp) * 2), c = dust ? [1, .9, .72] : [.5, .72, 1];
+        let px = b.rel.x, py = b.rel.y, pz = b.rel.z;
+        for (let j = 1; j <= TS; j++) { const f = j / TS, bend = dust ? -.35 * f * f : 0;
+          tv.copy(sd).addScaledVector(sx, sp).addScaledVector(vd, bend).addScaledVector(up, sp * .6).normalize(); q.copy(b.rel).addScaledVector(tv, L * f);
+          const a0 = I * (1 - (j - 1) / TS) * (dust ? .5 : .65) * (1 - Math.abs(sp) * 6), a1 = I * (1 - f) * (dust ? .5 : .65) * (1 - Math.abs(sp) * 6);
+          tailP.set([px, py, pz, q.x, q.y, q.z], v * 3); tailC.set([c[0] * a0, c[1] * a0, c[2] * a0, c[0] * a1, c[1] * a1, c[2] * a1], v * 3); v += 2; px = q.x; py = q.y; pz = q.z; } } }
+    tailG.setDrawRange(0, v); tailG.attributes.position.needsUpdate = tailG.attributes.color.needsUpdate = true; tails.visible = v > 0; }
+  // the belts: ~33 000 real orbits (every asteroid brighter than H 14 + the known Kuiper belt), solved on the GPU each frame
+  const beltU = { dJ: { value: 0 }, AUr: { value: AU }, px: { value: 1 }, k: { value: 1 } };
+  let beltP = null, beltOn = false;
+  fetch(TP + 'belt.bin').then(r => r.arrayBuffer()).then(buf => { const u = new Uint16Array(buf), N = u.length / 6, ib = new THREE.InterleavedBuffer(u, 6), g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.InterleavedBufferAttribute(ib, 3, 0, true)); g.setAttribute('k2', new THREE.InterleavedBufferAttribute(ib, 3, 3, true));
+    g.setDrawRange(0, HI ? N : Math.floor(N / 2));
+    beltP = new THREE.Points(g, new THREE.ShaderMaterial({ uniforms: beltU, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      vertexShader: `attribute vec3 k2; uniform float dJ, AUr, px, k; varying vec4 vC;
+        void main() { float a = position.x * 100., e = position.y, i = position.z * 3.14159265, O = k2.x * 6.2831853, w = k2.y * 6.2831853;
+          float M = mod(k2.z * 6.2831853 + .01720209895 / pow(a, 1.5) * dJ, 6.2831853), E = e > .8 ? 3.14159265 : M;
+          for (int j = 0; j < 8; j++) E -= (E - e * sin(E) - M) / (1. - e * cos(E));
+          float xp = a * (cos(E) - e), yp = a * sqrt(1. - e * e) * sin(E), cw = cos(w), sw = sin(w), cO = cos(O), sO = sin(O), ci = cos(i), si = sin(i);
+          vec3 p = vec3((cw * cO - sw * sO * ci) * xp + (-sw * cO - cw * sO * ci) * yp, (cw * sO + sw * cO * ci) * xp + (-sw * sO + cw * cO * ci) * yp, sw * si * xp + cw * si * yp) * AUr;
+          vec3 c = a < 1.7 ? vec3(1., .62, .4) : a < 3.4 ? vec3(.78, .72, .62) : a < 4.3 ? vec3(.95, .82, .45) : a < 5.6 ? vec3(.55, .9, .6) : vec3(.55, .78, 1.);
+          vC = vec4(c, k * (a > 30. ? 1. : .8)); vec4 mv = modelViewMatrix * vec4(p, 1.); gl_Position = projectionMatrix * mv; gl_PointSize = px * (a > 30. ? 2.6 : 2.1); }`,
+      fragmentShader: `varying vec4 vC; void main() { float f = smoothstep(.5, .15, length(gl_PointCoord - .5)); if (f <= 0.) discard; gl_FragColor = vec4(vC.rgb * vC.a * f, 1.); }` }));
+    beltP.frustumCulled = false; beltP.visible = beltOn; helioG.add(beltP); }).catch(e => console.warn('3D belts:', e));
+  // the spacecraft: a small gold dot + name; the ones near the Earth only while the Earth is close (L1 = 235 R⊕)
+  fetch(new URL('./data/craft.json?' + Math.floor(Date.now() / 36e5), import.meta.url).href).then(r => r.json()).then(j => { Object.assign(CR, j.craft);
+    for (const n of [...Object.keys(j.craft), 'GOES-19']) mkBody(n, [.01, 0, 90, 0, 0, '', 2.4, '#FFD36E'], { kind: 'craft', near: n === 'GOES-19' || j.craft[n].c === 'E' }); }).catch(() => {});
+  fetch(TP + 'sb.json').then(r => r.json()).then(j => { Object.assign(SB, j.b); for (const [n, [b, x]] of Object.entries(SBB)) if (n === 'Charon' ? SB.Pluto : SB[n]) mkBody(n, b, x); orbT = -1e15; }).catch(() => {});
   const OMEGA = 2 * Math.PI / 25.38, kmsAU = v => v * 86400 / 1.495978707e8, JS = 64, KS = 340, DTW = 1 / 24, NW = JS * KS;
   const helioG = new THREE.Group(); scene.add(helioG);
   const wGeo = new THREE.BufferGeometry(), wa = new Float32Array(NW * 4), wb = new Float32Array(NW * 4);
@@ -307,20 +402,25 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
             if (prev && v < NT - 1) { torPos.set(prev, v * 3); torPos.set(q, v * 3 + 3); torCol.set([...col, al, ...col, al], v * 4); v += 2; } prev = q; } } } }
     torG.setDrawRange(0, v); torG.attributes.position.needsUpdate = torG.attributes.color.needsUpdate = true; }
   // labels
-  const lab = document.createElement('div'); lab.className = 'e3g-pl'; el.appendChild(lab);
+  const lab = labHost = document.createElement('div'); lab.className = 'e3g-pl'; el.appendChild(lab);
   for (const b of Object.values(bodies)) { b.lab = lab.appendChild(document.createElement('span')); b.lab.textContent = tr(b.name); b.lab.style.color = b.col || '#FFE6B0'; }
   hLab.forEach((sp, i) => { sp.textContent = i ? tr('heliopause · 121 AU (Voyager 1, 2012)') : tr('termination shock · 94 AU'); lab.appendChild(sp); });
   const sunW = new THREE.Vector3();
   let realScale = false, guides = false;   // guides = names + orbit lines
   // camHelio: the camera's heliocentric ecliptic position (R⊕, doubles) · camW: the camera's world position (in the Earth view's frame)
   let windOn = false;
-  function update(t, camHelio, W, H, nearOn, pxr) {
+  let lastCH = [0, 0, 0];
+  // a heliocentric ecliptic point (R⊕) → screen px of the last frame ({ x, y, ok })
+  function screen(h, W, H) { const pix = 2 * Math.tan(camera.fov * D2R / 2) / H, p = toW([h[0] - lastCH[0], h[1] - lastCH[1], h[2] - lastCH[2]], new THREE.Vector3()).applyQuaternion(cam.quaternion.clone().invert());
+    if (p.z >= 0) return { x: 0, y: 0, ok: false }; const x = p.x / (-p.z * pix) + W / 2, y = H / 2 - p.y / (-p.z * pix); return { x, y, ok: x > 40 && x < W - 40 && y > 60 && y < H - 60 }; }
+  function update(t, camHelio, W, H, nearOn, pxr) { lastCH = camHelio;
     eclToWorld(t); if (Math.abs(t - orbT) > 5 * DAY) buildOrbits(t);
     cam.quaternion.copy(camera.quaternion); cam.fov = camera.fov; cam.aspect = camera.aspect;
     const pix = 2 * Math.tan(camera.fov * D2R / 2) / H; let nearest = 1e12;
     for (const b of Object.values(bodies)) { const h = helio(b.name, t); toW([h[0] - camHelio[0], h[1] - camHelio[1], h[2] - camHelio[2]], b.rel); b.d = b.rel.length();
       const boost = realScale ? 1 : Math.max(1, b.minPx * pix * b.d / b.R); b.rs = b.R * boost; b.px = b.rs / (b.d * pix);
-      b.mesh.position.copy(b.rel); b.mesh.scale.setScalar(b.rs); if (b.name !== 'Earth' && b.name !== 'Sun') b.mesh.quaternion.copy(orient(b.b, t));
+      b.mesh.position.copy(b.rel); if (b.shp) b.mesh.scale.set(b.rs * b.shp[0], b.rs * b.shp[1], b.rs * b.shp[2]); else b.mesh.scale.setScalar(b.rs); if (b.name !== 'Earth' && b.name !== 'Sun') b.mesh.quaternion.copy(orient(b.b, t));
+      b.hid = b.near && bodies.Earth.d > 4000; if (b.kind === 'craft') { b.mesh.visible = !b.hid; continue; }
       nearest = Math.min(nearest, Math.max(1e-3, b.d - b.rs)); }
     if (warm.length) renderer.initTexture(warm.shift());
     if (HI) for (const b of Object.values(bodies)) if (!b.hi && b.px > 300 && b.b[5] && b.mesh.material.uniforms.map) { b.hi = true; const u = b.mesh.material.uniforms.map;
@@ -351,13 +451,14 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
           const f = i => { const x = (lFlow[i] - cH[i]) / L; return x - Math.floor(x); };
           u.L.value = L; u.k.value = K * w; u.v.value = v; u.ctr.value.copy(fw); u.off.value.set(f(0), f(1), f(2)); p.quaternion.copy(orbits.quaternion); } }
       else LW.forEach(l => l.p.visible = false); }
+    tailUpdate(t); if (beltP) { beltP.visible = beltOn; beltU.dJ.value = JD(t) - 2461000.5; beltU.px.value = pxr || 1; beltU.k.value = 1 - sm(300 * AU, 1500 * AU, bodies.Sun.d); }
     if (windOn) windUpdate(t, pxr || 1); else { active = []; cmeP.forEach(p => p.visible = false); }
     fieldUpdate(t, pix, nearOn); helioG.updateMatrixWorld(true);
-    cam.near = Math.max(hdR ? 1e-8 : 1e-3, nearest * .5); cam.far = Math.max(cam.near * 10, 4e6, bodies.Sun.d * 3); cam.updateProjectionMatrix(); cam.updateMatrixWorld();
+    cam.near = Math.max(hdR || nearest < 1e-3 ? 1e-8 : 1e-3, nearest * .5); cam.far = Math.max(cam.near * 10, 4e6, bodies.Sun.d * 3); cam.updateProjectionMatrix(); cam.updateMatrixWorld();
     // labels: beside each body when it is small on screen, hidden when big or behind
     const qi = cam.quaternion.clone().invert(), occ = Object.values(bodies).filter(o => o.px > 60 || (o.name === 'Earth' && nearOn));   // big bodies hide the labels behind them
     const put = [];   // labels already placed this frame: a later one that would overlap is hidden (Earth before the Moon)
-    for (const b of Object.values(bodies)) { const s = b.lab; if (b.px > 60 || occ.some(o => o !== b && o.d < b.d && o.rel.angleTo(b.rel) < Math.asin(Math.min(1, o.rs / o.d)))) { s.style.opacity = 0; continue; }
+    for (const b of Object.values(bodies)) { const s = b.lab; if (b.hid || b.px > 60 || occ.some(o => o !== b && o.d < b.d && o.rel.angleTo(b.rel) < Math.asin(Math.min(1, o.rs / o.d)))) { s.style.opacity = 0; continue; }
       v3.copy(b.rel).applyQuaternion(qi); if (v3.z > 0) { s.style.opacity = 0; continue; }
       const x = (v3.x / (-v3.z * pix) + W / 2), y = (H / 2 - v3.y / (-v3.z * pix)); if (x < -50 || x > W + 50 || y < -20 || y > H + 20) { s.style.opacity = 0; continue; }
       const lx = x + b.px + 6, ly = y - 8, lw = s._w || (s._w = s.offsetWidth) || 60; if (put.some(p => lx < p[0] + p[2] && p[0] < lx + lw && Math.abs(ly - p[1]) < 16)) { s.style.opacity = 0; continue; }
@@ -368,9 +469,9 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
     return { sunW, bodies }; }
   // the body under a screen point (within its drawn disc + a few px), nearest first
   function pick(x, y, W, H) { const pix = 2 * Math.tan(camera.fov * D2R / 2) / H; let best = null, bd = 1e9; const qi = cam.quaternion.clone().invert();
-    for (const b of Object.values(bodies)) { v3.copy(b.rel).applyQuaternion(qi); if (v3.z > 0) continue; const sx = v3.x / (-v3.z * pix) + W / 2, sy = H / 2 - v3.y / (-v3.z * pix), r = Math.hypot(sx - x, sy - y);
+    for (const b of Object.values(bodies)) { if (b.hid) continue; v3.copy(b.rel).applyQuaternion(qi); if (v3.z > 0) continue; const sx = v3.x / (-v3.z * pix) + W / 2, sy = H / 2 - v3.y / (-v3.z * pix), r = Math.hypot(sx - x, sy - y);
       if (r < Math.max(14, b.px + 6) && b.d < bd) { best = b; bd = b.d; } } return best; }
   const hdHas = n => bhd.has(n), hdOn = n => bhd.on === n, hdGround = (n, dirW) => bhd.ground(n, bodies[n], dirW);
   orbits.visible = guides; lab.style.display = guides ? '' : 'none';   // start as the Layers panel says (off)
-  return { scene, cam, update, bodies, pick, hdHas, hdOn, hdGround, helio, eclToWorld, toWorld: p => toW(p, new THREE.Vector3()), fromWorld: v => v.clone().applyMatrix3(Mi), get realScale() { return realScale; }, set realScale(v) { realScale = v; }, setWind, setCmes, cmeAtEarth, cmeMarks, windAt, get wind() { return windOn; }, set wind(v) { windOn = v; }, get field() { return fieldOn; }, set field(v) { fieldOn = v; }, get bare() { return fieldMode === 2; }, set bare(v) { fieldMode = v ? 2 : 1; }, get guides() { return guides; }, set guides(v) { guides = v; orbits.visible = v; lab.style.display = v ? '' : 'none'; } };
+  return { scene, cam, update, screen, bodies, pick, hdHas, hdOn, hdGround, helio, eclToWorld, toWorld: p => toW(p, new THREE.Vector3()), fromWorld: v => v.clone().applyMatrix3(Mi), get realScale() { return realScale; }, set realScale(v) { realScale = v; }, setWind, setCmes, cmeAtEarth, cmeMarks, windAt, get wind() { return windOn; }, set wind(v) { windOn = v; }, get field() { return fieldOn; }, set field(v) { fieldOn = v; }, get bare() { return fieldMode === 2; }, set bare(v) { fieldMode = v ? 2 : 1; }, get belt() { return beltOn; }, set belt(v) { beltOn = v; }, get guides() { return guides; }, set guides(v) { guides = v; orbits.visible = v; lab.style.display = v ? '' : 'none'; } };
 }

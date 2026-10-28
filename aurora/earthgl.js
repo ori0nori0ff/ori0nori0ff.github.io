@@ -10,7 +10,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
-import { createSolar } from './solar.js?v=422c64f1';
+import { createSolar } from './solar.js?v=cce6853c';
 
 const tr = (s, o) => window.T ? window.T(s, o) : String(s).replace(/\{(\w+)\}/g, (m, k) => o && o[k] != null ? o[k] : m);
 const D2R = Math.PI / 180, BASE = new URL('./', import.meta.url).href, T = BASE + 'img/earth/';
@@ -18,6 +18,8 @@ const CSS = `.e3g{position:absolute;inset:0;display:none;background:#000;overflo
 .e3g-go,.e3g-nav{position:absolute;z-index:2;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:6px}.e3g-go{left:10px}.e3g-nav{right:10px}
 .e3g-go button,.e3g-nav button{width:40px;height:40px;padding:0;border-radius:50%;font-size:16px;display:grid;place-items:center}.e3g-nav svg{transition:transform .1s linear}
 .e3g-bl{position:absolute;z-index:3;left:58px;top:50%;transform:translateY(-50%);list-style:none;margin:0;padding:6px;border:1px solid rgba(255,255,255,.18);border-radius:12px;background:rgba(10,14,20,.92);display:grid;gap:2px}.e3g-bl[hidden]{display:none}
+.e3g-bl{grid-template-columns:repeat(4,auto);align-items:start;gap:2px 6px}.e3g-blc{display:grid;gap:2px}.e3g-blc b{font:600 10.5px/1 var(--mono,monospace);letter-spacing:.08em;text-transform:uppercase;opacity:.6;padding:8px 12px 4px}
+@media (max-width:560px){.e3g-bl{grid-template-columns:auto;max-height:70vh;overflow:auto}}
 .e3g-bl button{width:100%;text-align:left;border:0;background:none;border-radius:8px;min-height:32px;padding:6px 12px}.e3g-bl button:hover,.e3g-bl button[aria-current=true]{background:rgba(57,255,158,.14)}
 .e3g-lay{position:absolute;z-index:3;left:10px;bottom:30px}.e3g-lp{position:absolute;left:48px;bottom:0;width:250px;padding:8px;border:1px solid rgba(255,255,255,.18);border-radius:12px;background:rgba(10,14,20,.92);display:flex;flex-direction:column;gap:6px}.e3g-lp[hidden]{display:none}
 .e3g-lp>button,.e3g-row button{text-align:left}.e3g-row{display:flex;gap:6px}.e3g-row button{flex:1}
@@ -52,7 +54,7 @@ const CSS = `.e3g{position:absolute;inset:0;display:none;background:#000;overflo
 @media (max-width:640px){.e3g-find{right:auto;left:12px;top:104px;width:calc(100% - 80px)}}
 .e3g-pl{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden}.e3g-pl span{position:absolute;left:0;top:0;font:700 12px Inter,system-ui,sans-serif;text-shadow:0 1px 3px #000,0 0 2px #000;white-space:nowrap;opacity:0;transition:opacity .25s}
 .e3g-ms{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden;transition:opacity .25s}.e3g-ln{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
-.e3g-ln path{stroke:rgba(230,235,241,.5);stroke-width:1;fill:none}.e3g-ln path.d{fill:rgba(230,235,241,.85);stroke:none}
+.e3g-ln path{stroke:rgba(230,235,241,.62);stroke-width:1.75;fill:none;stroke-linecap:round}.e3g-ln path.d{fill:rgba(230,235,241,.85);stroke:none}
 .e3g-lb{position:absolute;left:0;top:0;pointer-events:auto;text-align:left;padding:5px 9px;border:1px solid rgba(255,255,255,.16);border-radius:8px;background:rgba(10,14,20,.74);color:#E6EBF1;cursor:pointer;font:600 12px Inter,system-ui,sans-serif;line-height:1.25}
 .e3g-lb b{display:block;font-weight:700;color:#8FD3FF}.e3g-lb small{display:block;margin-top:2px;color:#9AA4B2;font-size:11px;font-weight:500}.e3g-lb:hover,.e3g-lb:focus-visible{border-color:rgba(255,255,255,.5)}
 .e3g-lb[data-k=bow] b{color:#F3E6D2}.e3g-lb[data-k=tail] b{color:#DCE3EB}.e3g-lb[data-k=vab] b{color:#C9B8FF}.e3g-lb[data-k=sw] b{color:#96C8FF}.e3g-ip{margin:8px 0 0;font:500 13px/1.5 Inter,system-ui,sans-serif;color:#C9D1DB}
@@ -69,18 +71,21 @@ function create(host, opts) {
   const el = document.createElement('div'); el.className = 'e3g'; host.appendChild(el);
   el.innerHTML = `<div class="e3g-find eo"><input type="search" data-k="find" placeholder="🔍 ${tr('Search a place or lat, lon')}" aria-label="${tr('Search a place or lat, lon')}" autocomplete="off"><ul role="listbox"></ul></div><div class="e3g-load">${tr('Loading the Earth…')} 0%</div><div class="e3g-alt">–</div>
     <div class="e3g-go"><button data-k="home" aria-label="${tr('Earth')}" title="${tr('Earth')}">🌍</button><button data-k="sys" aria-label="${tr('Solar system')}" title="${tr('Solar system')}">☀</button><button data-k="bodies" aria-expanded="false" aria-label="${tr('Go to')}" title="${tr('Go to')}">🪐</button></div>
-    <ul class="e3g-bl" hidden>${['Sun', 'Mercury', 'Venus', 'Earth', 'Moon', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune'].map(n => `<li><button data-b="${n}">${tr(n)}</button></li>`).join('')}</ul>
+    <ul class="e3g-bl" hidden>${[[['Planets', ['Sun', 'Mercury', 'Venus', 'Earth', 'Moon', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune']]],
+      [['Dwarf planets', ['Ceres', 'Pluto', 'Charon', 'Eris', 'Haumea', 'Makemake']], ['Comets', ['Halley', 'Encke', '67P']]],
+      [['Asteroids', ['Vesta', 'Pallas', 'Hygiea', 'Psyche', 'Bennu', 'Ryugu', 'Apophis']]],
+      [['Spacecraft', ['SOHO', 'ACE', 'DSCOVR', 'Wind', 'SWFO-L1', 'SDO', 'GOES-19', 'STEREO-A', 'Parker Solar Probe', 'Solar Orbiter']]]].map(col => `<li class="e3g-blc">${col.map(([h, L]) => `<b>${tr(h)}</b>` + L.map(n => `<button data-b="${n}">${tr(n)}</button>`).join('')).join('')}</li>`).join('')}</ul>
     <div class="e3g-lay"><button data-k="layers" aria-expanded="false">☰ ${tr('Layers')} ▾</button><div class="e3g-lp" hidden>
       <button class="eo" data-k="cl" aria-pressed="true">${tr('Clouds')}</button><button class="eo" data-k="cn" aria-pressed="false">${tr('Clouds: NASA')}</button><button class="eo" data-k="au" aria-pressed="true">${tr('Aurora')}</button>
       <div class="e3g-row eo"><button data-k="ms" aria-pressed="false">🧲 ${tr('Magnetic shield')}</button><button data-k="cme">💥 ${tr('CME impact')}</button></div>
-      <button data-k="sun" aria-pressed="false">${tr('Real Sun')}</button><button data-k="sp" aria-pressed="true">${tr('Auto-rotate')}</button><button data-k="rs" aria-pressed="false">${tr('Real scale')}</button><button data-k="gd" aria-pressed="false">${tr('Names and orbits')}</button><button data-k="sw" aria-pressed="false">${tr('Solar wind + CMEs')}</button><div class="e3g-row"><button data-k="sf" aria-pressed="false">${tr('Sun’s magnetic field')}</button><button data-k="dw" aria-pressed="false">🌀 ${tr('Without the solar wind')}</button></div></div></div>
+      <button data-k="sun" aria-pressed="false">${tr('Real Sun')}</button><button data-k="sp" aria-pressed="true">${tr('Auto-rotate')}</button><button data-k="rs" aria-pressed="false">${tr('Real scale')}</button><button data-k="gd" aria-pressed="false">${tr('Names and orbits')}</button><button data-k="sw" aria-pressed="false">${tr('Solar wind + CMEs')}</button><button data-k="blt" aria-pressed="false">${tr('Asteroid + Kuiper belts')}</button><div class="e3g-row"><button data-k="sf" aria-pressed="false">${tr('Sun’s magnetic field')}</button><button data-k="dw" aria-pressed="false">🌀 ${tr('Without the solar wind')}</button></div></div></div>
     <div class="e3g-time"><input type="datetime-local" class="e3g-date" data-k="date" aria-label="${tr('Date and time')}"><button data-k="now">${tr('Now')}</button>
       <div class="e3g-tod eo" title="${tr('Time of day here (local Sun time)')}">☀<button data-k="todB" aria-label="${tr('Earlier')}">‹</button><input type="range" data-k="tod" min="0" max="1435" step="5" aria-label="${tr('Time of day here (local Sun time)')}"><button data-k="todF" aria-label="${tr('Later')}">›</button><span></span></div>
       <div class="e3g-tod so" title="${tr('Move the clock (±10 days): orange = a CME leaves the Sun, red = it reaches the Earth')}">☄<button data-k="dyB" aria-label="${tr('Earlier')}">‹</button><div class="e3g-dw"><i class="e3g-mk"></i><input type="range" data-k="dy" min="-14400" max="14400" step="30" aria-label="${tr('Move the clock (±10 days): orange = a CME leaves the Sun, red = it reaches the Earth')}"></div><button data-k="dyF" aria-label="${tr('Later')}">›</button><button data-k="dyP" aria-label="${tr('Play')}" aria-pressed="false">▶</button><span></span></div></div>
     <div class="e3g-nav"><button data-k="fly" aria-pressed="false" title="${tr('Free flight: W A S D, drag to look, Esc to stop')}" aria-label="${tr('Free flight: W A S D, drag to look, Esc to stop')}">✈</button><button data-k="ang" aria-pressed="false" aria-label="${tr('Tilt')} / ${tr('Heading')}">∠</button><button data-k="cmp" aria-label="${tr('Reset to north')}"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 3l4 9h-8z" fill="#FF4D4D"/><path d="M12 21l-4-9h8z" fill="#E6EBF1"/></svg></button><button data-k="3d" aria-pressed="true" aria-label="${tr('3D view')}">3D</button><button data-k="zout" aria-label="${tr('Zoom out')}">−</button><button data-k="zin" aria-label="${tr('Zoom in')}">+</button></div>
     <div class="e3g-info" hidden aria-live="polite"></div>
     <div class="e3g-pnl" hidden><label>${tr('Tilt')}<input type="range" data-s="tilt" min="0" max="100" value="100"></label><label>${tr('Heading')}<input type="range" data-s="head" min="-180" max="180" value="0"></label><button data-k="north">${tr('Reset to north')}</button><small>${tr('Shift + drag or right-drag: tilt and turn')}</small></div>
-    <div class="e3g-attr">NASA Blue Marble · Black Marble · SVS star map · NOAA GMGSI · OVATION · ${tr('close-up')}: Sentinel-2 cloudless 2023 by EOX (CC BY-NC-SA 4.0) · Mapzen Terrarium / AWS · ${tr('Moon')}: JAXA Kaguya TC · NASA LRO LOLA (Moon Trek) · ${tr('Mars')}: MRO CTX (NASA/JPL/MSSS/Caltech Murray Lab/Esri) · Viking · MOLA / HRSC (Mars Trek)</div>`;
+    <div class="e3g-attr">NASA Blue Marble · Black Marble · SVS star map · NOAA GMGSI · OVATION · ${tr('close-up')}: Sentinel-2 cloudless 2023 by EOX (CC BY-NC-SA 4.0) · Mapzen Terrarium / AWS · ${tr('Moon')}: JAXA Kaguya TC · NASA LRO LOLA (Moon Trek) · ${tr('Mars')}: MRO CTX (NASA/JPL/MSSS/Caltech Murray Lab/Esri) · Viking · MOLA / HRSC (Mars Trek) · ${tr("small bodies")}: NASA/JPL SBDB · Ceres, Vesta: NASA Dawn (DLR / USGS) · Pluto: NASA New Horizons (USGS)</div>`;
   let W = 800, H = 600;
   const Q = opts.quality || (() => { try { const v = localStorage.getItem('aurora.q3d'); if (/^(low|medium|high)$/.test(v || '')) return v; } catch (e) {} return null; })() || (document.documentElement.classList.contains('lite') ? 'low' : 'high');   // low | medium | high (light mode → low)
   const renderer = new THREE.WebGLRenderer({ antialias: Q !== 'low', powerPreference: 'high-performance' });
@@ -110,7 +115,7 @@ function create(host, opts) {
   renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
   const pins = new Map(); let pinch = 0, twist = 0, midY = 0, mode = '';
   renderer.domElement.addEventListener('mousedown', e => { if (e.button === 1) e.preventDefault(); });   // middle button = tilt + turn, not the browser's autoscroll
-  let downAt = null; renderer.domElement.addEventListener('pointerup', e => { if (downAt && performance.now() - downAt[2] < 350 && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) < 6) { const r = renderer.domElement.getBoundingClientRect(), hp = MSH.hit(e.clientX - r.left, e.clientY - r.top), b = hp ? null : solar.pick(e.clientX - r.left, e.clientY - r.top, W, H); if (hp) MSH.info(hp); else if (b && b.name !== focus) flyToBody(b.name); } downAt = null; });
+  let downAt = null; renderer.domElement.addEventListener('pointerup', e => { if (downAt && performance.now() - downAt[2] < 350 && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) < 6) { const r = renderer.domElement.getBoundingClientRect(), hp = MSH.hit(e.clientX - r.left, e.clientY - r.top), bp = hp ? null : BLT.hit(e.clientX - r.left, e.clientY - r.top), b = hp || bp ? null : solar.pick(e.clientX - r.left, e.clientY - r.top, W, H); if (hp) MSH.info(hp); else if (bp) BLT.card(bp); else if (b && b.kind === 'craft') showInfo(b.name); else if (b && b.name !== focus) flyToBody(b.name); } downAt = null; });
   renderer.domElement.addEventListener('pointerdown', e => { downAt = [e.clientX, e.clientY, performance.now()]; renderer.domElement.setPointerCapture(e.pointerId); pins.set(e.pointerId, [e.clientX, e.clientY]); vel = [0, 0]; spinOff(); goal = null;
     mode = pins.size === 2 ? 'two' : (e.shiftKey || e.ctrlKey || e.button === 2 || e.button === 1) ? 'turn' : 'pan'; pinch = 0; });
   renderer.domElement.addEventListener('pointermove', e => { const o = pins.get(e.pointerId); if (!o) return; const dx = e.clientX - o[0], dy = e.clientY - o[1]; pins.set(e.pointerId, [e.clientX, e.clientY]);
@@ -739,14 +744,33 @@ ${SUNLIB}
   // the info card of the focused body: facts, its magnetic field, the latest NASA pictures, Closer / Follow the orbit
   const FACT = { Sun: [1392700, 609.1, 0, 8], Mercury: [4879, 1407.6, 87.97, 0], Venus: [12104, -5832.5, 224.7, 0], Earth: [12742, 23.934, 365.256, 1],
     Moon: [3474.8, 655.7, 27.322, 0], Mars: [6779, 24.623, 686.98, 2], Jupiter: [139820, 9.925, 4332.6, 97], Saturn: [116460, 10.656, 10759, 274],
-    Uranus: [50724, -17.24, 30687, 29], Neptune: [49244, 16.11, 60190, 16] };
+    Uranus: [50724, -17.24, 30687, 29], Neptune: [49244, 16.11, 60190, 16],
+    Ceres: [939.4, 9.074, 1681.6, 0], Pluto: [2376.6, -153.29, 90560, 5], Charon: [1212, 153.29, 6.387, 0], Eris: [2326, 378.9, 203830, 1], Haumea: [1632, 3.915, 103410, 2],
+    Makemake: [1430, 22.83, 112897, 1], Vesta: [525.4, 5.342, 1325.8, 0], Pallas: [512, 7.813, 1684, 0], Hygiea: [434, 13.83, 2042, 0], Psyche: [226, 4.196, 1828, 0],
+    Bennu: [.49, 4.296, 436.6, 0], Ryugu: [.9, 7.63, 474, 0], Apophis: [.34, 30.56, 323.6, 0], Halley: [11, 52.8, 27510, 0], Encke: [4.8, 11, 1206, 0], '67P': [4.1, 12.4, 2353, 0] };
+  // the real small bodies: what each one is (orbits: NASA/JPL SBDB; maps: Dawn, New Horizons)
+  const NOTE = { Ceres: 'The largest body in the asteroid belt, a dwarf planet. NASA’s Dawn orbited it 2015–2018: bright salt in Occator crater points to brine under the surface. Map: Dawn.',
+    Pluto: 'Dwarf planet of the Kuiper belt. NASA’s New Horizons flew past on 14 July 2015: a bright nitrogen-ice plain (the “heart”), water-ice mountains, thin hazy air. The south was in winter darkness: grey on the map.',
+    Charon: 'Pluto’s biggest moon, half its size: the two always show each other the same face and circle a point between them.',
+    Eris: 'Almost as big as Pluto and heavier; its discovery in 2005 led to the “dwarf planet” class in 2006. Today about 96 AU from the Sun.',
+    Haumea: 'Turns in under 4 hours, so fast that it is stretched into an egg shape (drawn to its measured size). It has a thin ring.',
+    Makemake: 'A bright, reddish dwarf planet of the Kuiper belt, covered in methane ice; one small moon found in 2016.',
+    Vesta: 'The second-biggest asteroid, a leftover protoplanet with an iron core. Dawn orbited it 2011–2012; the giant Rheasilvia crater covers its south pole, and meteorites from it reach Earth. Map: Dawn.',
+    Pallas: 'The third-biggest asteroid, on a steeply tilted orbit (35°).', Hygiea: 'The fourth-biggest asteroid, almost round: maybe a dwarf planet.',
+    Psyche: 'A metal-rich asteroid, maybe part of an early planet’s core. NASA’s Psyche spacecraft (launched 2023) is due there in 2029.',
+    Bennu: 'Near-Earth asteroid, a loose rubble pile. NASA’s OSIRIS-REx brought 121.6 g of it to Earth on 24 September 2023.',
+    Ryugu: 'Near-Earth asteroid shaped like a spinning top. Japan’s Hayabusa2 brought 5.4 g of it to Earth in December 2020.',
+    Apophis: 'On 13 April 2029 it passes about 32 000 km from Earth, closer than geostationary satellites, bright enough to see without a telescope. No impact risk for at least 100 years. (Its orbit here ignores the bend from Earth’s gravity in 2029.)',
+    Halley: 'The famous comet, back every ~76 years: last seen in 1986, next closest to the Sun in July 2061. Now near the far end of its orbit.',
+    Encke: 'The comet with the shortest known orbit of the big ones: around the Sun every 3.3 years. Source of the Taurid meteors.',
+    '67P': 'Comet Churyumov–Gerasimenko: ESA’s Rosetta orbited it 2014–2016 and set the Philae lander on it.' };
   const FIELD = { Sun: 'Closed loops near the Sun (orange); beyond ~2.5 solar radii the wind drags the lines into spirals that reach every planet (blue = towards the Sun, red = away). The wavy violet sheet is where they flip; bright dots ride the lines at the wind’s speed.',
     Mercury: 'A weak field, 1% of Earth’s; the solar wind almost touches the ground.', Venus: 'No global magnetic field: the solar wind strips its upper air directly.',
     Earth: 'Our shield: the magnetopause stands ~10 Earth radii towards the Sun, the tail stretches past the Moon. Where the field lines reach the poles: auroras.',
     Moon: 'No global field today; old lunar rocks show it had one billions of years ago.',
     Mars: 'Lost its global field ~4 billion years ago — and most of its atmosphere with it.', Jupiter: 'The biggest magnetosphere in the system: if we could see it, it would look bigger than the full Moon in our sky.',
     Saturn: 'Its field is almost perfectly lined up with its spin axis.', Uranus: 'Tilted ~60° and off-centre: its magnetosphere tumbles as it turns.', Neptune: 'Tilted ~47° and off-centre, like Uranus.' };
-  const MOONS = { Earth: 'the Moon', Mars: 'Phobos, Deimos' }, PHOTO = {}, PHN = {}, info = el.querySelector('.e3g-info'), nf = v => Math.round(v).toLocaleString(window.LOC || 'en-GB');
+  const MOONS = { Earth: 'the Moon', Mars: 'Phobos, Deimos', Pluto: 'Charon + 4 small', Eris: 'Dysnomia', Haumea: 'Hiʻiaka, Namaka', Makemake: 'MK2' }, PHOTO = {}, PHN = {}, info = el.querySelector('.e3g-info'), nf = v => Math.round(v).toLocaleString(window.LOC || 'en-GB');
   const span = h => { const a = Math.abs(h); return a < 48 ? `${Math.floor(a)} h ${Math.round(a % 1 * 60)} m` : a < 24 * 1000 ? `${(a / 24).toFixed(a < 240 ? 1 : 0)} ${tr('days')}` : `${(a / 8766).toFixed(1)} ${tr('years')}`; };
   async function photos(nm, host) { try {
       if (!PHOTO[nm]) {
@@ -764,15 +788,32 @@ ${SUNLIB}
   function liveInfo(t) { const o = info.querySelector('.e3g-il'); if (!o || !infoOf) return; const E = solar.helio('Earth', t), P = infoOf === 'Earth' ? E : solar.helio(infoOf, t);
     const de = Math.hypot(P[0] - E[0], P[1] - E[1], P[2] - E[2]) / AUr, ds = Math.hypot(...P) / AUr;
     o.innerHTML = infoOf === 'Earth' ? `<small>${tr('From the Sun')}</small>${ds.toFixed(3)} AU · ${(ds * 8.317).toFixed(1)} ${tr('light min')}`
-      : infoOf === 'Moon' ? `<small>${tr('From Earth')}</small>${nf(de * 1.495978707e8)} km · ${(de * 499).toFixed(2)} ${tr('light s')}`
+      : infoOf === 'Moon' || de < .03 ? `<small>${tr('From Earth')}</small>${nf(de * 1.495978707e8)} km · ${(de * 499).toFixed(2)} ${tr('light s')}`
       : `<small>${tr('From Earth')}</small>${de.toFixed(2)} AU · ${(de * 8.317).toFixed(1)} ${tr('light min')}`; }
-  function showInfo(nm) { infoOf = nm; orbitOn = orbitWait = 0; const F = FACT[nm]; pnl.hidden = true; press($('ang'), false);
+  // what each spacecraft is and what this page takes from it: operator, launch year, where, use
+  const CRAFT = { SOHO: ['ESA / NASA', 1995, 'L1', 'Watches the Sun from L1 since 1996. Its LASCO C2 / C3 coronagraphs show CMEs leaving the Sun: the Sun pictures and the storm replay use them.'],
+    ACE: ['NASA', 1997, 'L1', 'Measures the solar wind about an hour before it reaches the Earth: the 3-day / 7-day L1 charts.'],
+    DSCOVR: ['NOAA / NASA', 2015, 'L1', 'NOAA’s real-time solar wind monitor (the L1 card, the wind in 3D) and the EPIC camera that takes the full-Earth pictures.'],
+    Wind: ['NASA', 1994, 'L1', 'Solar wind since 1994; with ACE and DSCOVR it builds NASA’s OMNI record that the storm replay uses.'],
+    'SWFO-L1': ['NOAA', 2025, 'L1', 'NOAA’s new space-weather station at L1 (launched September 2025): solar wind + the CCOR-2 coronagraph.'],
+    SDO: ['NASA', 2010, 'GEO', 'Solar Dynamics Observatory: the AIA ultraviolet and HMI pictures of the Sun (Sun now, flares, regions). Geosynchronous orbit tilted 28.5°.'],
+    'GOES-19': ['NOAA', 2024, 'GEO', 'Weather satellite at 75.2° W with the CCOR-1 coronagraph, the SUVI Sun camera and the X-ray + proton sensors of the space weather card.'],
+    'STEREO-A': ['NASA', 2006, 'Sun', 'Circles the Sun near the Earth’s orbit, ahead of us: it sees the Sun from the side and CMEs coming our way edge-on (marked in ENLIL).'],
+    'Parker Solar Probe': ['NASA', 2018, 'Sun', 'Dives through the Sun’s corona: the closest and fastest spacecraft ever, about 6.1 million km from the surface at ~690 000 km/h.'],
+    'Solar Orbiter': ['ESA / NASA', 2020, 'Sun', 'Takes the closest pictures of the Sun and the first views of its poles, on an orbit that tilts more and more.'] };
+  const WHERE = { L1: 'L1 · 1.5 million km towards the Sun', GEO: 'Earth orbit · 36 000 km', Sun: 'Around the Sun' };
+  function showCraft(nm) { const C = CRAFT[nm]; infoOf = nm; orbitOn = orbitWait = 0; pnl.hidden = true; press($('ang'), false);
     info.innerHTML = `<div class="e3g-ih"><b>${tr(nm)}</b><button aria-label="${tr('Close')}">✕</button></div>
-      <div class="e3g-if"><div><small>${tr('Diameter')}</small>${nf(F[0])} km</div><div class="e3g-il"></div>
+      <div class="e3g-if"><div><small>${tr('Where')}</small>${tr(WHERE[C[2]])}</div><div class="e3g-il"></div><div><small>${tr('Operator')}</small>${C[0]}</div><div><small>${tr('Launched')}</small>${C[1]}</div></div>
+      <div class="e3g-im">🛰 ${tr(C[3])}</div><small class="e3g-isrc">${tr('Position')}: NASA/JPL Horizons</small>`;
+    info.appendChild(photoNode(nm)); liveInfo(now()); info.hidden = false; info.querySelector('.e3g-ih button').onclick = hideInfo; }
+  function showInfo(nm) { if (CRAFT[nm]) return showCraft(nm); infoOf = nm; orbitOn = orbitWait = 0; const F = FACT[nm]; pnl.hidden = true; press($('ang'), false);
+    info.innerHTML = `<div class="e3g-ih"><b>${tr(nm)}</b><button aria-label="${tr('Close')}">✕</button></div>
+      <div class="e3g-if"><div><small>${tr('Diameter')}</small>${F[0] < 10 ? nf(F[0] * 1000) + ' m' : nf(F[0]) + ' km'}</div><div class="e3g-il"></div>
       <div><small>${nm === 'Sun' ? tr('Turns once in') : tr('Day / year')}</small>${span(F[1])}${F[1] < 0 ? ' ↺' : ''}${F[2] ? ' · ' + span(F[2] * 24) : ''}</div>
       <div><small>${nm === 'Sun' ? tr('Planets') : tr('Moons')}</small>${MOONS[nm] ? tr(MOONS[nm]) : F[3] || '—'}</div></div>
-      <div class="e3g-im">🧲 ${tr(FIELD[nm])}</div>
-      <div class="e3g-ib"><button data-i="near">${tr('Closer')}</button>${F[2] ? `<button data-i="orb" aria-pressed="false">${tr('Follow the orbit')}</button>` : ''}</div>`;
+      <div class="e3g-im">${FIELD[nm] ? '🧲 ' + tr(FIELD[nm]) : '✦ ' + tr(NOTE[nm] || '')}</div>
+      <div class="e3g-ib"><button data-i="near">${tr('Closer')}</button>${F[2] && nm !== 'Charon' ? `<button data-i="orb" aria-pressed="false">${tr('Follow the orbit')}</button>` : ''}</div>`;
     info.insertBefore(photoNode(nm), info.querySelector('.e3g-ib')); liveInfo(now()); info.hidden = false;
     info.querySelector('.e3g-ih button').onclick = hideInfo;
     info.querySelector('[data-i="near"]').onclick = () => { if (focus !== nm || orbView) { orbView = false; flyToBody(nm, undefined, null, true); } else zoomBy(.3); };
@@ -781,13 +822,72 @@ ${SUNLIB}
       const t = now(), E = solar.helio('Earth', t), P = solar.helio(nm, t), rel = nm === 'Moon' ? P.map((v, i) => v - E[i]) : P,
         a = Math.hypot(...rel), u = rel.map(v => v / a), dir = solar.toWorld([u[0] * .55, u[1] * .55, .65]), back = a * 2.6 / solar.bodies[nm].R;
       if (focus !== nm || Math.abs(rng - back) > back * .2) { flyToBody(nm, back, dir, true); orbitWait = rate; } else orbitOn = rate; orbView = true; }; }
+  // ── callouts for the belts (like the magnetic shield's): a box at the screen edge, a thin line to the place, a tap = card;
+  //    the box titles carry the dots' colours, so they double as the legend
+  const BLT = (() => {
+    const lab = document.createElement('div'); lab.className = 'e3g-ms'; el.appendChild(lab);
+    const ln = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); ln.setAttribute('class', 'e3g-ln'); lab.appendChild(ln);
+    const TRO = 'Asteroids that share Jupiter’s orbit, held at the two stable Lagrange points 60° ahead of it (L4, the “Greek camp”) and 60° behind (L5, the “Trojan camp”). Over 15 000 are known. NASA’s Lucy is on its way to visit several of them (2027–2033).';
+    const PARTS = [
+      { k: 'nea', c: '#FFB07A', r: 1.3, t: 'Near-Earth asteroids', s: 'orbits that come close to ours',
+        i: 'Asteroids whose orbits come within 0.3 AU of the Earth’s path. More than 35 000 are known; NASA and ESA follow them, and none of the known big ones can hit us in the next 100 years. Only the biggest are drawn here.' },
+      { k: 'kw', c: '#C7BBA6', r: 2.5, t: 'Kirkwood gaps', s: 'thin rings emptied by Jupiter',
+        i: 'Thinner rings in the belt, where an asteroid would go round the Sun exactly 3, 5/2 or 7/3 times for each orbit of Jupiter (2.50, 2.82, 2.95 AU). Jupiter’s pull, repeated at the same spot, stretches those orbits until the asteroids leave.' },
+      { k: 'mb', c: '#C7BBA6', r: 2.75, t: 'Main asteroid belt', s: '2.1–3.3 AU · dots greatly enlarged',
+        i: 'Most known asteroids go round the Sun here, between Mars and Jupiter. All together they weigh only about 3% of the Moon, and Ceres alone is about 40% of that. They are far apart, on average hundreds of thousands of km: spacecraft cross the belt without dodging anything. Each dot here is drawn much bigger than it would look.' },
+      { k: 'hil', c: '#F2D173', r: 4.1, j: 180, t: 'Hilda group', s: '3 : 2 with Jupiter · a turning triangle',
+        i: 'Asteroids at about 4 AU that go round the Sun 3 times for every 2 orbits of Jupiter. Their orbits bunch them near three points (opposite Jupiter and at its two Trojan points), so together they draw a triangle that turns with Jupiter.' },
+      { k: 'l4', c: '#8CE69A', r: 5.2, j: 60, t: 'Jupiter Trojans · L4', s: '60° ahead of Jupiter', i: TRO },
+      { k: 'l5', c: '#8CE69A', r: 5.2, j: -60, t: 'Jupiter Trojans · L5', s: '60° behind Jupiter', i: TRO },
+      { k: 'kb', c: '#8CC7FF', r: 43, far: true, t: 'Kuiper belt', s: 'icy bodies beyond Neptune · 30–50 AU',
+        i: 'A ring of icy bodies beyond Neptune, home of Pluto, Haumea and Makemake; New Horizons flew past one of them, Arrokoth, in 2019. Its patchy look here comes partly from where telescopes have searched (the Milky Way hides much of the sky), not from how it really is.' } ];
+    const LP = PARTS.map(() => { const a = document.createElementNS('http://www.w3.org/2000/svg', 'path'), d = document.createElementNS('http://www.w3.org/2000/svg', 'path'); d.setAttribute('class', 'd'); ln.append(a, d); return [a, d]; });
+    const LB = PARTS.map(q => { const b = document.createElement('button'); b.type = 'button'; b.className = 'e3g-lb'; b.innerHTML = '<b></b><small></small>';
+      b.firstChild.textContent = tr(q.t); b.firstChild.style.color = q.c; b.lastChild.textContent = tr(q.s); b.onclick = () => card(q); lab.appendChild(b); return b; });
+    const AN = PARTS.map(() => ({ x: 0, y: 0, ok: false }));
+    const card = q => { infoOf = null; info.innerHTML = `<div class="e3g-ih"><b>${tr(q.t)}</b><button aria-label="${tr('Close')}">✕</button></div><p class="e3g-ip">${tr(q.i)}</p>`;
+      info.hidden = false; info.querySelector('.e3g-ih button').onclick = hideInfo; };
+    let op = 0;
+    function update(t, dt) { const dS = solar.bodies.Sun.d / AUr, want = solar.belt ? 1 : 0; op += (want - op) * Math.min(1, dt * 6);
+      lab.style.opacity = op; lab.style.visibility = op < .02 ? 'hidden' : ''; if (op < .02) return;
+      const J = solar.helio('Jupiter', t), lJ = Math.atan2(J[1], J[0]), sun = solar.screen([0, 0, 0], W, H), used = [];
+      PARTS.forEach((q, i) => { const a = AN[i]; a.ok = false;
+        if (q.far ? dS < 12 || dS > 900 : dS > 70 || dS < .3) { q.L = null; return; }   // inner parts while the inner system fills the view, the Kuiper belt from farther out
+        // the place: a fixed spot for the Jupiter-bound groups, else the ring point that sits best on screen (central, clear of the Sun and the other callouts)
+        // the spot it had keeps a bonus while it stays on screen: turning the camera moves the line smoothly instead of jumping between ring points
+        const cand = q.j != null ? [lJ + q.j * Math.PI / 180] : Array.from({ length: 24 }, (_, k) => k / 24 * 2 * Math.PI); let best = null, bs = 1e9, bL = null;
+        for (const L of cand) { const s = solar.screen([q.r * AUr * Math.cos(L), q.r * AUr * Math.sin(L), 0], W, H); if (!s.ok) continue;
+          let sc = Math.hypot(s.x - W / 2, s.y - H / 2) + (sun.ok && Math.hypot(s.x - sun.x, s.y - sun.y) < 50 ? 400 : 0) - (q.L === L ? Math.max(W, H) * .6 : 0);
+          for (const u of used) if (Math.hypot(s.x - u.x, s.y - u.y) < 90) sc += 300; if (sc < bs) { bs = sc; best = s; bL = L; } }
+        q.L = q.j != null ? null : bL; if (best) { a.x = best.x; a.y = best.y; a.ok = true; used.push(best); } });
+      const BW = Math.min(220, Math.max(130, W * .2)), GAP = W < 640 ? 34 : 54, top = 100, bot = H - 110, side = [[], []];
+      // a box changes side only once its spot is well past the middle (no flicker while the spot crosses it)
+      AN.forEach((a, i) => { if (a.ok) { const q = PARTS[i]; q.sd = q.sd == null ? +(a.x >= W / 2) : q.sd ? +(a.x > W / 2 - 80) : +(a.x > W / 2 + 80); side[q.sd].push(i); }
+        else { PARTS[i].sd = null; LB[i].style.display = 'none'; LP[i][0].setAttribute('d', ''); LP[i][1].setAttribute('d', ''); } });
+      side.forEach((ids, sd) => { ids.sort((p, q) => AN[p].y - AN[q].y); const bx = sd ? W - 64 - BW : 64, ys = ids.map(i => AN[i].y - GAP / 2);
+        for (let j = 0; j < ys.length; j++) ys[j] = Math.max(ys[j], j ? ys[j - 1] + GAP : top);
+        for (let j = ys.length - 1; j >= 0; j--) ys[j] = Math.min(ys[j], j < ys.length - 1 ? ys[j + 1] - GAP : bot - GAP);
+        ids.forEach((i, j) => { const b = LB[i], a = AN[i], y = Math.round(Math.max(top, ys[j])), ex = sd ? bx : bx + BW, ey = y + 16;
+          b.style.display = ''; b.style.width = BW + 'px'; b.style.transform = `translate(${bx}px, ${y}px)`;
+          LP[i][0].setAttribute('d', `M${ex},${ey} L${a.x.toFixed(1)},${a.y.toFixed(1)}`); LP[i][1].setAttribute('d', `M${(a.x - 2.5).toFixed(1)},${a.y.toFixed(1)} a2.5,2.5 0 1,0 5,0 a2.5,2.5 0 1,0 -5,0`); }); }); }
+    const hit = (x, y) => { if (op < .3) return null; let best = null, bd = 28; AN.forEach((a, i) => { const d = Math.hypot(a.x - x, a.y - y); if (a.ok && d < bd) { bd = d; best = PARTS[i]; } }); return best; };
+    return { update, hit, card };
+  })();
   function hideInfo() { info.hidden = true; infoOf = null; orbitOn = orbitWait = 0; }
   $('sys').onclick = () => flyToBody('Sun'); $('home').onclick = () => flyToBody('Earth');
   const bl = el.querySelector('.e3g-bl'), lp = el.querySelector('.e3g-lp'), pop = (b, p, on) => { p.hidden = !on; b.setAttribute('aria-expanded', on); };
   $('bodies').onclick = () => { pop($('bodies'), bl, bl.hidden); bl.querySelectorAll('[data-b]').forEach(o => o.setAttribute('aria-current', o.dataset.b === focus)); };
-  bl.onclick = e => { const b = e.target.closest('[data-b]'); if (!b) return; pop($('bodies'), bl, false); if (b.dataset.b !== focus) flyToBody(b.dataset.b); };
+  bl.onclick = e => { const b = e.target.closest('[data-b]'); if (!b) return; pop($('bodies'), bl, false); const n = b.dataset.b, B = solar.bodies[n];
+    if (B && B.kind === 'craft') { goCraft(n); return; } if (n !== focus) flyToBody(n); };
+  // a spacecraft: a view that shows where it is (round the Earth for L1 / GEO, the inner system for the ones around the Sun) + its card
+  function goCraft(n) { const B = solar.bodies[n], t = now(); solar.eclToWorld(t);
+    if (B.near) { const s = solar.toWorld(hE.map(v => -v)).normalize(), up = solar.toWorld([0, 0, 1]), side = new THREE.Vector3().crossVectors(s, up).normalize();
+      flyToBody('Earth', n === 'SDO' || n === 'GOES-19' ? 30 : 520, side.multiplyScalar(.8).addScaledVector(up, .6).addScaledVector(s, .35), true); }
+    else flyToBody('Sun', 2.4 * AUr / solar.bodies.Sun.R, null, true);
+    showInfo(n); }
   $('layers').onclick = () => pop($('layers'), lp, lp.hidden);
   el.addEventListener('pointerdown', e => { if (!e.target.closest('.e3g-bl,[data-k="bodies"]')) pop($('bodies'), bl, false); if (!e.target.closest('.e3g-lay')) pop($('layers'), lp, false); });
+  $('blt').onclick = e => { solar.belt = !solar.belt; press(e.currentTarget, solar.belt); };
   $('rs').onclick = e => { solar.realScale = !solar.realScale; press(e.currentTarget, solar.realScale); };
   $('gd').onclick = e => { solar.guides = !solar.guides; press(e.currentTarget, solar.guides); };
   $('sw').onclick = e => { solar.wind = !solar.wind; press(e.currentTarget, solar.wind); };
@@ -988,7 +1088,7 @@ ${SUNLIB}
     camera.updateProjectionMatrix(); camera.updateMatrixWorld(); msX = MSH.update(dt, t, D);
     const pix = 2 * Math.tan(camera.fov * D2R / 2) / H, nearOn = 1 / (D * pix) > 2.5;   // the detailed Earth until it is a few pixels across
     scene.visible = nearOn; el.classList.toggle('nf', focus !== 'Earth'); el.classList.toggle('sy', focus !== 'Earth' || !nearOn || dyPlay); el.classList.toggle('mso', MSH.on && focus === 'Earth');
-    { const ch = solar.fromWorld(camera.position); solar.update(t, [hE[0] + ch.x, hE[1] + ch.y, hE[2] + ch.z], W, H, nearOn, renderer.getPixelRatio()); feed(t); }
+    { const ch = solar.fromWorld(camera.position); solar.update(t, [hE[0] + ch.x, hE[1] + ch.y, hE[2] + ch.z], W, H, nearOn, renderer.getPixelRatio()); feed(t); BLT.update(t, dt); }
     { const k = solar.cam.far * .45 / 900; stars.scale.set(-k, k, k); }
     inv.copy(earth.matrixWorld).invert(); U.camO.value.copy(camera.position).applyMatrix4(inv);
     sunQ.visible = sunD.visible = realSun;
