@@ -144,16 +144,21 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
   const NL = Q === 'low' ? 2500 : 6000, lsa = new Float32Array(NL * 4);
   for (let i = 0; i < NL; i++) lsa.set([Math.random(), Math.random(), Math.random(), Math.random()], i * 4);
   const lGeo = new THREE.BufferGeometry(); lGeo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(NL * 3), 3)); lGeo.setAttribute('s', new THREE.Float32BufferAttribute(lsa, 4));
-  const lU = { L: { value: 100 }, off: { value: new THREE.Vector3() }, ctr: { value: new THREE.Vector3() }, k: { value: 0 }, v: { value: 400 }, px: wU.px, gate: wU.gate };
-  const localW = new THREE.Points(lGeo, new THREE.ShaderMaterial({ uniforms: lU, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-    vertexShader: `uniform float L, k, v, px, gate; uniform vec3 off, ctr; attribute vec4 s; varying vec4 vC; ${SC}
-      void main() { vec3 q = fract(s.xyz + off) - .5; float e = 1. - smoothstep(.28, .5, length(q));
-        vC = vec4(sc(v), .6 * k * gate * e * (.6 + .4 * s.w)); gl_PointSize = (1.9 + .9 * s.w) * px;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(ctr + q * L, 1.); if (vC.a < .004) gl_Position = vec4(2., 2., 2., 1.); }`,
-    fragmentShader: PFS }));
-  localW.frustumCulled = false; localW.visible = false; scene.add(localW);
+  // two clouds, sizes a factor 2 apart (by the parity of log2 of the distance), cross-faded: a cloud only changes size while it is invisible,
+  // so zooming never reshuffles the particles you see
+  const LW = [0, 1].map(j => { const u = { L: { value: 100 }, off: { value: new THREE.Vector3() }, ctr: { value: new THREE.Vector3() }, k: { value: 0 }, v: { value: 400 }, px: wU.px, gate: wU.gate };
+    const p = new THREE.Points(lGeo, new THREE.ShaderMaterial({ uniforms: u, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      vertexShader: `uniform float L, k, v, px, gate; uniform vec3 off, ctr; attribute vec4 s; varying vec4 vC; ${SC}
+        void main() { vec3 q = fract(s.xyz + off + ${(j * .5).toFixed(1)}) - .5; float e = 1. - smoothstep(.28, .5, length(q));
+          vC = vec4(sc(v), .6 * k * gate * e * (.6 + .4 * s.w)); gl_PointSize = (1.9 + .9 * s.w) * px;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(ctr + q * L, 1.); if (vC.a < .004) gl_Position = vec4(2., 2., 2., 1.); }`,
+      fragmentShader: PFS }));
+    p.frustumCulled = false; p.visible = false; scene.add(p); return { p, u }; });
   const sm = (a, b, x) => { const k = Math.max(0, Math.min(1, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
   const lFlow = [0, 0, 0]; let lAt = 0;
+  // the wind series at time t (linear between samples), null outside it
+  const windAt = t => { let a = null, b = null; for (const p of wSeries) { if (!(p.v > 100)) continue; if (p.t <= t && (!a || p.t > a.t)) a = p; if (p.t >= t && (!b || p.t < b.t)) b = p; }
+    if (!a || !b) return null; const f = b.t > a.t ? (t - a.t) / (b.t - a.t) : 0; return { v: a.v + (b.v - a.v) * f, n: (a.n || 5) + ((b.n || 5) - (a.n || 5)) * f }; };
   const vNow = t => { let best = null, bd = Infinity; for (const p of wSeries) { if (!(p.v > 100)) continue; const d = Math.abs(p.t - t); if (d < bd) { bd = d; best = p.v; } } return best || 400; };
   let wSeries = [], cmes = [], donki = null;
   function setWind(series) { wSeries = series || [];
@@ -334,14 +339,18 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
     { // the wind round the camera: its size follows the nearest body's distance; it hands over to the Earth's shield wind below ~120 R⊕,
       // stays off close to the other bodies, and leaves the far view to the big wind beyond ~0.1 AU
       let dN = Infinity, kB = 1; for (const b of Object.values(bodies)) { dN = Math.min(dN, b.d); if (b.name !== 'Earth' && b.name !== 'Sun') kB = Math.min(kB, sm(1.5 * b.R, 4 * b.R, b.d)); }
-      const K = windOn ? sm(80, 160, bodies.Earth.d) * kB * (1 - sm(.05 * AU, .15 * AU, dN)) : 0; localW.visible = K > .003;
+      const K = windOn ? sm(80, 160, bodies.Earth.d) * kB * (1 - sm(.05 * AU, .15 * AU, dN)) : 0;
       const now = performance.now(), dt = lAt ? Math.min(.1, (now - lAt) / 1000) : 0; lAt = now;
-      // the cloud sits ahead of the camera, round what you look at (the camera's near plane would cut a cloud centred on it)
-      if (localW.visible) { const L = Math.max(100, Math.min(.15 * AU, dN)), v = vNow(t), r = Math.hypot(...camHelio) || 1, sp = L / 7 * v / 400 * dt;
+      // the clouds sit ahead of the camera, round what you look at (the camera's near plane would cut a cloud centred on it)
+      if (K > .003) { const v = vNow(t), r = Math.hypot(...camHelio) || 1, sp = Math.max(100, dN) / 7 * v / 400 * dt;
         const fw = camera.getWorldDirection(tmp).applyMatrix3(Mi).normalize().multiplyScalar(dN), cH = [camHelio[0] + fw.x, camHelio[1] + fw.y, camHelio[2] + fw.z];
         for (let i = 0; i < 3; i++) lFlow[i] += camHelio[i] / r * sp;
-        const f = i => { const x = (lFlow[i] - cH[i]) / L; return x - Math.floor(x); };
-        lU.L.value = L; lU.k.value = K; lU.v.value = v; lU.ctr.value.copy(fw); lU.off.value.set(f(0), f(1), f(2)); localW.quaternion.copy(orbits.quaternion); } }
+        const e = Math.log2(Math.max(100, Math.min(.15 * AU, dN))), n = Math.floor(e), fr = e - n;
+        for (const j of [0, 1]) { const m = ((n % 2) + 2) % 2 === j ? n : n + 1, w = m === n ? 1 - fr : fr, L = Math.pow(2, m), { p, u } = LW[j];
+          p.visible = w * K > .003; if (!p.visible) continue;
+          const f = i => { const x = (lFlow[i] - cH[i]) / L; return x - Math.floor(x); };
+          u.L.value = L; u.k.value = K * w; u.v.value = v; u.ctr.value.copy(fw); u.off.value.set(f(0), f(1), f(2)); p.quaternion.copy(orbits.quaternion); } }
+      else LW.forEach(l => l.p.visible = false); }
     if (windOn) windUpdate(t, pxr || 1); else { active = []; cmeP.forEach(p => p.visible = false); }
     fieldUpdate(t, pix, nearOn); helioG.updateMatrixWorld(true);
     cam.near = Math.max(hdR ? 1e-8 : 1e-3, nearest * .5); cam.far = Math.max(cam.near * 10, 4e6, bodies.Sun.d * 3); cam.updateProjectionMatrix(); cam.updateMatrixWorld();
@@ -363,5 +372,5 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
       if (r < Math.max(14, b.px + 6) && b.d < bd) { best = b; bd = b.d; } } return best; }
   const hdHas = n => bhd.has(n), hdOn = n => bhd.on === n, hdGround = (n, dirW) => bhd.ground(n, bodies[n], dirW);
   orbits.visible = guides; lab.style.display = guides ? '' : 'none';   // start as the Layers panel says (off)
-  return { scene, cam, update, bodies, pick, hdHas, hdOn, hdGround, helio, eclToWorld, toWorld: p => toW(p, new THREE.Vector3()), fromWorld: v => v.clone().applyMatrix3(Mi), get realScale() { return realScale; }, set realScale(v) { realScale = v; }, setWind, setCmes, cmeAtEarth, cmeMarks, get wind() { return windOn; }, set wind(v) { windOn = v; }, get field() { return fieldOn; }, set field(v) { fieldOn = v; }, get bare() { return fieldMode === 2; }, set bare(v) { fieldMode = v ? 2 : 1; }, get guides() { return guides; }, set guides(v) { guides = v; orbits.visible = v; lab.style.display = v ? '' : 'none'; } };
+  return { scene, cam, update, bodies, pick, hdHas, hdOn, hdGround, helio, eclToWorld, toWorld: p => toW(p, new THREE.Vector3()), fromWorld: v => v.clone().applyMatrix3(Mi), get realScale() { return realScale; }, set realScale(v) { realScale = v; }, setWind, setCmes, cmeAtEarth, cmeMarks, windAt, get wind() { return windOn; }, set wind(v) { windOn = v; }, get field() { return fieldOn; }, set field(v) { fieldOn = v; }, get bare() { return fieldMode === 2; }, set bare(v) { fieldMode = v ? 2 : 1; }, get guides() { return guides; }, set guides(v) { guides = v; orbits.visible = v; lab.style.display = v ? '' : 'none'; } };
 }

@@ -10,7 +10,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
-import { createSolar } from './solar.js?v=c86a49e5';
+import { createSolar } from './solar.js?v=422c64f1';
 
 const tr = (s, o) => window.T ? window.T(s, o) : String(s).replace(/\{(\w+)\}/g, (m, k) => o && o[k] != null ? o[k] : m);
 const D2R = Math.PI / 180, BASE = new URL('./', import.meta.url).href, T = BASE + 'img/earth/';
@@ -25,8 +25,10 @@ const CSS = `.e3g{position:absolute;inset:0;display:none;background:#000;overflo
 .e3g.nf .eo,.e3g.sy .eo{display:none}.e3g:not(.sy):not(.mso) .so{display:none}
 .e3g-fh{position:absolute;z-index:3;left:50%;top:58px;transform:translateX(-50%);max-width:calc(100% - 140px);text-align:center;padding:6px 14px;border:1px solid rgba(255,255,255,.18);border-radius:999px;background:rgba(10,14,20,.78);color:#E6EBF1;font:600 12px Inter,system-ui,sans-serif;pointer-events:none}
 .e3g-fh b{color:#39FF9E;font-weight:700}.e3g-fh small{display:block;color:#9AA4B2;font-weight:500;font-size:11px;margin-top:2px}
-.e3g-dw{position:relative;display:flex;align-items:center}.e3g-dw input{width:220px}.e3g-mk{position:absolute;left:7px;right:7px;top:-5px;height:5px;pointer-events:none}
+.e3g-dw{position:relative;display:flex;align-items:center}.e3g-dw input{width:220px}.e3g-mk{position:absolute;z-index:2;left:7px;right:7px;top:-5px;height:5px;pointer-events:none}
 .e3g-mk b{position:absolute;top:0;width:3px;height:5px;margin-left:-1.5px;border-radius:1px;background:#FFB020}.e3g-mk b.e{background:#FF4D4D}.e3g-mk b.n{background:#E6EBF1;width:1px;margin-left:-.5px;height:9px;top:-2px}
+.e3g-mk b{pointer-events:auto;cursor:pointer}.e3g-mk b::before{content:'';position:absolute;left:-5px;right:-5px;top:-7px;bottom:-5px}
+.e3g-mk b:hover::after,.e3g-mk b:focus-visible::after{content:attr(data-tip);position:absolute;bottom:12px;left:50%;transform:translateX(-50%);white-space:nowrap;padding:4px 8px;border:1px solid rgba(255,255,255,.2);border-radius:6px;background:rgba(10,14,20,.92);color:#E6EBF1;font:600 11px Inter,system-ui,sans-serif;z-index:5}
 @media (max-width:640px){.e3g-dw input{width:120px}}
 .e3g button,.e3g-date{border:1px solid rgba(255,255,255,.18);background:rgba(10,14,20,.78);color:#E6EBF1;border-radius:999px;padding:7px 12px;min-height:36px;font:600 12px Inter,system-ui,sans-serif;cursor:pointer}
 .e3g-date{padding:6px 10px;color-scheme:dark}.e3g button[aria-pressed=true]{border-color:#39FF9E;color:#39FF9E}
@@ -49,7 +51,12 @@ const CSS = `.e3g{position:absolute;inset:0;display:none;background:#000;overflo
 .e3g-find ul{list-style:none;margin:6px 0 0;padding:4px;border:1px solid rgba(255,255,255,.18);border-radius:12px;background:rgba(10,14,20,.94);max-height:300px;overflow:auto}.e3g-find ul:empty{display:none}.e3g-find li{padding:8px 10px;border-radius:8px;cursor:pointer;color:#E6EBF1}.e3g-find li small{display:block;font-weight:500;color:#8B9BAE}.e3g-find li:hover,.e3g-find li[aria-selected=true]{background:rgba(57,255,158,.14)}
 @media (max-width:640px){.e3g-find{right:auto;left:12px;top:104px;width:calc(100% - 80px)}}
 .e3g-pl{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden}.e3g-pl span{position:absolute;left:0;top:0;font:700 12px Inter,system-ui,sans-serif;text-shadow:0 1px 3px #000,0 0 2px #000;white-space:nowrap;opacity:0;transition:opacity .25s}
-.e3g-ms{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden}.e3g-ms span{position:absolute;left:0;top:0;padding:2px 7px;border-radius:4px;background:rgba(0,0,0,.55);font:700 11px Inter,system-ui,sans-serif;color:#8FD3FF;white-space:nowrap;opacity:0;transition:opacity .25s}.e3g-ms span:nth-child(1){color:#F3E6D2}.e3g-ms span:nth-child(4){color:#C9B8FF}.e3g-ms span:nth-child(5){color:#96C8FF}.e3g-ms span:nth-child(6){color:#DCE3EB}.e3g-ms span:nth-child(7){color:#8E9AAB;font-weight:500}
+.e3g-ms{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden;transition:opacity .25s}.e3g-ln{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.e3g-ln path{stroke:rgba(230,235,241,.5);stroke-width:1;fill:none}.e3g-ln path.d{fill:rgba(230,235,241,.85);stroke:none}
+.e3g-lb{position:absolute;left:0;top:0;pointer-events:auto;text-align:left;padding:5px 9px;border:1px solid rgba(255,255,255,.16);border-radius:8px;background:rgba(10,14,20,.74);color:#E6EBF1;cursor:pointer;font:600 12px Inter,system-ui,sans-serif;line-height:1.25}
+.e3g-lb b{display:block;font-weight:700;color:#8FD3FF}.e3g-lb small{display:block;margin-top:2px;color:#9AA4B2;font-size:11px;font-weight:500}.e3g-lb:hover,.e3g-lb:focus-visible{border-color:rgba(255,255,255,.5)}
+.e3g-lb[data-k=bow] b{color:#F3E6D2}.e3g-lb[data-k=tail] b{color:#DCE3EB}.e3g-lb[data-k=vab] b{color:#C9B8FF}.e3g-lb[data-k=sw] b{color:#96C8FF}.e3g-ip{margin:8px 0 0;font:500 13px/1.5 Inter,system-ui,sans-serif;color:#C9D1DB}
+@media (max-width:640px){.e3g-lb small{display:none}}
 .e3g-attr{position:absolute;z-index:2;right:10px;bottom:6px;font:500 10px Inter,system-ui,sans-serif;color:rgba(220,227,235,.7);text-shadow:0 1px 2px #000;pointer-events:none;max-width:55%;text-align:right}`;
 
 // sub-solar point (low precision is plenty for day / night) → direction in the Earth's own frame (x = lon 0, y = north, z = lon −90°)
@@ -103,7 +110,7 @@ function create(host, opts) {
   renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
   const pins = new Map(); let pinch = 0, twist = 0, midY = 0, mode = '';
   renderer.domElement.addEventListener('mousedown', e => { if (e.button === 1) e.preventDefault(); });   // middle button = tilt + turn, not the browser's autoscroll
-  let downAt = null; renderer.domElement.addEventListener('pointerup', e => { if (downAt && performance.now() - downAt[2] < 350 && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) < 6) { const r = renderer.domElement.getBoundingClientRect(), b = solar.pick(e.clientX - r.left, e.clientY - r.top, W, H); if (b && b.name !== focus) flyToBody(b.name); } downAt = null; });
+  let downAt = null; renderer.domElement.addEventListener('pointerup', e => { if (downAt && performance.now() - downAt[2] < 350 && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) < 6) { const r = renderer.domElement.getBoundingClientRect(), hp = MSH.hit(e.clientX - r.left, e.clientY - r.top), b = hp ? null : solar.pick(e.clientX - r.left, e.clientY - r.top, W, H); if (hp) MSH.info(hp); else if (b && b.name !== focus) flyToBody(b.name); } downAt = null; });
   renderer.domElement.addEventListener('pointerdown', e => { downAt = [e.clientX, e.clientY, performance.now()]; renderer.domElement.setPointerCapture(e.pointerId); pins.set(e.pointerId, [e.clientX, e.clientY]); vel = [0, 0]; spinOff(); goal = null;
     mode = pins.size === 2 ? 'two' : (e.shiftKey || e.ctrlKey || e.button === 2 || e.button === 1) ? 'turn' : 'pan'; pinch = 0; });
   renderer.domElement.addEventListener('pointermove', e => { const o = pins.get(e.pointerId); if (!o) return; const dx = e.clientX - o[0], dy = e.clientY - o[1]; pins.set(e.pointerId, [e.clientX, e.clientY]);
@@ -614,12 +621,42 @@ ${SUNLIB}
       return nrmOf(Math.asin(ze), Math.atan2(ye, x) - gmst(t)).multiplyScalar(r); };   // right ascension − sidereal time = the longitude under the Moon
     // labels in the page, so they stay crisp
     const lab = document.createElement('div'); lab.className = 'e3g-ms'; el.appendChild(lab);
-    const LB = [0, 1, 2, 3, 4, 5, 6].map(() => lab.appendChild(document.createElement('span')));
+    // callouts: each part has a box at the left or right edge with a thin line to it; a tap on the box or on the part opens a card
+    const PARTS = [
+      { k: 'bow', t: () => tr('Bow shock'), s: 'where the solar wind brakes from supersonic',
+        i: 'Where the supersonic solar wind (300–800 km/s) slows down abruptly before it meets the Earth’s magnetic field, like the wave in front of a boat. It stands about 3 Earth radii ahead of the magnetopause.' },
+      { k: 'mp', t: () => tr('Magnetopause · {r} Earth radii', { r: S.R0.toFixed(1) }), s: 'the edge of our magnetic shield',
+        i: 'The boundary where the push of the solar wind equals the push of the Earth’s magnetic field. Usually about 10 Earth radii towards the Sun; a strong CME can squeeze it to 6–7, rarely inside the geostationary satellites (6.6). Here it is computed from NOAA’s live solar wind (Shue 1998 model).' },
+      { k: 'tail', t: () => tr('Magnetic tail'), s: 'the field stretched downwind, past the Moon',
+        i: 'The solar wind drags the night side of the field into a tail hundreds of Earth radii long, far past the Moon. Energy stored in the tail is let go in substorms, which make the aurora flare up.' },
+      { k: 'vab', t: () => tr('Van Allen belts'), s: 'particles trapped by the field',
+        i: 'Two rings of charged particles held by the field: the inner belt (about 1.2–3 Earth radii from the centre, mostly protons) and the outer belt (about 3–7, mostly electrons). Storms can fill the outer belt with fast electrons that harm satellites.' },
+      { k: 'sw', t: () => wTitle, s: 'from the Sun · to scale, particles sped up ~100×',
+        i: 'The solar wind: charged particles blowing out of the Sun at 300–800 km/s. Its speed here comes from NOAA’s real-time measurements at L1, 1.5 million km towards the Sun. A CME is a much faster, denser cloud: when one arrives the shield is squeezed and the aurora grows.' } ];
+    let wTitle = '';
+    const ln = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); ln.setAttribute('class', 'e3g-ln'); lab.appendChild(ln);
+    const LP = PARTS.map(() => { const a = document.createElementNS('http://www.w3.org/2000/svg', 'path'), d = document.createElementNS('http://www.w3.org/2000/svg', 'path'); d.setAttribute('class', 'd'); ln.append(a, d); return [a, d]; });
+    const LB = PARTS.map(q => { const b = document.createElement('button'); b.type = 'button'; b.className = 'e3g-lb'; b.dataset.k = q.k; b.innerHTML = '<b></b><small></small>';
+      b.querySelector('small').textContent = tr(q.s); b.onclick = () => partInfo(q); lab.appendChild(b); return b; });
+    const AN = PARTS.map(() => ({ x: 0, y: 0, ok: false }));
+    const partInfo = q => { infoOf = null; info.innerHTML = `<div class="e3g-ih"><b>${q.t()}</b><button aria-label="${tr('Close')}">✕</button></div><p class="e3g-ip">${tr(q.i)}</p>`;
+      info.hidden = false; info.querySelector('.e3g-ih button').onclick = hideInfo; };
     const wp = new THREE.Vector3(), pv = new THREE.Vector3();
     const hidden = p => { const d = pv.copy(p).sub(camera.position), len = d.length(); d.divideScalar(len); const b = camera.position.dot(d), h = b * b - camera.position.lengthSq() + 1; if (h <= 0) return false; const t0 = -b - Math.sqrt(h); return t0 > 0 && t0 < len; };
-    const put = (s, obj, x, y, z, txt) => { wp.set(x, y, z).applyMatrix4(obj.matrixWorld); pv.copy(wp).project(camera);
-      if (pv.z > 1 || Math.abs(pv.x) > 1.05 || Math.abs(pv.y) > 1.05 || hidden(wp)) { s.style.opacity = 0; return; }
-      s.style.opacity = S.fade * lblK; s.style.transform = `translate(${Math.round((pv.x * .5 + .5) * W + 8)}px, ${Math.round((.5 - pv.y * .5) * H - 9)}px)`; if (s.textContent !== txt) s.textContent = txt; };
+    const anchor = (i, obj, x, y, z) => { wp.set(x, y, z).applyMatrix4(obj.matrixWorld); pv.copy(wp).project(camera); const a = AN[i];
+      a.x = (pv.x * .5 + .5) * W; a.y = (.5 - pv.y * .5) * H; a.ok = !(pv.z > 1 || Math.abs(pv.x) > .97 || Math.abs(pv.y) > .97) && !hidden(wp); };   // read the screen spot first: hidden() reuses pv
+    // the boxes: left or right of the screen by where their part is, in the order of the parts' heights, kept apart and clear of the rails / bars
+    function layout() { const op = S.fade * lblK; lab.style.opacity = op; lab.style.visibility = op < .02 ? 'hidden' : ''; if (op < .02) return;
+      const BW = Math.min(220, Math.max(130, W * .2)), GAP = W < 640 ? 34 : 54, top = 100, bot = H - 110, side = [[], []];
+      AN.forEach((a, i) => { if (a.ok) side[a.x < W / 2 ? 0 : 1].push(i); else { LB[i].style.display = 'none'; LP[i][0].setAttribute('d', ''); LP[i][1].setAttribute('d', ''); } });
+      side.forEach((ids, sd) => { ids.sort((p, q) => AN[p].y - AN[q].y); const bx = sd ? W - 64 - BW : 64, ys = ids.map(i => AN[i].y - GAP / 2);
+        for (let j = 0; j < ys.length; j++) ys[j] = Math.max(ys[j], j ? ys[j - 1] + GAP : top);
+        for (let j = ys.length - 1; j >= 0; j--) ys[j] = Math.min(ys[j], j < ys.length - 1 ? ys[j + 1] - GAP : bot - GAP);
+        ids.forEach((i, j) => { const b = LB[i], a = AN[i], t = PARTS[i].t(), y = Math.round(Math.max(top, ys[j])), ex = sd ? bx : bx + BW, ey = y + 16;
+          b.style.display = ''; b.style.width = BW + 'px'; b.style.transform = `translate(${bx}px, ${y}px)`; if (b.firstChild.textContent !== t) b.firstChild.textContent = t;
+          LP[i][0].setAttribute('d', `M${ex},${ey} L${a.x.toFixed(1)},${a.y.toFixed(1)}`); LP[i][1].setAttribute('d', `M${(a.x - 2.5).toFixed(1)},${a.y.toFixed(1)} a2.5,2.5 0 1,0 5,0 a2.5,2.5 0 1,0 -5,0`); }); }); }
+    // a tap near a part's point opens its card
+    const hit = (x, y) => { if (!g.visible || S.fade * lblK < .3) return null; let best = null, bd = 28; AN.forEach((a, i) => { const d = Math.hypot(a.x - x, a.y - y); if (a.ok && d < bd) { bd = d; best = PARTS[i]; } }); return best; };
     // the CME that matters at time t: the latest one arrived within 30 h, else the next one due within 72 h (hrs = hours since its arrival)
     const realCme = t => { let best = null; for (const m of (solar.cmeMarks ? solar.cmeMarks() : [])) { if (m.tE == null) continue; const hrs = (t - m.tE) / 36e5; if (hrs < -72 || hrs > 30) continue;
         if (!best || (hrs >= 0 ? best.hrs < 0 || hrs < best.hrs : best.hrs < 0 && hrs > best.hrs)) best = { v: m.v, hrs }; } return best; };
@@ -632,28 +669,28 @@ ${SUNLIB}
       sw.matrix.makeBasis(ex, ey, ez); dip.quaternion.setFromUnitVectors(Yax, Mg);
       // a real CME aimed at the Earth (solar.js arrival times) follows the clock: the front sweeps in over the last 1.5 h (distance not to
       // scale in time), then the shield is squeezed by its speed, holds ~12 h and relaxes by ~30 h; dragging the clock back undoes it
-      let c = 0, R = S.Rw, al = S.alw; const rc = realCme(t);
+      // the wind at the clock's time: live (NOAA now, with Bz) near now, else the wind series (measured past + ENLIL forecast, no Bz)
+      const wt = tOver != null && Math.abs(t - Date.now()) > 36e5 && solar.windAt ? solar.windAt(t) : null, vT = wt ? wt.v : S.v, hw = wt ? shue(wt.n || 5, wt.v, 0) : { R: S.Rw, al: S.alw };
+      let c = 0, R = hw.R, al = hw.al; const rc = realCme(t);
       if (S.cme < 0 && rc) { const h = rc.hrs, u = h < 0 ? (h + 1.5) * 2 : 3 + h / .3 * 1.2; front.visible = h > -1.5 && u < 4.2;
         if (front.visible) { front.position.set(45 - u * 15 + 14, 0, 0); front.scale.setScalar(14 + u * 3); front.material.uniforms.gate.value = Math.min(1, u * 2) * (1 - smooth(3, 4.2, u)); }
-        c = smooth(-.1, .6, h) * (1 - smooth(12, 30, h)); const hs = shue(10 + rc.v / 40, rc.v, -Math.min(30, 5 + rc.v / 50)); R = S.Rw + (hs.R - S.Rw) * c; al = S.alw + (hs.al - S.alw) * c; c *= Math.min(1, rc.v / 1100); }
+        c = smooth(-.1, .6, h) * (1 - smooth(12, 30, h)); const hs = shue(10 + rc.v / 40, rc.v, -Math.min(30, 5 + rc.v / 50)); R = hw.R + (hs.R - hw.R) * c; al = hw.al + (hs.al - hw.al) * c; c *= Math.min(1, rc.v / 1100); }
       else if (S.cme < 0) front.visible = false;
       // the 💥 demo (no real CME near): 0–3 s the front sweeps in, then the shield is squeezed, holds, and relaxes
       if (S.cme >= 0) { S.cme += dt; const u = S.cme; front.visible = u < 4.2;
         if (front.visible) { const x = 45 - u * 15; front.position.set(x + 14, 0, 0); front.scale.setScalar(14 + u * 3); front.material.uniforms.gate.value = Math.min(1, u * 2) * (1 - smooth(3, 4.2, u)); }
         c = smooth(2.6, 3.4, u) * (1 - smooth(16, 24, u)); if (u > 24) S.cme = -1;
-        const h = shue(25, 1100, -25); R = S.Rw + (h.R - S.Rw) * c; al = S.alw + (h.al - S.alw) * c; }
+        const h = shue(25, 1100, -25); R = hw.R + (h.R - hw.R) * c; al = hw.al + (h.al - hw.al) * c; }
       S.R0 += (R - S.R0) * Math.min(1, dt * (S.cme >= 0 ? 4 : 1.5)); U2.R0.value = S.R0; U2.cme.value = c; U2.al.value = al;
       if (Math.abs(al - alBuilt) > .02) { mp.geometry.dispose(); mp.geometry = lathe(al, 1); alBuilt = al; }
       mp.scale.setScalar(S.R0); bs.scale.setScalar(S.R0);
-      U2.px.value = 1.1 * Math.tan(camera.fov * D2R / 2) * 2 / H; U3.dpr.value = renderer.getPixelRatio(); U3.spd.value = (c > .2 ? (S.cme < 0 && rc ? rc.v : 1500) : S.v) / 60;
+      U2.px.value = 1.1 * Math.tan(camera.fov * D2R / 2) * 2 / H; U3.dpr.value = renderer.getPixelRatio(); U3.spd.value = (c > .2 ? (S.cme < 0 && rc ? rc.v : 1500) : vT) / 60;
       AU.auB.value = 1 + 3.5 * c; belts[2].material.uniforms.k.value = .25 + .5 * c;
       g.updateMatrixWorld(true);
-      put(LB[0], sw, S.R0 * 1.34, -1.6, 0, tr('Bow shock')); put(LB[1], sw, S.R0 * .2, S.R0 * 1.28, 0, tr('Magnetopause · {r} Earth radii', { r: S.R0.toFixed(1) }));
-      put(LB[2], sw, -40, 8.5 * S.R0 / 10.5, 0, tr('Magnetic tail')); put(LB[3], dip, 0, 0, 4.4, tr('Van Allen belts'));
-      put(LB[4], sw, 26, -8, 0, (S.cme >= 0 && c > .2 ? 'CME 1500 km/s' : rc && S.cme < 0 ? 'CME ' + Math.round(rc.v) + ' km/s' + (rc.hrs < 0 ? ' · ' + tr('arrives in {h} h', { h: Math.ceil(-rc.hrs) }) : '') : tr('solar wind') + ' ' + Math.round(S.v) + ' km/s') + ' ← ' + tr('from the Sun'));
-      put(LB[6], sw, -10, -13, 0, tr('to scale · particle flow sped up ~100×'));
+      wTitle = (S.cme >= 0 && c > .2 ? 'CME 1500 km/s' : rc && S.cme < 0 ? 'CME ' + Math.round(rc.v) + ' km/s' + (rc.hrs < 0 ? ' · ' + tr('arrives in {h} h', { h: Math.ceil(-rc.hrs) }) : '') : tr('solar wind') + ' ' + Math.round(vT) + ' km/s');
+      anchor(0, sw, S.R0 * 1.34, 0, 0); anchor(1, sw, S.R0 * .25, S.R0 * 1.25, 0); anchor(2, sw, -40, 8.5 * S.R0 / 10.5 * .6, 0); anchor(3, dip, 0, 0, 4.2); anchor(4, sw, 26, -8, 0); layout();
       return 75; }   // how far past the Earth the camera must see (the Moon, the tail)
-    return { update, S, get on() { return on; }, set on(v) { on = v; }, impact() { S.cme = 0; } };
+    return { update, S, hit, info: q => partInfo(q), get on() { return on; }, set on(v) { on = v; }, impact() { S.cme = 0; } };
   })();
 
   // ── controls: the buttons of the Earth view
@@ -822,9 +859,15 @@ ${SUNLIB}
   const dyShow = t => { const r = real(), off = (t - r) / 6e4; if (!dyDrag) dy.value = Math.round(off / 30) * 30;
     const h = Math.round(Math.abs(off) / 60), d = Math.floor(h / 24);
     dyL.textContent = Math.abs(off) < 30 ? tr('Now') : (off < 0 ? '−' : '+') + (d ? d + ' ' + tr('d') + ' ' : '') + (h % 24) + ' h';
-    const ms = solar.cmeMarks ? solar.cmeMarks() : []; if (ms === mkSeen && performance.now() - mkAt < 6e4) return; mkSeen = ms; mkAt = performance.now();
+    // rebuilt only when the marks change (or once a minute, as now moves): rebuilding every frame would swallow hovers and clicks
+    const ms = solar.cmeMarks ? solar.cmeMarks() : [], key = ms.map(c => c.t0 + '/' + c.tE).join(';'); if (key === mkSeen && performance.now() - mkAt < 6e4) return; mkSeen = key; mkAt = performance.now();
     const pc = x => ((x - r) / 864e6 + 1) * 50, inR = x => x != null && Math.abs(x - r) <= 864e6;
-    mk.innerHTML = '<b class="n" style="left:50%"></b>' + ms.flatMap(c => [inR(c.t0) ? `<b style="left:${pc(c.t0).toFixed(2)}%"></b>` : '', inR(c.tE) ? `<b class="e" style="left:${pc(c.tE).toFixed(2)}%"></b>` : '']).join(''); };
+    // each mark: a tip on hover (what + when), a click moves the clock there
+    const dt = x => new Date(x).toLocaleString(window.LOC || 'en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }), bm = (cls, x, tip) => `<b${cls ? ` class="${cls}"` : ''} role="button" tabindex="0" data-t="${Math.round(x)}" data-tip="${tip}" aria-label="${tip}" style="left:${pc(x).toFixed(2)}%"></b>`;
+    mk.innerHTML = bm('n', r, tr('Now') + ' · ' + dt(r)) + ms.flatMap(c => [inR(c.t0) ? bm('', c.t0, `${tr('CME leaves the Sun')} · ${dt(c.t0)} · ${Math.round(c.v)} km/s`) : '',
+      inR(c.tE) ? bm('e', c.tE, `${tr('Estimated arrival at Earth')} · ${dt(c.tE)}`) : '']).join(''); };
+  const mkGo = e => { const b = e.target.closest('b[data-t]'); if (!b) return; e.preventDefault(); playSet(false); if (b.classList.contains('n')) $('now').click(); else setT(+b.dataset.t); mkSeen = null; };
+  mk.onclick = mkGo; mk.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') mkGo(e); };
   const todShow = t => { const m = solarMin(t); if (!todDrag) tod.value = Math.round(m / 5) * 5; todL.textContent = hm(m) + ' ' + tr('Sun time'); };
   const lm = new THREE.Matrix4(), O3 = new THREE.Vector3();
   function resize() { W = Math.max(200, host.clientWidth); H = Math.max(200, host.clientHeight); PRMAX = prCap(); PR = Math.min(PR, PRMAX);
