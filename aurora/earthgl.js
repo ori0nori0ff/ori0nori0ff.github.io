@@ -82,7 +82,7 @@ function create(host, opts) {
   const SPD = [[0, 'Auto'], [1e3, 'Real time'], [1e4, '10 s/s'], [6e4, '1 min/s'], [6e5, '10 min/s'], [36e5, '1 hour/s'], [864e5, '1 day/s'], [6048e5, '1 week/s'], [2629746e3, '1 month/s'], [31557600e3, '1 year/s'], [315576e6, '10 years/s']];
   el.innerHTML = `<div class="e3g-find eo"><input type="search" data-k="find" placeholder="🔍 ${tr('Search a place or lat, lon')}" aria-label="${tr('Search a place or lat, lon')}" autocomplete="off"><ul role="listbox"></ul></div><div class="e3g-load">${tr('Loading the Earth…')} 0%</div><div class="e3g-alt">–</div>
     <div class="e3g-go"><button data-k="home" aria-label="${tr('Earth')}" title="${tr('Earth')}">🌍</button><button data-k="sys" aria-label="${tr('Solar system')}" title="${tr('Solar system')}">☀</button><button data-k="bodies" aria-expanded="false" aria-label="${tr('Go to')}" title="${tr('Go to')}">🪐</button><button data-k="ev" aria-expanded="false" aria-label="${tr('Eclipses')}" title="${tr('Eclipses')}">🌘</button></div>
-    <div class="e3g-ev" hidden><div class="e3g-evh"><b>${tr('Eclipses')} 1900–2050</b><div class="e3g-evf">${[['all', 'All'], ['S', 'Solar'], ['L', 'Lunar'], ['here', 'Seen from here']].map(([k, l], i) => `<button data-f="${k}" aria-pressed="${!i}">${tr(l)}</button>`).join('')}</div></div><ol></ol></div>
+    <div class="e3g-ev" hidden><div class="e3g-evh"><b class="e3g-evt">${tr('Eclipses')} 1900–2050</b><div class="e3g-evf">${[['all', 'All'], ['S', 'Solar'], ['L', 'Lunar'], ['here', 'Seen from here'], ['fam', '★ Famous']].map(([k, l], i) => `<button data-f="${k}" aria-pressed="${!i}">${tr(l)}</button>`).join('')}</div></div><ol></ol></div>
     <ul class="e3g-bl" hidden>${[[['Planets', ['Sun', 'Mercury', 'Venus', 'Earth', 'Moon', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune']]],
       [['Dwarf planets', ['Ceres', 'Pluto', 'Charon', 'Eris', 'Haumea', 'Makemake']], ['Comets', ['Halley', 'Encke', '67P']]],
       [['Asteroids', ['Vesta', 'Pallas', 'Hygiea', 'Psyche', 'Bennu', 'Ryugu', 'Apophis']]],
@@ -940,7 +940,34 @@ ${SUNLIB}${MOONV}
         if (sd < (e[1] === 'n' ? rp : ru) + 1737.4) best = 1; } }
     return best; }
   const dfmt = t => new Date(t).toLocaleString(window.LOC || 'en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  // famous moments: the clock jumps there, the camera flies to the right place, a card says what happened
+  const UT = (y, mo, d, h, mi) => Date.UTC(y, mo - 1, d, h, mi || 0);
+  const MOM = [
+    ['🌑', UT(1999, 8, 11, 11, 3), 'Total solar eclipse over Romania', 'The last total eclipse seen from Romania: the shadow crossed the country, longest near Râmnicu Vâlcea (2 min 23 s).', { ecl: 1 }],
+    ['🌑', UT(2024, 4, 8, 18, 17), 'The Great North American Eclipse', 'Totality from Mexico to Canada, up to 4 min 28 s, watched by tens of millions.', { ecl: 1 }],
+    ['🌑', UT(2026, 8, 12, 17, 46), 'Total eclipse over Spain', 'Greenland, Iceland and Spain, near sunset in Spain. The first total eclipse in mainland Europe since 1999.', { ecl: 1 }],
+    ['🌑', UT(2027, 8, 2, 10, 7), 'The eclipse of the century', 'Totality up to 6 min 23 s over Egypt (Luxor), Spain and North Africa: the longest on land between 1991 and 2114.', { ecl: 1 }],
+    ['⚡', UT(2024, 5, 10, 20, 30), 'The G5 storm of May 2024', 'The strongest geomagnetic storm since 2003: a string of CMEs from region 13664 hit Earth; aurora was seen as far south as Romania, Spain and Mexico. The magnetic shield is shown squeezed by the wind.', { body: 'Earth', km: 120000, ms: 1 }],
+    ['☄', UT(2029, 4, 13, 21, 46), 'Apophis passes Earth', 'The 340 m asteroid passes about 32 000 km above the ground, inside the ring of geostationary satellites, visible to the naked eye from Europe and Africa. No risk of impact. Position here from its orbit (approximate this close).', { body: 'Earth', km: 90000, to: 'Apophis' }],
+    ['☄', UT(1986, 2, 9, 11), 'Halley at perihelion, 1986', 'Halley’s comet closest to the Sun; the Giotto, Vega and Suisei probes flew past it in March. Next return: 2061.', { body: 'Halley', km: 4e7 }],
+    ['☄', UT(1910, 4, 20), 'Halley at perihelion, 1910', 'A famous return: in May 1910 Earth passed through its tail.', { body: 'Halley', km: 4e7 }],
+    ['🔴', UT(2003, 8, 27, 9, 51), 'Mars closest in 60 000 years', 'Mars came within 55.76 million km of Earth, the closest since about 57 600 BC.', { body: 'Mars', km: 6e7, to: 'Earth' }],
+    ['🔴', UT(2018, 7, 27, 20, 22), 'Mars opposition + blood Moon', 'The same night: Mars at opposition (about 58 million km) and the longest total lunar eclipse of the century (1 h 43 min).', { ecl: 1 }]];
+  function goMoment(m) { const [, t, ti, tx, o] = m;
+    if (o.ecl) { const L = solar.eclList(), e = L.reduce((a, x) => !a || Math.abs(x[2] - t) < Math.abs(a[2] - t) ? x : a, null);
+      if (e && Math.abs(e[2] - t) < 2 * 864e5) { goEclipse(e, seenFrom(e, place())); const h = info.querySelector('.e3g-ih b'); if (h) h.textContent = tr(ti);
+        const p = info.querySelector('.e3g-ip'); if (p) p.insertAdjacentHTML('beforebegin', `<p class="e3g-ip">${tr(tx)}</p>`); return; } }
+    tOver = t; di.value = localStr(t); if (!realSun) { realSun = true; press($('sun'), true); }
+    const B = solar.bodies[o.body]; if (!B) return; solar.eclToWorld(t);
+    let dir = null; if (o.to && solar.bodies[o.to]) { const hb = solar.helio(o.to, t), ho = o.body === 'Earth' ? hE : solar.helio(o.body, t); dir = solar.toWorld(hb.map((v, i) => v - ho[i])).normalize(); if (o.body === 'Earth') dir.negate(); }
+    flyToBody(o.body, o.km / (B.R * 6371), dir, true);
+    if (o.ms) { const b = $('ms'); if (b && b.getAttribute('aria-pressed') !== 'true') setTimeout(() => b.click(), 300); }
+    infoOf = null; info.innerHTML = `<div class="e3g-ih"><b>${tr(ti)}</b><button aria-label="${tr('Close')}">✕</button></div><div class="e3g-if"><div><small>${tr('When')}</small>${dfmt(t)}</div></div><p class="e3g-ip">${tr(tx)}</p>`
+      + (o.ms ? `<p class="e3g-ip"><a href="?storm=may2024" style="color:#FF8A8A">⚡ ${tr('See the whole page on that day (storm mode)')} ›</a></p>` : '');
+    info.hidden = false; info.querySelector('.e3g-ih button').onclick = hideInfo; }
   function evBuild() { const L = solar.eclList(), p = place(), key = p.lat + ',' + p.lon + ',' + L.length;
+    evP.querySelector('.e3g-evt').textContent = evF === 'fam' ? tr('Famous moments') : tr('Eclipses') + ' 1900–2050';
+    if (evF === 'fam') { evL.innerHTML = MOM.map((m, i) => `<li><button data-m="${i}"><i>${m[0]}</i><span>${tr(m[2])}</span><small>${dfmt(m[1])}</small></button></li>`).join(''); evL.scrollTop = 0; return; }
     if (seenAt !== key) { seenAt = key; seen = L.map(e => seenFrom(e, p)); }
     const tn = now(); let nx = -1;
     evL.innerHTML = L.map((e, i) => { const s = seen[i];
@@ -951,7 +978,7 @@ ${SUNLIB}${MOONV}
     const n = evL.querySelector('.nx'); if (n) n.scrollIntoView({ block: 'center' }); }
   $('ev').onclick = () => { const on = evP.hidden; pop($('ev'), evP, on); if (on) { if (!solar.eclList().length) { evL.innerHTML = `<li><small>${tr('loading…')}</small></li>`; return; } evBuild(); } };
   evP.querySelector('.e3g-evf').onclick = e => { const b = e.target.closest('[data-f]'); if (!b) return; evF = b.dataset.f; evP.querySelectorAll('[data-f]').forEach(o => o.setAttribute('aria-pressed', o === b)); evBuild(); };
-  evL.onclick = e => { const b = e.target.closest('[data-e]'); if (!b) return; pop($('ev'), evP, false); goEclipse(solar.eclList()[+b.dataset.e], seen[+b.dataset.e]); };
+  evL.onclick = e => { const mb = e.target.closest('[data-m]'); if (mb) { pop($('ev'), evP, false); goMoment(MOM[+mb.dataset.m]); return; } const b = e.target.closest('[data-e]'); if (!b) return; pop($('ev'), evP, false); goEclipse(solar.eclList()[+b.dataset.e], seen[+b.dataset.e]); };
   function goEclipse(e, s) { const tm = e[2], t0 = tm - (e[0] === 'S' ? 80 : 110) * 6e4;
     tOver = t0; di.value = localStr(t0); if (!realSun) { realSun = true; press($('sun'), true); }
     solar.eclToWorld(tm); const M = solar.eclMoon(e, tm), S = solar.eclSun(e, tm);
