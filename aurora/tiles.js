@@ -125,6 +125,7 @@
     if (e.target === ov || e.target.closest('[data-x]')) close(); });
   addEventListener('keydown', e => { if (!S[0] || /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
     if (e.key === 'Escape' && !document.querySelector('#sunFull[style*="flex"], #enlFull[style*="block"], #xpOv.on')) close(); });
+  window.tlOpen = k => open(k);   // alerts.js: open the tile an alert is about
   const fromHash = () => { const m = location.hash.match(/^#p-(\w+)(?:\+(\w+))?/); if (!m) return close(false); open(m[1], false); if (m[2]) setSplit(true, m[2]); else if (split) setSplit(false); };
   addEventListener('popstate', fromHash);
   // any link to a part of a module (side menu, chapter links, the guide's "See it") opens that module there

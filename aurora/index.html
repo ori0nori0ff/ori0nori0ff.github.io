@@ -980,8 +980,8 @@
   <div class="fctl"><div class="pbtn" id="enlFPlay">▶</div><div class="pbtn spd" style="font:700 10px 'JetBrains Mono',monospace">1×</div><input type="range" id="enlFSlide" min="0" max="0" value="0"><span class="lbl" id="enlFT" style="min-width:150px;text-align:right">–</span><span class="lbl">PINCH · DRAG</span><div class="x" id="enlX">✕</div></div></div></div>
 <div id="toast"></div>
 <script src="i18n.js?v=b936034a"></script>
-<script src="i18n.ro.js?v=88c10166"></script>
-<script src="i18n.de.js?v=9f684386"></script>
+<script src="i18n.ro.js?v=b8833532"></script>
+<script src="i18n.de.js?v=fe20b00c"></script>
 <script src="land.js?v=d495927a"></script>
 <script src="globe.js?v=fa6d06d5"></script>
 <script src="tonight.js?v=91a2449f"></script>
@@ -2455,6 +2455,7 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-repl
   const hx = t.querySelector('.hx'), sync = () => hx.setAttribute('aria-pressed', String(document.documentElement.classList.contains('xp')));
   hx.onclick = () => { const b = document.getElementById('xpBtn'); if (b) b.click(); sync(); };
   new MutationObserver(sync).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] }); sync(); })();</script>
-<script src="tiles.js?v=96e8c7e1"></script>
+<script src="tiles.js?v=1c4eef56"></script>
+<script src="alerts.js?v=3d949f62"></script>
 </body>
 </html>
