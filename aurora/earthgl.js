@@ -10,7 +10,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
-import { createSolar } from './solar.js?v=656a61b4';
+import { createSolar } from './solar.js?v=1a2756a7';
 
 const tr = (s, o) => window.T ? window.T(s, o) : String(s).replace(/\{(\w+)\}/g, (m, k) => o && o[k] != null ? o[k] : m);
 const D2R = Math.PI / 180, BASE = new URL('./', import.meta.url).href, T = BASE + 'img/earth/';
@@ -85,7 +85,7 @@ function create(host, opts) {
     <div class="e3g-ev" hidden><div class="e3g-evh"><b class="e3g-evt">${tr('Eclipses')} 1900–2050</b><div class="e3g-evf">${[['all', 'All'], ['S', 'Solar'], ['L', 'Lunar'], ['here', 'Seen from here'], ['fam', '★ Famous']].map(([k, l], i) => `<button data-f="${k}" aria-pressed="${!i}">${tr(l)}</button>`).join('')}</div></div><ol></ol></div>
     <ul class="e3g-bl" hidden>${[[['Planets', ['Sun', 'Mercury', 'Venus', 'Earth', 'Moon', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune']]],
       [['Dwarf planets', ['Ceres', 'Pluto', 'Charon', 'Eris', 'Haumea', 'Makemake']], ['Comets', ['Halley', 'Encke', '67P']]],
-      [['Asteroids', ['Vesta', 'Pallas', 'Hygiea', 'Psyche', 'Bennu', 'Ryugu', 'Apophis']]],
+      [['Asteroids', ['Vesta', 'Pallas', 'Hygiea', 'Psyche', 'Bennu', 'Ryugu', 'Apophis']], ['Big moons', ['Io', 'Europa', 'Ganymede', 'Callisto', 'Titan', 'Triton']]],
       [['Spacecraft', ['SOHO', 'ACE', 'DSCOVR', 'Wind', 'SWFO-L1', 'SDO', 'GOES-19', 'STEREO-A', 'Parker Solar Probe', 'Solar Orbiter']]]].map(col => `<li class="e3g-blc">${col.map(([h, L]) => `<b>${tr(h)}</b>` + L.map(n => `<button data-b="${n}">${tr(n)}</button>`).join('')).join('')}</li>`).join('')}</ul>
     <div class="e3g-lay"><button data-k="layers" aria-expanded="false">☰ ${tr('Layers')} ▾</button><div class="e3g-lp" hidden>
       <button class="eo" data-k="cl" aria-pressed="true">${tr('Clouds')}</button><button class="eo" data-k="cn" aria-pressed="false">${tr('Clouds: NASA')}</button><button class="eo" data-k="au" aria-pressed="true">${tr('Aurora')}</button>
@@ -791,11 +791,19 @@ ${SUNLIB}${MOONV}
     Uranus: [50724, -17.24, 30687, 29], Neptune: [49244, 16.11, 60190, 16],
     Ceres: [939.4, 9.074, 1681.6, 0], Pluto: [2376.6, -153.29, 90560, 5], Charon: [1212, 153.29, 6.387, 0], Eris: [2326, 378.9, 203830, 1], Haumea: [1632, 3.915, 103410, 2],
     Makemake: [1430, 22.83, 112897, 1], Vesta: [525.4, 5.342, 1325.8, 0], Pallas: [512, 7.813, 1684, 0], Hygiea: [434, 13.83, 2042, 0], Psyche: [226, 4.196, 1828, 0],
-    Bennu: [.49, 4.296, 436.6, 0], Ryugu: [.9, 7.63, 474, 0], Apophis: [.34, 30.56, 323.6, 0], Halley: [11, 52.8, 27510, 0], Encke: [4.8, 11, 1206, 0], '67P': [4.1, 12.4, 2353, 0] };
+    Bennu: [.49, 4.296, 436.6, 0], Ryugu: [.9, 7.63, 474, 0], Apophis: [.34, 30.56, 323.6, 0], Halley: [11, 52.8, 27510, 0], Encke: [4.8, 11, 1206, 0], '67P': [4.1, 12.4, 2353, 0],
+    Io: [3643.2, 42.46, 0, 0], Europa: [3121.6, 85.23, 0, 0], Ganymede: [5268.2, 171.71, 0, 0], Callisto: [4820.6, 400.54, 0, 0], Titan: [5149.5, 382.69, 0, 0], Triton: [2706.8, -141.04, 0, 0] };
+  const HOSTOF = { Io: 'Jupiter', Europa: 'Jupiter', Ganymede: 'Jupiter', Callisto: 'Jupiter', Titan: 'Saturn', Triton: 'Neptune' };
   // the real small bodies: what each one is (orbits: NASA/JPL SBDB; maps: Dawn, New Horizons)
   const NOTE = { Ceres: 'The largest body in the asteroid belt, a dwarf planet. NASA’s Dawn orbited it 2015–2018: bright salt in Occator crater points to brine under the surface. Map: Dawn.',
     Pluto: 'Dwarf planet of the Kuiper belt. NASA’s New Horizons flew past on 14 July 2015: a bright nitrogen-ice plain (the “heart”), water-ice mountains, thin hazy air. The south was in winter darkness: grey on the map.',
     Charon: 'Pluto’s biggest moon, half its size: the two always show each other the same face and circle a point between them.',
+    Io: 'The most volcanic world known: over 400 active volcanoes, heated by Jupiter’s tides. Voyager and Galileo mapped its sulphur colours and lava lakes; Juno flew close in 2023–24. Map: Galileo + Voyager (USGS).',
+    Europa: 'An ice shell over a salty ocean holding about twice the water of Earth’s oceans, one of the best places to look for life. NASA’s Europa Clipper arrives in 2030. Map: Galileo + Voyager (USGS), colour approximate.',
+    Ganymede: 'The largest moon in the solar system, bigger than Mercury, and the only one with its own magnetic field (and its own aurorae). ESA’s JUICE will orbit it from 2034. Map: Galileo + Voyager (USGS).',
+    Callisto: 'One of the most heavily cratered surfaces known: an old, dark, icy crust barely changed for about 4 billion years. Map: Galileo + Voyager (USGS), colour approximate.',
+    Titan: 'The only moon with thick air (1.5 times Earth’s surface pressure): an orange haze of nitrogen and methane, with lakes and seas of liquid methane under it. ESA’s Huygens landed in 2005; NASA’s Dragonfly drone launches in 2028. Map: Cassini (USGS), seen through the haze.',
+    Triton: 'Orbits Neptune backwards, so it was probably a captured Kuiper-belt world. Voyager 2 saw nitrogen geysers in 1989, the only visit; the half it never saw is filled in on the map. Map: Voyager 2 (USGS).',
     Eris: 'Almost as big as Pluto and heavier; its discovery in 2005 led to the “dwarf planet” class in 2006. Today about 96 AU from the Sun.',
     Haumea: 'Turns in under 4 hours, so fast that it is stretched into an egg shape (drawn to its measured size). It has a thin ring.',
     Makemake: 'A bright, reddish dwarf planet of the Kuiper belt, covered in methane ice; one small moon found in 2016.',
@@ -814,7 +822,7 @@ ${SUNLIB}${MOONV}
     Moon: 'No global field today; old lunar rocks show it had one billions of years ago.',
     Mars: 'Lost its global field ~4 billion years ago — and most of its atmosphere with it.', Jupiter: 'The biggest magnetosphere in the system: if we could see it, it would look bigger than the full Moon in our sky.',
     Saturn: 'Its field is almost perfectly lined up with its spin axis.', Uranus: 'Tilted ~60° and off-centre: its magnetosphere tumbles as it turns.', Neptune: 'Tilted ~47° and off-centre, like Uranus.' };
-  const MOONS = { Earth: 'the Moon', Mars: 'Phobos, Deimos', Pluto: 'Charon + 4 small', Eris: 'Dysnomia', Haumea: 'Hiʻiaka, Namaka', Makemake: 'MK2' }, PHOTO = {}, PHN = {}, info = el.querySelector('.e3g-info'), nf = v => Math.round(v).toLocaleString(window.LOC || 'en-GB');
+  const MOONS = { Earth: 'the Moon', Mars: 'Phobos, Deimos', Jupiter: 'Io, Europa, Ganymede, Callisto + 93 small', Saturn: 'Titan + 273 smaller', Neptune: 'Triton + 15 small', Pluto: 'Charon + 4 small', Eris: 'Dysnomia', Haumea: 'Hiʻiaka, Namaka', Makemake: 'MK2' }, PHOTO = {}, PHN = {}, info = el.querySelector('.e3g-info'), nf = v => Math.round(v).toLocaleString(window.LOC || 'en-GB');
   const span = h => { const a = Math.abs(h); return a < 48 ? `${Math.floor(a)} h ${Math.round(a % 1 * 60)} m` : a < 24 * 1000 ? `${(a / 24).toFixed(a < 240 ? 1 : 0)} ${tr('days')}` : `${(a / 8766).toFixed(1)} ${tr('years')}`; };
   async function photos(nm, host) { try {
       if (!PHOTO[nm]) {
@@ -854,8 +862,8 @@ ${SUNLIB}${MOONV}
   function showInfo(nm) { if (CRAFT[nm]) return showCraft(nm); infoOf = nm; orbitOn = orbitWait = 0; const F = FACT[nm]; pnl.hidden = true; press($('ang'), false);
     info.innerHTML = `<div class="e3g-ih"><b>${tr(nm)}</b><button aria-label="${tr('Close')}">✕</button></div>
       <div class="e3g-if"><div><small>${tr('Diameter')}</small>${F[0] < 10 ? nf(F[0] * 1000) + ' m' : nf(F[0]) + ' km'}</div><div class="e3g-il"></div>
-      <div><small>${nm === 'Sun' ? tr('Turns once in') : tr('Day / year')}</small>${span(F[1])}${F[1] < 0 ? ' ↺' : ''}${F[2] ? ' · ' + span(F[2] * 24) : ''}</div>
-      <div><small>${nm === 'Sun' ? tr('Planets') : tr('Moons')}</small>${MOONS[nm] ? tr(MOONS[nm]) : F[3] || '—'}</div></div>
+      <div><small>${nm === 'Sun' ? tr('Turns once in') : HOSTOF[nm] ? tr('Day = orbit') : tr('Day / year')}</small>${span(F[1])}${F[1] < 0 ? ' ↺' : ''}${F[2] ? ' · ' + span(F[2] * 24) : ''}</div>
+      ${HOSTOF[nm] ? `<div><small>${tr('Orbits')}</small>${tr(HOSTOF[nm])}</div>` : `<div><small>${nm === 'Sun' ? tr('Planets') : tr('Moons')}</small>${MOONS[nm] ? tr(MOONS[nm]) : F[3] || '—'}</div>`}</div>
       <div class="e3g-im">${FIELD[nm] ? '🧲 ' + tr(FIELD[nm]) : '✦ ' + tr(NOTE[nm] || '')}</div>
       <div class="e3g-ib"><button data-i="near">${tr('Closer')}</button>${F[2] && nm !== 'Charon' ? `<button data-i="orb" aria-pressed="false">${tr('Follow the orbit')}</button>` : ''}</div>`;
     info.insertBefore(photoNode(nm), info.querySelector('.e3g-ib')); liveInfo(now()); info.hidden = false;
@@ -1050,7 +1058,8 @@ ${SUNLIB}${MOONV}
   $('blt').onclick = e => { solar.belt = !solar.belt; press(e.currentTarget, solar.belt); };
   $('rs').onclick = e => { solar.realScale = !solar.realScale; press(e.currentTarget, solar.realScale); };
   $('gd').onclick = e => { solar.guides = !solar.guides; press(e.currentTarget, solar.guides); };
-  $('sw').onclick = e => { solar.wind = !solar.wind; press(e.currentTarget, solar.wind); };
+  let windMine = false;   // once you switch the wind yourself, the clock never switches it back on
+  $('sw').onclick = e => { windMine = true; solar.wind = !solar.wind; press(e.currentTarget, solar.wind); };
   $('sf').onclick = e => { solar.field = !solar.field; press(e.currentTarget, solar.field); if (!solar.field) { solar.bare = false; press($('dw'), false); } };
   $('dw').onclick = e => { solar.bare = !solar.bare; press(e.currentTarget, solar.bare); if (!solar.bare) return; solar.field = true; press($('sf'), true); flyToBody('Sun', 110 * 23481 / solar.bodies.Sun.R, null, true); };
   // the wind + CME data come from the page (space3d: ENLIL at Earth + DONKI); a CME reaching the Earth squeezes the shield once
@@ -1103,7 +1112,7 @@ ${SUNLIB}${MOONV}
     b.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); n = 0; step(); } }; }
   // solar system view: the clock ±10 days around now, ‹ › hold to run (CME marks above the slider); moving it switches the solar wind + CMEs on
   const dy = $('dy'), dyL = el.querySelector('.so span'), mk = el.querySelector('.e3g-mk'), real = () => opts.time ? opts.time() : Date.now(); let dyDrag = false, mkAt = 0, mkSeen = null;
-  const windOn = () => { if (!solar.wind) { solar.wind = true; press($('sw'), true); } };
+  const windOn = () => { if (!solar.wind && !windMine) { solar.wind = true; press($('sw'), true); } };
   const setT = t => { tOver = t; di.value = localStr(tOver); windOn(); };
   // ▶ / ⏸: the clock runs on at 6 hours a second until paused (the slider stays at its end, the label keeps counting)
   // speed list: Auto = 6 h/s, slowing at CME arrivals (as before); the others run at a fixed rate either way (◀ / ▶), 1800–2050

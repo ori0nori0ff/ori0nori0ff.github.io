@@ -50,6 +50,17 @@ function eqToEcl(ra, de) { const a = ra * D2R, d = de * D2R, x = Math.cos(d) * M
 const charon = t => { const p = kepSB(SB.Pluto, t), P = eqToEcl(132.993, -6.163), N = eqToEcl(222.993, 0), W = (302.695 + 56.3625225 * (t / DAY - 10957.5)) * D2R;
   const C = [P[1] * N[2] - P[2] * N[1], P[2] * N[0] - P[0] * N[2], P[0] * N[1] - P[1] * N[0]], r = 19591 / 6371;
   return [0, 1, 2].map(i => p[i] + r * (N[i] * Math.cos(W) + C[i] * Math.sin(W))); };
+// the big moons (img/planets/moons.json, NASA/JPL Horizons, tools/build_moons.py): planet-centred osculating elements once a year
+// 1800–2050 [jd, a km, e, i, Ω, ω, u = ω + M unwrapped], interpolated → ecliptic R⊕ from the planet (checked: ≤ 0.5° off for Io, ≤ 0.03° the rest)
+const MO = {}, MHOST = { Io: 'Jupiter', Europa: 'Jupiter', Ganymede: 'Jupiter', Callisto: 'Jupiter', Titan: 'Saturn', Triton: 'Neptune' };
+function moonEl(name, t) { const R = MO[name], jd = JD(t), c = Math.max(R[0][0], Math.min(R[R.length - 1][0], jd)); let lo = 0, hi = R.length - 2;
+  while (lo < hi) { const m = (lo + hi + 1) >> 1; if (R[m][0] <= c) lo = m; else hi = m - 1; }
+  const a = R[lo], b = R[lo + 1], f = (c - a[0]) / (b[0] - a[0]), el = [1, 2, 3, 4, 5, 6].map(k => a[k] + (b[k] - a[k]) * f);
+  el[5] += (b[6] - a[6]) / (b[0] - a[0]) * (jd - c);   // beyond the table: keep turning at the mean rate
+  return el; }   // a km, e, i, Ω, ω, u
+const moonXYZ = (el, u) => { const [a, e, I, Om, w] = el, Mn = (u - w) * D2R; let E = Mn; for (let k = 0; k < 8; k++) E -= (E - e * Math.sin(E) - Mn) / (1 - e * Math.cos(E));
+  return kepE([a / 6371, e, I, Om, w], E).map(v => v / AU); };
+const moonP = (name, t) => { const el = moonEl(name, t); return moonXYZ(el, el[5]); };
 // spacecraft (NASA/JPL Horizons, data/craft.json by the Pages bot): tables of J2000 ecliptic km, from the Earth ('E') or the Sun ('S');
 // SDO repeats every sidereal day outside its 6-day table (geosynchronous: the same inertial spot); GOES-19 = geostationary at 75.2° W
 const CR = {}, SIDE = 86164090.5;
@@ -81,6 +92,7 @@ const moonAt = t => { const g = moonGeo(t), w = eclAt(t); if (!w) return g; cons
 export function helio(name, t) { const T = (t / DAY + 2440587.5 - 2451545) / 36525;
   if (name === 'Sun') return [0, 0, 0];
   if (name === 'Charon') return SB.Pluto ? charon(t) : [0, 0, 0];
+  if (MO[name]) { const p = helio(MHOST[name], t), m = moonP(name, t); return [p[0] + m[0], p[1] + m[1], p[2] + m[2]]; }
   if (SB[name]) return kepSB(SB[name], t);
   if (CR[name] || name === 'GOES-19') return craftPos(name, t);
   if (name === 'Moon') { const e = kepler('Earth', T), m = moonAt(t); return [e[0] + m[0], e[1] + m[1], e[2] + m[2]]; }
@@ -108,6 +120,10 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
   const eqW = (ra, de) => toW(eqToEcl(ra, de), new THREE.Vector3());
   function orient(b, t) { const P = eqW(b[1], b[2]).normalize(), N = eqW(b[1] + 90, 0).normalize(), W = (b[3] + b[4] * (t / DAY - 10957.5)) * D2R;
     const X = N.clone().multiplyScalar(Math.cos(W)).addScaledVector(new THREE.Vector3().crossVectors(P, N), Math.sin(W)).normalize(), Z = new THREE.Vector3().crossVectors(X, P);
+    return new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(X, P, Z)); }
+  function orientMoon(name, t) { const r = toW(moonP(name, t), new THREE.Vector3()), v = toW(moonP(name, t + 6e4), new THREE.Vector3()).sub(r);
+    const P = new THREE.Vector3().crossVectors(r, v).normalize(); if (moonEl(name, t)[2] > 90) P.negate();
+    const X = r.clone().negate().normalize(), Z = new THREE.Vector3().crossVectors(X, P);
     return new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(X, P, Z)); }
 
   // a lit planet: day texture, Lambert from the Sun + a soft limb, a thin air rim for the ones with air
@@ -176,7 +192,12 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
       for (let k = 0; k <= 720; k++) { const x = kepE(el, k / 720 * 2 * Math.PI); P.push(x[0], x[1], x[2]); }
       const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
       orbits.add(new THREE.Line(g, new THREE.LineBasicMaterial({ color: bodies[n].col, transparent: true, opacity: .2, depthWrite: false }))); }
+    mOrb.clear(); for (const n of Object.keys(MO)) { if (!bodies[n]) continue; const el = moonEl(n, t), P = [];
+      for (let k = 0; k <= 360; k++) P.push(...moonXYZ(el, el[4] + k));
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+      const l = new THREE.Line(g, new THREE.LineBasicMaterial({ color: bodies[n].col, transparent: true, opacity: .3, depthWrite: false })); l.userData.h = MHOST[n]; l.frustumCulled = false; mOrb.add(l); }
     orbT = t; }
+  const mOrb = new THREE.Group(); scene.add(mOrb);
 
   // ── the solar wind + CMEs, drawn on the GPU (same model as space3d: the wind measured / forecast at Earth is traced back
   //    to the solar longitude it left from; each source longitude emits a particle every hour that flies straight out while
@@ -236,6 +257,10 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
   // the spacecraft: a small gold dot + name; the ones near the Earth only while the Earth is close (L1 = 235 R⊕)
   fetch(new URL('./data/craft.json?' + Math.floor(Date.now() / 36e5), import.meta.url).href).then(r => r.json()).then(j => { Object.assign(CR, j.craft);
     for (const n of [...Object.keys(j.craft), 'GOES-19']) mkBody(n, [.01, 0, 90, 0, 0, '', 2.4, '#FFD36E'], { kind: 'craft', near: n === 'GOES-19' || j.craft[n].c === 'E' }); }).catch(() => {});
+  const MOONB = { Io: [1821.6, 'io', '#F2D36B'], Europa: [1560.8, 'europa', '#E8DCC8'], Ganymede: [2634.1, 'ganymede', '#C2B6A6'], Callisto: [2410.3, 'callisto', '#A8967E'],
+    Titan: [2574.7, 'titan', '#E0A050'], Triton: [1353.4, 'triton', '#D9C7C2'] };
+  fetch(TP + 'moons.json').then(r => r.json()).then(j => { Object.assign(MO, j.m);
+    for (const [n, [R, m, c]] of Object.entries(MOONB)) if (MO[n]) mkBody(n, [R, 0, 90, 0, 0, m, 1.6, c], { kind: 'moon', host: MHOST[n] }); orbT = -1e15; }).catch(() => {});
   fetch(TP + 'eclipses.json').then(r => r.json()).then(j => { ECL = j.e; }).catch(() => {});
   fetch(TP + 'sb.json').then(r => r.json()).then(j => { Object.assign(SB, j.b); for (const [n, [b, x]] of Object.entries(SBB)) if (n === 'Charon' ? SB.Pluto : SB[n]) mkBody(n, b, x); orbT = -1e15; }).catch(() => {});
   const OMEGA = 2 * Math.PI / 25.38, kmsAU = v => v * 86400 / 1.495978707e8, JS = 64, KS = 340, DTW = 1 / 24, NW = JS * KS;
@@ -446,8 +471,9 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
     const pix = 2 * Math.tan(camera.fov * D2R / 2) / H; let nearest = 1e12;
     for (const b of Object.values(bodies)) { const h = helio(b.name, t); toW([h[0] - camHelio[0], h[1] - camHelio[1], h[2] - camHelio[2]], b.rel); b.d = b.rel.length();
       const boost = realScale ? 1 : Math.max(1, b.minPx * pix * b.d / b.R); b.rs = b.R * boost; b.px = b.rs / (b.d * pix);
-      b.mesh.position.copy(b.rel); if (b.shp) b.mesh.scale.set(b.rs * b.shp[0], b.rs * b.shp[1], b.rs * b.shp[2]); else b.mesh.scale.setScalar(b.rs); if (b.name !== 'Earth' && b.name !== 'Sun') b.mesh.quaternion.copy(orient(b.b, t));
-      const cr = CR[b.name]; b.hid = (b.near && bodies.Earth.d > 4000) || (cr && b.name !== 'SDO' && (t < cr.t0 - DAY || t > cr.t0 + (cr.p.length / 3 - 1) * cr.s * 6e4 + DAY));   // spacecraft: only where their table reaches if (b.kind === 'craft') { b.mesh.visible = !b.hid; continue; }
+      b.mesh.position.copy(b.rel); if (b.shp) b.mesh.scale.set(b.rs * b.shp[0], b.rs * b.shp[1], b.rs * b.shp[2]); else b.mesh.scale.setScalar(b.rs); if (b.name !== 'Earth' && b.name !== 'Sun') b.mesh.quaternion.copy(b.host ? orientMoon(b.name, t) : orient(b.b, t));
+      const cr = CR[b.name]; b.hid = (b.near && bodies.Earth.d > 4000) || (cr && b.name !== 'SDO' && (t < cr.t0 - DAY || t > cr.t0 + (cr.p.length / 3 - 1) * cr.s * 6e4 + DAY));
+      if (b.host) { const H = bodies[b.host], sep = b.rel.distanceTo(H.rel) / (b.d * pix); b.mesh.visible = sep > H.px + b.px + 2; if (!b.mesh.visible) b.hid = true; }   // a moon drawn into its (enlarged) planet: hidden till they part   // spacecraft: only where their table reaches if (b.kind === 'craft') { b.mesh.visible = !b.hid; continue; }
       nearest = Math.min(nearest, Math.max(1e-3, b.d - b.rs)); }
     if (warm.length) renderer.initTexture(warm.shift());
     if (HI) for (const b of Object.values(bodies)) if (!b.hi && b.px > 300 && b.b[5] && b.mesh.material.uniforms.map) { b.hi = true; const u = b.mesh.material.uniforms.map;
@@ -465,6 +491,7 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
     bodies.Earth.mesh.visible = !nearOn; bodies.Earth.mesh.quaternion.copy(quatW);
     glow.position.copy(S); glow.scale.setScalar(Math.max(bodies.Sun.rs * 9, 40 * pix * bodies.Sun.d));
     orbits.position.copy(S); orbits.quaternion.setFromRotationMatrix(new THREE.Matrix4().setFromMatrix3(M));
+    mOrb.visible = orbits.visible; for (const l of mOrb.children) { const H = bodies[l.userData.h]; l.position.copy(H.rel); l.quaternion.copy(orbits.quaternion); }
     helioG.position.copy(S); helioG.quaternion.copy(orbits.quaternion); windP.visible = windOn && !quiet; wU.px.value = pxr || 1;
     { // the wind round the camera: its size follows the nearest body's distance; it hands over to the Earth's shield wind below ~120 R⊕,
       // stays off close to the other bodies, and leaves the far view to the big wind beyond ~0.1 AU
