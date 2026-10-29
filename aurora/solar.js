@@ -60,13 +60,30 @@ function craftPos(name, t) {
   if (name === 'SDO' && (t < c.t0 || t > c.t0 + (n - 1) * st)) tt = c.t0 + (((t - c.t0) % SIDE) + SIDE) % SIDE;
   const u = Math.max(0, Math.min(n - 1, (tt - c.t0) / st)), i = Math.min(n - 2, Math.floor(u)), f = u - i, q = [0, 1, 2].map(k => (c.p[i * 3 + k] * (1 - f) + c.p[i * 3 + 3 + k] * f) / 6371);
   if (c.c !== 'E') return q; const E = helio('Earth', t); return [E[0] + q[0], E[1] + q[1], E[2] + q[2]]; }
+// eclipses 1900–2050 (img/planets/eclipses.json, NASA/JPL Horizons, tools/build_eclipses.py): [kind 'S' | 'L', type, t max, γ | magnitude,
+// window start, Moon hourly [x, y, z km, vx, vy, vz m/s] × 11, Sun hourly [x, y, z ×10 km] × 11] — exact Sun + Moon for 10 h round each one
+let ECL = [];
+const WIN = 36e6;
+export function eclAt(t) { let lo = 0, hi = ECL.length - 1;
+  while (lo <= hi) { const m = (lo + hi) >> 1, e = ECL[m]; if (t < e[4]) hi = m - 1; else if (t > e[4] + WIN) lo = m + 1; else return e; } return null; }
+export function eclList() { return ECL; }
+// geocentric ecliptic Moon (R⊕): cubic Hermite on the hourly states
+export function eclMoon(e, t) { const R = e[5], u0 = (t - e[4]) / 36e5, i = Math.max(0, Math.min(R.length - 2, Math.floor(u0))), u = u0 - i, a = R[i], b = R[i + 1], H = 3.6;
+  const h00 = 2 * u ** 3 - 3 * u * u + 1, h10 = u ** 3 - 2 * u * u + u, h01 = -2 * u ** 3 + 3 * u * u, h11 = u ** 3 - u * u;
+  return [0, 1, 2].map(k => (h00 * a[k] + h10 * H * a[k + 3] + h01 * b[k] + h11 * H * b[k + 3]) / 6371); }
+// geocentric ecliptic Sun (R⊕), where its light left it
+export function eclSun(e, t) { const R = e[6], u0 = (t - e[4]) / 36e5, i = Math.max(0, Math.min(R.length - 2, Math.floor(u0))), u = u0 - i, a = R[i], b = R[i + 1];
+  return [0, 1, 2].map(k => (a[k] + (b[k] - a[k]) * u) * 10 / 6371); }
+// the Moon: the exact one inside an eclipse window (blended in over its first / last 1.5 h), else the low-precision series
+const moonAt = t => { const g = moonGeo(t), w = eclAt(t); if (!w) return g; const p = eclMoon(w, t), f = Math.max(0, Math.min(1, (t - w[4]) / 54e5, (w[4] + WIN - t) / 54e5));
+  return g.map((v, i) => v + (p[i] - v) * f); };
 // heliocentric ecliptic position (R⊕, astronomical x / y / z) of any body
 export function helio(name, t) { const T = (t / DAY + 2440587.5 - 2451545) / 36525;
   if (name === 'Sun') return [0, 0, 0];
   if (name === 'Charon') return SB.Pluto ? charon(t) : [0, 0, 0];
   if (SB[name]) return kepSB(SB[name], t);
   if (CR[name] || name === 'GOES-19') return craftPos(name, t);
-  if (name === 'Moon') { const e = kepler('Earth', T), m = moonGeo(t); return [e[0] + m[0], e[1] + m[1], e[2] + m[2]]; }
+  if (name === 'Moon') { const e = kepler('Earth', T), m = moonAt(t); return [e[0] + m[0], e[1] + m[1], e[2] + m[2]]; }
   return kepler(name, T); }
 
 import { createBodyHD } from './bodyhd.js?v=e199e9f2';
@@ -94,12 +111,21 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
     return new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(X, P, Z)); }
 
   // a lit planet: day texture, Lambert from the Sun + a soft limb, a thin air rim for the ones with air
-  const pMat = (map, rim, gas) => new THREE.ShaderMaterial({ uniforms: { map: { value: map }, sun: { value: new THREE.Vector3(1, 0, 0) }, rim: { value: new THREE.Color(...(rim || [0, 0, 0])) } },
-    vertexShader: `varying vec2 vUv; varying vec3 vN, vV; void main() { vUv = uv; vec4 w = modelMatrix * vec4(position, 1.); vN = normalize(mat3(modelMatrix) * normal); vV = normalize(cameraPosition - w.xyz); gl_Position = projectionMatrix * viewMatrix * w; }`,
-    fragmentShader: `uniform sampler2D map; uniform vec3 sun, rim; varying vec2 vUv; varying vec3 vN, vV;
+  const pMat = (map, rim, gas) => new THREE.ShaderMaterial({ uniforms: { map: { value: map }, sun: { value: new THREE.Vector3(1, 0, 0) }, rim: { value: new THREE.Color(...(rim || [0, 0, 0])) },
+      occ: { value: new THREE.Vector4(0, 0, 0, 0) }, sunP: { value: new THREE.Vector3() }, ctr: { value: new THREE.Vector4(0, 0, 0, 1) } },
+    vertexShader: `varying vec2 vUv; varying vec3 vN, vV, vP; void main() { vUv = uv; vec4 w = modelMatrix * vec4(position, 1.); vP = w.xyz; vN = normalize(mat3(modelMatrix) * normal); vV = normalize(cameraPosition - w.xyz); gl_Position = projectionMatrix * viewMatrix * w; }`,
+    fragmentShader: `uniform sampler2D map; uniform vec3 sun, rim, sunP; uniform vec4 occ, ctr; varying vec2 vUv; varying vec3 vN, vV, vP;
+      // share of the Sun's disc seen from P past an occluder (centre occ.xyz, radius occ.w; off when w = 0)
+      float seen(vec3 P) { if (occ.w <= 0.) return 1.; vec3 e = occ.xyz - P, s = sunP - P; float de = length(e), ds = length(s); if (dot(e, s) <= 0.) return 1.;
+        float a = asin(min(1., occ.w / de)), b = asin(min(1., 109.2 / ds)), d = asin(clamp(length(cross(e / de, s / ds)), 0., 1.));
+        if (d >= a + b) return 1.; if (d <= a - b) return 0.; if (d <= b - a) return 1. - a * a / (b * b);
+        float A = b * b * acos(clamp((d * d + b * b - a * a) / (2. * d * b), -1., 1.)) + a * a * acos(clamp((d * d + a * a - b * b) / (2. * d * a), -1., 1.)) - .5 * sqrt(max(0., (-d + a + b) * (d + a - b) * (d - a + b) * (d + a + b)));
+        return 1. - A / (3.14159265 * b * b); }
       void main() { vec3 n = normalize(vN); float l = dot(n, sun), mu = max(dot(n, vV), 0.); vec3 c = texture2D(map, vUv).rgb;
         ${gas ? 'c *= .55 + .45 * pow(mu, .35);' : ''}
-        vec3 col = c * (max(l, 0.) * 1.25 + .012) + rim * pow(1. - mu, 3.) * smoothstep(-.25, .3, l);
+        float v = seen(ctr.xyz + (vP - ctr.xyz) * ctr.w);   // on the true-size body even when it is drawn bigger
+        vec3 col = c * (max(l, 0.) * 1.25 * v + .012) + rim * pow(1. - mu, 3.) * smoothstep(-.25, .3, l) * v
+          + c * vec3(.62, .2, .07) * .3 * (1. - v) * smoothstep(-.1, .2, l) * step(0., occ.w - .001);   // sunlight bent red through the Earth's air
         gl_FragColor = vec4(col, 1.); }` });
   const sphere = new THREE.SphereGeometry(1, 96, 48), bodies = {}; let labHost = null;
   const bhd = createBodyHD({ THREE, renderer, Q }); scene.add(bhd.group);   // HD close-ups (the Moon) when a body fills the view
@@ -210,6 +236,7 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
   // the spacecraft: a small gold dot + name; the ones near the Earth only while the Earth is close (L1 = 235 R⊕)
   fetch(new URL('./data/craft.json?' + Math.floor(Date.now() / 36e5), import.meta.url).href).then(r => r.json()).then(j => { Object.assign(CR, j.craft);
     for (const n of [...Object.keys(j.craft), 'GOES-19']) mkBody(n, [.01, 0, 90, 0, 0, '', 2.4, '#FFD36E'], { kind: 'craft', near: n === 'GOES-19' || j.craft[n].c === 'E' }); }).catch(() => {});
+  fetch(TP + 'eclipses.json').then(r => r.json()).then(j => { ECL = j.e; }).catch(() => {});
   fetch(TP + 'sb.json').then(r => r.json()).then(j => { Object.assign(SB, j.b); for (const [n, [b, x]] of Object.entries(SBB)) if (n === 'Charon' ? SB.Pluto : SB[n]) mkBody(n, b, x); orbT = -1e15; }).catch(() => {});
   const OMEGA = 2 * Math.PI / 25.38, kmsAU = v => v * 86400 / 1.495978707e8, JS = 64, KS = 340, DTW = 1 / 24, NW = JS * KS;
   const helioG = new THREE.Group(); scene.add(helioG);
@@ -428,6 +455,9 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
     const S = bodies.Sun.rel; sunW.copy(S);
     for (const b of Object.values(bodies)) if (b.mesh.material.uniforms.sun) b.mesh.material.uniforms.sun.value.copy(tmp.copy(S).sub(b.rel).normalize());
     ring.material.uniforms.sun.value.copy(bodies.Saturn.mesh.material.uniforms.sun.value);
+    { const w = eclAt(t), mu = bodies.Moon.mesh.material.uniforms, mo = bodies.Moon;
+      if (w && w[0] === 'L') { mu.occ.value.set(bodies.Earth.rel.x, bodies.Earth.rel.y, bodies.Earth.rel.z, 1.02); mu.sunP.value.copy(S); mu.ctr.value.set(mo.rel.x, mo.rel.y, mo.rel.z, mo.R / mo.rs); }
+      else mu.occ.value.w = 0; }
     // HD close-up of the biggest body on screen that has one; its texture sphere sinks a little under the relief
     let hb = null; for (const b of Object.values(bodies)) if (bhd.has(b.name) && (!hb || b.px > hb.px)) hb = b;
     cam.updateMatrixWorld(); const hdR = bhd.update(hb, cam, hb ? hb.mesh.material.uniforms.sun.value : null);
@@ -473,5 +503,5 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
       if (r < Math.max(14, b.px + 6) && b.d < bd) { best = b; bd = b.d; } } return best; }
   const hdHas = n => bhd.has(n), hdOn = n => bhd.on === n, hdGround = (n, dirW) => bhd.ground(n, bodies[n], dirW);
   orbits.visible = guides; lab.style.display = guides ? '' : 'none';   // start as the Layers panel says (off)
-  return { scene, cam, update, screen, bodies, pick, hdHas, hdOn, hdGround, helio, eclToWorld, toWorld: p => toW(p, new THREE.Vector3()), fromWorld: v => v.clone().applyMatrix3(Mi), get realScale() { return realScale; }, set realScale(v) { realScale = v; }, setWind, setCmes, cmeAtEarth, cmeMarks, windAt, get wind() { return windOn; }, set quiet(v) { quiet = v; }, set wind(v) { windOn = v; }, get field() { return fieldOn; }, set field(v) { fieldOn = v; }, get bare() { return fieldMode === 2; }, set bare(v) { fieldMode = v ? 2 : 1; }, get belt() { return beltOn; }, set belt(v) { beltOn = v; }, get guides() { return guides; }, set guides(v) { guides = v; orbits.visible = v; lab.style.display = v ? '' : 'none'; } };
+  return { scene, cam, update, screen, bodies, pick, eclAt, eclList, eclMoon, eclSun, hdHas, hdOn, hdGround, helio, eclToWorld, toWorld: p => toW(p, new THREE.Vector3()), fromWorld: v => v.clone().applyMatrix3(Mi), get realScale() { return realScale; }, set realScale(v) { realScale = v; }, setWind, setCmes, cmeAtEarth, cmeMarks, windAt, get wind() { return windOn; }, set quiet(v) { quiet = v; }, set wind(v) { windOn = v; }, get field() { return fieldOn; }, set field(v) { fieldOn = v; }, get bare() { return fieldMode === 2; }, set bare(v) { fieldMode = v ? 2 : 1; }, get belt() { return beltOn; }, set belt(v) { beltOn = v; }, get guides() { return guides; }, set guides(v) { guides = v; orbits.visible = v; lab.style.display = v ? '' : 'none'; } };
 }

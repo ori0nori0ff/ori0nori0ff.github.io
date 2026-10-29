@@ -10,7 +10,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
-import { createSolar } from './solar.js?v=7ccc2bc2';
+import { createSolar } from './solar.js?v=656a61b4';
 
 const tr = (s, o) => window.T ? window.T(s, o) : String(s).replace(/\{(\w+)\}/g, (m, k) => o && o[k] != null ? o[k] : m);
 const D2R = Math.PI / 180, BASE = new URL('./', import.meta.url).href, T = BASE + 'img/earth/';
@@ -18,6 +18,13 @@ const CSS = `.e3g{position:absolute;inset:0;display:none;background:#000;overflo
 .e3g-go,.e3g-nav{position:absolute;z-index:2;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:6px}.e3g-go{left:10px}.e3g-nav{right:10px}
 .e3g-go button,.e3g-nav button{width:40px;height:40px;padding:0;border-radius:50%;font-size:16px;display:grid;place-items:center}.e3g-nav svg{transition:transform .1s linear}
 .e3g-bl{position:absolute;z-index:3;left:58px;top:50%;transform:translateY(-50%);list-style:none;margin:0;padding:6px;border:1px solid rgba(255,255,255,.18);border-radius:12px;background:rgba(10,14,20,.92);display:grid;gap:2px}.e3g-bl[hidden]{display:none}
+.e3g-ecb{flex-basis:100%;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:4px;font:600 12px Inter,system-ui,sans-serif;color:#E6EBF1}.e3g-ecb[hidden]{display:none}
+.e3g-ecb b{color:#FFE600;font-weight:600;margin-right:4px}.e3g-ecb button{border:1px solid rgba(255,255,255,.18);background:rgba(10,14,20,.85);color:#E6EBF1;border-radius:999px;padding:4px 10px;font:600 12px Inter,system-ui,sans-serif;cursor:pointer;font-variant-numeric:tabular-nums}
+.e3g-ecb button small{color:#9AA4B2;margin-right:5px;font-weight:500}.e3g-ecb button.on{border-color:#FFB020;background:rgba(255,176,32,.16)}
+.e3g-ev{position:absolute;z-index:3;left:58px;top:50%;transform:translateY(-50%);width:min(360px,calc(100% - 80px));max-height:78%;display:flex;flex-direction:column;border:1px solid rgba(255,255,255,.18);border-radius:12px;background:rgba(10,14,20,.94);color:#E6EBF1}.e3g-ev[hidden]{display:none}
+.e3g-evh{padding:10px 12px 6px;font:600 13px Inter,system-ui,sans-serif}.e3g-evf{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}.e3g-evf button{border:1px solid rgba(255,255,255,.18);background:none;color:#C9D1DB;border-radius:999px;padding:3px 9px;font:600 11px Inter,system-ui,sans-serif;cursor:pointer}.e3g-evf button[aria-pressed=true]{background:rgba(57,255,158,.16);color:#E6EBF1;border-color:rgba(57,255,158,.5)}
+.e3g-ev ol{list-style:none;margin:0;padding:4px 6px 8px;overflow:auto}.e3g-ev li button{display:grid;grid-template-columns:auto 1fr;gap:0 8px;width:100%;text-align:left;border:0;background:none;color:#E6EBF1;border-radius:8px;padding:6px 8px;cursor:pointer;font:500 12px Inter,system-ui,sans-serif}
+.e3g-ev li button:hover,.e3g-ev li button.nx{background:rgba(57,255,158,.12)}.e3g-ev li i{font-style:normal;font-size:16px;grid-row:span 2;align-self:center}.e3g-ev li small{color:#9AA4B2}.e3g-ev li small b{color:#FFE600;font-weight:600}
 .e3g-bl{grid-template-columns:repeat(4,auto);align-items:start;gap:2px 6px}.e3g-blc{display:grid;gap:2px}.e3g-blc b{font:600 10.5px/1 var(--mono,monospace);letter-spacing:.08em;text-transform:uppercase;opacity:.6;padding:8px 12px 4px}
 @media (max-width:560px){.e3g-bl{grid-template-columns:auto;max-height:70vh;overflow:auto}}
 .e3g-bl button{width:100%;text-align:left;border:0;background:none;border-radius:8px;min-height:32px;padding:6px 12px}.e3g-bl button:hover,.e3g-bl button[aria-current=true]{background:rgba(57,255,158,.14)}
@@ -72,9 +79,10 @@ function sunDir(t) { const d = new Date(t), doy = (t - Date.UTC(d.getUTCFullYear
 function create(host, opts) {
   if (!document.getElementById('e3g-css')) { const st = document.createElement('style'); st.id = 'e3g-css'; st.textContent = CSS; document.head.appendChild(st); }
   const el = document.createElement('div'); el.className = 'e3g'; host.appendChild(el);
-  const SPD = [[0, 'Auto'], [6e4, '1 min/s'], [36e5, '1 hour/s'], [864e5, '1 day/s'], [6048e5, '1 week/s'], [2629746e3, '1 month/s'], [31557600e3, '1 year/s'], [315576e6, '10 years/s']];
+  const SPD = [[0, 'Auto'], [1e3, 'Real time'], [1e4, '10 s/s'], [6e4, '1 min/s'], [6e5, '10 min/s'], [36e5, '1 hour/s'], [864e5, '1 day/s'], [6048e5, '1 week/s'], [2629746e3, '1 month/s'], [31557600e3, '1 year/s'], [315576e6, '10 years/s']];
   el.innerHTML = `<div class="e3g-find eo"><input type="search" data-k="find" placeholder="🔍 ${tr('Search a place or lat, lon')}" aria-label="${tr('Search a place or lat, lon')}" autocomplete="off"><ul role="listbox"></ul></div><div class="e3g-load">${tr('Loading the Earth…')} 0%</div><div class="e3g-alt">–</div>
-    <div class="e3g-go"><button data-k="home" aria-label="${tr('Earth')}" title="${tr('Earth')}">🌍</button><button data-k="sys" aria-label="${tr('Solar system')}" title="${tr('Solar system')}">☀</button><button data-k="bodies" aria-expanded="false" aria-label="${tr('Go to')}" title="${tr('Go to')}">🪐</button></div>
+    <div class="e3g-go"><button data-k="home" aria-label="${tr('Earth')}" title="${tr('Earth')}">🌍</button><button data-k="sys" aria-label="${tr('Solar system')}" title="${tr('Solar system')}">☀</button><button data-k="bodies" aria-expanded="false" aria-label="${tr('Go to')}" title="${tr('Go to')}">🪐</button><button data-k="ev" aria-expanded="false" aria-label="${tr('Eclipses')}" title="${tr('Eclipses')}">🌘</button></div>
+    <div class="e3g-ev" hidden><div class="e3g-evh"><b>${tr('Eclipses')} 1900–2050</b><div class="e3g-evf">${[['all', 'All'], ['S', 'Solar'], ['L', 'Lunar'], ['here', 'Seen from here']].map(([k, l], i) => `<button data-f="${k}" aria-pressed="${!i}">${tr(l)}</button>`).join('')}</div></div><ol></ol></div>
     <ul class="e3g-bl" hidden>${[[['Planets', ['Sun', 'Mercury', 'Venus', 'Earth', 'Moon', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune']]],
       [['Dwarf planets', ['Ceres', 'Pluto', 'Charon', 'Eris', 'Haumea', 'Makemake']], ['Comets', ['Halley', 'Encke', '67P']]],
       [['Asteroids', ['Vesta', 'Pallas', 'Hygiea', 'Psyche', 'Bennu', 'Ryugu', 'Apophis']]],
@@ -83,9 +91,10 @@ function create(host, opts) {
       <button class="eo" data-k="cl" aria-pressed="true">${tr('Clouds')}</button><button class="eo" data-k="cn" aria-pressed="false">${tr('Clouds: NASA')}</button><button class="eo" data-k="au" aria-pressed="true">${tr('Aurora')}</button>
       <div class="e3g-row eo"><button data-k="ms" aria-pressed="false">🧲 ${tr('Magnetic shield')}</button><button data-k="cme">💥 ${tr('CME impact')}</button></div>
       <button data-k="sun" aria-pressed="false">${tr('Real Sun')}</button><button data-k="sp" aria-pressed="true">${tr('Auto-rotate')}</button><button data-k="rs" aria-pressed="false">${tr('Real scale')}</button><button data-k="gd" aria-pressed="false">${tr('Names and orbits')}</button><button data-k="sw" aria-pressed="false">${tr('Solar wind + CMEs')}</button><button data-k="blt" aria-pressed="false">${tr('Asteroid + Kuiper belts')}</button><div class="e3g-row"><button data-k="sf" aria-pressed="false">${tr('Sun’s magnetic field')}</button><button data-k="dw" aria-pressed="false">🌀 ${tr('Without the solar wind')}</button></div></div></div>
-    <div class="e3g-time"><input type="datetime-local" class="e3g-date" data-k="date" aria-label="${tr('Date and time')}"><button data-k="now">${tr('Now')}</button>
+    <div class="e3g-time"><div class="e3g-ecb" hidden></div><input type="datetime-local" class="e3g-date" data-k="date" aria-label="${tr('Date and time')}"><button data-k="now">${tr('Now')}</button>
       <div class="e3g-tod eo" title="${tr('Time of day here (local Sun time)')}">☀<button data-k="todB" aria-label="${tr('Earlier')}">‹</button><input type="range" data-k="tod" min="0" max="1435" step="5" aria-label="${tr('Time of day here (local Sun time)')}"><button data-k="todF" aria-label="${tr('Later')}">›</button><span></span></div>
-      <div class="e3g-tod so" title="${tr('Move the clock (±10 days): orange = a CME leaves the Sun, red = it reaches the Earth')}">☄<button data-k="dyB" aria-label="${tr('Earlier')}">‹</button><div class="e3g-dw"><i class="e3g-mk"></i><input type="range" data-k="dy" min="-14400" max="14400" step="30" aria-label="${tr('Move the clock (±10 days): orange = a CME leaves the Sun, red = it reaches the Earth')}"></div><button data-k="dyF" aria-label="${tr('Later')}">›</button><button data-k="dyR" aria-label="${tr('Play backwards')}" aria-pressed="false">◀</button><button data-k="dyP" aria-label="${tr('Play')}" aria-pressed="false">▶</button><select data-k="dyS" class="e3g-spd" aria-label="${tr('Speed')}">${SPD.map(([v, l], i) => `<option value="${i}">${tr(l)}</option>`).join('')}</select><span></span></div></div>
+      <div class="e3g-tod so" title="${tr('Move the clock (±10 days): orange = a CME leaves the Sun, red = it reaches the Earth')}">☄<button data-k="dyB" aria-label="${tr('Earlier')}">‹</button><div class="e3g-dw"><i class="e3g-mk"></i><input type="range" data-k="dy" min="-14400" max="14400" step="30" aria-label="${tr('Move the clock (±10 days): orange = a CME leaves the Sun, red = it reaches the Earth')}"></div><button data-k="dyF" aria-label="${tr('Later')}">›</button><span></span></div>
+      <div class="e3g-tod e3g-play"><button data-k="dyR" aria-label="${tr('Play backwards')}" aria-pressed="false">◀</button><button data-k="dyP" aria-label="${tr('Play')}" aria-pressed="false">▶</button><select data-k="dyS" class="e3g-spd" aria-label="${tr('Speed')}">${SPD.map(([v, l], i) => `<option value="${i}">${tr(l)}</option>`).join('')}</select></div></div>
     <div class="e3g-nav"><button data-k="fly" aria-pressed="false" title="${tr('Free flight: W A S D, drag to look, Esc to stop')}" aria-label="${tr('Free flight: W A S D, drag to look, Esc to stop')}">✈</button><button data-k="ang" aria-pressed="false" aria-label="${tr('Tilt')} / ${tr('Heading')}">∠</button><button data-k="cmp" aria-label="${tr('Reset to north')}"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 3l4 9h-8z" fill="#FF4D4D"/><path d="M12 21l-4-9h8z" fill="#E6EBF1"/></svg></button><button data-k="3d" aria-pressed="true" aria-label="${tr('3D view')}">3D</button><button data-k="zout" aria-label="${tr('Zoom out')}">−</button><button data-k="zin" aria-label="${tr('Zoom in')}">+</button></div>
     <div class="e3g-info" hidden aria-live="polite"></div>
     <div class="e3g-pnl" hidden><label>${tr('Tilt')}<input type="range" data-s="tilt" min="0" max="100" value="100"></label><label>${tr('Heading')}<input type="range" data-s="head" min="-180" max="180" value="0"></label><button data-k="north">${tr('Reset to north')}</button><small>${tr('Shift + drag or right-drag: tilt and turn')}</small></div>
@@ -138,13 +147,23 @@ function create(host, opts) {
   
   const U = { day: { value: TX.day }, night: { value: TX.night }, clouds: { value: TX.clouds }, nrm: { value: TX.normal }, water: { value: TX.water },
     sun: { value: new THREE.Vector3(1, 0, 0) }, rsun: { value: new THREE.Vector3(1, 0, 0) }, lightsOn: { value: 0 }, camO: { value: new THREE.Vector3() }, morph: { value: 0 }, cloudOn: { value: 1 }, cloudShift: { value: 0 },
-    cloudFade: { value: 1 }, aumap: { value: null }, auOn: { value: 1 }, hdA: { value: 0 }, pxk: { value: 1000 }, wtime: { value: 0 } };
+    cloudFade: { value: 1 }, aumap: { value: null }, auOn: { value: 1 }, hdA: { value: 0 }, pxk: { value: 1000 }, wtime: { value: 0 },
+    eMoon: { value: new THREE.Vector4(0, 0, 0, 0) }, eSun: { value: new THREE.Vector4(1, 0, 0, 23481) } };
   // one light model for the globe and the close-up tiles: n = up, P = the point, N = relief normal, Nw = water-surface normal, rough = wave slope variance,
   // d = colour, w = water 0…1, g = map uv, rk = how strongly the relief shades
   // the sunlight that reaches the ground through the air (Rayleigh + Mie, the same air as the shell): white at noon, gold then red at sunrise / sunset.
   // Real Sun only (lightsOn): with the studio light the Sun is a lamp, not low in anyone's sky
   const SUNT = /* glsl */`
-    uniform float lightsOn;
+    uniform float lightsOn; uniform vec4 eMoon, eSun;
+    // solar eclipse: the share of the Sun's disc seen from P past the Moon (eMoon = Moon centre in R⊕, w = 1 in an eclipse window;
+    // eSun = direction + distance of the Sun as its light left it). Real Sun only.
+    float eclF(vec3 P) { if (eMoon.w < .5 || lightsOn < .01) return 1.; vec3 m = eMoon.xyz - P, s = eSun.xyz * eSun.w - P; float dm = length(m), ds = length(s);
+      float a = asin(min(1., .27271 / dm)), b = asin(min(1., 109.2 / ds)), d = asin(clamp(length(cross(m / dm, s / ds)), 0., 1.));
+      if (dot(m, s) <= 0. || d >= a + b) return 1.; float f;
+      if (d <= a - b) f = 0.; else if (d <= b - a) f = 1. - a * a / (b * b);
+      else { float A = b * b * acos(clamp((d * d + b * b - a * a) / (2. * d * b), -1., 1.)) + a * a * acos(clamp((d * d + a * a - b * b) / (2. * d * a), -1., 1.)) - .5 * sqrt(max(0., (-d + a + b) * (d + a - b) * (d - a + b) * (d + a + b)));
+        f = 1. - A / (3.14159265 * b * b); }
+      return mix(1., f, lightsOn); }
     vec3 sunT(float mu) { float m = max(mu, 0.) + .035; vec3 t = exp(-(vec3(12.3, 28.8, 70.6) * .0042 + 21. * 1.1 * .0011) * (1. / m - 1. / 1.035));
       return mix(vec3(1.), t * smoothstep(-.03, .02, mu) + vec3(.02, .01, .005) * (1. - smoothstep(-.03, .02, mu)), lightsOn); }`;
   const SHADE = /* glsl */`${SUNT}
@@ -152,7 +171,7 @@ function create(host, opts) {
     vec3 shade(vec3 n, vec3 P, vec3 N, vec3 Nw, float rough, vec3 d, float w, vec2 g, float rk) {
       vec3 ea = normalize(vec3(n.z, 0., -n.x) + vec3(1e-5)), no = cross(n, ea);
       vec3 Vd = camO - P; float dist = length(Vd); vec3 V = Vd / dist;
-      float mu = dot(n, sun), vn = max(dot(n, V), 0.), dl = pow(smoothstep(-.02, .62, mu), 1.5);
+      float ef = eclF(n), mu = dot(n, sun), vn = max(dot(n, V), 0.), dl = pow(smoothstep(-.02, .62, mu), 1.5) * ef;
       vec2 cu = g + vec2(cloudShift, 0.); float cf = cloudOn * cloudFade, c = smoothstep(.12, .85, texture2D(clouds, cu).r) * cf;
       float zen = clamp(sqrt(max(1. - mu * mu, 0.)) / max(mu, .08), 0., 9.);   // tan of the Sun's zenith angle
       float cs = smoothstep(.1, .8, texture2D(clouds, cu - vec2(dot(sun, ea), dot(sun, no)) * (.0006 + .00035 * zen), 2.5).r) * cf * smoothstep(-.05, .25, mu);
@@ -164,7 +183,7 @@ function create(host, opts) {
         float Dm = exp((c2 - 1.) / (c2 * rough)) / (3.1416 * rough * c2 * c2);
         vec3 skyc = vec3(.22, .42, .9) * smoothstep(-.04, .35, mu) * .45;   // no sky to mirror at night
         col = mix(col, col * (1. - Fv) + skyc * Fv, w);
-        col += vec3(1., .94, .82) * sT * min(5. * F * Dm / (4. * nv), 6.) * smoothstep(0., .06, nl) * w * (1. - c) * (1. - .8 * cs) * (.35 + .65 * lightsOn) * smoothstep(-.02, .1, mu);
+        col += vec3(1., .94, .82) * sT * min(5. * F * Dm / (4. * nv), 6.) * smoothstep(0., .06, nl) * w * (1. - c) * (1. - .8 * cs) * (.35 + .65 * lightsOn) * smoothstep(-.02, .1, mu) * ef;
       }
       // aerial perspective: a blue veil, thicker toward the edge and with distance (Google-Earth look); clear right under you
       float hz = (.08 + .3 * pow(1. - vn, 2.)) * (1. - exp(-dist * 40.));
@@ -207,7 +226,7 @@ function create(host, opts) {
       float gx = C(u + vec2(e.x, 0.)) - C(u - vec2(e.x, 0.)), gy = C(u + vec2(0., e.y)) - C(u - vec2(0., e.y));
       vec3 N = normalize(n - (ea * gx + no * gy) * 4.5);
       float self = smoothstep(.1, .85, texture2D(clouds, u + vec2(dot(sun, ea), dot(sun, no)) * .0012, 1.5).r) * cloudOn; float mu = dot(n, sun), lit = pow(smoothstep(-.02, .62, mu), 1.5) * clamp(1. + (dot(N, sun) - mu) * .7, .6, 1.3) * (1. - .35 * max(self - c, 0.) - .2 * c * c), V = max(dot(n, normalize(camO - n)), 0.);
-      lit *= 1. + cd * .45;   // puffy light and shade inside the clouds
+      lit *= (1. + cd * .45) * eclF(n);   // puffy light and shade inside the clouds; the Moon's shadow in an eclipse
       vec3 col = mix(vec3(.5, .56, .68), vec3(1.04, 1.03, 1.) * sunT(mu), lit) * (lit * 1.25 + .002);   // pink and gold clouds at sunrise
       col = mix(col, vec3(.36, .58, 1.) * 1.05 * max(mu * .9 + .1, 0.), (.06 + .25 * pow(1. - V, 2.)) * smoothstep(-.3, .45, mu));
       col += vec3(.1, 1., .35) * texture2D(aumap, vec2(fract(vUv.x + .5), vUv.y), 2.).r * auOn * (1. - smoothstep(-.2, .05, mu)) * .07;   // lit green from the aurora above
@@ -219,7 +238,7 @@ function create(host, opts) {
   const AIR_R = 1.025, STEPS = Q === 'low' ? 6 : Q === 'medium' ? 8 : 10;
   const air = { visible: true };   // the air is a full-screen pass after the scene (see airPass), so it can stop at the real ground
   const AIRFS = /* glsl */`
-    uniform sampler2D tDiffuse, tDepth; uniform mat4 projInv, camW; uniform mat3 toObj; uniform vec2 cn; uniform vec3 sun, camO; uniform float morph; varying vec2 vUv;
+    uniform sampler2D tDiffuse, tDepth; uniform mat4 projInv, camW; uniform mat3 toObj; uniform vec2 cn; uniform vec3 sun, camO; uniform float morph; varying vec2 vUv; ${SUNT}
     const float RA = ${AIR_R.toFixed(4)}, HR = .0042, HM = .0011, G = .76;
     const vec3 BR = vec3(12.3, 28.8, 70.6); const float BM = 21.;
     vec2 hit(vec3 o, vec3 d, float r) { float b = dot(o, d), c = dot(o, o) - r * r, h = b * b - c; if (h < 0.) return vec2(1e9, -1e9); h = sqrt(h); return vec2(-b - h, -b + h); }
@@ -241,6 +260,7 @@ function create(host, opts) {
         // Sun's disc blur the edge ±0.7°); and since our air is
         // ~3× thicker than the real one (so the limb shows), its light also fades over ~10° past the day-night line instead of ending in a hard band
         float rp = length(p), el = asin(clamp(dot(p, sun) / rp, -1., 1.)), dip = acos(min(1. / rp, 1.)), lit = smoothstep(-dip - .012, -dip + .012, el) * smoothstep(-.17, .03, el);
+        lit *= eclF(p);   // the Moon's shadow darkens the air too
         if (lit <= 0.) continue;
         den *= vec2(lit, lit);
         vec2 odS = depthTo(p); vec3 tr = exp(-(BR * (odC.x + odS.x) + BM * 1.1 * (odC.y + odS.y)));
@@ -257,11 +277,20 @@ function create(host, opts) {
       vec3 trans(vec3 o, vec3 d) { vec2 a = hit(o, d, RA); if (a.y <= 0.) return vec3(1.); float t0 = max(a.x, 0.), L = (a.y - t0) / 12.; vec2 od = vec2(0.);
         for (int i = 0; i < 12; i++) { vec3 p = o + d * (t0 + (float(i) + .5) * L); od += exp(-max(length(p) - 1., 0.) / vec2(HR, HM)) * L; }
         return exp(-(BR * od.x + BM * 1.1 * od.y)); }`;
-  const SUNA = 8 * D2R, sunQ = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ uniforms: { sun: U.sun, camO: U.camO, toObj: { value: new THREE.Matrix3() } },
+  const MOONV = /* glsl */`
+      // the Moon seen from the camera in an eclipse window: its direction, its angular radius, and the share of the Sun still showing
+      vec3 mDir() { return normalize(eMoon.xyz - camO); }
+      float mRad() { return asin(min(1., .27271 / length(eMoon.xyz - camO))); }
+      float sunLeft() { if (eMoon.w < .5) return 1.; float a = mRad(), b = RD, d = acos(clamp(dot(mDir(), sun), -1., 1.));
+        if (d >= a + b) return 1.; if (d <= a - b) return 0.; if (d <= b - a) return 1. - a * a / (b * b);
+        float A = b * b * acos(clamp((d * d + b * b - a * a) / (2. * d * b), -1., 1.)) + a * a * acos(clamp((d * d + a * a - b * b) / (2. * d * a), -1., 1.)) - .5 * sqrt(max(0., (-d + a + b) * (d + a - b) * (d - a + b) * (d + a + b)));
+        return 1. - A / (3.14159265 * b * b); }`;
+  const SUNA = 8 * D2R, sunQ = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ uniforms: { sun: U.sun, camO: U.camO, eMoon: U.eMoon, toObj: { value: new THREE.Matrix3() } },
     vertexShader: `varying vec3 vW; varying vec2 vQ; void main() { vQ = position.xy; vW = (modelMatrix * vec4(position, 1.)).xyz; gl_Position = projectionMatrix * viewMatrix * vec4(vW, 1.); }`,
-    fragmentShader: `uniform vec3 sun, camO; uniform mat3 toObj; varying vec3 vW; varying vec2 vQ;
-${SUNLIB}
+    fragmentShader: `uniform vec3 sun, camO; uniform vec4 eMoon; uniform mat3 toObj; varying vec3 vW; varying vec2 vQ;
+${SUNLIB}${MOONV}
       void main() { vec3 d = normalize(toObj * normalize(vW - cameraPosition)); float r = acos(clamp(dot(d, sun), -1., 1.)), x = r / RD;
+        float left = sunLeft(), tot = 1. - smoothstep(0., .015, left);   // share of the Sun still showing; 1 at totality
         float disc = smoothstep(1.08, .92, x) * (1. - .6 * (1. - sqrt(max(1. - x * x, 0.))));
         float ang = acos(clamp(dot(sun, -normalize(camO)), -1., 1.)), er = asin(min(1. / length(camO), 1.)), vis = smoothstep(er - RD, er + RD, ang);   // how much of the disc clears the Earth
         // a tight glare like a camera sees it: bright close to the disc, falling fast, + six faint rays (camera-aligned); no wide grey fog in a vacuum
@@ -270,16 +299,24 @@ ${SUNLIB}
         float glow = (1.4 * exp(-r / .0022) + .22 * exp(-r / .009) + .035 * exp(-r / .04) + ray) * mix(.1, 1., vis) * smoothstep(${SUNA.toFixed(4)}, ${(SUNA * .5).toFixed(4)}, r);
         // the disc is ~100 000× brighter than the sky: even through the thick air at sunset (a few % gets through, mostly red) it stays a clear red-orange disc;
         // the clean pass caps the brightness keeping the colour. The glare is light already scattered, so it dims less (sqrt)
+        disc *= left; glow *= mix(.02, 1., sqrt(left));   // the glare goes as the Sun is covered (the crisp disc is cut by the Moon itself, after the bloom)
         vec3 tr = trans(camO, d), c = vec3(1., .98, .95) * disc * 400. * tr + vec3(1., .9, .76) * glow * sqrt(tr);
+        if (tot > 0.) {   // the corona, only seen in totality: a pearly glow that falls off over a few solar radii, with streamers + polar plumes
+          float rm = acos(clamp(dot(d, mDir()), -1., 1.)) / RD, q = atan(dot(d, normalize(cross(sun, vec3(0., 1., 0.)))), dot(d, vec3(0., 1., 0.)));
+          float st = .55 + .45 * pow(abs(sin(q)), 3.) * (.7 + .3 * sin(q * 7. + 1.3)) + .25 * pow(abs(cos(q)), 24.) * (.5 + .5 * sin(q * 41.));
+          float cor = smoothstep(.98, 1.04, rm) * pow(max(x, 1.), -3.2) * st * (1. + 4. * exp(-(x - 1.) * 9.));
+          c += vec3(.9, .93, 1.) * cor * 1.1 * tot * tr; }
         gl_FragColor = vec4(c, 1.); }`, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
   sunQ.renderOrder = 2; sunQ.frustumCulled = false; scene.add(sunQ);
   // the crisp disc on top of the finished picture (after the bloom, which would melt a 0.5° disc into a blob): red-orange through the air at the horizon,
   // white from space, limb-darkened; hidden by the Earth's ball (mountains do not hide it)
   const sunDepth = { value: null }, sunRes = { value: new THREE.Vector2(1, 1) };   // the scene's depth (filled by the air pass each frame): mountains hide the disc too
   const sunScene = new THREE.Scene(), sunD = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ uniforms: { ...sunQ.material.uniforms, tDepth: sunDepth, res: sunRes },
-    vertexShader: sunQ.material.vertexShader, fragmentShader: `uniform vec3 sun, camO; uniform mat3 toObj; uniform sampler2D tDepth; uniform vec2 res; varying vec3 vW; varying vec2 vQ; ${SUNLIB}
+    vertexShader: sunQ.material.vertexShader, fragmentShader: `uniform vec3 sun, camO; uniform vec4 eMoon; uniform mat3 toObj; uniform sampler2D tDepth; uniform vec2 res; varying vec3 vW; varying vec2 vQ; ${SUNLIB}${MOONV}
       void main() { if (texture2D(tDepth, gl_FragCoord.xy / res).r > .5) discard; vec3 d = normalize(toObj * normalize(vW - cameraPosition)); float x = acos(clamp(dot(d, sun), -1., 1.)) / RD, px = max(fwidth(x), .02);
-        float cov = smoothstep(1. + px, 1. - px, x); if (cov <= 0.) discard;
+        float cov = smoothstep(1. + px, 1. - px, x);
+        if (eMoon.w > .5) { float y = acos(clamp(dot(d, mDir()), -1., 1.)) / mRad(), py = max(fwidth(y), .02); cov *= smoothstep(1. - py, 1. + py, y); }   // the Moon in front of it
+        if (cov <= 0.) discard;
         float b = dot(camO, d), cd = sqrt(max(dot(camO, camO) - b * b, 0.)), vis = b < 0. ? smoothstep(1.00005, 1.0004, cd) : 1.;
         vec3 tr = trans(camO, d); float m = max(tr.r, max(tr.g, tr.b)), a = cov * vis * clamp(m * 300., 0., 1.);
         float ld = 1. - .4 * (1. - sqrt(max(1. - x * x, 0.)));
@@ -518,7 +555,7 @@ ${SUNLIB}
     composer.addPass({ enabled: true, needsSwap: false, clear: false, renderToScreen: false, setSize(w, h) { maskRT.setSize(w, h); sunRes.value.set(w, h); }, dispose() {},
       render(r, w, rb) { q.material.uniforms.tDepth.value = rb.depthTexture; const o = r.getRenderTarget(); r.setRenderTarget(maskRT); q.render(r); r.setRenderTarget(o); } }); }
   { }   // the buffer the scene went into this frame
-  Object.assign(airPass.uniforms, { camO: U.camO, sun: U.sun, morph: U.morph });   // ShaderPass copies its uniforms: hand it the live ones
+  Object.assign(airPass.uniforms, { camO: U.camO, sun: U.sun, morph: U.morph, lightsOn: U.lightsOn, eMoon: U.eMoon, eSun: U.eSun });   // ShaderPass copies its uniforms: hand it the live ones
   composer.addPass(airPass);
   // a safety net: a single NaN / Inf pixel from any shader would be smeared by the bloom into black blocks and a whole-screen flicker — clean it first
   composer.addPass(new ShaderPass({ uniforms: { tDiffuse: { value: null } }, vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`,
@@ -877,6 +914,95 @@ ${SUNLIB}
     const hit = (x, y) => { if (op < .3) return null; let best = null, bd = 28; AN.forEach((a, i) => { const d = Math.hypot(a.x - x, a.y - y); if (a.ok && d < bd) { bd = d; best = PARTS[i]; } }); return best; };
     return { update, hit, card };
   })();
+  // ── eclipses: the list (1900–2050, with how much of it your place sees), a click = the clock to it at 10 min/s + a view of it
+  const EKIND = { T: 'Total solar eclipse', A: 'Annular solar eclipse', H: 'Hybrid solar eclipse', P: 'Partial solar eclipse', t: 'Total lunar eclipse', p: 'Partial lunar eclipse', n: 'Penumbral lunar eclipse' };
+  const evP = el.querySelector('.e3g-ev'), evL = evP.querySelector('ol'); let evF = 'all', seenAt = null, seen = [];
+  const place = () => (opts.places && opts.places[0]) || { name: 'Brașov', lat: 45.65, lon: 25.6 };
+  // the place as a geocentric ecliptic unit vector at time t (R⊕)
+  const placeEcl = (p, t) => { const f = p.lat * D2R, th = gmst(t) + p.lon * D2R, x = Math.cos(f) * Math.cos(th), y = Math.cos(f) * Math.sin(th), z = Math.sin(f), e = 23.4393 * D2R;
+    return [x, y * Math.cos(e) + z * Math.sin(e), -y * Math.sin(e) + z * Math.cos(e)]; };
+  const dot3 = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2], sub3 = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]], len3 = a => Math.sqrt(dot3(a, a));
+  // share of the Sun covered by the Moon seen from P (R⊕), the same circles as the shader
+  function covered(P, M, S) { const m = sub3(M, P), s = sub3(S, P), dm = len3(m), ds = len3(s); if (dot3(m, s) <= 0) return 0;
+    const a = Math.asin(Math.min(1, .27271 / dm)), b = Math.asin(Math.min(1, 109.2 / ds)), c = dot3(m, s) / dm / ds, d = Math.acos(Math.min(1, c));
+    if (d >= a + b) return 0; if (d <= a - b) return 1; if (d <= b - a) return a * a / (b * b);
+    const A = b * b * Math.acos((d * d + b * b - a * a) / (2 * d * b)) + a * a * Math.acos((d * d + a * a - b * b) / (2 * d * a)) - .5 * Math.sqrt(Math.max(0, (-d + a + b) * (d + a - b) * (d - a + b) * (d + a + b)));
+    return A / (Math.PI * b * b); }
+  // what your place sees of each eclipse: solar = the most of the Sun covered while it is up; lunar = the Moon up during the umbral (or penumbral) part
+  function seenFrom(e, p) { let best = 0;
+    for (let k = 0; k <= 300; k++) { const t = e[4] + k * 12e4, M = solar.eclMoon(e, t), S = solar.eclSun(e, t), P = placeEcl(p, t);
+      if (e[0] === 'S') { if (dot3(P, S) <= 0) continue; best = Math.max(best, covered(P, M, S)); }
+      else { if (dot3(P, M) <= 0) continue; const v = S.map(x => -x / len3(S)), dm = dot3(M, v), sd = len3(sub3(M, v.map(x => x * dm))) * 6371, Ds = len3(S) * 6371,
+          ru = 1.02 * (6378 - dm * 6371 * (695700 - 6378) / Ds), rp = 1.02 * (6378 + dm * 6371 * (695700 + 6378) / Ds);
+        if (sd < (e[1] === 'n' ? rp : ru) + 1737.4) best = 1; } }
+    return best; }
+  const dfmt = t => new Date(t).toLocaleString(window.LOC || 'en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  function evBuild() { const L = solar.eclList(), p = place(), key = p.lat + ',' + p.lon + ',' + L.length;
+    if (seenAt !== key) { seenAt = key; seen = L.map(e => seenFrom(e, p)); }
+    const tn = now(); let nx = -1;
+    evL.innerHTML = L.map((e, i) => { const s = seen[i];
+      if ((evF === 'S' || evF === 'L') && e[0] !== evF) return ''; if (evF === 'here' && s < .01) return '';
+      if (nx < 0 && e[2] > tn) nx = i;
+      const vis = s < .01 ? tr('not seen from {p}', { p: p.name }) : e[0] === 'S' ? tr('{p}: {n}% of the Sun covered', { p: p.name, n: Math.max(1, Math.round(s * 100)) }) : tr('seen from {p}', { p: p.name });
+      return `<li><button data-e="${i}"${i === nx ? ' class="nx"' : ''}><i>${e[0] === 'S' ? (e[1] === 'P' ? '🌘' : e[1] === 'A' ? '💍' : '🌑') : e[1] === 't' ? '🔴' : '🌕'}</i><span>${dfmt(e[2])} · ${tr(EKIND[e[1]])}</span><small>${s >= .01 ? `<b>${vis}</b>` : vis}</small></button></li>`; }).join('');
+    const n = evL.querySelector('.nx'); if (n) n.scrollIntoView({ block: 'center' }); }
+  $('ev').onclick = () => { const on = evP.hidden; pop($('ev'), evP, on); if (on) { if (!solar.eclList().length) { evL.innerHTML = `<li><small>${tr('loading…')}</small></li>`; return; } evBuild(); } };
+  evP.querySelector('.e3g-evf').onclick = e => { const b = e.target.closest('[data-f]'); if (!b) return; evF = b.dataset.f; evP.querySelectorAll('[data-f]').forEach(o => o.setAttribute('aria-pressed', o === b)); evBuild(); };
+  evL.onclick = e => { const b = e.target.closest('[data-e]'); if (!b) return; pop($('ev'), evP, false); goEclipse(solar.eclList()[+b.dataset.e], seen[+b.dataset.e]); };
+  function goEclipse(e, s) { const tm = e[2], t0 = tm - (e[0] === 'S' ? 80 : 110) * 6e4;
+    tOver = t0; di.value = localStr(t0); if (!realSun) { realSun = true; press($('sun'), true); }
+    solar.eclToWorld(tm); const M = solar.eclMoon(e, tm), S = solar.eclSun(e, tm);
+    if (e[0] === 'S') {   // above the spot nearest the shadow's axis at the greatest eclipse, so the shadow sweeps under you
+      const u = sub3(M, S), ul = len3(u), un = u.map(x => x / ul), k = dot3(M, un), c = sub3(M, un.map(x => x * k)), g = len3(c), dirW = solar.toWorld(sub3(c, un.map(x => x * Math.sqrt(Math.max(0, 1 - g * g))))).normalize();
+      solar.eclToWorld(t0); flyToBody('Earth', 2.4, dirW, true); }
+    else { solar.eclToWorld(t0); flyToBody('Moon', 16, solar.toWorld(M).negate().normalize(), true); }   // between the Moon and the Earth, facing the Moon
+    spd = 6e5; $('dyS').value = String(SPD.findIndex(x => x[0] === 6e5)); playSet(true, 1);
+    const p = place(), vis = s < .01 ? tr('not seen from {p}', { p: p.name }) : e[0] === 'S' ? tr('{p}: {n}% of the Sun covered', { p: p.name, n: Math.max(1, Math.round(s * 100)) }) : tr('seen from {p}', { p: p.name });
+    infoOf = null; info.innerHTML = `<div class="e3g-ih"><b>${tr(EKIND[e[1]])}</b><button aria-label="${tr('Close')}">✕</button></div>
+      <div class="e3g-if"><div><small>${tr('Greatest')}</small>${dfmt(tm)}</div><div><small>${e[0] === 'S' ? 'γ' : tr('Magnitude')}</small>${e[3]}</div></div>
+      <p class="e3g-ip"><b>${vis}</b></p><p class="e3g-ip">${tr(e[0] === 'S' ? 'The dark patch is the Moon’s shadow: how dark = how much of the Sun is covered there. The red line is the path where the Sun is fully covered (or a ring, for an annular one). The clock runs at 10 minutes a second; change it in the time bar.' : 'The Moon goes into the Earth’s shadow. In the full shadow it turns red: the only sunlight that still reaches it is bent through the Earth’s air, the light of every sunrise and sunset on Earth at once.')}</p>
+      <small class="e3g-isrc">${tr('Positions')}: NASA/JPL Horizons</small>`;
+    info.hidden = false; info.querySelector('.e3g-ih button').onclick = hideInfo; }
+  // the central line of a total / annular eclipse, on the globe while its window is on the clock
+  const cLine = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xFF6A3D, transparent: true, opacity: .95 })); cLine.visible = false; earth.add(cLine); let cFor = null;
+  // the eclipse as seen from the ground under the camera: first contact, totality / ring, greatest, end (Sun above the horizon only)
+  const ecb = el.querySelector('.e3g-ecb'); let phK = '', phT = 0, ph = null;
+  function phases(w, P, qi) {
+    const at = tk => { solar.eclToWorld(tk); const M = solar.toWorld(solar.eclMoon(w, tk)).applyQuaternion(qi), S = solar.toWorld(solar.eclSun(w, tk)).applyQuaternion(qi);
+      const m = M.sub(P), s = S.sub(P), up = s.dot(P) > 0, a = Math.asin(Math.min(1, .27271 / m.length())), b = Math.asin(Math.min(1, 109.2 / s.length())), d = m.angleTo(s);
+      return { up, f: up ? 1 - (covered([P.x, P.y, P.z], [M.x + P.x, M.y + P.y, M.z + P.z], [S.x + P.x, S.y + P.y, S.z + P.z])) : 1, c: d < a + b, in: d <= Math.abs(a - b), tot: a >= b }; };
+    const L = []; for (let k = 0; k <= 600; k++) L.push(at(w[4] + k * 6e4));
+    // a boundary between minute k-1 and k, to 5 s
+    const edge = (k, key) => { let lo = w[4] + (k - 1) * 6e4, hi = lo + 6e4; const v0 = at(lo)[key]; while (hi - lo > 5e3) { const mi = (lo + hi) / 2; if (at(mi)[key] === v0) lo = mi; else hi = mi; } return (lo + hi) / 2; };
+    const o = { c1: null, c2: null, c3: null, c4: null, mx: null, fm: 1, tot: false };
+    for (let k = 1; k <= 600; k++) { const p = L[k - 1], q = L[k];
+      if (!p.c && q.c && q.up) o.c1 = edge(k, 'c'); if (p.c && !q.c && p.up) o.c4 = edge(k, 'c');
+      if (!p.in && q.in && q.up) { o.c2 = edge(k, 'in'); o.tot = q.tot; } if (p.in && !q.in && p.up) o.c3 = edge(k, 'in');
+      if (q.up && q.f < o.fm) { o.fm = q.f; o.mx = w[4] + k * 6e4; } }
+    if (o.mx) for (let k = -60; k <= 60; k++) { const tk = o.mx + k * 1e3, v = at(tk); if (v.up && v.f <= o.fm) { o.fm = v.f; o.mx = tk; } }
+    if (o.fm > .995) return null;   // not seen from here (or the Sun is down all through it)
+    return o; }
+  const hmsE = t => new Date(t).toLocaleTimeString(window.LOC || 'en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  function phaseBar(t, w, qi) {
+    if (!w || w[0] !== 'S' || !realSun) { ecb.hidden = true; ph = null; return; }
+    const P = U.camO.value.clone().normalize(), key = w[2] + ':' + (P.x * 500 | 0) + ',' + (P.y * 500 | 0) + ',' + (P.z * 500 | 0);
+    if (key !== phK && performance.now() - phT > 700) { phK = key; phT = performance.now(); ph = phases(w, P, qi); solar.eclToWorld(t); ecb.dataset.k = ''; }
+    if (!ph) { ecb.hidden = true; return; }
+    const tot = ph.tot ? 'Totality' : 'Ring', B = [['c1', 'Start'], ['c2', tot + ' begins'], ['mx', 'Greatest'], ['c3', tot + ' ends'], ['c4', 'End']].filter(([k]) => ph[k]);
+    const cur = B.reduce((a, [k], i) => t >= ph[k] - 2e3 ? i : a, -1), sig = phK + cur;
+    if (ecb.dataset.k !== sig) { ecb.dataset.k = sig; ecb.hidden = false;
+      ecb.innerHTML = `<b>🌘 ${tr('Here')}: ${Math.round((1 - ph.fm) * 100)}%</b>` + B.map(([k, l], i) => `<button data-t="${ph[k]}"${i === cur ? ' class="on"' : ''}><small>${tr(l)}</small>${hmsE(ph[k])}</button>`).join('');
+      ecb.querySelectorAll('button').forEach(b => b.onclick = () => { const tt = +b.dataset.t - (b.dataset.t == ph.c2 ? 15e3 : 0); tOver = tt; di.value = localStr(tt); if (!realSun) { realSun = true; press($('sun'), true); } }); } }
+  function eclFrame(t) { const w = solar.eclAt(t), qi = earth.quaternion.clone().invert(); phaseBar(t, w, qi);
+    if (!w || w[0] !== 'S') { U.eMoon.value.w = 0; cLine.visible = false; return; }
+    const M = solar.eclMoon(w, t), S = solar.eclSun(w, t), m = solar.toWorld(M).applyQuaternion(qi), sd = len3(S), s = solar.toWorld(S).applyQuaternion(qi).normalize();
+    U.eMoon.value.set(m.x, m.y, m.z, 1); U.eSun.value.set(s.x, s.y, s.z, sd);
+    if (cFor !== w) { cFor = w; const P = [];
+      if (w[1] !== 'P') for (let k = 0; k <= 600; k++) { const tk = w[4] + k * 6e4, Mk = solar.eclMoon(w, tk), Sk = solar.eclSun(w, tk), u = sub3(Mk, Sk), ul = len3(u), un = u.map(x => x / ul);
+        const b = dot3(Mk, un), h = b * b - dot3(Mk, Mk) + 1; if (h < 0) { if (P.length) break; continue; }
+        const q = Mk.map((x, i) => x + un[i] * (-b - Math.sqrt(h))); solar.eclToWorld(tk); const o = solar.toWorld(q).applyQuaternion(qi).multiplyScalar(1.0015); P.push(o.x, o.y, o.z); }
+      solar.eclToWorld(t); cLine.geometry.dispose(); cLine.geometry = new THREE.BufferGeometry(); cLine.geometry.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); }
+    cLine.visible = U.morph.value < .01 && U.camO.value.length() > 1.05 && cLine.geometry.attributes.position && cLine.geometry.attributes.position.count > 1; }
   function hideInfo() { info.hidden = true; infoOf = null; orbitOn = orbitWait = 0; }
   $('sys').onclick = () => flyToBody('Sun'); $('home').onclick = () => flyToBody('Earth');
   const bl = el.querySelector('.e3g-bl'), lp = el.querySelector('.e3g-lp'), pop = (b, p, on) => { p.hidden = !on; b.setAttribute('aria-expanded', on); };
@@ -890,7 +1016,7 @@ ${SUNLIB}
     else flyToBody('Sun', 2.4 * AUr / solar.bodies.Sun.R, null, true);
     showInfo(n); }
   $('layers').onclick = () => pop($('layers'), lp, lp.hidden);
-  el.addEventListener('pointerdown', e => { if (!e.target.closest('.e3g-bl,[data-k="bodies"]')) pop($('bodies'), bl, false); if (!e.target.closest('.e3g-lay')) pop($('layers'), lp, false); });
+  el.addEventListener('pointerdown', e => { if (!e.target.closest('.e3g-bl,[data-k="bodies"]')) pop($('bodies'), bl, false); if (!e.target.closest('.e3g-ev,[data-k="ev"]')) pop($('ev'), evP, false); if (!e.target.closest('.e3g-lay')) pop($('layers'), lp, false); });
   $('blt').onclick = e => { solar.belt = !solar.belt; press(e.currentTarget, solar.belt); };
   $('rs').onclick = e => { solar.realScale = !solar.realScale; press(e.currentTarget, solar.realScale); };
   $('gd').onclick = e => { solar.guides = !solar.guides; press(e.currentTarget, solar.guides); };
@@ -940,9 +1066,9 @@ ${SUNLIB}
     ul.onpointerdown = e => { const li = e.target.closest('li[data-i]'); if (li) { e.preventDefault(); pick(hits[+li.dataset.i]); } };
     fi.onblur = () => setTimeout(() => { hits = []; draw(); }, 150); }
   for (const [k, dir] of [['todB', -1], ['todF', 1]]) { const b = $(k); let iv = null, n = 0;
-    const step = () => { const t = now() + dir * 6e5 * (n < 8 ? 1 : n < 30 ? 2 : 4); tOver = t; di.value = localStr(t); n++; if (!realSun) { realSun = true; press($('sun'), true); } };
-    const stop = () => { clearInterval(iv); iv = null; };
-    b.onpointerdown = e => { e.preventDefault(); b.setPointerCapture(e.pointerId); n = 0; step(); stop(); iv = setInterval(step, 90); };
+    const step = () => { const t = now() + dir * 6e4 * (n < 8 ? 1 : n < 30 ? 5 : 15); tOver = t; di.value = localStr(t); n++; if (!realSun) { realSun = true; press($('sun'), true); } };
+    const stop = () => { clearTimeout(iv); clearInterval(iv); iv = null; };
+    b.onpointerdown = e => { e.preventDefault(); b.setPointerCapture(e.pointerId); n = 0; step(); stop(); iv = setTimeout(() => { iv = setInterval(step, 90); }, 400); };
     b.onpointerup = b.onpointercancel = b.onlostpointercapture = stop;
     b.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); n = 0; step(); } }; }
   // solar system view: the clock ±10 days around now, ‹ › hold to run (CME marks above the slider); moving it switches the solar wind + CMEs on
@@ -964,8 +1090,8 @@ ${SUNLIB}
   dy.oninput = () => { dyDrag = true; setT(real() + +dy.value * 6e4); }; dy.onchange = () => { dyDrag = false; };
   for (const [k, dir] of [['dyB', -1], ['dyF', 1]]) { const b = $(k); let iv = null, n = 0;
     const step = () => { setT(now() + dir * 6e4 * (n < 8 ? 60 : n < 30 ? 180 : 360)); n++; };
-    const stop = () => { clearInterval(iv); iv = null; };
-    b.onpointerdown = e => { e.preventDefault(); b.setPointerCapture(e.pointerId); n = 0; step(); stop(); iv = setInterval(step, 90); };
+    const stop = () => { clearTimeout(iv); clearInterval(iv); iv = null; };
+    b.onpointerdown = e => { e.preventDefault(); b.setPointerCapture(e.pointerId); n = 0; step(); stop(); iv = setTimeout(() => { iv = setInterval(step, 90); }, 400); };
     b.onpointerup = b.onpointercancel = b.onlostpointercapture = stop;
     b.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); n = 0; step(); } }; }
   const dyShow = t => { const r = real(), off = (t - r) / 6e4; if (!dyDrag) dy.value = Math.round(off / 30) * 30;
@@ -1066,7 +1192,7 @@ ${SUNLIB}
       { const B = fst ? null : fB; if (B) { if (qBprev && qBname === focus) turnView(B.mesh.quaternion.clone().multiply(qBprev.clone().invert()));
           qBprev = (qBprev || new THREE.Quaternion()).copy(B.mesh.quaternion); qBname = focus; } else qBname = null; }
       // the magnetic shield view stays fixed toward the Sun (the shield points at it), so the clock can run fast without the view spinning
-      if (focus === 'Earth' && MSH.on) { const sl = Math.atan2(-U.rsun.value.z, U.rsun.value.x); if (sunL != null) { let d = sl - sunL; d -= 2 * Math.PI * Math.round(d / (2 * Math.PI)); if (d) turnView(new THREE.Quaternion().setFromAxisAngle(Yax.clone().applyQuaternion(earth.quaternion), d)); } sunL = sl; } else sunL = null;
+      if (focus === 'Earth' && MSH.on) { const sl = Math.atan2(-U.rsun.value.z, U.rsun.value.x); if (sunL != null) { let d = sl - sunL; d -= 2 * Math.PI * Math.round(d / (2 * Math.PI)); if (d && Math.abs(d) < .5) turnView(new THREE.Quaternion().setFromAxisAngle(Yax.clone().applyQuaternion(earth.quaternion), d)); }   /* a jump of the clock (a date, an eclipse) keeps the view */ sunL = sl; } else sunL = null;
       if (spin && rng > .4) tgt.applyAxisAngle(Yax, dt * .02 * Math.min(1, rng));   // a slow turn seen from far away
       if (!pins.size && (vel[0] || vel[1])) { panBy(vel[0], vel[1]); vel = vel.map(v => Math.abs(v *= Math.pow(.05, dt)) < .05 ? 0 : v); }   // the throw glides on
       if (goal) { goal.u = Math.min(1, goal.u + dt / goal.dur); const e = goal.u * goal.u * (3 - 2 * goal.u);   // fly: up, across, down (log range + a hop that grows with the distance)
@@ -1106,7 +1232,7 @@ ${SUNLIB}
     camera.updateProjectionMatrix(); camera.updateMatrixWorld(); msX = MSH.update(dt, t, D);
     const pix = 2 * Math.tan(camera.fov * D2R / 2) / H, nearOn = 1 / (D * pix) > 2.5;   // the detailed Earth until it is a few pixels across
     scene.visible = nearOn; el.classList.toggle('nf', focus !== 'Earth'); el.classList.toggle('sy', focus !== 'Earth' || !nearOn || dyPlay); el.classList.toggle('mso', MSH.on && focus === 'Earth');
-    { const ch = solar.fromWorld(camera.position); solar.update(t, [hE[0] + ch.x, hE[1] + ch.y, hE[2] + ch.z], W, H, nearOn, renderer.getPixelRatio()); feed(t); BLT.update(t, dt); }
+    { const ch = solar.fromWorld(camera.position); solar.update(t, [hE[0] + ch.x, hE[1] + ch.y, hE[2] + ch.z], W, H, nearOn, renderer.getPixelRatio()); feed(t); BLT.update(t, dt); eclFrame(t); }
     { const k = solar.cam.far * .45 / 900; stars.scale.set(-k, k, k); }
     inv.copy(earth.matrixWorld).invert(); U.camO.value.copy(camera.position).applyMatrix4(inv);
     sunQ.visible = sunD.visible = realSun;
