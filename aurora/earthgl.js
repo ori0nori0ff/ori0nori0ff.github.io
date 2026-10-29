@@ -10,7 +10,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
-import { createSolar } from './solar.js?v=1a2756a7';
+import { createSolar } from './solar.js?v=06b07705';
 
 const tr = (s, o) => window.T ? window.T(s, o) : String(s).replace(/\{(\w+)\}/g, (m, k) => o && o[k] != null ? o[k] : m);
 const D2R = Math.PI / 180, BASE = new URL('./', import.meta.url).href, T = BASE + 'img/earth/';
@@ -86,7 +86,7 @@ function create(host, opts) {
     <ul class="e3g-bl" hidden>${[[['Planets', ['Sun', 'Mercury', 'Venus', 'Earth', 'Moon', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune']]],
       [['Dwarf planets', ['Ceres', 'Pluto', 'Charon', 'Eris', 'Haumea', 'Makemake']], ['Comets', ['Halley', 'Encke', '67P']]],
       [['Asteroids', ['Vesta', 'Pallas', 'Hygiea', 'Psyche', 'Bennu', 'Ryugu', 'Apophis']], ['Big moons', ['Io', 'Europa', 'Ganymede', 'Callisto', 'Titan', 'Triton']]],
-      [['Spacecraft', ['SOHO', 'ACE', 'DSCOVR', 'Wind', 'SWFO-L1', 'SDO', 'GOES-19', 'STEREO-A', 'Parker Solar Probe', 'Solar Orbiter']]]].map(col => `<li class="e3g-blc">${col.map(([h, L]) => `<b>${tr(h)}</b>` + L.map(n => `<button data-b="${n}">${tr(n)}</button>`).join('')).join('')}</li>`).join('')}</ul>
+      [['Spacecraft', ['ISS', 'SOHO', 'ACE', 'DSCOVR', 'Wind', 'SWFO-L1', 'SDO', 'GOES-19', 'STEREO-A', 'Parker Solar Probe', 'Solar Orbiter']]]].map(col => `<li class="e3g-blc">${col.map(([h, L]) => `<b>${tr(h)}</b>` + L.map(n => `<button data-b="${n}">${tr(n)}</button>`).join('')).join('')}</li>`).join('')}</ul>
     <div class="e3g-lay"><button data-k="layers" aria-expanded="false">☰ ${tr('Layers')} ▾</button><div class="e3g-lp" hidden>
       <button class="eo" data-k="cl" aria-pressed="true">${tr('Clouds')}</button><button class="eo" data-k="cn" aria-pressed="false">${tr('Clouds: NASA')}</button><button class="eo" data-k="au" aria-pressed="true">${tr('Aurora')}</button>
       <div class="e3g-row eo"><button data-k="ms" aria-pressed="false">🧲 ${tr('Magnetic shield')}</button><button data-k="cme">💥 ${tr('CME impact')}</button></div>
@@ -560,6 +560,8 @@ ${SUNLIB}${MOONV}
   { }   // the buffer the scene went into this frame
   Object.assign(airPass.uniforms, { camO: U.camO, sun: U.sun, morph: U.morph, lightsOn: U.lightsOn, eMoon: U.eMoon, eSun: U.eSun });   // ShaderPass copies its uniforms: hand it the live ones
   composer.addPass(airPass);
+  composer.addPass({ enabled: true, needsSwap: false, clear: false, renderToScreen: false, setSize() {}, dispose() {},   // the ISS over the air (it flies above it), with its own depth
+    render(r, w, rb) { const ac = r.autoClear; r.autoClear = false; r.setRenderTarget(rb); solar.issDraw(r, camera); r.autoClear = ac; } });
   // a safety net: a single NaN / Inf pixel from any shader would be smeared by the bloom into black blocks and a whole-screen flicker — clean it first
   composer.addPass(new ShaderPass({ uniforms: { tDiffuse: { value: null } }, vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`,
     fragmentShader: `uniform sampler2D tDiffuse; varying vec2 vUv; void main() { vec4 c = texture2D(tDiffuse, vUv); vec3 k = any(isnan(c.rgb)) || any(isinf(c.rgb)) ? vec3(0.) : max(c.rgb, 0.); k *= min(1., 4. / max(max(k.r, k.g), max(k.b, 1e-4))); gl_FragColor = vec4(k, 1.); }` }));
@@ -840,6 +842,7 @@ ${SUNLIB}${MOONV}
   function liveInfo(t) { const o = info.querySelector('.e3g-il'); if (!o || !infoOf) return; const E = solar.helio('Earth', t), P = infoOf === 'Earth' ? E : solar.helio(infoOf, t);
     const de = Math.hypot(P[0] - E[0], P[1] - E[1], P[2] - E[2]) / AUr, ds = Math.hypot(...P) / AUr;
     o.innerHTML = infoOf === 'Earth' ? `<small>${tr('From the Sun')}</small>${ds.toFixed(3)} AU · ${(ds * 8.317).toFixed(1)} ${tr('light min')}`
+      : infoOf === 'ISS' ? `<small>${tr('Height')}</small>${nf(de * 1.495978707e8 - 6371)} km`
       : infoOf === 'Moon' || de < .03 ? `<small>${tr('From Earth')}</small>${nf(de * 1.495978707e8)} km · ${(de * 499).toFixed(2)} ${tr('light s')}`
       : `<small>${tr('From Earth')}</small>${de.toFixed(2)} AU · ${(de * 8.317).toFixed(1)} ${tr('light min')}`; }
   // what each spacecraft is and what this page takes from it: operator, launch year, where, use
@@ -849,11 +852,12 @@ ${SUNLIB}${MOONV}
     Wind: ['NASA', 1994, 'L1', 'Solar wind since 1994; with ACE and DSCOVR it builds NASA’s OMNI record that the storm replay uses.'],
     'SWFO-L1': ['NOAA', 2025, 'L1', 'NOAA’s new space-weather station at L1 (launched September 2025): solar wind + the CCOR-2 coronagraph.'],
     SDO: ['NASA', 2010, 'GEO', 'Solar Dynamics Observatory: the AIA ultraviolet and HMI pictures of the Sun (Sun now, flares, regions). Geosynchronous orbit tilted 28.5°.'],
+    ISS: ['NASA · Roscosmos · ESA · JAXA · CSA', 1998, 'LEO', 'The International Space Station: about 420 km up, once round the Earth every ~93 minutes at 7.7 km/s, crewed without a break since November 2000. 109 m across, the size of a football field; drawn here simplified but to scale, its solar wings turning to the Sun.'],
     'GOES-19': ['NOAA', 2024, 'GEO', 'Weather satellite at 75.2° W with the CCOR-1 coronagraph, the SUVI Sun camera and the X-ray + proton sensors of the space weather card.'],
     'STEREO-A': ['NASA', 2006, 'Sun', 'Circles the Sun near the Earth’s orbit, ahead of us: it sees the Sun from the side and CMEs coming our way edge-on (marked in ENLIL).'],
     'Parker Solar Probe': ['NASA', 2018, 'Sun', 'Dives through the Sun’s corona: the closest and fastest spacecraft ever, about 6.1 million km from the surface at ~690 000 km/h.'],
     'Solar Orbiter': ['ESA / NASA', 2020, 'Sun', 'Takes the closest pictures of the Sun and the first views of its poles, on an orbit that tilts more and more.'] };
-  const WHERE = { L1: 'L1 · 1.5 million km towards the Sun', GEO: 'Earth orbit · 36 000 km', Sun: 'Around the Sun' };
+  const WHERE = { L1: 'L1 · 1.5 million km towards the Sun', GEO: 'Earth orbit · 36 000 km', LEO: 'Earth orbit · about 420 km', Sun: 'Around the Sun' };
   function showCraft(nm) { const C = CRAFT[nm]; infoOf = nm; orbitOn = orbitWait = 0; pnl.hidden = true; press($('ang'), false);
     info.innerHTML = `<div class="e3g-ih"><b>${tr(nm)}</b><button aria-label="${tr('Close')}">✕</button></div>
       <div class="e3g-if"><div><small>${tr('Where')}</small>${tr(WHERE[C[2]])}</div><div class="e3g-il"></div><div><small>${tr('Operator')}</small>${C[0]}</div><div><small>${tr('Launched')}</small>${C[1]}</div></div>
@@ -1049,6 +1053,7 @@ ${SUNLIB}${MOONV}
     if (B && B.kind === 'craft') { goCraft(n); return; } if (n !== focus) flyToBody(n); };
   // a spacecraft: a view that shows where it is (round the Earth for L1 / GEO, the inner system for the ones around the Sun) + its card
   function goCraft(n) { const B = solar.bodies[n], t = now(); solar.eclToWorld(t);
+    if (n === 'ISS') { if (B.hid) $('now').click(); flyToBody('ISS', 6, null, true); showInfo(n); return; }   // right beside it, then it carries the camera along
     if (B.near) { const s = solar.toWorld(hE.map(v => -v)).normalize(), up = solar.toWorld([0, 0, 1]), side = new THREE.Vector3().crossVectors(s, up).normalize();
       flyToBody('Earth', n === 'SDO' || n === 'GOES-19' ? 30 : 520, side.multiplyScalar(.8).addScaledVector(up, .6).addScaledVector(s, .35), true); }
     else flyToBody('Sun', 2.4 * AUr / solar.bodies.Sun.R, null, true);
@@ -1215,14 +1220,14 @@ ${SUNLIB}${MOONV}
       if (t2 < T_MIN || t2 > T_MAX) { t2 = Math.max(T_MIN, Math.min(T_MAX, t2)); playSet(false); limAt = performance.now(); }
       tOver = t2; di.value = localStr(t2); }
     else if (dyPlay) { const tn = now(); let k = 1; for (const m of (solar.cmeMarks ? solar.cmeMarks() : [])) if (m.tE != null) { const d = Math.abs(tn - m.tE) / 36e5; k = Math.min(k, d < 2 ? 1 / 24 : d < 6 ? 1 / 4 : 1); }
-      setT(tn + dyDir * Math.min(.1, dt0) * 216e5 * k); }
+      setT(tn + dyDir * Math.min(.1, dt0) * (focus === 'ISS' ? 6e4 : 216e5 * k)); }
     solar.quiet = fastT() || Math.abs(now() - real()) > 30 * 864e5;   // the wind + CME data only cover days round today
     if (orbitOn) { tOver = now() + Math.min(.1, dt0) * orbitOn; if (performance.now() - infoAt > 250) di.value = localStr(tOver); }
     const dt = Math.min(.05, dt0), t = now(); hE = solar.helio('Earth', t);
     if (infoOf && performance.now() - infoAt > 250) { infoAt = performance.now(); liveInfo(t); }
     {
       const kk = Math.min(1, dt * 6);
-      solar.eclToWorld(t); fc.copy(focus === 'Earth' ? O3 : solar.toWorld(solar.helio(focus, t).map((v, i) => v - hE[i])));
+      solar.eclToWorld(t); if (focus === 'ISS') solar.poseISS(t); fc.copy(focus === 'Earth' ? O3 : solar.toWorld(solar.helio(focus, t).map((v, i) => v - hE[i])));
       const fB = focus !== 'Earth' && rng < 2 && solar.bodies[focus];   // close to a body: it alone turns the camera (its rotation already holds the frame's)
       const fst = fastT(); if (fst && focus === 'Earth' && !(MSH.on && rng > 3) && Mprev) turnView(new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().setFromMatrix3(solar.eclToWorld(t).clone().multiply(Mprev.clone().invert()))));
       if (focus !== 'Earth' && Mprev && !(fB && qBname === focus && !fst)) { const qd = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().setFromMatrix3(solar.eclToWorld(t).clone().multiply(Mprev.clone().invert()))); tgt.applyQuaternion(qd); if (fly) { fly.off.applyQuaternion(qd); fly.q.premultiply(qd); } if (goal) { goal.a.applyQuaternion(qd); goal.b.applyQuaternion(qd); goal.ax.applyQuaternion(qd); } }   // away from the Earth the view stays still among the stars

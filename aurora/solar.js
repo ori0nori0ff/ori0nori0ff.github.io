@@ -61,10 +61,95 @@ function moonEl(name, t) { const R = MO[name], jd = JD(t), c = Math.max(R[0][0],
 const moonXYZ = (el, u) => { const [a, e, I, Om, w] = el, Mn = (u - w) * D2R; let E = Mn; for (let k = 0; k < 8; k++) E -= (E - e * Math.sin(E) - Mn) / (1 - e * Math.cos(E));
   return kepE([a / 6371, e, I, Om, w], E).map(v => v / AU); };
 const moonP = (name, t) => { const el = moonEl(name, t); return moonXYZ(el, el[5]); };
+// the ISS: SGP4 (near-Earth branch, WGS-72, after Vallado 2006: the same code as the app's sky page) from CelesTrak's TLE, which the
+// Pages bot saves as data/iss.txt every 6 h. TEME is taken as the equator the globe turns on (GMST here has no precession either).
+const SGP = (() => {
+const XKE = 0.0743669161331734, RE = 6378.135, J2 = 0.001082616, J3OJ2 = -0.00000253881 / 0.001082616, J4 = -0.00000165597, TWO_PI = 2 * Math.PI;
+function sgp4init(l1, l2) {
+  const s = {};
+  const yy = +l1.substr(18, 2), days = +l1.substr(20, 12), yr = yy < 57 ? 2000 + yy : 1900 + yy;
+  s.jdEpoch = Date.UTC(yr, 0, 1) / 864e5 + 2440587.5 - 1 + days;
+  const bm = l1.substr(53, 6).trim(), be = +l1.substr(59, 2);
+  s.bstar = +(bm[0] === '-' ? '-.' + bm.slice(1) : '.' + bm.replace('+', '')) * Math.pow(10, be);
+  s.inclo = +l2.substr(8, 8) * D2R; s.nodeo = +l2.substr(17, 8) * D2R; s.ecco = +('.' + l2.substr(26, 7));
+  s.argpo = +l2.substr(34, 8) * D2R; s.mo = +l2.substr(43, 8) * D2R; let no = +l2.substr(52, 11) * TWO_PI / 1440;
+  const ss = 78 / RE + 1, qzms2t = Math.pow((120 - 78) / RE, 4), x2o3 = 2 / 3;
+  const cosio = Math.cos(s.inclo), cosio2 = cosio * cosio, eccsq = s.ecco * s.ecco, omeosq = 1 - eccsq, rteosq = Math.sqrt(omeosq);
+  const ak = Math.pow(XKE / no, x2o3), d1 = 0.75 * J2 * (3 * cosio2 - 1) / (rteosq * omeosq);
+  let del = d1 / (ak * ak); const adel = ak * (1 - del * del - del * (1 / 3 + 134 * del * del / 81));
+  del = d1 / (adel * adel); no = no / (1 + del); s.no = no;
+  const ao = Math.pow(XKE / no, x2o3), sinio = Math.sin(s.inclo), po = ao * omeosq, con42 = 1 - 5 * cosio2;
+  s.con41 = -con42 - cosio2 - cosio2; const posq = po * po, rp = ao * (1 - s.ecco);
+  s.isimp = rp < 220 / RE + 1;
+  let sfour = ss, qzms24 = qzms2t; const perige = (rp - 1) * RE;
+  if (perige < 156) { sfour = perige < 98 ? 20 : perige - 78; qzms24 = Math.pow((120 - sfour) / RE, 4); sfour = sfour / RE + 1; }
+  const pinvsq = 1 / posq, tsi = 1 / (ao - sfour); s.eta = ao * s.ecco * tsi;
+  const etasq = s.eta * s.eta, eeta = s.ecco * s.eta, psisq = Math.abs(1 - etasq), coef = qzms24 * Math.pow(tsi, 4), coef1 = coef / Math.pow(psisq, 3.5);
+  const cc2 = coef1 * no * (ao * (1 + 1.5 * etasq + eeta * (4 + etasq)) + 0.375 * J2 * tsi / psisq * s.con41 * (8 + 3 * etasq * (8 + etasq)));
+  s.cc1 = s.bstar * cc2; const cc3 = s.ecco > 1e-4 ? -2 * coef * tsi * J3OJ2 * no * sinio / s.ecco : 0;
+  s.x1mth2 = 1 - cosio2;
+  s.cc4 = 2 * no * coef1 * ao * omeosq * (s.eta * (2 + 0.5 * etasq) + s.ecco * (0.5 + 2 * etasq) - J2 * tsi / (ao * psisq) *
+    (-3 * s.con41 * (1 - 2 * eeta + etasq * (1.5 - 0.5 * eeta)) + 0.75 * s.x1mth2 * (2 * etasq - eeta * (1 + etasq)) * Math.cos(2 * s.argpo)));
+  s.cc5 = 2 * coef1 * ao * omeosq * (1 + 2.75 * (etasq + eeta) + eeta * etasq);
+  const cosio4 = cosio2 * cosio2, t1 = 1.5 * J2 * pinvsq * no, t2 = 0.5 * t1 * J2 * pinvsq, t3 = -0.46875 * J4 * pinvsq * pinvsq * no;
+  s.mdot = no + 0.5 * t1 * rteosq * s.con41 + 0.0625 * t2 * rteosq * (13 - 78 * cosio2 + 137 * cosio4);
+  s.argpdot = -0.5 * t1 * con42 + 0.0625 * t2 * (7 - 114 * cosio2 + 395 * cosio4) + t3 * (3 - 36 * cosio2 + 49 * cosio4);
+  const xhdot1 = -t1 * cosio;
+  s.nodedot = xhdot1 + (0.5 * t2 * (4 - 19 * cosio2) + 2 * t3 * (3 - 7 * cosio2)) * cosio;
+  s.omgcof = s.bstar * cc3 * Math.cos(s.argpo); s.xmcof = s.ecco > 1e-4 ? -x2o3 * coef * s.bstar / eeta : 0;
+  s.nodecf = 3.5 * omeosq * xhdot1 * s.cc1; s.t2cof = 1.5 * s.cc1;
+  s.xlcof = -0.25 * J3OJ2 * sinio * (3 + 5 * cosio) / (Math.abs(cosio + 1) > 1.5e-12 ? 1 + cosio : 1.5e-12);
+  s.aycof = -0.5 * J3OJ2 * sinio; s.delmo = Math.pow(1 + s.eta * Math.cos(s.mo), 3); s.sinmao = Math.sin(s.mo); s.x7thm1 = 7 * cosio2 - 1;
+  if (!s.isimp) {
+    const cc1sq = s.cc1 * s.cc1; s.d2 = 4 * ao * tsi * cc1sq; const tp = s.d2 * tsi * s.cc1 / 3;
+    s.d3 = (17 * ao + sfour) * tp; s.d4 = 0.5 * tp * ao * tsi * (221 * ao + 31 * sfour) * s.cc1;
+    s.t3cof = s.d2 + 2 * cc1sq; s.t4cof = 0.25 * (3 * s.d3 + s.cc1 * (12 * s.d2 + 10 * cc1sq));
+    s.t5cof = 0.2 * (3 * s.d4 + 12 * s.cc1 * s.d3 + 6 * s.d2 * s.d2 + 15 * cc1sq * (2 * s.d2 + cc1sq));
+  }
+  return s;
+}
+// TEME position (km) at Unix ms t
+function sgp4(s, tms) {
+  const t = (JD(tms) - s.jdEpoch) * 1440;
+  const xmdf = s.mo + s.mdot * t, argpdf = s.argpo + s.argpdot * t, nodedf = s.nodeo + s.nodedot * t, t2 = t * t;
+  let argpm = argpdf, mm = xmdf, nodem = nodedf + s.nodecf * t2, tempa = 1 - s.cc1 * t, tempe = s.bstar * s.cc4 * t, templ = s.t2cof * t2;
+  if (!s.isimp) {
+    const delomg = s.omgcof * t, delm = s.xmcof * (Math.pow(1 + s.eta * Math.cos(xmdf), 3) - s.delmo), tp = delomg + delm;
+    mm = xmdf + tp; argpm = argpdf - tp; const t3 = t2 * t, t4 = t3 * t;
+    tempa -= s.d2 * t2 + s.d3 * t3 + s.d4 * t4; tempe += s.bstar * s.cc5 * (Math.sin(mm) - s.sinmao); templ += s.t3cof * t3 + t4 * (s.t4cof + t * s.t5cof);
+  }
+  const am = Math.pow(XKE / s.no, 2 / 3) * tempa * tempa; let em = s.ecco - tempe; if (em < 1e-6) em = 1e-6;
+  mm += s.no * templ; let xlm = mm + argpm + nodem;
+  nodem %= TWO_PI; argpm %= TWO_PI; xlm %= TWO_PI; mm = (xlm - argpm - nodem) % TWO_PI;
+  const sinip = Math.sin(s.inclo), cosip = Math.cos(s.inclo);
+  const axnl = em * Math.cos(argpm), tp0 = 1 / (am * (1 - em * em)), aynl = em * Math.sin(argpm) + tp0 * s.aycof;
+  const xl = mm + argpm + nodem + tp0 * s.xlcof * axnl, u = (xl - nodem) % TWO_PI;
+  let eo1 = u, tem5 = 9999, k = 1, sineo1 = 0, coseo1 = 0;
+  while (Math.abs(tem5) >= 1e-12 && k <= 10) {
+    sineo1 = Math.sin(eo1); coseo1 = Math.cos(eo1);
+    tem5 = (u - aynl * coseo1 + axnl * sineo1 - eo1) / (1 - coseo1 * axnl - sineo1 * aynl);
+    if (Math.abs(tem5) >= 0.95) tem5 = tem5 > 0 ? 0.95 : -0.95; eo1 += tem5; k++;
+  }
+  const ecose = axnl * coseo1 + aynl * sineo1, esine = axnl * sineo1 - aynl * coseo1, el2 = axnl * axnl + aynl * aynl, pl = am * (1 - el2);
+  const rl = am * (1 - ecose), betal = Math.sqrt(1 - el2), tp = esine / (1 + betal);
+  const sinu = am / rl * (sineo1 - aynl - axnl * tp), cosu = am / rl * (coseo1 - axnl + aynl * tp);
+  let su = Math.atan2(sinu, cosu); const sin2u = 2 * cosu * sinu, cos2u = 1 - 2 * sinu * sinu, tt = 1 / pl, tt1 = 0.5 * J2 * tt, tt2 = tt1 * tt;
+  const mrt = rl * (1 - 1.5 * tt2 * betal * s.con41) + 0.5 * tt1 * s.x1mth2 * cos2u;
+  su -= 0.25 * tt2 * s.x7thm1 * sin2u;
+  const xnode = nodem + 1.5 * tt2 * cosip * sin2u, xinc = s.inclo + 1.5 * tt2 * cosip * sinip * cos2u;
+  const sinsu = Math.sin(su), cossu = Math.cos(su), snod = Math.sin(xnode), cnod = Math.cos(xnode), sini = Math.sin(xinc), cosi = Math.cos(xinc);
+  const xmx = -snod * cosi, xmy = cnod * cosi, k2 = mrt * RE;
+  return [(xmx * sinsu + cnod * cossu) * k2, (xmy * sinsu + snod * cossu) * k2, sini * sinsu * k2];
+}
+  return { init: sgp4init, prop: sgp4 }; })();
+let ISS = null;
+const issGeo = t => { const p = SGP.prop(ISS, t); return [p[0], p[1] * Math.cos(EPS) + p[2] * Math.sin(EPS), -p[1] * Math.sin(EPS) + p[2] * Math.cos(EPS)].map(v => v / 6371); };
+const issOk = t => !!ISS && Math.abs(JD(t) - ISS.jdEpoch) < 4;   // a TLE holds a few days; outside them the station is not drawn
 // spacecraft (NASA/JPL Horizons, data/craft.json by the Pages bot): tables of J2000 ecliptic km, from the Earth ('E') or the Sun ('S');
 // SDO repeats every sidereal day outside its 6-day table (geosynchronous: the same inertial spot); GOES-19 = geostationary at 75.2° W
 const CR = {}, SIDE = 86164090.5;
 function craftPos(name, t) {
+  if (name === 'ISS') { const E = helio('Earth', t), g = ISS ? issGeo(t) : [0, 0, 0]; return [E[0] + g[0], E[1] + g[1], E[2] + g[2]]; }
   if (name === 'GOES-19') { const g = (280.46061837 + 360.98564736629 * (JD(t) - 2451545) - 75.2) * D2R, r = 42164 / 6371, E = helio('Earth', t);
     return [E[0] + r * Math.cos(g), E[1] + r * Math.sin(g) * Math.cos(EPS), E[2] - r * Math.sin(g) * Math.sin(EPS)]; }
   const c = CR[name], n = c.p.length / 3, st = c.s * 6e4; let tt = t;
@@ -94,7 +179,7 @@ export function helio(name, t) { const T = (t / DAY + 2440587.5 - 2451545) / 365
   if (name === 'Charon') return SB.Pluto ? charon(t) : [0, 0, 0];
   if (MO[name]) { const p = helio(MHOST[name], t), m = moonP(name, t); return [p[0] + m[0], p[1] + m[1], p[2] + m[2]]; }
   if (SB[name]) return kepSB(SB[name], t);
-  if (CR[name] || name === 'GOES-19') return craftPos(name, t);
+  if (CR[name] || name === 'GOES-19' || name === 'ISS') return craftPos(name, t);
   if (name === 'Moon') { const e = kepler('Earth', T), m = moonAt(t); return [e[0] + m[0], e[1] + m[1], e[2] + m[2]]; }
   return kepler(name, T); }
 
@@ -121,6 +206,10 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
   function orient(b, t) { const P = eqW(b[1], b[2]).normalize(), N = eqW(b[1] + 90, 0).normalize(), W = (b[3] + b[4] * (t / DAY - 10957.5)) * D2R;
     const X = N.clone().multiplyScalar(Math.cos(W)).addScaledVector(new THREE.Vector3().crossVectors(P, N), Math.sin(W)).normalize(), Z = new THREE.Vector3().crossVectors(X, P);
     return new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(X, P, Z)); }
+  function orientISS(t) { const r = toW(issGeo(t), new THREE.Vector3()), v = toW(issGeo(t + 1e3), new THREE.Vector3()).sub(r), Z = r.normalize();
+    const X = v.addScaledVector(Z, -v.dot(Z)).normalize(), Y = new THREE.Vector3().crossVectors(Z, X);
+    return new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(X, Y, Z)); }
+  function poseISS(t) { const I = bodies.ISS; if (I && ISS && issOk(t)) I.mesh.quaternion.copy(orientISS(t)); }
   function orientMoon(name, t) { const r = toW(moonP(name, t), new THREE.Vector3()), v = toW(moonP(name, t + 6e4), new THREE.Vector3()).sub(r);
     const P = new THREE.Vector3().crossVectors(r, v).normalize(); if (moonEl(name, t)[2] > 90) P.negate();
     const X = r.clone().negate().normalize(), Z = new THREE.Vector3().crossVectors(X, P);
@@ -261,6 +350,28 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
     Titan: [2574.7, 'titan', '#E0A050'], Triton: [1353.4, 'triton', '#D9C7C2'] };
   fetch(TP + 'moons.json').then(r => r.json()).then(j => { Object.assign(MO, j.m);
     for (const [n, [R, m, c]] of Object.entries(MOONB)) if (MO[n]) mkBody(n, [R, 0, 90, 0, 0, m, 1.6, c], { kind: 'moon', host: MHOST[n] }); orbT = -1e15; }).catch(() => {});
+  // a simplified ISS to scale (1 = 54.5 m, half the truss): truss across the orbit, the pressurised modules along it, 8 solar wings that turn to the Sun
+  let issG = null; const issScene = new THREE.Scene(), issSun = { value: new THREE.Vector3() }, issLit = { value: 1 };
+  function issModel(o) { const sunU = issSun, g = issG = new THREE.Group(), M = {};
+    const mat = c => M[c] || (M[c] = new THREE.ShaderMaterial({ uniforms: { sun: sunU, lit: issLit, col: { value: new THREE.Color(c) } }, side: THREE.DoubleSide,
+      vertexShader: `varying vec3 vN; void main() { vN = normalize(mat3(modelMatrix) * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`,
+      fragmentShader: `uniform vec3 sun, col; uniform float lit; varying vec3 vN; void main() { float l = dot(normalize(vN), sun); if (!gl_FrontFacing) l = -l; gl_FragColor = vec4(col * (.03 + .07 * lit + 1.05 * lit * max(l, 0.)), 1.); }` }));
+    const add = (geo, c, x, y, z) => { const m = new THREE.Mesh(geo, mat(c)); m.position.set(x, y, z); m.frustumCulled = false; g.add(m); return m; };
+    add(new THREE.BoxGeometry(.07, 2, .07), '#8E9196', 0, 0, 0);   // the integrated truss, 109 m
+    add(new THREE.CylinderGeometry(.04, .04, 1.45, 18).rotateZ(Math.PI / 2), '#DADDE2', -.22, 0, -.09);   // Zvezda … Destiny … Harmony
+    add(new THREE.CylinderGeometry(.04, .04, .5, 18), '#DADDE2', .42, 0, -.09);   // Columbus + Kibo across
+    add(new THREE.CylinderGeometry(.045, .045, .2, 18).rotateX(Math.PI / 2), '#DADDE2', -.05, 0, -.2);   // Unity + nadir ports
+    add(new THREE.BoxGeometry(.06, .5, .006), '#E8EAEE', .06, .3, .18); add(new THREE.BoxGeometry(.06, .5, .006), '#E8EAEE', .06, -.3, .18);   // radiators
+    o.wings = [];
+    for (const y of [-.9, -.64, .64, .9]) { const w = new THREE.Group(); w.position.set(0, y, 0); g.add(w); o.wings.push(w);
+      for (const x of [-.37, .37]) { const p = new THREE.Mesh(new THREE.PlaneGeometry(.64, .21), mat('#9A6A24')); p.position.x = x; p.frustumCulled = false; w.add(p); } }
+    g.visible = false; issScene.add(g); }
+  // its orbit: one turn round the Earth, half behind and half ahead of now
+  const issLine = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xFFD36E, transparent: true, opacity: .55, depthWrite: false }));
+  issLine.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(121 * 3), 3)); issLine.frustumCulled = false; issLine.visible = false; scene.add(issLine);
+  fetch(new URL('./data/iss.txt?' + Math.floor(Date.now() / 36e5), import.meta.url).href).then(r => r.ok ? r.text() : Promise.reject()).then(x => {
+    const L = x.split(/\r?\n/), i = L.findIndex(l => l.startsWith('1 25544')); if (i < 0 || !L[i + 1]) return;
+    ISS = SGP.init(L[i], L[i + 1]); issModel(mkBody('ISS', [.0545, 0, 90, 0, 0, '', 2.4, '#FFD36E'], { kind: 'craft', near: true, iss: true })); }).catch(() => {});
   fetch(TP + 'eclipses.json').then(r => r.json()).then(j => { ECL = j.e; }).catch(() => {});
   fetch(TP + 'sb.json').then(r => r.json()).then(j => { Object.assign(SB, j.b); for (const [n, [b, x]] of Object.entries(SBB)) if (n === 'Charon' ? SB.Pluto : SB[n]) mkBody(n, b, x); orbT = -1e15; }).catch(() => {});
   const OMEGA = 2 * Math.PI / 25.38, kmsAU = v => v * 86400 / 1.495978707e8, JS = 64, KS = 340, DTW = 1 / 24, NW = JS * KS;
@@ -471,8 +582,9 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
     const pix = 2 * Math.tan(camera.fov * D2R / 2) / H; let nearest = 1e12;
     for (const b of Object.values(bodies)) { const h = helio(b.name, t); toW([h[0] - camHelio[0], h[1] - camHelio[1], h[2] - camHelio[2]], b.rel); b.d = b.rel.length();
       const boost = realScale ? 1 : Math.max(1, b.minPx * pix * b.d / b.R); b.rs = b.R * boost; b.px = b.rs / (b.d * pix);
-      b.mesh.position.copy(b.rel); if (b.shp) b.mesh.scale.set(b.rs * b.shp[0], b.rs * b.shp[1], b.rs * b.shp[2]); else b.mesh.scale.setScalar(b.rs); if (b.name !== 'Earth' && b.name !== 'Sun') b.mesh.quaternion.copy(b.host ? orientMoon(b.name, t) : orient(b.b, t));
+      b.mesh.position.copy(b.rel); if (b.shp) b.mesh.scale.set(b.rs * b.shp[0], b.rs * b.shp[1], b.rs * b.shp[2]); else b.mesh.scale.setScalar(b.rs); if (b.name !== 'Earth' && b.name !== 'Sun') b.mesh.quaternion.copy(b.host ? orientMoon(b.name, t) : b.iss ? (issOk(t) ? orientISS(t) : b.mesh.quaternion) : orient(b.b, t));
       const cr = CR[b.name]; b.hid = (b.near && bodies.Earth.d > 4000) || (cr && b.name !== 'SDO' && (t < cr.t0 - DAY || t > cr.t0 + (cr.p.length / 3 - 1) * cr.s * 6e4 + DAY));
+      if (b.iss) { if (!issOk(t)) b.hid = true; b.mesh.visible = !b.hid; }
       if (b.host) { const H = bodies[b.host], sep = b.rel.distanceTo(H.rel) / (b.d * pix); b.mesh.visible = sep > H.px + b.px + 2; if (!b.mesh.visible) b.hid = true; }   // a moon drawn into its (enlarged) planet: hidden till they part   // spacecraft: only where their table reaches if (b.kind === 'craft') { b.mesh.visible = !b.hid; continue; }
       nearest = Math.min(nearest, Math.max(1e-3, b.d - b.rs)); }
     if (warm.length) renderer.initTexture(warm.shift());
@@ -491,6 +603,14 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
     bodies.Earth.mesh.visible = !nearOn; bodies.Earth.mesh.quaternion.copy(quatW);
     glow.position.copy(S); glow.scale.setScalar(Math.max(bodies.Sun.rs * 9, 40 * pix * bodies.Sun.d));
     orbits.position.copy(S); orbits.quaternion.setFromRotationMatrix(new THREE.Matrix4().setFromMatrix3(M));
+    { const I = bodies.ISS, on = !!I && !I.hid && orbits.visible && bodies.Earth.d < 60; issLine.visible = on;
+      if (on) { const per = 2 * Math.PI / ISS.no * 6e4, a = issLine.geometry.attributes.position, v = new THREE.Vector3();
+        for (let k = 0; k <= 120; k++) { toW(issGeo(t + (k / 120 - .5) * per), v); a.setXYZ(k, v.x, v.y, v.z); } a.needsUpdate = true; issLine.position.copy(bodies.Earth.rel); }
+      if (I && issG) { const show = !I.hid && bodies.Earth.d < 60; issG.visible = show; I.mesh.material.visible = bodies.Earth.d > 3;   // far: just the dot
+        if (show) { const p = toW(issGeo(t), new THREE.Vector3()); issG.position.copy(p); issG.quaternion.copy(I.mesh.quaternion); issG.scale.setScalar(I.R);
+          issSun.value.copy(I.mesh.material.uniforms.sun.value); const s = issSun.value, k = p.dot(s), off = Math.sqrt(Math.max(0, p.lengthSq() - k * k));
+          issLit.value = k > 0 ? 1 : Math.min(1, Math.max(0, (off - .99) / .02));   // in the Earth's shadow: dark (a soft edge for the penumbra)
+          const sl = s.clone().applyQuaternion(issG.quaternion.clone().invert()), th = Math.atan2(sl.x, sl.z); for (const w of I.wings) w.rotation.y = th; } } }
     mOrb.visible = orbits.visible; for (const l of mOrb.children) { const H = bodies[l.userData.h]; l.position.copy(H.rel); l.quaternion.copy(orbits.quaternion); }
     helioG.position.copy(S); helioG.quaternion.copy(orbits.quaternion); windP.visible = windOn && !quiet; wU.px.value = pxr || 1;
     { // the wind round the camera: its size follows the nearest body's distance; it hands over to the Earth's shield wind below ~120 R⊕,
@@ -530,5 +650,10 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
       if (r < Math.max(14, b.px + 6) && b.d < bd) { best = b; bd = b.d; } } return best; }
   const hdHas = n => bhd.has(n), hdOn = n => bhd.on === n, hdGround = (n, dirW) => bhd.ground(n, bodies[n], dirW);
   orbits.visible = guides; lab.style.display = guides ? '' : 'none';   // start as the Layers panel says (off)
-  return { scene, cam, update, screen, bodies, pick, eclAt, eclList, eclMoon, eclSun, hdHas, hdOn, hdGround, helio, eclToWorld, toWorld: p => toW(p, new THREE.Vector3()), fromWorld: v => v.clone().applyMatrix3(Mi), get realScale() { return realScale; }, set realScale(v) { realScale = v; }, setWind, setCmes, cmeAtEarth, cmeMarks, windAt, get wind() { return windOn; }, set quiet(v) { quiet = v; }, set wind(v) { windOn = v; }, get field() { return fieldOn; }, set field(v) { fieldOn = v; }, get bare() { return fieldMode === 2; }, set bare(v) { fieldMode = v ? 2 : 1; }, get belt() { return beltOn; }, set belt(v) { beltOn = v; }, get guides() { return guides; }, set guides(v) { guides = v; orbits.visible = v; lab.style.display = v ? '' : 'none'; } };
+  // the station's pass: hidden behind the Earth (camera → station crosses the globe), near / far hug the model
+  function issDraw(r, cam) { if (!issG || !issG.visible) return; const c = cam.position, p = issG.position, d = c.distanceTo(p), u = p.clone().sub(c).divideScalar(d), k = -c.dot(u);
+    if (k > 0 && k < d && c.lengthSq() - k * k < 1) return;
+    const R = issG.scale.x, ic = issDraw.c || (issDraw.c = new THREE.PerspectiveCamera()); ic.copy(cam); ic.near = Math.max(d - 1.6 * R, R * .02); ic.far = d + 1.6 * R; ic.updateProjectionMatrix();
+    r.clearDepth(); r.render(issScene, ic); }
+  return { issDraw, poseISS, scene, cam, update, screen, bodies, pick, eclAt, eclList, eclMoon, eclSun, hdHas, hdOn, hdGround, helio, eclToWorld, toWorld: p => toW(p, new THREE.Vector3()), fromWorld: v => v.clone().applyMatrix3(Mi), get realScale() { return realScale; }, set realScale(v) { realScale = v; }, setWind, setCmes, cmeAtEarth, cmeMarks, windAt, get wind() { return windOn; }, set quiet(v) { quiet = v; }, set wind(v) { windOn = v; }, get field() { return fieldOn; }, set field(v) { fieldOn = v; }, get bare() { return fieldMode === 2; }, set bare(v) { fieldMode = v ? 2 : 1; }, get belt() { return beltOn; }, set belt(v) { beltOn = v; }, get guides() { return guides; }, set guides(v) { guides = v; orbits.visible = v; lab.style.display = v ? '' : 'none'; } };
 }
