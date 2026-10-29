@@ -13,7 +13,7 @@ jobs:
   frames:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Clips this run?
         id: c
         run: |
@@ -31,7 +31,10 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add aurora/sun/frames.json aurora/data
-          git diff --cached --quiet || { git commit -qm "Sun frames + Earth data $(date -u +%d.%m\ %H:%M)"; git pull -q --rebase; git push -q; }
+          git diff --cached --quiet && exit 0
+          git commit -qm "Sun frames + Earth data $(date -u +%d.%m\ %H:%M)"
+          # another push (publish_web, clouds bot) may land in between: rebase (our new files win) and try again
+          for i in 1 2 3 4 5; do git pull -q --rebase -X theirs && git push -q && exit 0; git rebase --abort 2>/dev/null; sleep $((i * 7)); done; exit 1
       # past ENLIL runs (NOAA keeps only the current one) -> branch "enlil", one commit, force-pushed (no history)
       - name: ENLIL archive
         run: |

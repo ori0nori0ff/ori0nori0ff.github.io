@@ -12,7 +12,7 @@ jobs:
   clouds:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: pip install -q h5py numpy pillow
       - run: python3 tools/build_clouds.py --out out --base aurora/img/earth/clouds.jpg
       - name: Publish to branch "clouds"
