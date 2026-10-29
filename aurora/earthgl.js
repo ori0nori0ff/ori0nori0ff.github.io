@@ -1188,14 +1188,14 @@ ${SUNLIB}${MOONV}
       const kk = Math.min(1, dt * 6);
       solar.eclToWorld(t); fc.copy(focus === 'Earth' ? O3 : solar.toWorld(solar.helio(focus, t).map((v, i) => v - hE[i])));
       const fB = focus !== 'Earth' && rng < 2 && solar.bodies[focus];   // close to a body: it alone turns the camera (its rotation already holds the frame's)
-      const fst = fastT(); if (fst && focus === 'Earth' && !MSH.on && Mprev) turnView(new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().setFromMatrix3(solar.eclToWorld(t).clone().multiply(Mprev.clone().invert()))));
+      const fst = fastT(); if (fst && focus === 'Earth' && !(MSH.on && rng > 3) && Mprev) turnView(new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().setFromMatrix3(solar.eclToWorld(t).clone().multiply(Mprev.clone().invert()))));
       if (focus !== 'Earth' && Mprev && !(fB && qBname === focus && !fst)) { const qd = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().setFromMatrix3(solar.eclToWorld(t).clone().multiply(Mprev.clone().invert()))); tgt.applyQuaternion(qd); if (fly) { fly.off.applyQuaternion(qd); fly.q.premultiply(qd); } if (goal) { goal.a.applyQuaternion(qd); goal.b.applyQuaternion(qd); goal.ax.applyQuaternion(qd); } }   // away from the Earth the view stays still among the stars
       Mprev = solar.eclToWorld(t).clone();
       // close to another body (within 2 radii) the camera turns with it, so its ground doesn't slide away under you
       { const B = fst ? null : fB; if (B) { if (qBprev && qBname === focus) turnView(B.mesh.quaternion.clone().multiply(qBprev.clone().invert()));
           qBprev = (qBprev || new THREE.Quaternion()).copy(B.mesh.quaternion); qBname = focus; } else qBname = null; }
       // the magnetic shield view stays fixed toward the Sun (the shield points at it), so the clock can run fast without the view spinning
-      if (focus === 'Earth' && MSH.on) { const sl = Math.atan2(-U.rsun.value.z, U.rsun.value.x); if (sunL != null) { let d = sl - sunL; d -= 2 * Math.PI * Math.round(d / (2 * Math.PI)); if (d && Math.abs(d) < .5) turnView(new THREE.Quaternion().setFromAxisAngle(Yax.clone().applyQuaternion(earth.quaternion), d)); }   /* a jump of the clock (a date, an eclipse) keeps the view */ sunL = sl; } else sunL = null;
+      if (focus === 'Earth' && MSH.on && rng > 3) { const sl = Math.atan2(-U.rsun.value.z, U.rsun.value.x); if (sunL != null) { let d = sl - sunL; d -= 2 * Math.PI * Math.round(d / (2 * Math.PI)); if (d && !goal) turnView(new THREE.Quaternion().setFromAxisAngle(Yax.clone().applyQuaternion(earth.quaternion), d)); }   /* always Sun-fixed, except during a flight (its target would turn with it) */ sunL = sl; } else sunL = null;
       if (spin && rng > .4) tgt.applyAxisAngle(Yax, dt * .02 * Math.min(1, rng));   // a slow turn seen from far away
       if (!pins.size && (vel[0] || vel[1])) { panBy(vel[0], vel[1]); vel = vel.map(v => Math.abs(v *= Math.pow(.05, dt)) < .05 ? 0 : v); }   // the throw glides on
       if (goal) { goal.u = Math.min(1, goal.u + dt / goal.dur); const e = goal.u * goal.u * (3 - 2 * goal.u);   // fly: up, across, down (log range + a hop that grows with the distance)
@@ -1234,7 +1234,7 @@ ${SUNLIB}${MOONV}
     camera.near = Math.max(Math.min(D - 1, hAG, msX ? 1.5 : 1e9) * .3, 3e-7); camera.far = Math.max(D + 1.2, msX ? D + msX : 0);   // the far side of the air and aurora shells too
     camera.updateProjectionMatrix(); camera.updateMatrixWorld(); msX = MSH.update(dt, t, D);
     const pix = 2 * Math.tan(camera.fov * D2R / 2) / H, nearOn = 1 / (D * pix) > 2.5;   // the detailed Earth until it is a few pixels across
-    scene.visible = nearOn; el.classList.toggle('nf', focus !== 'Earth'); el.classList.toggle('sy', focus !== 'Earth' || !nearOn || dyPlay); el.classList.toggle('mso', MSH.on && focus === 'Earth');
+    scene.visible = nearOn; el.classList.toggle('nf', focus !== 'Earth'); el.classList.toggle('sy', focus !== 'Earth' || !nearOn); el.classList.toggle('mso', MSH.on && focus === 'Earth' && rng > 3);
     { const ch = solar.fromWorld(camera.position); solar.update(t, [hE[0] + ch.x, hE[1] + ch.y, hE[2] + ch.z], W, H, nearOn, renderer.getPixelRatio()); feed(t); BLT.update(t, dt); eclFrame(t); }
     { const k = solar.cam.far * .45 / 900; stars.scale.set(-k, k, k); }
     inv.copy(earth.matrixWorld).invert(); U.camO.value.copy(camera.position).applyMatrix4(inv);
