@@ -10,7 +10,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
-import { createSolar } from './solar.js?v=cce6853c';
+import { createSolar } from './solar.js?v=7ccc2bc2';
 
 const tr = (s, o) => window.T ? window.T(s, o) : String(s).replace(/\{(\w+)\}/g, (m, k) => o && o[k] != null ? o[k] : m);
 const D2R = Math.PI / 180, BASE = new URL('./', import.meta.url).href, T = BASE + 'img/earth/';
@@ -35,6 +35,7 @@ const CSS = `.e3g{position:absolute;inset:0;display:none;background:#000;overflo
 .e3g button,.e3g-date{border:1px solid rgba(255,255,255,.18);background:rgba(10,14,20,.78);color:#E6EBF1;border-radius:999px;padding:7px 12px;min-height:36px;font:600 12px Inter,system-ui,sans-serif;cursor:pointer}
 .e3g-date{padding:6px 10px;color-scheme:dark}.e3g button[aria-pressed=true]{border-color:#39FF9E;color:#39FF9E}
 .e3g-tod{display:flex;align-items:center;gap:8px;border:1px solid rgba(255,255,255,.18);background:rgba(10,14,20,.78);color:#FFE600;border-radius:999px;padding:0 12px;min-height:36px;font:600 12px Inter,system-ui,sans-serif}
+.e3g-spd{border:1px solid rgba(255,255,255,.18);background:rgba(10,14,20,.9);color:#E6EBF1;border-radius:999px;font:600 12px Inter,system-ui,sans-serif;padding:3px 6px;cursor:pointer}
 .e3g-tod input{width:170px;accent-color:#FFB020}.e3g-tod button{border:0;background:none;color:#E6EBF1;font:700 16px Inter,system-ui,sans-serif;padding:0 4px;min-height:30px;cursor:pointer;user-select:none;touch-action:none}.e3g-tod button:hover{color:#FFE600}.e3g-tod span{color:#E6EBF1;min-width:86px;font-variant-numeric:tabular-nums}
 .e3g-alt{position:absolute;z-index:2;left:12px;top:56px;font:700 15px Inter,system-ui,sans-serif;color:#FFE600;text-shadow:0 1px 3px #000;pointer-events:none}
 .e3g-alt small{display:block;font:500 12px Inter,system-ui,sans-serif;color:#C9D1DB}
@@ -59,7 +60,9 @@ const CSS = `.e3g{position:absolute;inset:0;display:none;background:#000;overflo
 .e3g-lb b{display:block;font-weight:700;color:#8FD3FF}.e3g-lb small{display:block;margin-top:2px;color:#9AA4B2;font-size:11px;font-weight:500}.e3g-lb:hover,.e3g-lb:focus-visible{border-color:rgba(255,255,255,.5)}
 .e3g-lb[data-k=bow] b{color:#F3E6D2}.e3g-lb[data-k=tail] b{color:#DCE3EB}.e3g-lb[data-k=vab] b{color:#C9B8FF}.e3g-lb[data-k=sw] b{color:#96C8FF}.e3g-ip{margin:8px 0 0;font:500 13px/1.5 Inter,system-ui,sans-serif;color:#C9D1DB}
 @media (max-width:640px){.e3g-lb small{display:none}}
-.e3g-attr{position:absolute;z-index:2;right:10px;bottom:6px;font:500 10px Inter,system-ui,sans-serif;color:rgba(220,227,235,.7);text-shadow:0 1px 2px #000;pointer-events:none;max-width:55%;text-align:right}`;
+.e3g-attr{position:absolute;z-index:4;right:10px;bottom:8px;font:500 10.5px/1.45 Inter,system-ui,sans-serif;color:rgba(220,227,235,.8);text-align:right}
+.e3g-attr summary{list-style:none;cursor:pointer;display:inline-block;padding:3px 9px;border:1px solid rgba(255,255,255,.16);border-radius:999px;background:rgba(10,14,20,.7)}.e3g-attr summary::-webkit-details-marker{display:none}
+.e3g-attr[open] summary{color:#FFE600}.e3g-attr>div{position:absolute;right:0;bottom:calc(100% + 6px);width:min(420px,80vw);padding:8px 11px;border:1px solid rgba(255,255,255,.16);border-radius:10px;background:rgba(10,14,20,.94);text-align:left}`;
 
 // sub-solar point (low precision is plenty for day / night) → direction in the Earth's own frame (x = lon 0, y = north, z = lon −90°)
 function sunDir(t) { const d = new Date(t), doy = (t - Date.UTC(d.getUTCFullYear(), 0, 0)) / 864e5, dec = 23.44 * Math.sin(2 * Math.PI * (doy - 81) / 365.25);
@@ -69,6 +72,7 @@ function sunDir(t) { const d = new Date(t), doy = (t - Date.UTC(d.getUTCFullYear
 function create(host, opts) {
   if (!document.getElementById('e3g-css')) { const st = document.createElement('style'); st.id = 'e3g-css'; st.textContent = CSS; document.head.appendChild(st); }
   const el = document.createElement('div'); el.className = 'e3g'; host.appendChild(el);
+  const SPD = [[0, 'Auto'], [6e4, '1 min/s'], [36e5, '1 hour/s'], [864e5, '1 day/s'], [6048e5, '1 week/s'], [2629746e3, '1 month/s'], [31557600e3, '1 year/s'], [315576e6, '10 years/s']];
   el.innerHTML = `<div class="e3g-find eo"><input type="search" data-k="find" placeholder="🔍 ${tr('Search a place or lat, lon')}" aria-label="${tr('Search a place or lat, lon')}" autocomplete="off"><ul role="listbox"></ul></div><div class="e3g-load">${tr('Loading the Earth…')} 0%</div><div class="e3g-alt">–</div>
     <div class="e3g-go"><button data-k="home" aria-label="${tr('Earth')}" title="${tr('Earth')}">🌍</button><button data-k="sys" aria-label="${tr('Solar system')}" title="${tr('Solar system')}">☀</button><button data-k="bodies" aria-expanded="false" aria-label="${tr('Go to')}" title="${tr('Go to')}">🪐</button></div>
     <ul class="e3g-bl" hidden>${[[['Planets', ['Sun', 'Mercury', 'Venus', 'Earth', 'Moon', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune']]],
@@ -81,11 +85,11 @@ function create(host, opts) {
       <button data-k="sun" aria-pressed="false">${tr('Real Sun')}</button><button data-k="sp" aria-pressed="true">${tr('Auto-rotate')}</button><button data-k="rs" aria-pressed="false">${tr('Real scale')}</button><button data-k="gd" aria-pressed="false">${tr('Names and orbits')}</button><button data-k="sw" aria-pressed="false">${tr('Solar wind + CMEs')}</button><button data-k="blt" aria-pressed="false">${tr('Asteroid + Kuiper belts')}</button><div class="e3g-row"><button data-k="sf" aria-pressed="false">${tr('Sun’s magnetic field')}</button><button data-k="dw" aria-pressed="false">🌀 ${tr('Without the solar wind')}</button></div></div></div>
     <div class="e3g-time"><input type="datetime-local" class="e3g-date" data-k="date" aria-label="${tr('Date and time')}"><button data-k="now">${tr('Now')}</button>
       <div class="e3g-tod eo" title="${tr('Time of day here (local Sun time)')}">☀<button data-k="todB" aria-label="${tr('Earlier')}">‹</button><input type="range" data-k="tod" min="0" max="1435" step="5" aria-label="${tr('Time of day here (local Sun time)')}"><button data-k="todF" aria-label="${tr('Later')}">›</button><span></span></div>
-      <div class="e3g-tod so" title="${tr('Move the clock (±10 days): orange = a CME leaves the Sun, red = it reaches the Earth')}">☄<button data-k="dyB" aria-label="${tr('Earlier')}">‹</button><div class="e3g-dw"><i class="e3g-mk"></i><input type="range" data-k="dy" min="-14400" max="14400" step="30" aria-label="${tr('Move the clock (±10 days): orange = a CME leaves the Sun, red = it reaches the Earth')}"></div><button data-k="dyF" aria-label="${tr('Later')}">›</button><button data-k="dyP" aria-label="${tr('Play')}" aria-pressed="false">▶</button><span></span></div></div>
+      <div class="e3g-tod so" title="${tr('Move the clock (±10 days): orange = a CME leaves the Sun, red = it reaches the Earth')}">☄<button data-k="dyB" aria-label="${tr('Earlier')}">‹</button><div class="e3g-dw"><i class="e3g-mk"></i><input type="range" data-k="dy" min="-14400" max="14400" step="30" aria-label="${tr('Move the clock (±10 days): orange = a CME leaves the Sun, red = it reaches the Earth')}"></div><button data-k="dyF" aria-label="${tr('Later')}">›</button><button data-k="dyR" aria-label="${tr('Play backwards')}" aria-pressed="false">◀</button><button data-k="dyP" aria-label="${tr('Play')}" aria-pressed="false">▶</button><select data-k="dyS" class="e3g-spd" aria-label="${tr('Speed')}">${SPD.map(([v, l], i) => `<option value="${i}">${tr(l)}</option>`).join('')}</select><span></span></div></div>
     <div class="e3g-nav"><button data-k="fly" aria-pressed="false" title="${tr('Free flight: W A S D, drag to look, Esc to stop')}" aria-label="${tr('Free flight: W A S D, drag to look, Esc to stop')}">✈</button><button data-k="ang" aria-pressed="false" aria-label="${tr('Tilt')} / ${tr('Heading')}">∠</button><button data-k="cmp" aria-label="${tr('Reset to north')}"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 3l4 9h-8z" fill="#FF4D4D"/><path d="M12 21l-4-9h8z" fill="#E6EBF1"/></svg></button><button data-k="3d" aria-pressed="true" aria-label="${tr('3D view')}">3D</button><button data-k="zout" aria-label="${tr('Zoom out')}">−</button><button data-k="zin" aria-label="${tr('Zoom in')}">+</button></div>
     <div class="e3g-info" hidden aria-live="polite"></div>
     <div class="e3g-pnl" hidden><label>${tr('Tilt')}<input type="range" data-s="tilt" min="0" max="100" value="100"></label><label>${tr('Heading')}<input type="range" data-s="head" min="-180" max="180" value="0"></label><button data-k="north">${tr('Reset to north')}</button><small>${tr('Shift + drag or right-drag: tilt and turn')}</small></div>
-    <div class="e3g-attr">NASA Blue Marble · Black Marble · SVS star map · NOAA GMGSI · OVATION · ${tr('close-up')}: Sentinel-2 cloudless 2023 by EOX (CC BY-NC-SA 4.0) · Mapzen Terrarium / AWS · ${tr('Moon')}: JAXA Kaguya TC · NASA LRO LOLA (Moon Trek) · ${tr('Mars')}: MRO CTX (NASA/JPL/MSSS/Caltech Murray Lab/Esri) · Viking · MOLA / HRSC (Mars Trek) · ${tr("small bodies")}: NASA/JPL SBDB · Ceres, Vesta: NASA Dawn (DLR / USGS) · Pluto: NASA New Horizons (USGS)</div>`;
+    <details class="e3g-attr"><summary>ⓘ ${tr('Sources')}</summary><div>NASA Blue Marble · Black Marble · SVS star map · NOAA GMGSI · OVATION · ${tr('close-up')}: Sentinel-2 cloudless 2023 by EOX (CC BY-NC-SA 4.0) · Mapzen Terrarium / AWS · ${tr('Moon')}: JAXA Kaguya TC · NASA LRO LOLA (Moon Trek) · ${tr('Mars')}: MRO CTX (NASA/JPL/MSSS/Caltech Murray Lab/Esri) · Viking · MOLA / HRSC (Mars Trek) · ${tr("small bodies")}: NASA/JPL SBDB · Ceres, Vesta: NASA Dawn (DLR / USGS) · Pluto: NASA New Horizons (USGS)</div></details>`;
   let W = 800, H = 600;
   const Q = opts.quality || (() => { try { const v = localStorage.getItem('aurora.q3d'); if (/^(low|medium|high)$/.test(v || '')) return v; } catch (e) {} return null; })() || (document.documentElement.classList.contains('lite') ? 'low' : 'high');   // low | medium | high (light mode → low)
   const renderer = new THREE.WebGLRenderer({ antialias: Q !== 'low', powerPreference: 'high-performance' });
@@ -903,8 +907,8 @@ ${SUNLIB}
     shield(); if (m) { setT(m.tE - 2 * 36e5); playSet(true); } else setTimeout(() => MSH.impact(), far ? 0 : 2600); };
   const pad = v => String(v).padStart(2, '0'), localStr = t => { const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
   $('fly').onclick = () => fly ? flyOff() : flyOn();
-  const di = $('date'); di.onchange = () => { const t = Date.parse(di.value); if (isFinite(t)) tOver = t; };
-  $('now').onclick = () => { playSet(false); tOver = null; di.value = localStr(now()); };
+  const di = $('date'); di.onchange = () => { const t = Date.parse(di.value); if (isFinite(t)) tOver = Math.max(Date.UTC(1800, 0, 1), Math.min(Date.UTC(2050, 0, 1), t)); };
+  $('now').onclick = () => { playSet(false, 1); spd = 0; $('dyS').value = '0'; tOver = null; di.value = localStr(now()); };
   // time of day at the place you look at: local Sun time (UTC + longitude / 15) on the same day; moving it switches the real Sun on
   const tod = $('tod'), todL = el.querySelector('.e3g-tod span'), lonHere = () => { const o = tgt.clone().applyQuaternion(earth.quaternion.clone().invert()); return Math.atan2(-o.z, o.x) / D2R; };
   const solarMin = t => ((t / 6e4 + lonHere() * 4) % 1440 + 1440) % 1440, hm = m => pad(Math.floor(m / 60) % 24) + ':' + pad(Math.floor(m % 60));
@@ -946,9 +950,17 @@ ${SUNLIB}
   const windOn = () => { if (!solar.wind) { solar.wind = true; press($('sw'), true); } };
   const setT = t => { tOver = t; di.value = localStr(tOver); windOn(); };
   // ▶ / ⏸: the clock runs on at 6 hours a second until paused (the slider stays at its end, the label keeps counting)
-  var dyPlay = false;   // var + function: flyToBody may stop it before this line has run
-  function playSet(on) { dyPlay = on; const b = $('dyP'); b.textContent = on ? '⏸' : '▶'; b.setAttribute('aria-label', tr(on ? 'Pause' : 'Play')); b.setAttribute('aria-pressed', !!on); }
-  const dyP = $('dyP'); dyP.onclick = () => playSet(!dyPlay);
+  // speed list: Auto = 6 h/s, slowing at CME arrivals (as before); the others run at a fixed rate either way (◀ / ▶), 1800–2050
+  var dyPlay = false, dyDir = 1, spd = 0;   // var + function: flyToBody may stop it before this line has run
+  function playSet(on, dir = dyDir) { dyPlay = on; dyDir = dir; const f = $('dyP'), r = $('dyR');
+    f.textContent = on && dir > 0 ? '⏸' : '▶'; r.textContent = on && dir < 0 ? '⏸' : '◀';
+    f.setAttribute('aria-label', tr(on && dir > 0 ? 'Pause' : 'Play')); r.setAttribute('aria-label', tr(on && dir < 0 ? 'Pause' : 'Play backwards'));
+    f.setAttribute('aria-pressed', on && dir > 0); r.setAttribute('aria-pressed', on && dir < 0);
+    if (on) { try { orbitOn = orbitWait = 0; } catch (e) {} } }   // Follow the orbit has its own clock: the two would fight
+  const dyP = $('dyP'); dyP.onclick = () => playSet(!(dyPlay && dyDir > 0), 1); $('dyR').onclick = () => playSet(!(dyPlay && dyDir < 0), -1);
+  $('dyS').onchange = e => { spd = SPD[+e.target.value][0]; if (!dyPlay) playSet(true, dyDir); };
+  const fastT = () => dyPlay && spd >= 864e5, T_MIN = Date.UTC(1800, 0, 1), T_MAX = Date.UTC(2050, 0, 1);
+  let limAt = 0;   // the time the clock hit the 1800 / 2050 edge (a short note in the label)
   dy.oninput = () => { dyDrag = true; setT(real() + +dy.value * 6e4); }; dy.onchange = () => { dyDrag = false; };
   for (const [k, dir] of [['dyB', -1], ['dyF', 1]]) { const b = $(k); let iv = null, n = 0;
     const step = () => { setT(now() + dir * 6e4 * (n < 8 ? 60 : n < 30 ? 180 : 360)); n++; };
@@ -958,7 +970,8 @@ ${SUNLIB}
     b.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); n = 0; step(); } }; }
   const dyShow = t => { const r = real(), off = (t - r) / 6e4; if (!dyDrag) dy.value = Math.round(off / 30) * 30;
     const h = Math.round(Math.abs(off) / 60), d = Math.floor(h / 24);
-    dyL.textContent = Math.abs(off) < 30 ? tr('Now') : (off < 0 ? '−' : '+') + (d ? d + ' ' + tr('d') + ' ' : '') + (h % 24) + ' h';
+    dyL.textContent = performance.now() - limAt < 4000 ? tr('Planet positions are reliable 1800–2050') : Math.abs(off) < 30 ? tr('Now')
+      : d >= 365 ? (off < 0 ? '−' : '+') + (d / 365.25).toFixed(d < 3650 ? 1 : 0) + ' ' + tr('y') : (off < 0 ? '−' : '+') + (d ? d + ' ' + tr('d') + ' ' : '') + (h % 24) + ' h';
     // rebuilt only when the marks change (or once a minute, as now moves): rebuilding every frame would swallow hovers and clicks
     const ms = solar.cmeMarks ? solar.cmeMarks() : [], key = ms.map(c => c.t0 + '/' + c.tE).join(';'); if (key === mkSeen && performance.now() - mkAt < 6e4) return; mkSeen = key; mkAt = performance.now();
     const pc = x => ((x - r) / 864e6 + 1) * 50, inR = x => x != null && Math.abs(x - r) <= 864e6;
@@ -1033,8 +1046,12 @@ ${SUNLIB}
     if (slow > 90 && PR > PRMIN) { PR = Math.max(PRMIN, PR - .1); resize(); slow = 0; }
     else if (fast > 180 && PR < PRMAX) { PR = Math.min(PR + .1, PRMAX); resize(); fast = 0; }
     if (orbitWait && !goal) { orbitOn = orbitWait; orbitWait = 0; }
-    if (dyPlay) { const tn = now(); let k = 1; for (const m of (solar.cmeMarks ? solar.cmeMarks() : [])) if (m.tE != null) { const d = Math.abs(tn - m.tE) / 36e5; k = Math.min(k, d < 2 ? 1 / 24 : d < 6 ? 1 / 4 : 1); }
-      setT(tn + Math.min(.1, dt0) * 216e5 * k); }
+    if (dyPlay && spd) { let t2 = now() + dyDir * Math.min(.1, dt0) * spd;
+      if (t2 < T_MIN || t2 > T_MAX) { t2 = Math.max(T_MIN, Math.min(T_MAX, t2)); playSet(false); limAt = performance.now(); }
+      tOver = t2; di.value = localStr(t2); }
+    else if (dyPlay) { const tn = now(); let k = 1; for (const m of (solar.cmeMarks ? solar.cmeMarks() : [])) if (m.tE != null) { const d = Math.abs(tn - m.tE) / 36e5; k = Math.min(k, d < 2 ? 1 / 24 : d < 6 ? 1 / 4 : 1); }
+      setT(tn + dyDir * Math.min(.1, dt0) * 216e5 * k); }
+    solar.quiet = fastT() || Math.abs(now() - real()) > 30 * 864e5;   // the wind + CME data only cover days round today
     if (orbitOn) { tOver = now() + Math.min(.1, dt0) * orbitOn; if (performance.now() - infoAt > 250) di.value = localStr(tOver); }
     const dt = Math.min(.05, dt0), t = now(); hE = solar.helio('Earth', t);
     if (infoOf && performance.now() - infoAt > 250) { infoAt = performance.now(); liveInfo(t); }
@@ -1042,10 +1059,11 @@ ${SUNLIB}
       const kk = Math.min(1, dt * 6);
       solar.eclToWorld(t); fc.copy(focus === 'Earth' ? O3 : solar.toWorld(solar.helio(focus, t).map((v, i) => v - hE[i])));
       const fB = focus !== 'Earth' && rng < 2 && solar.bodies[focus];   // close to a body: it alone turns the camera (its rotation already holds the frame's)
-      if (focus !== 'Earth' && Mprev && !(fB && qBname === focus)) { const qd = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().setFromMatrix3(solar.eclToWorld(t).clone().multiply(Mprev.clone().invert()))); tgt.applyQuaternion(qd); if (fly) { fly.off.applyQuaternion(qd); fly.q.premultiply(qd); } if (goal) { goal.a.applyQuaternion(qd); goal.b.applyQuaternion(qd); goal.ax.applyQuaternion(qd); } }   // away from the Earth the view stays still among the stars
+      const fst = fastT(); if (fst && focus === 'Earth' && !MSH.on && Mprev) turnView(new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().setFromMatrix3(solar.eclToWorld(t).clone().multiply(Mprev.clone().invert()))));
+      if (focus !== 'Earth' && Mprev && !(fB && qBname === focus && !fst)) { const qd = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().setFromMatrix3(solar.eclToWorld(t).clone().multiply(Mprev.clone().invert()))); tgt.applyQuaternion(qd); if (fly) { fly.off.applyQuaternion(qd); fly.q.premultiply(qd); } if (goal) { goal.a.applyQuaternion(qd); goal.b.applyQuaternion(qd); goal.ax.applyQuaternion(qd); } }   // away from the Earth the view stays still among the stars
       Mprev = solar.eclToWorld(t).clone();
       // close to another body (within 2 radii) the camera turns with it, so its ground doesn't slide away under you
-      { const B = fB; if (B) { if (qBprev && qBname === focus) turnView(B.mesh.quaternion.clone().multiply(qBprev.clone().invert()));
+      { const B = fst ? null : fB; if (B) { if (qBprev && qBname === focus) turnView(B.mesh.quaternion.clone().multiply(qBprev.clone().invert()));
           qBprev = (qBprev || new THREE.Quaternion()).copy(B.mesh.quaternion); qBname = focus; } else qBname = null; }
       // the magnetic shield view stays fixed toward the Sun (the shield points at it), so the clock can run fast without the view spinning
       if (focus === 'Earth' && MSH.on) { const sl = Math.atan2(-U.rsun.value.z, U.rsun.value.x); if (sunL != null) { let d = sl - sunL; d -= 2 * Math.PI * Math.round(d / (2 * Math.PI)); if (d) turnView(new THREE.Quaternion().setFromAxisAngle(Yax.clone().applyQuaternion(earth.quaternion), d)); } sunL = sl; } else sunL = null;

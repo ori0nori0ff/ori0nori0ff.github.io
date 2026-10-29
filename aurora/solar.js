@@ -408,19 +408,19 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
   const sunW = new THREE.Vector3();
   let realScale = false, guides = false;   // guides = names + orbit lines
   // camHelio: the camera's heliocentric ecliptic position (R⊕, doubles) · camW: the camera's world position (in the Earth view's frame)
-  let windOn = false;
+  let windOn = false, quiet = false;   // quiet: the clock is far from the wind / CME data or runs fast → the wind layer rests
   let lastCH = [0, 0, 0];
   // a heliocentric ecliptic point (R⊕) → screen px of the last frame ({ x, y, ok })
   function screen(h, W, H) { const pix = 2 * Math.tan(camera.fov * D2R / 2) / H, p = toW([h[0] - lastCH[0], h[1] - lastCH[1], h[2] - lastCH[2]], new THREE.Vector3()).applyQuaternion(cam.quaternion.clone().invert());
     if (p.z >= 0) return { x: 0, y: 0, ok: false }; const x = p.x / (-p.z * pix) + W / 2, y = H / 2 - p.y / (-p.z * pix); return { x, y, ok: x > 40 && x < W - 40 && y > 60 && y < H - 60 }; }
   function update(t, camHelio, W, H, nearOn, pxr) { lastCH = camHelio;
-    eclToWorld(t); if (Math.abs(t - orbT) > 5 * DAY) buildOrbits(t);
+    eclToWorld(t); if (Math.abs(t - orbT) > 365 * DAY) buildOrbits(t);   // orbits change over centuries: once a simulated year is plenty (fast clock)
     cam.quaternion.copy(camera.quaternion); cam.fov = camera.fov; cam.aspect = camera.aspect;
     const pix = 2 * Math.tan(camera.fov * D2R / 2) / H; let nearest = 1e12;
     for (const b of Object.values(bodies)) { const h = helio(b.name, t); toW([h[0] - camHelio[0], h[1] - camHelio[1], h[2] - camHelio[2]], b.rel); b.d = b.rel.length();
       const boost = realScale ? 1 : Math.max(1, b.minPx * pix * b.d / b.R); b.rs = b.R * boost; b.px = b.rs / (b.d * pix);
       b.mesh.position.copy(b.rel); if (b.shp) b.mesh.scale.set(b.rs * b.shp[0], b.rs * b.shp[1], b.rs * b.shp[2]); else b.mesh.scale.setScalar(b.rs); if (b.name !== 'Earth' && b.name !== 'Sun') b.mesh.quaternion.copy(orient(b.b, t));
-      b.hid = b.near && bodies.Earth.d > 4000; if (b.kind === 'craft') { b.mesh.visible = !b.hid; continue; }
+      const cr = CR[b.name]; b.hid = (b.near && bodies.Earth.d > 4000) || (cr && b.name !== 'SDO' && (t < cr.t0 - DAY || t > cr.t0 + (cr.p.length / 3 - 1) * cr.s * 6e4 + DAY));   // spacecraft: only where their table reaches if (b.kind === 'craft') { b.mesh.visible = !b.hid; continue; }
       nearest = Math.min(nearest, Math.max(1e-3, b.d - b.rs)); }
     if (warm.length) renderer.initTexture(warm.shift());
     if (HI) for (const b of Object.values(bodies)) if (!b.hi && b.px > 300 && b.b[5] && b.mesh.material.uniforms.map) { b.hi = true; const u = b.mesh.material.uniforms.map;
@@ -435,11 +435,11 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
     bodies.Earth.mesh.visible = !nearOn; bodies.Earth.mesh.quaternion.copy(quatW);
     glow.position.copy(S); glow.scale.setScalar(Math.max(bodies.Sun.rs * 9, 40 * pix * bodies.Sun.d));
     orbits.position.copy(S); orbits.quaternion.setFromRotationMatrix(new THREE.Matrix4().setFromMatrix3(M));
-    helioG.position.copy(S); helioG.quaternion.copy(orbits.quaternion); windP.visible = windOn; wU.px.value = pxr || 1;
+    helioG.position.copy(S); helioG.quaternion.copy(orbits.quaternion); windP.visible = windOn && !quiet; wU.px.value = pxr || 1;
     { // the wind round the camera: its size follows the nearest body's distance; it hands over to the Earth's shield wind below ~120 R⊕,
       // stays off close to the other bodies, and leaves the far view to the big wind beyond ~0.1 AU
       let dN = Infinity, kB = 1; for (const b of Object.values(bodies)) { dN = Math.min(dN, b.d); if (b.name !== 'Earth' && b.name !== 'Sun') kB = Math.min(kB, sm(1.5 * b.R, 4 * b.R, b.d)); }
-      const K = windOn ? sm(80, 160, bodies.Earth.d) * kB * (1 - sm(.05 * AU, .15 * AU, dN)) : 0;
+      const K = windOn && !quiet ? sm(80, 160, bodies.Earth.d) * kB * (1 - sm(.05 * AU, .15 * AU, dN)) : 0;
       const now = performance.now(), dt = lAt ? Math.min(.1, (now - lAt) / 1000) : 0; lAt = now;
       // the clouds sit ahead of the camera, round what you look at (the camera's near plane would cut a cloud centred on it)
       if (K > .003) { const v = vNow(t), r = Math.hypot(...camHelio) || 1, sp = Math.max(100, dN) / 7 * v / 400 * dt;
@@ -452,7 +452,7 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
           u.L.value = L; u.k.value = K * w; u.v.value = v; u.ctr.value.copy(fw); u.off.value.set(f(0), f(1), f(2)); p.quaternion.copy(orbits.quaternion); } }
       else LW.forEach(l => l.p.visible = false); }
     tailUpdate(t); if (beltP) { beltP.visible = beltOn; beltU.dJ.value = JD(t) - 2461000.5; beltU.px.value = pxr || 1; beltU.k.value = 1 - sm(300 * AU, 1500 * AU, bodies.Sun.d); }
-    if (windOn) windUpdate(t, pxr || 1); else { active = []; cmeP.forEach(p => p.visible = false); }
+    if (windOn && !quiet) windUpdate(t, pxr || 1); else { active = []; cmeP.forEach(p => p.visible = false); }
     fieldUpdate(t, pix, nearOn); helioG.updateMatrixWorld(true);
     cam.near = Math.max(hdR || nearest < 1e-3 ? 1e-8 : 1e-3, nearest * .5); cam.far = Math.max(cam.near * 10, 4e6, bodies.Sun.d * 3); cam.updateProjectionMatrix(); cam.updateMatrixWorld();
     // labels: beside each body when it is small on screen, hidden when big or behind
@@ -473,5 +473,5 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
       if (r < Math.max(14, b.px + 6) && b.d < bd) { best = b; bd = b.d; } } return best; }
   const hdHas = n => bhd.has(n), hdOn = n => bhd.on === n, hdGround = (n, dirW) => bhd.ground(n, bodies[n], dirW);
   orbits.visible = guides; lab.style.display = guides ? '' : 'none';   // start as the Layers panel says (off)
-  return { scene, cam, update, screen, bodies, pick, hdHas, hdOn, hdGround, helio, eclToWorld, toWorld: p => toW(p, new THREE.Vector3()), fromWorld: v => v.clone().applyMatrix3(Mi), get realScale() { return realScale; }, set realScale(v) { realScale = v; }, setWind, setCmes, cmeAtEarth, cmeMarks, windAt, get wind() { return windOn; }, set wind(v) { windOn = v; }, get field() { return fieldOn; }, set field(v) { fieldOn = v; }, get bare() { return fieldMode === 2; }, set bare(v) { fieldMode = v ? 2 : 1; }, get belt() { return beltOn; }, set belt(v) { beltOn = v; }, get guides() { return guides; }, set guides(v) { guides = v; orbits.visible = v; lab.style.display = v ? '' : 'none'; } };
+  return { scene, cam, update, screen, bodies, pick, hdHas, hdOn, hdGround, helio, eclToWorld, toWorld: p => toW(p, new THREE.Vector3()), fromWorld: v => v.clone().applyMatrix3(Mi), get realScale() { return realScale; }, set realScale(v) { realScale = v; }, setWind, setCmes, cmeAtEarth, cmeMarks, windAt, get wind() { return windOn; }, set quiet(v) { quiet = v; }, set wind(v) { windOn = v; }, get field() { return fieldOn; }, set field(v) { fieldOn = v; }, get bare() { return fieldMode === 2; }, set bare(v) { fieldMode = v ? 2 : 1; }, get belt() { return beltOn; }, set belt(v) { beltOn = v; }, get guides() { return guides; }, set guides(v) { guides = v; orbits.visible = v; lab.style.display = v ? '' : 'none'; } };
 }
