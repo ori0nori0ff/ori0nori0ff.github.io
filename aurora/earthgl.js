@@ -263,7 +263,10 @@ function create(host, opts) {
         lit *= eclF(p);   // the Moon's shadow darkens the air too
         if (lit <= 0.) continue;
         den *= vec2(lit, lit);
-        vec2 odS = depthTo(p); vec3 tr = exp(-(BR * (odC.x + odS.x) + BM * 1.1 * (odC.y + odS.y)));
+        // sunlight reaching the point keeps its colour (red at dusk); along the view the blue lost by scattering is mostly given back by light scattered
+        // again from the rest of the sky (multiple scattering): near-grey there, so a far horizon is pale blue-white, not yellow-brown
+        vec2 odS = depthTo(p); vec3 tV = exp(-(BR * odC.x + BM * 1.1 * odC.y)); tV = mix(vec3(dot(tV, vec3(.25, .45, .3))), tV, .3);
+        vec3 tr = exp(-(BR * odS.x + BM * 1.1 * odS.y)) * tV;
         sr += tr * den.x; sm += tr * den.y; }
       float mu = dot(d, sun), pr = .0596831 * (1. + mu * mu), pm = .1193662 * (1. - G * G) * (1. + mu * mu) / ((2. + G * G) * pow(1. + G * G - 2. * G * mu, 1.5));
       pm = pm * .88 + .12 * .0795775 * (1. - .9409) / pow(1. + .9409 - 1.94 * mu, 1.5);   // + the aerosols' narrow forward peak: the limb lights up round the Sun like in orbit photos
