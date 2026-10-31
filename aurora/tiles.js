@@ -19,9 +19,19 @@
   css.textContent = `
   html.tiles .chx, html.tiles #portals, html.tiles #safe { display: none !important; }
   #tiles { display: grid; grid-template-columns: 1fr 1.618fr 1fr; gap: 16px; margin: 16px 0 8px; height: var(--gh, 760px); }
-  #tiles .col { display: grid; grid-template-rows: repeat(4, 1fr); gap: 16px; min-height: 0; }
+  #tiles .col { display: grid; grid-auto-rows: minmax(0, 1fr); gap: 16px; min-height: 0; }
   .tl { position: relative; display: block; min-width: 0; min-height: 0; padding: 0; border-radius: 13px; overflow: hidden; cursor: pointer; text-align: left;
     border: 1px solid #1F2630; border-left: 3px solid var(--c); background: var(--tile); color: #E6EDF5; font: inherit; transition: transform .25s, border-color .25s, box-shadow .25s; }
+  .tl[hidden] { display: none !important; }
+  #tiles { position: relative; }
+  html.tledit .tl { cursor: grab; outline: 1px dashed rgba(255,255,255,.35); outline-offset: 3px; touch-action: none; } html.tledit .tl:hover { transform: none; }
+  .tl.drg { opacity: .55; cursor: grabbing; } .tl.ovr { outline: 2px solid var(--c) !important; } .tl.ovt { box-shadow: 0 -6px 0 0 var(--acc, #7BE0FF) !important; } .tl.ovb { box-shadow: 0 6px 0 0 var(--acc, #7BE0FF) !important; }
+  #tiles .col { overflow: visible; } html.tledit #tiles .col:empty { outline: 1px dashed rgba(255,255,255,.25); }
+  .tlx { display: none; position: absolute; top: 8px; right: 8px; z-index: 3; width: 28px; height: 28px; border-radius: 50%; background: rgba(0,0,0,.75); color: #fff; text-align: center; line-height: 28px; font-size: 13px; cursor: pointer; } html.tledit .tlx { display: block; }
+  .tlh { position: absolute; z-index: 4; touch-action: none; } .tlh.v { cursor: col-resize; } .tlh.h { cursor: row-resize; }
+  .tlh::after { content: ''; position: absolute; inset: 0; margin: auto; border-radius: 3px; background: var(--acc, #7BE0FF); opacity: .55; } .tlh.v::after { width: 4px; height: 64px; } .tlh.h::after { height: 4px; width: 64px; } .tlh:hover::after { opacity: 1; }
+  #tlEd { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 45; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; max-width: 92vw; padding: 10px 14px; border-radius: 14px; background: var(--head, #10151C); border: 1px solid var(--line, #2A323D); box-shadow: 0 20px 60px rgba(0,0,0,.6); font: 500 12.5px Inter, sans-serif; color: #C9D3DF; }
+  #tlEd button { height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid #2A323D; background: none; color: #E6EDF5; cursor: pointer; font: inherit; } #tlEd .ok { background: var(--acc, #7BE0FF); color: #0A0A0A; border-color: transparent; font-weight: 700; }
   .tl.fc { border-left-width: 1px; border-top: 3px solid var(--c); background: none; }
   .tl:hover, .tl:focus-visible { transform: translateY(-2px); border-color: var(--c); box-shadow: 0 14px 40px rgba(0,0,0,.45); outline: none; }
   .tls { position: absolute; top: 0; left: 0; transform-origin: 0 0; pointer-events: none; padding: 21px 26px; }
@@ -63,7 +73,7 @@
   // the board: Sun column · forecast · Earth column
   const tile = p => `<button type="button" class="tl${p[4] === 'C' ? ' fc' : ''}" style="--c:${p[2]}" data-p="${p[0]}" aria-label="${T(p[3])}">${p[1] ? '<div class="tls"></div>' : '<div class="tlrp"></div>'}<span class="cap"><strong>${T(p[3])}</strong><span class="lv"></span><i>↗</i></span></button>`;
   const box = document.createElement('nav'); box.id = 'tiles'; box.setAttribute('aria-label', T('The chapters'));
-  box.innerHTML = ['L', 'C', 'R'].map(s => s === 'C' ? tile(P.find(p => p[4] === 'C')) : `<div class="col">${P.filter(p => p[4] === s).map(tile).join('')}</div>`).join('');
+  box.innerHTML = ['L', 'C', 'R'].map(s => `<div class="col">${P.filter(p => p[4] === s).map(tile).join('')}</div>`).join('');
   $('frForecast').before(box);
   const st = key => box.querySelector(`[data-p="${key}"] .tls`);
   const stageW = () => Math.round(innerWidth * .95 - 2);   // = the window's width; the stage's padding = the window body's
@@ -74,6 +84,54 @@
       if (t.classList.contains('fc')) { s.style.width = FCW + 'px'; const k = Math.min(t.clientWidth / FCW, t.clientHeight / Math.max(1, s.scrollHeight)); s.style.transform = `scale(${k})`; s.style.left = Math.max(0, (t.clientWidth - FCW * k) / 2) + 'px'; s.style.top = Math.max(0, (t.clientHeight - s.scrollHeight * k) / 2) + 'px'; }
       else { s.style.width = W + 'px'; s.style.transform = `scale(${t.clientWidth / W})`; } }); };
   P.forEach(p => { if (!p[1]) return; const el = $(p[1]); if (!el) return; el.inert = true; st(p[0]).appendChild(el); });
+  // the viewer's own board (⚙ → ✎ Arrange the board): drag a tile onto another = swap (the forecast too), drag the lines between
+  // them = resize (1 : 1 and 1 : φ pull the line), ✕ = hide, ＋ = show again; kept in this browser only
+  const CK = 'aurora.tiles', cols = [...box.querySelectorAll('.col')], PHI = 1.618, tl = k => box.querySelector(`.tl[data-p="${k}"]`);
+  let CF = { w: [1, PHI, 1], h: {}, hide: [] }, drag = null;
+  const vis = c => [...c.children].filter(t => t.classList.contains('tl') && !t.hidden);
+  const cur = () => ({ cols: cols.map(c => [...c.children].filter(t => t.classList.contains('tl')).map(t => t.dataset.p)), w: CF.w, h: CF.h, hide: CF.hide });
+  const layout = () => { const ed = H.classList.contains('tledit'); box.style.gridTemplateColumns = CF.w.map((w, i) => `minmax(0, ${vis(cols[i]).length || ed ? w : 0}fr)`).join(' ');
+    box.style.columnGap = cols.filter((c, i) => CF.w[i] > .001 && (vis(c).length || ed)).length > 1 ? '' : '0px';
+    cols.forEach(c => { c.style.gridTemplateRows = vis(c).map(t => `minmax(0, ${CF.h[t.dataset.p] || 1}fr)`).join(' ') || 'none'; }); };
+  const apply = c => { if (c && c.cols) { CF = { w: c.w && c.w.length === 3 ? c.w : CF.w, h: c.h || {}, hide: c.hide || [] }; c.cols.forEach((ks, i) => ks.forEach(k => { const t = tl(k); if (t && cols[i]) cols[i].appendChild(t); })); }
+    box.querySelectorAll('.tl[data-p]').forEach(t => { t.hidden = CF.hide.includes(t.dataset.p); }); layout(); };
+  const save = () => { try { localStorage.setItem(CK, JSON.stringify(cur())); } catch (e) {} };
+  try { apply(JSON.parse(localStorage.getItem(CK))); } catch (e) {}
+  const handles = () => { box.querySelectorAll('.tlh').forEach(h => h.remove()); if (!H.classList.contains('tledit')) return; const B = box.getBoundingClientRect();
+    const mk = (cls, x, y, w, h, d) => { const e = document.createElement('div'); e.className = 'tlh ' + cls; Object.assign(e.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' }); Object.assign(e.dataset, d); box.appendChild(e); };
+    for (let i = 0; i < 2; i++) { const a = cols[i].getBoundingClientRect(), b = cols[i + 1].getBoundingClientRect(); mk('v', a.right - B.left, 0, Math.max(10, b.left - a.right), B.height, { c: i }); }
+    cols.forEach(c => { const v = vis(c); for (let i = 0; i + 1 < v.length; i++) { const a = v[i].getBoundingClientRect(), b = v[i + 1].getBoundingClientRect(); mk('h', a.left - B.left, a.bottom - B.top, a.width, Math.max(10, b.top - a.bottom), { a: v[i].dataset.p, b: v[i + 1].dataset.p }); } }); };
+  const bar = document.createElement('div'); bar.id = 'tlEd';
+  const name = k => T((P.find(p => p[0] === k) || [])[3] || k);
+  const drawBar = () => { bar.innerHTML = `<span>${T('Drag a tile onto another to swap them · drag the lines between them to resize')}</span>${CF.hide.map(k => `<button type="button" data-show="${k}">＋ ${name(k)}</button>`).join('')}<button type="button" data-ed="r">${T('Reset the board')}</button><button type="button" data-ed="x" class="ok">${T('Done')}</button>`; if (!bar.isConnected) document.body.appendChild(bar); };
+  const redo = () => { layout(); save(); fit(); handles(); if (bar.isConnected) drawBar(); };
+  const edit = on => { H.classList.toggle('tledit', on); layout(); if (on) { box.querySelectorAll('.tl').forEach(t => { if (!t.querySelector('.tlx')) t.insertAdjacentHTML('beforeend', `<span class="tlx" title="${T('Hide')}">✕</span>`); }); drawBar(); } else bar.remove(); fit(); handles(); };
+  bar.onclick = e => { const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.show) { CF.hide = CF.hide.filter(k => k !== b.dataset.show); apply(); redo(); }
+    else if (b.dataset.ed === 'r') { try { localStorage.removeItem(CK); } catch (x) {} location.reload(); } else edit(false); };
+  const snap = q => { for (const v of [0, .5, 1 / (1 + PHI), PHI / (1 + PHI), 1]) if (Math.abs(q - v) < .03) return v; return q; };
+  box.addEventListener('pointerdown', e => { if (!H.classList.contains('tledit')) return; const x = e.target.closest('.tlx'), h = e.target.closest('.tlh'), t = e.target.closest('.tl');
+    e.preventDefault();
+    if (x && t) { CF.hide.push(t.dataset.p); apply(); redo(); return; }
+    if (h) { h.setPointerCapture(e.pointerId); if (h.dataset.c != null) { const i = +h.dataset.c; drag = { k: 'c', i, x: e.clientX, a: cols[i].offsetWidth, b: cols[i + 1].offsetWidth, s: CF.w[i] + CF.w[i + 1] }; }
+      else { const A = h.dataset.a, Bk = h.dataset.b; drag = { k: 'r', A, B: Bk, y: e.clientY, a: tl(A).offsetHeight, b: tl(Bk).offsetHeight, s: (CF.h[A] || 1) + (CF.h[Bk] || 1) }; } return; }
+    if (t) { t.setPointerCapture(e.pointerId); drag = { k: 't', t }; t.classList.add('drg'); } });
+  box.addEventListener('pointermove', e => { if (!drag) return;
+    if (drag.k === 'c') { const q = snap(Math.max(0, Math.min(1, (drag.a + e.clientX - drag.x) / (drag.a + drag.b)))); CF.w = CF.w.slice(); CF.w[drag.i] = drag.s * q; CF.w[drag.i + 1] = drag.s * (1 - q); layout(); fit(); }
+    else if (drag.k === 'r') { const q = Math.max(.04, Math.min(.96, snap((drag.a + e.clientY - drag.y) / (drag.a + drag.b)))); CF.h[drag.A] = drag.s * q; CF.h[drag.B] = drag.s * (1 - q); layout(); fit(); }
+    else { box.querySelectorAll('.ovr, .ovt, .ovb').forEach(t => t.classList.remove('ovr', 'ovt', 'ovb')); const o = document.elementFromPoint(e.clientX, e.clientY), t = o && o.closest('.tl');
+      if (t && t !== drag.t) { const R = t.getBoundingClientRect(), y = (e.clientY - R.top) / R.height; t.classList.add(y < .25 ? 'ovt' : y > .75 ? 'ovb' : 'ovr'); } } });
+  const up = e => { if (!drag) return; const d = drag; drag = null;
+    if (d.k === 't') { d.t.classList.remove('drg'); const o = box.querySelector('.tl.ovr, .tl.ovt, .tl.ovb');
+      if (o) { const z = o.classList.contains('ovt') ? 't' : o.classList.contains('ovb') ? 'b' : 'r'; o.classList.remove('ovr', 'ovt', 'ovb');
+        if (z === 't') o.before(d.t); else if (z === 'b') o.after(d.t); else { const m = document.createComment(''); d.t.replaceWith(m); o.replaceWith(d.t); m.replaceWith(o); } }
+      else { const el = document.elementFromPoint(e.clientX, e.clientY), c = el && el.closest('.col'); if (c && !c.contains(d.t)) c.appendChild(d.t); } }
+    redo(); };
+  box.addEventListener('pointerup', up); box.addEventListener('pointercancel', up);
+  addEventListener('resize', () => { if (!drag) handles(); });
+  window.tilesCfg = el => { el.innerHTML = `<button type="button" class="sb" data-m="e">✎ ${T('Arrange the board')}</button><button type="button" class="sb" data-m="r" style="margin-top:8px">${T('Reset the board')}</button>`;
+    el.onclick = e => { const b = e.target.closest('[data-m]'); if (!b) return; if (b.dataset.m === 'r') { try { localStorage.removeItem(CK); } catch (x) {} location.reload(); return; }
+      const xb = document.querySelector('#setPane [data-x]'); if (xb) xb.click(); edit(true); }; };
   fit(); addEventListener('resize', fit); H.classList.remove('tpre'); setTimeout(fit, 1500); setTimeout(fit, 5000);   // the forecast grows as its data comes in
   const live = () => P.forEach(p => { if (!p[5]) return; const v = p[5](), el = box.querySelector(`[data-p="${p[0]}"] .lv`); if (el && v && el.textContent !== v) el.textContent = v; });
   live(); setInterval(live, 4000);
@@ -115,7 +173,7 @@
     S.forEach((k, i) => { if (k) home($(P.find(q => q[0] === k)[1])); S[i] = null; }); split = false; act = 0; mark(); relayout();
     if (push && /^#p-/.test(location.hash)) history.pushState({}, '', location.pathname + location.search); }
   const step = d => { const ks = P.filter(p => p[1]).map(p => p[0]); let j = ks.indexOf(S[act]); do { j = (j + d + ks.length) % ks.length; } while (split && ks[j] === S[1 - act]); show(act, ks[j]); hash(); };
-  box.addEventListener('click', e => { if (!e.isTrusted) return; const b = e.target.closest('[data-p]'); if (b) open(b.dataset.p); });   // a script pressing a button inside a tile (the header clock) must not open it
+  box.addEventListener('click', e => { if (!e.isTrusted || H.classList.contains('tledit')) return; const b = e.target.closest('[data-p]'); if (b) open(b.dataset.p); });   // a script pressing a button inside a tile (the header clock) must not open it
   ov.addEventListener('click', e => {
     const b = e.target.closest('#tlStrip [data-p]'); if (b) { show(act, b.dataset.p); hash(); return; }
     const g = e.target.closest('[data-go]'); if (g) return step(+g.dataset.go);

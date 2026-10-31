@@ -1007,8 +1007,8 @@
   <div class="fctl"><div class="pbtn" id="enlFPlay">▶</div><div class="pbtn spd" style="font:700 10px 'JetBrains Mono',monospace">1×</div><input type="range" id="enlFSlide" min="0" max="0" value="0"><span class="lbl" id="enlFT" style="min-width:150px;text-align:right">–</span><span class="lbl">PINCH · DRAG</span><div class="x" id="enlX">✕</div></div></div></div>
 <div id="toast"></div>
 <script src="i18n.js?v=b936034a"></script>
-<script src="i18n.ro.js?v=4761bd02"></script>
-<script src="i18n.de.js?v=28018fc0"></script>
+<script src="i18n.ro.js?v=faaa5a44"></script>
+<script src="i18n.de.js?v=39032d4b"></script>
 <script src="land.js?v=d495927a"></script>
 <script src="globe.js?v=234d5b26"></script>
 <script src="tonight.js?v=91a2449f"></script>
@@ -2468,10 +2468,11 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-repl
       <div class="sh" style="margin:-4px 0 8px;font-size:12px;color:var(--dim)">${T('Slower clock steps, no autoplay, no blur or animations, fewer Sun frames loaded, the 3D model paused while it is a small tile. The page reloads.')}</div>
       <label class="sw">${T('Sun filters change by themselves')}<input type="checkbox" data-t="sunauto" ${get('aurora.sunauto') === 'off' ? '' : 'checked'}></label>
       <label class="sw">${T('Keep the side menu open')}<input type="checkbox" data-t="nav" ${get('aurora.nav') === 'pin' ? 'checked' : ''}></label></div>
+    <div class="sg" id="tlCfgG" hidden><div class="lbl">${T('Board tiles')}</div><div id="tlCfg"></div></div>
     <div class="sg"><div class="lbl">${T('Report')}</div><button type="button" class="sb rep" data-a="rep">⬇ ${T('Save the full report (image)')}</button>
       <a href="#safe" class="note" data-a="safe">${T('No cookies, no tracking, nothing about you is stored')} ›</a></div>`;
   document.body.append(sh, pn);
-  const open = () => { pn.classList.add('on'); sh.classList.add('on'); pn.setAttribute('aria-hidden', 'false'); const xb = $q('#xpBtn'); pn.querySelector('[data-t="xp"]').checked = !!(xb && xb.getAttribute('aria-pressed') === 'true'); pn.querySelector('[data-x]').focus(); };
+  const open = () => { { const g = $q('#tlCfgG'); if (g) { g.hidden = !window.tilesCfg; if (window.tilesCfg) tilesCfg($q('#tlCfg')); } } pn.classList.add('on'); sh.classList.add('on'); pn.setAttribute('aria-hidden', 'false'); const xb = $q('#xpBtn'); pn.querySelector('[data-t="xp"]').checked = !!(xb && xb.getAttribute('aria-pressed') === 'true'); pn.querySelector('[data-x]').focus(); };
   const close = () => { pn.classList.remove('on'); sh.classList.remove('on'); pn.setAttribute('aria-hidden', 'true'); };
   sh.onclick = close; addEventListener('keydown', e => { if (e.key === 'Escape' && pn.classList.contains('on')) close(); });
   pn.addEventListener('click', e => { const t = e.target;
@@ -2544,7 +2545,7 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-repl
   const hx = t.querySelector('.hx'), sync = () => hx.setAttribute('aria-pressed', String(document.documentElement.classList.contains('xp')));
   hx.onclick = () => { const b = document.getElementById('xpBtn'); if (b) b.click(); sync(); };
   new MutationObserver(sync).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] }); sync(); })();</script>
-<script src="tiles.js?v=1c4eef56"></script>
+<script src="tiles.js?v=77f42a47"></script>
 <script src="alerts.js?v=9fa6b2d7"></script>
 </body>
 </html>
