@@ -10,7 +10,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
-import { createSolar } from './solar.js?v=06b07705';
+import { createSolar } from './solar.js?v=ed5618ba';
 
 const tr = (s, o) => window.T ? window.T(s, o) : String(s).replace(/\{(\w+)\}/g, (m, k) => o && o[k] != null ? o[k] : m);
 const D2R = Math.PI / 180, BASE = new URL('./', import.meta.url).href, T = BASE + 'img/earth/';
@@ -54,7 +54,7 @@ const CSS = `.e3g{position:absolute;inset:0;display:none;background:#000;overflo
 .e3g-if{display:grid;grid-template-columns:1fr 1fr;gap:6px}.e3g-if div{background:rgba(255,255,255,.06);border-radius:8px;padding:6px 8px}.e3g-if small{display:block;color:#8B9BAE;font-size:11px}
 .e3g-im{border-left:2px solid #39FF9E;padding-left:8px;color:#C8D2DC}.e3g-iph small{color:#8B9BAE;font-size:11px}.e3g-iph div{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:4px}
 .e3g-iph a{position:relative;display:block;aspect-ratio:1;border-radius:6px;overflow:hidden;background:rgba(255,255,255,.06)}.e3g-iph img{width:100%;height:100%;object-fit:cover}.e3g-iph span{position:absolute;left:0;right:0;bottom:0;color:#fff;font-size:10.5px;padding:1px 4px;background:rgba(0,0,0,.6)}
-.e3g-ib{display:flex;gap:6px}.e3g-ib button{flex:1}
+.e3g-ib{display:flex;flex-wrap:wrap;gap:6px}.e3g-ib button{flex:1 1 40%;min-width:0}
 @media (max-width:640px){.e3g-info{left:56px;right:56px;width:auto;top:auto;bottom:76px;max-height:45%}}
 .e3g-pnl label{display:grid;grid-template-columns:64px 1fr;align-items:center;gap:8px}.e3g-pnl input{accent-color:#39FF9E;width:100%}.e3g-pnl button{align-self:flex-end}.e3g-pnl small{font-weight:500;color:#8B9BAE}
 .e3g-find{position:absolute;z-index:3;right:10px;top:56px;width:280px;font:600 13px Inter,system-ui,sans-serif}.e3g-find input{width:100%;box-sizing:border-box;border:1px solid rgba(255,255,255,.18);background:rgba(10,14,20,.85);color:#E6EBF1;border-radius:999px;padding:9px 14px;min-height:38px;font:inherit;outline:none}.e3g-find input:focus{border-color:#39FF9E}
@@ -116,7 +116,7 @@ function create(host, opts) {
   const RMIN = .12 / 6371, RFAR = 5e7;   // R⊕: down to 120 m over the Earth, out to ~2 100 AU (room for the Oort cloud later)
   let focus = 'Earth', Rf = 1;   // the body the camera turns around (its radius in R⊕); ranges are in its radii
   const rMin = () => focus === 'Earth' ? RMIN : solar.hdHas(focus) ? 2000 / (Rf * 6371000) : .015, rMax = () => RFAR / Rf;
-  const maxTilt = r => (1.36 + .12 * (1 - smooth(Math.log(1.5), Math.log(25), Math.log(r * 6371)))) * (1 - smooth(Math.log(250), Math.log(16000), Math.log(r * 6371)));   // ≈ 85° low over the ground, 78° at 25 km, 0 seen from far away
+  const maxTilt = r => focus === 'Sun' ? 1.47 * (1 - smooth(.3, 3, r / Rf)) : (1.36 + .12 * (1 - smooth(Math.log(1.5), Math.log(25), Math.log(r * 6371)))) * (1 - smooth(Math.log(250), Math.log(16000), Math.log(r * 6371)));   // ≈ 85° low over the ground, 78° at 25 km, 0 seen from far away; the Sun: like the Sun preview (flat above 3 solar radii, ~84° below 0.3)
   const frameAt = () => { const t = tgt; cE.crossVectors(Yax, t); if (cE.lengthSq() < 1e-8) cE.set(1, 0, 0); cE.normalize(); cN.crossVectors(t, cE).normalize();
     cF.copy(cN).multiplyScalar(Math.cos(head)).addScaledVector(cE, Math.sin(head)); cR.copy(cE).multiplyScalar(Math.cos(head)).addScaledVector(cN, -Math.sin(head)); };
   const zoomBy = f => { rngTo = Math.max(rMin(), Math.min(rMax(), rngTo * f)); };
@@ -723,7 +723,7 @@ ${SUNLIB}${MOONV}
       // the wind at the clock's time: live (NOAA now, with Bz) near now, else the wind series (measured past + ENLIL forecast, no Bz)
       const wt = tOver != null && Math.abs(t - Date.now()) > 36e5 && solar.windAt ? solar.windAt(t) : null, vT = wt ? wt.v : S.v, hw = wt ? shue(wt.n || 5, wt.v, 0) : { R: S.Rw, al: S.alw };
       let c = 0, R = hw.R, al = hw.al; const rc = realCme(t);
-      if (S.cme < 0 && rc) { const h = rc.hrs, u = h < 0 ? (h + 1.5) * 2 : 3 + h / .3 * 1.2; front.visible = h > -1.5 && u < 4.2;
+      if (S.cme < 0 && rc) { const h = rc.hrs, u = h < 0 ? (h + 1.5) * 2 : 3 + h / .3 * 1.2; front.visible = h > -1.5 && u < 4.2 && !solar.wind;   // with the wind on, the real CME (bubble + rope + particles) reaches the shield itself
         if (front.visible) { front.position.set(45 - u * 15 + 14, 0, 0); front.scale.setScalar(14 + u * 3); front.material.uniforms.gate.value = Math.min(1, u * 2) * (1 - smooth(3, 4.2, u)); }
         c = smooth(-.1, .6, h) * (1 - smooth(12, 30, h)); const hs = shue(10 + rc.v / 40, rc.v, -Math.min(30, 5 + rc.v / 50)); R = hw.R + (hs.R - hw.R) * c; al = hw.al + (hs.al - hw.al) * c; c *= Math.min(1, rc.v / 1100); }
       else if (S.cme < 0) front.visible = false;
@@ -779,7 +779,7 @@ ${SUNLIB}${MOONV}
   function flyToBody(name, r1, dir, keep) { const B = solar.bodies[name]; if (!B) return; playSet(false); flyOff(); const t = now(); solar.eclToWorld(t);
     const c = name === 'Earth' ? O3.clone() : solar.toWorld(solar.helio(name, t).map((v, i) => v - hE[i])), off = camera.position.clone().sub(c), d = off.length();
     look0.copy(camera.getWorldDirection(new THREE.Vector3())); lookU = 0;
-    focus = name; Rf = B.R; Mprev = solar.eclToWorld(t).clone(); headTo = 0; if (name !== 'Earth') tkTo = 0;
+    focus = name; Rf = B.R; Mprev = solar.eclToWorld(t).clone(); headTo = 0; if (name !== 'Earth') tkTo = name === 'Sun' ? 1 : 0;
     const a = off.normalize(), sunD = solar.toWorld(hE.map(v => -v)).sub(c).normalize();   // from the body toward the Sun
     const b = dir ? dir.clone().normalize() : name === 'Sun' ? solar.toWorld([0, 0, 1]).multiplyScalar(.75).addScaledVector(a, .66).normalize() : sunD.clone().multiplyScalar(.75).addScaledVector(a, .5).normalize();
     tgt.copy(a); rng = rngTo = Math.max(rMin(), d / Rf - 1);
@@ -869,10 +869,13 @@ ${SUNLIB}${MOONV}
       <div><small>${nm === 'Sun' ? tr('Turns once in') : HOSTOF[nm] ? tr('Day = orbit') : tr('Day / year')}</small>${span(F[1])}${F[1] < 0 ? ' ↺' : ''}${F[2] ? ' · ' + span(F[2] * 24) : ''}</div>
       ${HOSTOF[nm] ? `<div><small>${tr('Orbits')}</small>${tr(HOSTOF[nm])}</div>` : `<div><small>${nm === 'Sun' ? tr('Planets') : tr('Moons')}</small>${MOONS[nm] ? tr(MOONS[nm]) : F[3] || '—'}</div>`}</div>
       <div class="e3g-im">${FIELD[nm] ? '🧲 ' + tr(FIELD[nm]) : '✦ ' + tr(NOTE[nm] || '')}</div>
-      <div class="e3g-ib"><button data-i="near">${tr('Closer')}</button>${F[2] && nm !== 'Charon' ? `<button data-i="orb" aria-pressed="false">${tr('Follow the orbit')}</button>` : ''}</div>`;
+      <div class="e3g-ib"><button data-i="near">${tr('Closer')}</button>${nm === 'Sun' ? `<button data-i="erb">${tr('Eruption')}</button><button data-i="erj">${tr('Small jet')}</button><button data-i="flt">${tr('Filter')}: ${tr(solar.sun ? solar.sun.FM[solar.sun.filter] : 'Normal')}</button>` : ''}${F[2] && nm !== 'Charon' ? `<button data-i="orb" aria-pressed="false">${tr('Follow the orbit')}</button>` : ''}</div>`;
     info.insertBefore(photoNode(nm), info.querySelector('.e3g-ib')); liveInfo(now()); info.hidden = false;
     info.querySelector('.e3g-ih button').onclick = hideInfo;
     info.querySelector('[data-i="near"]').onclick = () => { if (focus !== nm || orbView) { orbView = false; flyToBody(nm, undefined, null, true); } else zoomBy(.3); };
+    if (nm === 'Sun') { const fb = info.querySelector('[data-i="flt"]');   // eruptions + SDO looks on the cinematic Sun (ignored until it is built)
+      info.querySelector('[data-i="erb"]').onclick = () => solar.sun && solar.sun.flare(true); info.querySelector('[data-i="erj"]').onclick = () => solar.sun && solar.sun.flare(false);
+      fb.onclick = () => { const S = solar.sun; if (!S) return; const m = (S.filter + 1) % S.FM.length; S.setFilter(m); fb.textContent = tr('Filter') + ': ' + tr(S.FM[m]); }; }
     const ob = info.querySelector('[data-i="orb"]'); if (ob) ob.onclick = () => { const on = !(orbitOn || orbitWait), rate = F[2] * DAYms / 40; orbitOn = orbitWait = 0; press(ob, on); if (!on) return; spinOff();
       // the camera stays on the planet, steps back outward + up: the Sun and the inner orbits stay in view behind it, so you see it move
       const t = now(), E = solar.helio('Earth', t), P = solar.helio(nm, t), rel = nm === 'Moon' ? P.map((v, i) => v - E[i]) : P,

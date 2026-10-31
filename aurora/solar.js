@@ -184,6 +184,7 @@ export function helio(name, t) { const T = (t / DAY + 2440587.5 - 2451545) / 365
   return kepler(name, T); }
 
 import { createBodyHD } from './bodyhd.js?v=e199e9f2';
+import { createSun, makeCme } from './sunfx.js?v=a1d3b067';
 
 export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, quatW, dayTex }) {
   const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(camera.fov, camera.aspect, 1, 1e8);
@@ -256,6 +257,9 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
     if (labHost) { o.lab = labHost.appendChild(document.createElement('span')); o.lab.textContent = tr(name); o.lab.style.color = o.col || '#FFE6B0'; o.lab.classList.add('e3g-sb'); }
     return o; }
   for (const [name, b] of Object.entries(BODY)) mkBody(name, b);
+  // the cinematic Sun (sunfx.js: today's NOAA regions, loops, eruptions, SDO looks); the textured ball stands in until it is built
+  let SUN = null, sunTurn = null, sAt = 0, lastTd = null; const sunHold = new THREE.Group();
+  createSun({ auto: false }).then(s => { SUN = s; sunHold.add(s.group); scene.add(sunHold, s.halo); bodies.Sun.mesh.visible = false; }).catch(() => {});
   // the Sun's glow (always faces the camera)
   const gc = document.createElement('canvas'); gc.width = gc.height = 256; { const g = gc.getContext('2d'), gr = g.createRadialGradient(128, 128, 0, 128, 128, 128);
     gr.addColorStop(0, 'rgba(255,240,210,1)'); gr.addColorStop(.12, 'rgba(255,220,160,.55)'); gr.addColorStop(.35, 'rgba(255,170,90,.14)'); gr.addColorStop(1, 'rgba(255,150,60,0)'); g.fillStyle = gr; g.fillRect(0, 0, 256, 256); }
@@ -454,18 +458,27 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
           vC = c.z > .5 ? vec4(1., .82 + .18 * (1. - e), .62 + .38 * (1. - e), min(1., .55 + .6 * e) * fade) : vec4(1., .6 + .25 * q, .4 + .3 * q, .3 * fade * q);
           vC.a *= gate * smoothstep(.0003 * AUr, .003 * AUr, -mv.z); gl_PointSize = (c.z > .5 ? 2.3 : 2.8) * px; gl_Position = projectionMatrix * mv; }`,
       fragmentShader: PFS }));
-    p.frustumCulled = false; p.visible = false; helioG.add(p); cmeP.push(p); }
+    p.frustumCulled = false; p.visible = false; helioG.add(p); cmeP.push(p);
+    const lk = makeCme(); lk.u.px = wU.px; helioG.add(lk.group); p.userData.look = lk; }   // + bubble, cavity and flux rope (sunfx.js)
   let active = [];
+  function ropeAxisOf(c, ax) {   // the flux rope lies as it lay in its source region when it left (sunfx.js), turned into the wind's frame
+    if (!SUN || sunTurn === null) return null; const tL = c.t - (.1 - .00465) / kmsAU(c.v) * DAY;
+    const qS = orient(bodies.Sun.b, tL).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), sunTurn)), qH = helioG.getWorldQuaternion(new THREE.Quaternion());
+    const dL = ax.clone().applyQuaternion(qH).applyQuaternion(qS.clone().invert());
+    return SUN.ropeAxis(dL).applyQuaternion(qS).applyQuaternion(qH.invert()); }
   function windUpdate(t, pxr) { const td = t / DAY, nqf = Math.floor(td / DTW), tq = nqf * DTW;
     wU.frac.value = td - tq; wU.ph0.value = (OMEGA * tq) % (2 * Math.PI); wU.nq.value = nqf % 100000; wU.tsec.value = (performance.now() / 1000) % 1000; wU.px.value = pxr;
     active = []; let m = 0;
     for (const c of cmes) { const va = kmsAU(c.v), r = .1 + va * (td - c.t / DAY); if (r < .02 || r > 3.4 || m >= NC) continue;
       const E = helio('Earth', c.t), lon = Math.atan2(E[1], E[0]) + c.lon * D2R, la = c.lat * D2R, h = Math.max(5, c.half) * D2R;
       const ax = new THREE.Vector3(Math.cos(la) * Math.cos(lon), Math.cos(la) * Math.sin(lon), Math.sin(la)), up = Math.abs(ax.z) > .9 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 0, 1);
-      const u = new THREE.Vector3().crossVectors(ax, up).normalize(), w = new THREE.Vector3().crossVectors(ax, u), U = cmeP[m].material.uniforms;
-      U.ax.value.copy(ax); U.u.value.copy(u); U.w.value.copy(w); U.r.value = r; U.hh.value = h; U.fade.value = Math.min(1, (3.4 - r) / .6); cmeP[m].visible = true; m++;
+      if (!c._u) c._u = ropeAxisOf(c, ax); const u = c._u ? c._u.clone().addScaledVector(ax, -c._u.dot(ax)).normalize() : new THREE.Vector3().crossVectors(ax, up).normalize(), w = new THREE.Vector3().crossVectors(ax, u), U = cmeP[m].material.uniforms;
+      U.ax.value.copy(ax); U.u.value.copy(u); U.w.value.copy(w); U.r.value = r; U.hh.value = h; U.fade.value = Math.min(1, (3.4 - r) / .6); cmeP[m].visible = true;
+      { const lk = cmeP[m].userData.look; lk.group.visible = true; lk.group.scale.setScalar(r * AU); lk.group.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(u, ax, u.clone().cross(ax)));
+        lk.set(h, .45 * U.fade.value * wU.gate.value, performance.now() / 1000 % 1000); }
+      m++;
       active.push({ c, r, ax }); }
-    for (; m < NC; m++) cmeP[m].visible = false; }
+    for (; m < NC; m++) { cmeP[m].visible = false; cmeP[m].userData.look.group.visible = false; } }
   // how hard a CME is pressing on Earth now (0–1) + hours until the next one arrives (same rule as space3d)
   function cmeAtEarth(t) { const E = helio('Earth', t), rE = Math.hypot(...E) / AU, ue = E.map(x => x / (rE * AU)); let f = 0, eta = null, hit = null;
     for (const { c, r, ax } of active) { if (ax.x * ue[0] + ax.y * ue[1] + ax.z * ue[2] < Math.cos(Math.max(5, c.half) * D2R)) continue;
@@ -538,7 +551,7 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
     const d = t / DAY, rot = (OMEGA * d) % (2 * Math.PI), dSun = bodies.Sun.d, amax = Math.min(125, Math.max(2.5, dSun / AU * 1.6)), real = fieldOn && fieldMode === 1;
     fieldG.rotation.set(0, 0, rot); fieldG.visible = fieldOn;
     dip.visible = fieldOn && fieldMode === 2; spir.visible = pulses.visible = tori.visible = real;
-    loops.visible = real && SSr / (dSun * pix) > 14; sheets.forEach(o => o.visible = real && o.userData.a < amax);
+    loops.visible = real && !SUN && SSr / (dSun * pix) > 14;   // the cinematic Sun draws its own loops sheets.forEach(o => o.visible = real && o.userData.a < amax);
     const hf = real ? Math.min(1, Math.max(0, (dSun / AU - 45) / 15)) : 0; helio2.forEach(o => { o.visible = hf > 0; o.material.opacity = hf; });
     if (!fieldOn) return;
     // pulses (and the what-if dots) ride the lines
@@ -602,6 +615,17 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
     if (hdR) { nearest = Math.min(nearest, Math.max(2e-8, hdR.clear)); hb.mesh.scale.setScalar(hb.rs * (1 - 15000 / (hb.R * 6371000))); }
     bodies.Earth.mesh.visible = !nearOn; bodies.Earth.mesh.quaternion.copy(quatW);
     glow.position.copy(S); glow.scale.setScalar(Math.max(bodies.Sun.rs * 9, 40 * pix * bodies.Sun.d));
+    if (SUN) { const B = bodies.Sun, nw = performance.now(), sdt = sAt ? Math.min(.1, (nw - sAt) / 1000) : 0; sAt = nw;
+      sunHold.position.copy(S); sunHold.scale.setScalar(B.rs); sunHold.quaternion.copy(orient(B.b, t));
+      if (sunTurn === null) {   // NOAA longitudes count from the middle of the disc seen from the Earth: turn the regions about the axis to face us
+        const e = bodies.Earth.rel.clone().sub(S).applyQuaternion(sunHold.quaternion.clone().invert()); sunTurn = Math.atan2(e.x, e.z); SUN.group.rotation.y = sunTurn; }
+      { const td = t / DAY;   // a measured CME leaves the surface (worked back from its time at 21.5 solar radii and its speed): the Sun erupts there
+        if (lastTd !== null && td > lastTd && td - lastTd < 2) for (const c of cmes) { const tL = c.t / DAY - (.1 - .00465) / kmsAU(c.v); if (tL <= lastTd || tL > td) continue;
+          const E = helio('Earth', c.t), lon = Math.atan2(E[1], E[0]) + c.lon * D2R, la = c.lat * D2R;
+          const d = new THREE.Vector3(Math.cos(la) * Math.cos(lon), Math.cos(la) * Math.sin(lon), Math.sin(la)).applyQuaternion(helioG.getWorldQuaternion(new THREE.Quaternion()));
+          SUN.flareAt(d.applyQuaternion(SUN.group.getWorldQuaternion(new THREE.Quaternion()).invert())); }
+        lastTd = td; }
+      SUN.auto = B.px > 250; SUN.update(sdt, cam); glow.material.opacity = 1 - sm(30, 160, B.px); }
     orbits.position.copy(S); orbits.quaternion.setFromRotationMatrix(new THREE.Matrix4().setFromMatrix3(M));
     { const I = bodies.ISS, on = !!I && !I.hid && orbits.visible && bodies.Earth.d < 60; issLine.visible = on;
       if (on) { const per = 2 * Math.PI / ISS.no * 6e4, a = issLine.geometry.attributes.position, v = new THREE.Vector3();
@@ -629,7 +653,7 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
           u.L.value = L; u.k.value = K * w; u.v.value = v; u.ctr.value.copy(fw); u.off.value.set(f(0), f(1), f(2)); p.quaternion.copy(orbits.quaternion); } }
       else LW.forEach(l => l.p.visible = false); }
     tailUpdate(t); if (beltP) { beltP.visible = beltOn; beltU.dJ.value = JD(t) - 2461000.5; beltU.px.value = pxr || 1; beltU.k.value = 1 - sm(300 * AU, 1500 * AU, bodies.Sun.d); }
-    if (windOn && !quiet) windUpdate(t, pxr || 1); else { active = []; cmeP.forEach(p => p.visible = false); }
+    if (windOn && !quiet) windUpdate(t, pxr || 1); else { active = []; cmeP.forEach(p => { p.visible = false; p.userData.look.group.visible = false; }); }
     fieldUpdate(t, pix, nearOn); helioG.updateMatrixWorld(true);
     cam.near = Math.max(hdR || nearest < 1e-3 ? 1e-8 : 1e-3, nearest * .5); cam.far = Math.max(cam.near * 10, 4e6, bodies.Sun.d * 3); cam.updateProjectionMatrix(); cam.updateMatrixWorld();
     // labels: beside each body when it is small on screen, hidden when big or behind
@@ -655,5 +679,5 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
     if (k > 0 && k < d && c.lengthSq() - k * k < 1) return;
     const R = issG.scale.x, ic = issDraw.c || (issDraw.c = new THREE.PerspectiveCamera()); ic.copy(cam); ic.near = Math.max(d - 1.6 * R, R * .02); ic.far = d + 1.6 * R; ic.updateProjectionMatrix();
     r.clearDepth(); r.render(issScene, ic); }
-  return { issDraw, poseISS, scene, cam, update, screen, bodies, pick, eclAt, eclList, eclMoon, eclSun, hdHas, hdOn, hdGround, helio, eclToWorld, toWorld: p => toW(p, new THREE.Vector3()), fromWorld: v => v.clone().applyMatrix3(Mi), get realScale() { return realScale; }, set realScale(v) { realScale = v; }, setWind, setCmes, cmeAtEarth, cmeMarks, windAt, get wind() { return windOn; }, set quiet(v) { quiet = v; }, set wind(v) { windOn = v; }, get field() { return fieldOn; }, set field(v) { fieldOn = v; }, get bare() { return fieldMode === 2; }, set bare(v) { fieldMode = v ? 2 : 1; }, get belt() { return beltOn; }, set belt(v) { beltOn = v; }, get guides() { return guides; }, set guides(v) { guides = v; orbits.visible = v; lab.style.display = v ? '' : 'none'; } };
+  return { get sun() { return SUN; }, issDraw, poseISS, scene, cam, update, screen, bodies, pick, eclAt, eclList, eclMoon, eclSun, hdHas, hdOn, hdGround, helio, eclToWorld, toWorld: p => toW(p, new THREE.Vector3()), fromWorld: v => v.clone().applyMatrix3(Mi), get realScale() { return realScale; }, set realScale(v) { realScale = v; }, setWind, setCmes, cmeAtEarth, cmeMarks, windAt, get wind() { return windOn; }, set quiet(v) { quiet = v; }, set wind(v) { windOn = v; }, get field() { return fieldOn; }, set field(v) { fieldOn = v; }, get bare() { return fieldMode === 2; }, set bare(v) { fieldMode = v ? 2 : 1; }, get belt() { return beltOn; }, set belt(v) { beltOn = v; }, get guides() { return guides; }, set guides(v) { guides = v; orbits.visible = v; lab.style.display = v ? '' : 'none'; } };
 }
