@@ -114,6 +114,7 @@
   svg { display: block; width: 100%; height: auto; }
   svg text { font-family: Mono, monospace; }
   svg[data-tx] { cursor: crosshair; }
+  .flr[data-t] { cursor: pointer; } .flr[data-t]:hover { background: rgba(255,255,255,.06); }
   .legend { display: flex; gap: 12px; flex-wrap: wrap; font: 500 10px Mono, monospace; color: var(--dim); margin-top: 6px; }
   .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
   ol.steps { margin: 8px 0 0; padding-left: 0; list-style: none; counter-reset: s; }
@@ -529,6 +530,20 @@
   .rpbar { display: flex; align-items: center; gap: 16px; padding: 10px 16px; border-bottom: 1px solid #1C232D; }
   .rpbar h2 { margin: 0; font: 600 17px Inter, sans-serif; color: #E6EDF5; flex: 1; min-width: 0; }
   .rptag { flex: none; font: 700 10.5px 'JetBrains Mono', monospace; letter-spacing: .08em; color: #0A0A0A; background: #FFB347; border-radius: 6px; padding: 5px 9px; }
+  .rparc { flex: none; height: 36px; padding: 0 14px; border-radius: 18px; border: 1px solid #2C3542; background: #131820; color: #E6EDF5; font: 600 12px 'JetBrains Mono', monospace !important; }
+  .rparc:hover { border-color: #FFB347; }
+  .rparcw { display: none; position: absolute; inset: 0; z-index: 5; background: rgba(4,6,9,.78); align-items: flex-start; justify-content: center; padding: 64px 16px 16px; }
+  .rparcw.on { display: flex; }
+  .rparcw > * { max-width: 760px; width: 100%; }
+  .rparch { display: flex; align-items: center; gap: 16px; background: #0D1117; border: 1px solid #1C232D; border-bottom: 0; border-radius: 14px 14px 0 0; padding: 12px 14px; }
+  .rparch h3 { margin: 0; flex: 1; font: 600 16px Inter, sans-serif; color: #E6EDF5; } .rparch label { font-size: 12px; color: #A9B4C2; display: flex; gap: 6px; align-items: center; }
+  .rparcl { background: #0D1117; border: 1px solid #1C232D; border-radius: 0 0 14px 14px; max-height: calc(100vh - 160px); overflow: auto; padding: 6px; }
+  .rparcl button { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center; width: 100%; text-align: left; background: none; border: 1px solid transparent; border-radius: 10px; padding: 10px; color: inherit; cursor: pointer; }
+  .rparcl button:hover, .rparcl button.on { border-color: #2C3542; background: #131820; }
+  .rparcl .t { display: flex; flex-direction: column; min-width: 0; } .rparcl .t b { color: #E6EDF5; font: 600 14px Inter, sans-serif; } .rparcl .t span { font-size: 12px; color: #8B9BAE; }
+  .rparcl .bd { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; } .rparcl .bd i { font: 700 11px 'JetBrains Mono', monospace; font-style: normal; color: #0A0A0A; border-radius: 5px; padding: 3px 7px; }
+  .rparcl .bd .fl { background: #FF5A5A; } .rparcl .bd .sy { background: #2C3542; color: #C9D3DF; }
+  @media (max-width: 640px) { .rparcl button { grid-template-columns: 1fr; } .rparcl .bd { justify-content: flex-start; } }
   .rpx { flex: none; width: 36px; height: 36px; border-radius: 18px; border: 1px solid #2C3542; background: #131820; color: #E6EDF5; font-size: 15px !important; }
   .rpgrid { flex: 1; min-height: 0; display: grid; grid-template-columns: 1.618fr 1fr; gap: 16px; padding: 13px 16px; overflow: auto; }
   .rpleft { display: flex; flex-direction: column; gap: 13px; min-width: 0; }
@@ -992,8 +1007,8 @@
   <div class="fctl"><div class="pbtn" id="enlFPlay">▶</div><div class="pbtn spd" style="font:700 10px 'JetBrains Mono',monospace">1×</div><input type="range" id="enlFSlide" min="0" max="0" value="0"><span class="lbl" id="enlFT" style="min-width:150px;text-align:right">–</span><span class="lbl">PINCH · DRAG</span><div class="x" id="enlX">✕</div></div></div></div>
 <div id="toast"></div>
 <script src="i18n.js?v=b936034a"></script>
-<script src="i18n.ro.js?v=78cda7b8"></script>
-<script src="i18n.de.js?v=6eb8d89f"></script>
+<script src="i18n.ro.js?v=4761bd02"></script>
+<script src="i18n.de.js?v=28018fc0"></script>
 <script src="land.js?v=d495927a"></script>
 <script src="globe.js?v=234d5b26"></script>
 <script src="tonight.js?v=91a2449f"></script>
@@ -1494,7 +1509,8 @@ function tcursor() {
 }
 window.tcursor = tcursor;
 // tap a chart → the shared clock jumps to that moment
-document.addEventListener('click', e => { const svg = e.target.closest && e.target.closest('svg[data-tx]'); if (!svg) return;
+document.addEventListener('click', e => { const fr = e.target.closest && e.target.closest('.flr[data-t]'); if (fr) { syStop(); sy.on = true; syShow(+fr.dataset.t); return; }   // a flare in the list → the clock (X-ray chart cursor) at its peak
+  const svg = e.target.closest && e.target.closest('svg[data-tx]'); if (!svg) return;
   const [a, b, xa, xb] = JSON.parse(svg.dataset.tx), r = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal, x = (e.clientX - r.left) / r.width * (vb && vb.width || r.width);
   if (x < xa || x > xb) return; const t = a + (x - xa) / (xb - xa) * (b - a); syStop(); sy.on = true; syShow(t); });
 const PLAYS = ['syPlay', 'sunPlay', 'sunFPlay', 'enlPlay', 'enlFPlay'], SLIDES = ['sySlide', 'sunSlide', 'sunFSlide', 'enlSlide', 'enlFSlide'];
@@ -1947,7 +1963,7 @@ async function srXray() {   // X-rays (GOES, last 7 days) + the biggest flares o
     const big = fl.filter(f => /^[MX]/.test(f.max_class)), show = (big.length ? big : fl.filter(f => /^C/.test(f.max_class)).sort((a, b) => b.max_xrlong - a.max_xrlong).slice(0, 3)).sort((a, b) => Date.parse(b.max_time) - Date.parse(a.max_time)).slice(0, 6);
     $('srXList').innerHTML = legend([['#FF5A5A', T('0.1–0.8 NM · SETS THE CLASS')], ['#5AA9FF', '0.05–0.4 NM']])
       + `<div class="lbl" style="margin-top:12px">${big.length ? T('M / X flares') : T('Biggest flares')} · ${T('last 7 days')}</div>`
-      + (show.length ? show.map(f => `<div class="flr"><b style="color:${/^X/.test(f.max_class) ? '#FF4444' : /^M/.test(f.max_class) ? '#FFA040' : '#E0E0E0'}">${f.max_class}</b>${flWhere(RI, f)}<span>${dayHm(Date.parse(f.max_time))}</span></div>`).join('') : '<div class="loading">' + T('NO FLARES') + '</div>');
+      + (show.length ? show.map(f => `<div class="flr" role="button" tabindex="0" data-t="${Date.parse(f.max_time)}" title="${T('Show this moment on the clock')}"><b style="color:${/^X/.test(f.max_class) ? '#FF4444' : /^M/.test(f.max_class) ? '#FFA040' : '#E0E0E0'}">${f.max_class}</b>${flWhere(RI, f)}<span>${dayHm(Date.parse(f.max_time))}</span></div>`).join('') : '<div class="loading">' + T('NO FLARES') + '</div>');
   } catch (e) { $('srXNow').textContent = T('GOES data unavailable right now.'); }
 }
 window.srXray = srXray;
@@ -2403,8 +2419,8 @@ window.earthReport = () => ({ dst: $('dstChart'), cr: $('secCr').style.display =
   document.addEventListener('focusin', e => { if (!on) return; const el = e.target.closest('#sunChips button, [data-xp]'); if (!el) return; const b = el.getBoundingClientRect(); show(el, b.left, b.bottom); });
 })();</script>
 <script>/* storm replay: lazy-loaded, opened from the guide / the explain bar / #replay */
-window.openReplay = n => { if (window.StormReplay) return StormReplay.open(n); const s = document.createElement('script'); s.src = 'replay.js?v=4de6569f'; s.onload = () => StormReplay.open(n); document.body.appendChild(s); };
-{ const m = location.hash.match(/^#replay(?:-(\d+))?$/); if (m) setTimeout(() => openReplay(m[1] ? m[1] - 1 : 0), 0); }   // #replay / #replay-9 = open at that step
+window.openReplay = (n, id) => { if (window.StormReplay) return StormReplay.open(n, id); const s = document.createElement('script'); s.src = 'replay.js?v=ba36e097'; s.onload = () => StormReplay.open(n, id); document.body.appendChild(s); };
+{ const m = location.hash.match(/^#replay(?:=(\w+))?(?:-(\d+))?$/); if (m) setTimeout(() => openReplay(m[2] ? m[2] - 1 : 0, m[1]), 0); }   // #replay / #replay-9 = open at that step; #replay=oct2024 = another week of the archive
 document.addEventListener('click', e => { const b = e.target.closest('[data-replay]'); if (!b) return; e.preventDefault(); const o = document.getElementById('xpOv'); if (o) o.classList.remove('on'); openReplay(); });</script>
 <script>/* calm / storm switch: storm = ?storm=may2024 (storm.js answers every feed with the 10 May 2024 data) */
 (() => { const on = !!window.STORM, set = v => { const u = new URL(location.href); if (v) u.searchParams.set('storm', v); else u.searchParams.delete('storm'); u.hash = ''; location.href = u.href; };

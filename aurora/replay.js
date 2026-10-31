@@ -3,7 +3,7 @@
    SDO / SOHO pictures, NASA CCMC WSA-ENLIL run). Loaded on demand by index.html: window.StormReplay.open() */
 (() => {
   const T = (s, o) => window.T ? window.T(s, o) : String(s).replace(/\{(\w+)\}/g, (m, k) => o && o[k] != null ? o[k] : m);
-  const BASE = 'replay/may2024/', H = 3600e3, NS = 'http://www.w3.org/2000/svg';
+  let ID = 'may2024', BASE = 'replay/may2024/', IX = null; const H = 3600e3, NS = 'http://www.w3.org/2000/svg';
   let D = null, root = null, t = 0, play = false, speed = 1, raf = 0, last = 0, step = -1, SUNK = 'HMIIF', story = [];
   // guided tour (default): one step at a time — the clock glides to the next step, the rest of the screen dims, a pause to read, then on; after the last step (or ⇄) the viewer drives
   let guide = true, hold = 0, glide = 0;
@@ -71,6 +71,56 @@
     ].sort((a, b) => a.t - b.t);
   }
 
+  /* any other week: the story is written from the data — the biggest flares, shocks at L1, Bz south, the storm's peak, the deepest
+     SYM-H, a Forbush decrease or particles at the ground — plus a short hand-written note for the famous storms */
+  const NOTES = {
+    sep2017: 'Region 2673 fired the two biggest flares of solar cycle 24: X9.3 on 6 September and X8.2 on 10 September, from the Sun\'s western edge. The CMEs of 4 and 6 September drove a severe (G4) storm on 7–8 September, in the middle of the Atlantic hurricane season — the radio blackouts also hit emergency radio in the Caribbean.',
+    apr2023: 'On 21 April 2023 a long filament erupted with an M1.7 flare and threw a CME straight at Earth. It arrived on 23 April and set off a severe (G4) storm, with auroras far south over Europe and the US.',
+    oct2024: 'On 9 October 2024 an X1.8 flare from region 3848 launched a fast CME straight at Earth. It arrived on 10 October and drove a severe (G4) storm; red auroras were seen across Europe, Romania included, and as far south as Mexico.',
+    nov2025: 'Region 4274 fired three X flares in three days, the strongest an X5.1 on 11 November 2025. Their CMEs reached Earth on 12 November and set off a severe (G4) storm, with auroras across Europe, Romania included.',
+  };
+  function autoStory() {
+    const L = (k, o) => ({ k, o }), out = [], n = D.v.length, day = x => new Date(x).toLocaleDateString(document.documentElement.lang || 'en', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+    out.push({ t: D.t0 + 2 * H, sun: 'HMIIF', hi: ['sun'], c: '#FFB347', h: L(D.title || 'The week of {d}', { d: day(D.t0) }),
+      p: NOTES[ID] ? L(NOTES[ID]) : L('A week of real data from {d}. The steps were found automatically in the data: the biggest flares, shocks at L1, the storm\'s peak and its deepest point.', { d: day(D.t0) }) });
+    // flares: peaks of the long channel ≥ M1, the highest within ±3 h; every X flare + the biggest M flares, at most 4
+    const F = []; for (let i = 0; i < n; i++) { const v = D.xr[i]; if (v == null || v < 1e-5) continue; let top = true;
+      for (let j = Math.max(0, i - 36); j <= Math.min(n - 1, i + 36); j++) if ((D.xr[j] || 0) > v || ((D.xr[j] || 0) === v && j < i)) { top = false; break; } if (top) F.push([D.t0 + i * D.step, v]); }
+    F.sort((a, b) => b[1] - a[1]).slice(0, 4).forEach(([tt, v], fi) => { const X = v >= 1e-4;
+      out.push({ t: tt, sun: '0131', hi: ['sun', 'xr'], c: '#3FD2FF', h: L('Flare {x}', { x: xcls(v) }),
+        p: L(X ? 'An X-class flare: its X-rays reach Earth in 8 minutes and black out shortwave radio over the sunlit half of the planet. Watch the coronagraph a few hours later for a CME.' : 'An M-class flare: a minor to moderate radio blackout on the day side. Strong ones can also throw out a CME.'),
+        fx: [X ? 'R3 radio blackout' : 'R1–R2 radio blackout'] });
+      if (X && !fi) out.push({ t: tt + 3 * H, sun: 'C3', hi: ['sun'], c: '#4A7BFF', h: L('After the flare: a CME?'),   // once, after the biggest one
+        p: L('In LASCO C3 a disc hides the Sun. A cloud that spreads all around the disc (a "halo") is coming our way; one that leaves to one side will miss us.') }); });
+    // shocks at L1: speed up ≥ 80 km/s within 15 min with the density or the field jumping too; the 2 biggest, 12 h apart
+    const S = []; for (let i = 0; i + 3 < n; i++) { const a = D.v[i], b = D.v[i + 3]; if (a == null || b == null || b - a < 80) continue;
+      const na = D.n[i], nb = D.n[i + 3], ba = D.bt[i], bb = D.bt[i + 3]; if (!((na != null && nb != null && nb > na * 1.4) || (ba != null && bb != null && bb > ba * 1.4))) continue; S.push([i, b - a, a, b]); }
+    S.sort((x, y) => y[1] - x[1]); const SH = []; S.forEach(q => { if (SH.length < 2 && SH.every(o => Math.abs(o[0] - q[0]) > 144)) SH.push(q); });
+    SH.forEach(([i, , a, b]) => { const tt = D.t0 + (i + 1) * D.step;
+      out.push({ t: tt, sun: 'C3', hi: ['v', 'n', 'bz'], c: '#7BE0FF', h: L('A shock reaches L1'),
+        p: L('{t}: at L1, 1.5 million km away, the wind jumps from {a} to {b} km/s and the density and field jump with it — a CME has arrived. Earth gets about {m} minutes of warning.', { t: utc(tt), a: Math.round(a), b: Math.round(b), m: Math.round(1.5e6 / b / 60) }) }); });
+    const bz = peak('bz', D.t0, D.t1, (v, w) => v < w), sym = peak('sym', D.t0, D.t1, (v, w) => v < w), km = D.kp.reduce((a, p) => p[1] > a[1] ? p : a, [D.t0, 0]);
+    if (bz[1] != null && bz[1] <= -10) out.push({ t: bz[0], sun: 'C3', hi: ['bz', 'sym'], c: '#7BE0FF', h: L('Bz turns south: {b} nT', { b: Math.round(bz[1]) }),
+      p: L('The cloud\'s magnetic field points south, against Earth\'s: the shield opens and energy pours in. The longer and stronger Bz stays south, the bigger the storm.') });
+    if (gOf(km[1])) { const g = gOf(km[1]);
+      out.push({ t: km[0], sun: 'C3', hi: ['kp', 'globe'], c: kpc(km[1]), h: L('G{g} — Kp {k}', { g, k: km[1].toFixed(1).replace('.0', '') }),
+        p: L(g >= 5 ? 'An extreme storm, the rarest kind: the aurora oval swells far south, power grids and GPS feel it.' : g === 4 ? 'A severe storm: the aurora comes far south of its usual home — on good nights even over Romania. GPS and HF radio suffer.' : g === 3 ? 'A strong storm: aurora over Scandinavia, Scotland, northern Germany and Poland; satellites feel more drag.' : 'A minor to moderate storm: aurora over the north of Europe and Canada.'),
+        fx: [g >= 4 ? 'G' + g + ' geomagnetic storm' : 'Aurora in the north'] }); }
+    else out.push({ t: km[0], sun: 'C3', hi: ['kp', 'globe'], c: kpc(km[1]), h: L('No big storm this week'), p: L('Kp only reached {k}. The Sun was active, but nothing hit Earth hard enough for a storm.', { k: km[1].toFixed(1).replace('.0', '') }) });
+    if (sym[1] != null && sym[1] <= -50) out.push({ t: sym[0], sun: 'C3', hi: ['sym'], c: '#7BE0FF', h: L('The deepest point: SYM-H {v} nT', { v: Math.round(sym[1]) }),
+      p: L('The ring of current around Earth is at its strongest: the field at the equator is weakened by {v} nT. Below −100 nT is a strong storm, below −250 an extreme one.', { v: Math.abs(Math.round(sym[1])) }) });
+    if (D.cr.length) { const c0 = D.cr[0][1], mn = D.cr.reduce((a, p) => p[1] < a[1] ? p : a), X = F.filter(f => f[1] >= 1e-4);
+      let gl = null; X.forEach(([tt]) => { const b = (D.cr.filter(p => p[0] < tt).pop() || [0, c0])[1]; D.cr.filter(p => p[0] >= tt && p[0] <= tt + 4 * H).forEach(p => { if (p[1] - b >= 2 && (!gl || p[1] - b > gl[1])) gl = [p[0], p[1] - b]; }); });
+      if (gl) out.push({ t: gl[0], sun: '0131', hi: ['cr'], c: '#FFE14D', h: L('Particles from the flare reach the ground'),
+        p: L('Protons from the flare, sped up to almost the speed of light, reach Earth within minutes and are counted at the ground: the Oulu neutron monitor jumps by {c} %. A ground level enhancement is rare — a few per solar cycle.', { c: gl[1].toFixed(1) }), fx: ['Radiation storm'] });
+      if (mn[1] <= -2) out.push({ t: mn[0], sun: 'C3', hi: ['v', 'cr'], c: '#B9A7FF', h: L('Cosmic rays swept away'),
+        p: L('The cloud carries its own magnetic field past Earth and pushes cosmic rays aside: the neutron count drops by {c} % — a Forbush decrease.', { c: Math.abs(mn[1]).toFixed(1) }) }); }
+    out.push({ t: D.t1 - 2 * H, sun: 'HMIIF', hi: [], c: '#39FF9E', h: L('What we learn'),
+      p: L('The same chain as every day on this page: the Sun → flares and CMEs → the wind at L1 → Kp, SYM-H and the aurora. Open ☰ Archive to compare with another week.') });
+    out.sort((a, b) => a.t - b.t); for (let i = 1; i < out.length; i++) if (out[i].t - out[i - 1].t < 20 * 60e3) out[i].t = out[i - 1].t + 20 * 60e3;   // steps never on the same minute
+    return out;
+  }
+
   /* charts: one SVG per strip, drawn once; the cursor moves */
   const STRIPS = [
     ['xr', 'X-rays (GOES)', '#FF5A5A', 'log', [1e-8, 1e-3], v => xcls(v)],
@@ -81,15 +131,21 @@
     ['sym', 'SYM-H (Dst)', '#FF8A8A', 'lin', [-560, 80], v => Math.round(v) + ' nT'],
     ['cr', 'Cosmic rays', '#B9A7FF', 'lin', [-12, 2], v => v.toFixed(1) + ' %'],
   ];
+  const gOf = k => k >= 8.99 ? 5 : k >= 7.66 ? 4 : k >= 6.66 ? 3 : k >= 5.66 ? 2 : k >= 4.66 ? 1 : 0;   // NOAA: G1 = Kp 5 … G4 = Kp 8 including 9−, G5 = Kp 9
   const kpc = k => k >= 8.6 ? '#8C7CFF' : k >= 7.6 ? '#D61F3A' : k >= 6.6 ? '#FF4D4D' : k >= 5.6 ? '#FF9338' : k >= 4.6 ? '#FFE14D' : k >= 3.6 ? '#B8F25C' : '#3FD98A';   // the page's Kp spectrum (G5 indigo)
   function drawStrips() {
     const box = $('.rpcharts'); box.innerHTML = '';
     const W = 1000, x = tt => (tt - D.t0) / (D.t1 - D.t0) * W;
-    STRIPS.forEach(([k, name, col, sc, [lo, hi]]) => {
+    const ext = (k, f) => { const a = k === 'cr' ? D.cr.map(p => p[1]) : D[k]; return a.reduce((m, v) => v == null ? m : f(m, v), f === Math.min ? 1e9 : -1e9); };
+    const RANGE = { v: [250, Math.max(700, ext('v', Math.max) * 1.05)], n: [0, Math.max(20, ext('n', Math.max) * 1.05)], bz: (e => [-e, e])(Math.max(20, ext('bt', Math.max) * 1.1, -ext('bz', Math.min) * 1.1)),
+      sym: [Math.min(-100, ext('sym', Math.min) * 1.08), Math.max(40, ext('sym', Math.max) * 1.2)], cr: [Math.min(-3, ext('cr', Math.min) * 1.15), Math.max(1, ext('cr', Math.max) * 1.15)] };
+    const nd = Math.round((D.t1 - D.t0) / (24 * H));
+    STRIPS.forEach(([k, name, col, sc, rg]) => { if (k === 'cr' && !D.cr.length) return;   // no neutron data baked for this week
+      const [lo, hi] = ID === 'may2024' || !RANGE[k] ? rg : RANGE[k];
       const Hh = k === 'xr' ? 160 : 56;   // the X-ray chart is the big one, like the live page's
       const y = sc === 'log' ? v => Hh - (Math.log10(v) - Math.log10(lo)) / (Math.log10(hi) - Math.log10(lo)) * Hh : v => Hh - (v - lo) / (hi - lo) * Hh;
       let s = '';
-      for (let d = 0; d <= 5; d++) s += `<line x1="${x(D.t0 + d * 24 * H)}" x2="${x(D.t0 + d * 24 * H)}" y1="0" y2="${Hh}" stroke="#1F2630"/>`;
+      for (let d = 1; d < nd; d++) s += `<line x1="${x(D.t0 + d * 24 * H)}" x2="${x(D.t0 + d * 24 * H)}" y1="0" y2="${Hh}" stroke="#1F2630"/>`;
       if (k === 'xr') { [1e-8, 1e-7, 1e-6].forEach(v => s += `<line x1="0" x2="${W}" y1="${y(v)}" y2="${y(v)}" stroke="#1C232D"/>`);
         [[1e-5, '#FFB347'], [1e-4, '#FF5A5A']].forEach(([v, c]) => s += `<line x1="0" x2="${W}" y1="${y(v)}" y2="${y(v)}" stroke="${c}" stroke-opacity=".7" stroke-dasharray="6 4" vector-effect="non-scaling-stroke"/>`);
         let d2 = '', pen = false; D.xs.forEach((v, i) => { if (v == null) { pen = false; return; } d2 += (pen ? 'L' : 'M') + x(D.t0 + i * D.step).toFixed(1) + ' ' + y(Math.max(lo, Math.min(hi, v))).toFixed(1); pen = true; });
@@ -118,7 +174,7 @@
     });
     box.addEventListener('click', e => { const b = e.target.closest('.rpxf [data-t]'); if (b) { e.stopPropagation(); pause(); seek(+b.dataset.t); } });
     // day labels under the strips
-    const nd = Math.round((D.t1 - D.t0) / (24 * H)); let lab = ''; for (let d = 0; d < nd; d++) lab += `<span style="left:${(d + .5) * 100 / nd}%">${new Date(D.t0 + d * 24 * H).toLocaleDateString(document.documentElement.lang || 'en', { day: 'numeric', month: 'short', timeZone: 'UTC' })}</span>`;
+    let lab = ''; for (let d = 0; d < nd; d++) lab += `<span style="left:${(d + .5) * 100 / nd}%">${new Date(D.t0 + d * 24 * H).toLocaleDateString(document.documentElement.lang || 'en', { day: 'numeric', month: 'short', timeZone: 'UTC' })}</span>`;
     box.insertAdjacentHTML('beforeend', `<div class="rpdays">${lab}</div>`);
     box.onpointerdown = e => { const r = box.querySelector('svg').getBoundingClientRect(); const go = ev => seek(D.t0 + Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width)) * (D.t1 - D.t0)); pause(); go(e);
       const mv = ev => go(ev), up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); }; addEventListener('pointermove', mv); addEventListener('pointerup', up); };
@@ -152,14 +208,14 @@
     const L = D.sun[SUNK] || [], f = near(L, t) || L[0];
     if (f) { const el = $('#rpSun'); if (el.dataset.u !== f[1]) { el.src = BASE + f[1]; el.dataset.u = f[1]; } $('#rpSunT').textContent = utc(f[0]); }
     const i = L.indexOf(f); for (let k = 1; k < 6; k++) if (L[i + k]) img(L[i + k][1]);
-    const e = near(D.enl, t), en = $('#rpEnl');
-    if (e && t >= D.enl[0][0]) { const u = `url("${BASE}${e[1]}")`; if (en.dataset.u !== e[1]) { en.style.backgroundImage = u; en.dataset.u = e[1]; } $('#rpEnlT').textContent = utc(e[0]); en.classList.remove('wait'); const rc = $('#rpEnlRun'); if (rc) rc.textContent = T(e[0] >= Date.UTC(2024, 4, 11) ? 'NASA CCMC run of 11 May 06:00 UTC (with the CME of the X5.8 flare). Sun in the centre, Earth = the yellow dot on the right.' : 'NASA CCMC run of 9 May 20:27 UTC. Sun in the centre, Earth = the yellow dot on the right.'); }
-    else { en.classList.add('wait'); $('#rpEnlT').textContent = T('the run starts on 9 May'); }
+    const e = D.enl.length ? near(D.enl, t) : null, en = $('#rpEnl');
+    if (e && t >= D.enl[0][0]) { const u = `url("${BASE}${e[1]}")`; if (en.dataset.u !== e[1]) { en.style.backgroundImage = u; en.dataset.u = e[1]; } $('#rpEnlT').textContent = utc(e[0]); en.classList.remove('wait'); const rc = $('#rpEnlRun'); if (rc) rc.textContent = e[2] ? T('NASA CCMC run of {d} UTC: what forecasters had at that moment. Sun in the centre, Earth = the yellow dot on the right.', { d: new Date(e[2]).toLocaleString(document.documentElement.lang || 'en', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) }) : T(e[0] >= Date.UTC(2024, 4, 11) ? 'NASA CCMC run of 11 May 06:00 UTC (with the CME of the X5.8 flare). Sun in the centre, Earth = the yellow dot on the right.' : 'NASA CCMC run of 9 May 20:27 UTC. Sun in the centre, Earth = the yellow dot on the right.'); }
+    else { en.classList.add('wait'); $('#rpEnlT').textContent = !D.enl.length ? T('no ENLIL run for this week') : ID === 'may2024' ? T('the run starts on 9 May') : T('the run starts on {d}', { d: new Date(D.enl[0][0]).toLocaleDateString(document.documentElement.lang || 'en', { day: 'numeric', month: 'short', timeZone: 'UTC' }) }); }
   }
 
   function values() {
     const i = idx(t);
-    STRIPS.forEach(([k, , , , , fmt]) => { let v = k === 'kp' ? kpAt(t) : k === 'cr' ? (near(D.cr, t) || [0, null])[1] : D[k][i];
+    STRIPS.forEach(([k, , , , , fmt]) => { if (!root.querySelector(`[data-v="${k}"]`)) return; let v = k === 'kp' ? kpAt(t) : k === 'cr' ? (near(D.cr, t) || [0, null])[1] : D[k][i];
       for (let j = 1; v == null && k !== 'kp' && k !== 'cr' && j <= 12 && i - j >= 0; j++) v = D[k][i - j]; /* short data gaps (the probes saturated in the storm): last value within an hour */ root.querySelector(`[data-v="${k}"]`).textContent = v == null ? '–' : fmt(v); });
     root.querySelectorAll('.rpcur').forEach(l => { const x = (t - D.t0) / (D.t1 - D.t0) * 1000; l.setAttribute('x1', x); l.setAttribute('x2', x); });
     $('#rpClock').innerHTML = `<b>${utc(t)}</b><span>${T('Romania')}: ${ro(t)}</span>`;
@@ -201,7 +257,7 @@
     const y1 = Math.max(top, Math.min(bot - H0, y)); if (side === 'l' || side === 'r') ay = Math.max(18, Math.min(H0 - 24, r.top + 30 - y1));
     tip.style.left = Math.round(x) + 'px'; tip.style.top = Math.round(y1) + 'px'; tip.style.setProperty('--ay', ay + 'px'); tip.dataset.side = side; tip.classList.add('on');
   }
-  function setSun(k) { SUNK = k; root.querySelectorAll('.rpsf button').forEach(b => b.classList.toggle('on', b.dataset.k === k)); pics(); }
+  function setSun(k) { if (!(D.sun[k] || []).length) return; SUNK = k; root.querySelectorAll('.rpsf button').forEach(b => b.classList.toggle('on', b.dataset.k === k)); pics(); }
 
   function render(force) { values(); pics(); drawGlobe(force); if (guide && play) return;   // the tour moves the steps itself (arrival → read → glide)
     let n = 0; story.forEach((s, i) => { if (s.t <= t + 60e3) n = i; }); setStep(n); }
@@ -227,16 +283,36 @@
     if (end) $('#rpStep').insertAdjacentHTML('beforeend', `<div class="rpyou">${T("Now it's yours: drag the slider, change the speed, click any step or chart.")}</div>`); }
   function guideMode() { guide = true; root.classList.remove('free'); $('#rpMode').textContent = T('⇄ Explore freely'); setStep(0, true); render(true); start(); }
 
+  /* the archive: every baked week (replay/index.json) with its daily Kp, biggest flare and deepest SYM-H; a pick reloads the replay */
+  async function archive() {
+    pause(); let box = $('#rpArc');
+    if (!box) { root.insertAdjacentHTML('beforeend', `<div id="rpArc" class="rparcw" role="dialog" aria-label="${T('Storm archive')}"><div class="rparch"><h3>${T('Storm archive')}</h3>
+      <label><input type="checkbox" id="rpArcS"> ${T('storms only (G1+)')}</label><button type="button" class="rpx" aria-label="${T('Close')}">✕</button></div><div class="rparcl"></div></div>`);
+      box = $('#rpArc'); box.querySelector('.rpx').onclick = () => box.classList.remove('on'); $('#rpArcS').onchange = list; box.onclick = e => { if (e.target === box) box.classList.remove('on'); }; }
+    if (!IX) try { IX = await (await fetch('replay/index.json?t=' + Math.floor(Date.now() / 36e5))).json(); } catch (e) { IX = []; }
+    list(); box.classList.add('on'); (box.querySelector('.rparcl button') || box.querySelector('.rpx')).focus();
+  }
+  function list() {
+    const only = $('#rpArcS').checked, fmt = x => new Date(x).toLocaleDateString(document.documentElement.lang || 'en', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+    $('#rpArc .rparcl').innerHTML = (IX || []).filter(e => !only || gOf(Math.max(...e.kp))).map(e => { const km = Math.max(...e.kp), g = gOf(km) ? 'G' + gOf(km) : '', W = e.kp.length * 14;
+      const bars = e.kp.map((k, i) => `<rect x="${i * 14 + 1}" y="${36 - k / 9 * 36}" width="12" height="${Math.max(1.5, k / 9 * 36)}" rx="1.5" fill="${kpc(k)}"/>`).join('');
+      return `<button type="button" data-id="${e.id}" class="${e.id === ID ? 'on' : ''}"><svg viewBox="0 0 ${W} 36" width="${W}" height="36" aria-hidden="true">${bars}</svg>
+        <span class="t"><b>${esc(T(e.title))}</b><span>${fmt(e.t0)} – ${fmt(e.t1 - 1)}${e.famous ? ' · ★' : ''}</span></span>
+        <span class="bd">${g ? `<i style="background:${kpc(km)}">${g}</i>` : ''}${e.xr >= 1e-5 ? `<i class="fl">${xcls(e.xr)}</i>` : ''}<i class="sy">SYM-H ${Math.round(e.sym)}</i></span></button>`; }).join('')
+      || `<p>${T('Nothing here yet.')}</p>`;
+    $('#rpArc .rparcl').onclick = ev => { const b = ev.target.closest('[data-id]'); if (b) { $('#rpArc').classList.remove('on'); if (b.dataset.id !== ID) open(0, b.dataset.id); } };
+  }
+
   function build() {
-    root = document.createElement('div'); root.id = 'rp'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', T('Storm replay · May 2024'));
-    root.className = 'guide'; root.innerHTML = `<div class="rpbar"><span class="rptag">${T('REPLAY · REAL DATA FROM MAY 2024 · NOT LIVE')}</span><h2>${T('The G5 storm of May 2024, step by step')}</h2><button type="button" class="rpx" aria-label="${T('Close')}">✕</button></div>
+    root = document.createElement('div'); root.id = 'rp'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', ID === 'may2024' ? T('Storm replay · May 2024') : T(D.title));
+    root.className = 'guide'; root.innerHTML = `<div class="rpbar"><span class="rptag">${ID === 'may2024' ? T('REPLAY · REAL DATA FROM MAY 2024 · NOT LIVE') : T('REPLAY · REAL DATA · NOT LIVE')}</span><h2>${ID === 'may2024' ? T('The G5 storm of May 2024, step by step') : esc(T(D.title))}</h2><button type="button" class="rparc" aria-haspopup="dialog">☰ ${T('Archive')}</button><button type="button" class="rpx" aria-label="${T('Close')}">✕</button></div>
     <div class="rpgrid">
       <div class="rpleft">
         <div class="rpmedia">
           <figure data-hi="sun"><div class="rpsq"><img id="rpSun" alt="${T('The Sun at the replay time')}"></div><figcaption><b>${T('The Sun')}</b><span id="rpSunT"></span></figcaption>
-            <div class="rpsf">${SUNF.map(f => `<button type="button" data-k="${f[0]}" style="--c:${f[2]}">${T(f[1])}</button>`).join('')}</div></figure>
+            <div class="rpsf">${SUNF.filter(f => (D.sun[f[0]] || []).length).map(f => `<button type="button" data-k="${f[0]}" style="--c:${f[2]}">${T(f[1])}</button>`).join('')}</div></figure>
           <figure data-hi="enl"><div class="rpsq"><div id="rpEnl" role="img" aria-label="${T('NASA WSA-ENLIL solar wind density, seen from above')}"></div></div><figcaption><b>${T('WSA-ENLIL · density from above')}</b><span id="rpEnlT"></span></figcaption>
-            <p class="rpcap" id="rpEnlRun">${T('NASA CCMC run of 9 May 20:27 UTC. Sun in the centre, Earth = the yellow dot on the right.')}</p></figure>
+            <p class="rpcap" id="rpEnlRun">${ID === 'may2024' ? T('NASA CCMC run of 9 May 20:27 UTC. Sun in the centre, Earth = the yellow dot on the right.') : T('Sun in the centre, Earth = the yellow dot on the right.')}</p></figure>
           <figure data-hi="globe"><div class="rpsq"><canvas id="rpGlobe" aria-label="${T('Aurora oval estimated from Kp')}"></canvas></div><figcaption><b>${T('Aurora oval')}</b><span>${T('estimated from Kp')}</span></figcaption>
             <p class="rpcap">${T('The yellow dot is Brașov. The further south the glow, the stronger the storm.')}</p></figure>
         </div>
@@ -250,7 +326,7 @@
       <button type="button" id="rpMode" class="rpmode">${T('⇄ Explore freely')}</button><div class="rpsp" role="group" aria-label="${T('Speed')}">${[1, 2, 4].map(v => `<button type="button" data-s="${v}" class="${v === 1 ? 'on' : ''}">${v}×</button>`).join('')}</div>
       <div id="rpGP" class="rpgp"></div><input type="range" id="rpSlide" min="0" max="1000" value="0" aria-label="${T('Replay time')}"><div id="rpClock" class="rpclock"></div></div>`;
     document.body.appendChild(root);
-    $('.rpx').onclick = close;
+    $('.rpx').onclick = close; $('.rparc').onclick = archive;
     $('#rpPlay').onclick = () => play ? pause() : start();
     $('#rpMode').onclick = () => { if (guide) { pause(); freeMode(); } else guideMode(); };
     const hop = d => { const was = play; pause(); setStep(step + d, true); render(true); if (was) { start(); } };   // guided: one step back / on, the tour goes on reading from there
@@ -259,6 +335,7 @@
     $('#rpSlide').oninput = e => { pause(); if (guide) freeMode(); seek(D.t0 + e.target.value / 1000 * (D.t1 - D.t0)); };
     root.querySelector('.rpsp').onclick = e => { const b = e.target.closest('[data-s]'); if (!b) return; speed = +b.dataset.s; if (guide) freeMode(); root.querySelectorAll('.rpsp button').forEach(x => x.classList.toggle('on', x === b)); };
     root.querySelector('.rpsf').onclick = e => { const b = e.target.closest('[data-k]'); if (b) setSun(b.dataset.k); };
+    if (!(D.sun[SUNK] || []).length) { const f = SUNF.find(f => (D.sun[f[0]] || []).length); if (f) setSun(f[0]); }
     root.querySelector('.rpli').onclick = e => { const b = e.target.closest('[data-i]'); if (b) { pause(); setStep(+b.dataset.i, true); render(true); } };
     root.addEventListener('keydown', e => { if (e.key === 'Escape') close(); else if (e.key === ' ' && !e.target.closest('button, input')) { e.preventDefault(); play ? pause() : start(); }
       else if (e.key === 'ArrowRight' && !e.target.closest('input')) $('#rpNext').click(); else if (e.key === 'ArrowLeft' && !e.target.closest('input')) $('#rpPrev').click(); });
@@ -266,11 +343,12 @@
   }
   function close() { pause(); if (root) root.classList.remove('on'); document.documentElement.classList.remove('rpon'); if (location.hash === '#replay') history.replaceState(null, '', location.pathname + location.search); }
 
-  async function open(n) {
+  async function open(n, id) {
+    if (id && id !== ID) { if (root) { pause(); root.remove(); } root = null; D = null; ID = id; BASE = 'replay/' + id + '/'; cache.clear(); gT = -1; step = -1; guide = true; SUNK = 'HMIIF'; }
     document.documentElement.classList.add('rpon');
-    if (!D) { const w = document.createElement('div'); w.id = 'rpLoad'; w.textContent = T('Loading the May 2024 storm…'); document.body.appendChild(w);
+    if (!D) { const w = document.createElement('div'); w.id = 'rpLoad'; w.textContent = ID === 'may2024' ? T('Loading the May 2024 storm…') : T('Loading the storm…'); document.body.appendChild(w);
       try { D = await (await fetch(BASE + 'data.json')).json(); } catch (e) { w.textContent = T('Could not load the replay.'); setTimeout(() => w.remove(), 2500); document.documentElement.classList.remove('rpon'); return; }
-      w.remove(); story = buildStory(); build(); t = story[0].t; setStep(0, true); }
+      w.remove(); story = ID === 'may2024' ? buildStory() : autoStory(); build(); t = story[0].t; setStep(0, true); }
     if (n > 0) setStep(n, true);
     root.classList.add('on'); render(true); $('#rpPlay').focus();
     if (guide && !play && !matchMedia('(prefers-reduced-motion: reduce)').matches) { hold = 0; setTimeout(() => { if (root.classList.contains('on') && !play) start(); }, 900); }
