@@ -1241,6 +1241,7 @@ window.I18N_DICT.de = {
   "the Moon": "der Mond",
   "Closer": "Näher heran",
   "Follow the orbit": "Der Bahn folgen",
+  "Open large": "Groß öffnen",
   "Arrange the board": "Übersicht anordnen",
   "Drag a tile onto another to swap them · drag the lines between them to resize": "Ziehe eine Kachel auf eine andere, um sie zu tauschen · ziehe die Linien dazwischen, um die Größe zu ändern",
   "Done": "Fertig",

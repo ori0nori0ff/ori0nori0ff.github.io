@@ -33,11 +33,13 @@
   #tlEd { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 45; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; max-width: 92vw; padding: 10px 14px; border-radius: 14px; background: var(--head, #10151C); border: 1px solid var(--line, #2A323D); box-shadow: 0 20px 60px rgba(0,0,0,.6); font: 500 12.5px Inter, sans-serif; color: #C9D3DF; }
   #tlEd button { height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid #2A323D; background: none; color: #E6EDF5; cursor: pointer; font: inherit; } #tlEd .ok { background: var(--acc, #7BE0FF); color: #0A0A0A; border-color: transparent; font-weight: 700; }
   .tl.fc { border-left-width: 1px; border-top: 3px solid var(--c); background: none; }
-  .tl:hover, .tl:focus-visible { transform: translateY(-2px); border-color: var(--c); box-shadow: 0 14px 40px rgba(0,0,0,.45); outline: none; }
-  .tls { position: absolute; top: 0; left: 0; transform-origin: 0 0; pointer-events: none; padding: 21px 26px; }
+  .tl:hover, .tl:focus-visible { transform: none; border-color: var(--c); box-shadow: 0 14px 40px rgba(0,0,0,.45); outline: none; }
+  .tls { position: absolute; top: 0; left: 0; transform-origin: 0 0; padding: 21px 26px; } html.tledit .tls { pointer-events: none; }
   .tl.fc .tls { padding: 0; }
   .tls > section { margin: 0 !important; } .tls #syncCard { position: static !important; }
   .tls .tcur { stroke-width: 5px; }   /* the clock's line: thick enough to survive the shrink without flickering */
+  .tl { cursor: default; } .tl.tlgo, .tl .cap { cursor: pointer; }
+  .tlo { position: absolute; top: 8px; right: 8px; z-index: 3; width: 30px; height: 30px; border-radius: 9px; border: 1px solid var(--c); background: rgba(6,8,11,.82); color: #fff; font-size: 15px; cursor: pointer; opacity: .55; transition: opacity .2s; } .tl:hover .tlo, .tlo:focus-visible { opacity: 1; } html.tledit .tlo { display: none; } .tl:not(.tlgo):hover .cap { opacity: 0; pointer-events: none; } .tl .cap { transition: opacity .2s; }   /* the caption steps aside so the controls under it can be used */
   .tl .cap { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: baseline; gap: 10px; padding: 24px 14px 10px; background: linear-gradient(180deg, rgba(6,8,11,0), rgba(6,8,11,.94) 55%); }
   .tl.fc .cap { display: none; }
   .tl .cap strong { font: 700 14px Inter, sans-serif; color: #F1F4F8; white-space: nowrap; } .tl .cap .lv { font: 600 11px 'JetBrains Mono', monospace; color: var(--c); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -71,7 +73,7 @@
   `;
   document.head.appendChild(css);
   // the board: Sun column · forecast · Earth column
-  const tile = p => `<button type="button" class="tl${p[4] === 'C' ? ' fc' : ''}" style="--c:${p[2]}" data-p="${p[0]}" aria-label="${T(p[3])}">${p[1] ? '<div class="tls"></div>' : '<div class="tlrp"></div>'}<span class="cap"><strong>${T(p[3])}</strong><span class="lv"></span><i>↗</i></span></button>`;
+  const tile = p => `<div role="region" class="tl${p[4] === 'C' ? ' fc' : ''}${p[1] ? '' : ' tlgo'}" style="--c:${p[2]}" data-p="${p[0]}" aria-label="${T(p[3])}">${p[1] ? '<div class="tls"></div>' : '<div class="tlrp"></div>'}<span class="cap"><strong>${T(p[3])}</strong><span class="lv"></span><i>↗</i></span><button type="button" class="tlo" aria-label="${T('Open large')}" title="${T('Open large')}">⤢</button></div>`;
   const box = document.createElement('nav'); box.id = 'tiles'; box.setAttribute('aria-label', T('The chapters'));
   box.innerHTML = ['L', 'C', 'R'].map(s => `<div class="col">${P.filter(p => p[4] === s).map(tile).join('')}</div>`).join('');
   $('frForecast').before(box);
@@ -83,7 +85,7 @@
     box.querySelectorAll('.tl').forEach(t => { const s = t.querySelector('.tls'); if (!s) return;
       if (t.classList.contains('fc')) { s.style.width = FCW + 'px'; const k = Math.min(t.clientWidth / FCW, t.clientHeight / Math.max(1, s.scrollHeight)); s.style.transform = `scale(${k})`; s.style.left = Math.max(0, (t.clientWidth - FCW * k) / 2) + 'px'; s.style.top = Math.max(0, (t.clientHeight - s.scrollHeight * k) / 2) + 'px'; }
       else { s.style.width = W + 'px'; s.style.transform = `scale(${t.clientWidth / W})`; } }); };
-  P.forEach(p => { if (!p[1]) return; const el = $(p[1]); if (!el) return; el.inert = true; st(p[0]).appendChild(el); });
+  P.forEach(p => { if (!p[1]) return; const el = $(p[1]); if (!el) return; el.inert = false; st(p[0]).appendChild(el); });
   // the viewer's own board (⚙ → ✎ Arrange the board): drag a tile onto another = swap (the forecast too), drag the lines between
   // them = resize (1 : 1 and 1 : φ pull the line), ✕ = hide, ＋ = show again; kept in this browser only
   const CK = 'aurora.tiles', cols = [...box.querySelectorAll('.col')], PHI = 1.618, tl = k => box.querySelector(`.tl[data-p="${k}"]`);
@@ -143,7 +145,7 @@
   ov.innerHTML = `<div id="tlWin"><div id="tlHead"><button type="button" class="tb" data-go="-1" aria-label="${T('Previous')}">‹</button><div id="tlStrip">${P.filter(p => p[1]).map(p => `<button type="button" data-p="${p[0]}" style="--c:${p[2]}"><i></i>${T(p[3])}</button>`).join('')}</div><button type="button" class="tb" data-go="1" aria-label="${T('Next')}">›</button><button type="button" class="tb" data-split aria-pressed="false" title="${T('Read two modules side by side')}">⊞ ${T('Side by side')}</button><button type="button" class="tb" data-x aria-label="${T('Close')}">✕</button></div><div id="tlPanes">${pane(1)}${pane(2)}</div></div>`;
   document.body.appendChild(ov);
   const S = [null, null], pn = i => $('tlP' + (i + 1)); let act = 0, split = false;
-  const home = el => { const p = P.find(q => q[1] === el.id); st(p[0]).appendChild(el); el.inert = true; };
+  const home = el => { const p = P.find(q => q[1] === el.id); st(p[0]).appendChild(el); el.inert = false; };
   const relayout = () => requestAnimationFrame(() => { dispatchEvent(new Event('resize')); });
   function show(i, key, target) {   // put module `key` into pane i
     const p = P.find(q => q[0] === key); if (!p || !p[1]) return; const o = 1 - i;
@@ -173,7 +175,7 @@
     S.forEach((k, i) => { if (k) home($(P.find(q => q[0] === k)[1])); S[i] = null; }); split = false; act = 0; mark(); relayout();
     if (push && /^#p-/.test(location.hash)) history.pushState({}, '', location.pathname + location.search); }
   const step = d => { const ks = P.filter(p => p[1]).map(p => p[0]); let j = ks.indexOf(S[act]); do { j = (j + d + ks.length) % ks.length; } while (split && ks[j] === S[1 - act]); show(act, ks[j]); hash(); };
-  box.addEventListener('click', e => { if (!e.isTrusted || H.classList.contains('tledit')) return; const b = e.target.closest('[data-p]'); if (b) open(b.dataset.p); });   // a script pressing a button inside a tile (the header clock) must not open it
+  box.addEventListener('click', e => { if (!e.isTrusted || H.classList.contains('tledit')) return; const b = e.target.closest('.tl[data-p]'); if (b && (e.target.closest('.tlo, .cap') || b.classList.contains('tlgo'))) open(b.dataset.p); });   // a script pressing a button inside a tile (the header clock) must not open it
   ov.addEventListener('click', e => {
     const b = e.target.closest('#tlStrip [data-p]'); if (b) { show(act, b.dataset.p); hash(); return; }
     const g = e.target.closest('[data-go]'); if (g) return step(+g.dataset.go);

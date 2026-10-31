@@ -1241,6 +1241,7 @@ window.I18N_DICT.ro = {
   "the Moon": "Luna",
   "Closer": "Mai aproape",
   "Follow the orbit": "Urmărește orbita",
+  "Open large": "Deschide mare",
   "Arrange the board": "Aranjează board-ul",
   "Drag a tile onto another to swap them · drag the lines between them to resize": "Trage un tile peste altul ca să le schimbi locul · trage de liniile dintre ele ca să le redimensionezi",
   "Done": "Gata",
