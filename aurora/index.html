@@ -27,7 +27,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-title" content="Orion's Space Observer">
 <meta name="application-name" content="Orion's Space Observer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://services.swpc.noaa.gov https://tiles.maps.eox.at https://s3.amazonaws.com https://api.open-meteo.com https://historical-forecast-api.open-meteo.com https://geocoding-api.open-meteo.com https://raw.githubusercontent.com https://earthquake.usgs.gov https://www.seismicportal.eu https://images-api.nasa.gov https://epic.gsfc.nasa.gov https://trek.nasa.gov https://astro.arcgis.com; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://services.swpc.noaa.gov https://imag-data.bgs.ac.uk https://tiles.maps.eox.at https://s3.amazonaws.com https://api.open-meteo.com https://historical-forecast-api.open-meteo.com https://geocoding-api.open-meteo.com https://raw.githubusercontent.com https://earthquake.usgs.gov https://www.seismicportal.eu https://images-api.nasa.gov https://epic.gsfc.nasa.gov https://trek.nasa.gov https://astro.arcgis.com; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
   /* one clean font everywhere: Inter (OFL, self-hosted). The old family names (used in CSS and on the canvases) map to it too. */
@@ -291,6 +291,7 @@
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
   @media (min-width: 760px) {
     .grid.two-col, .two { grid-template-columns: 1fr 1fr; }
+    .grid.shg { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }   /* shield: one row, equal columns of the cards that show */
     .grid.top { grid-template-columns: 1fr 1fr; } .grid.top > :first-child { grid-column: 1 / -1; }
     .grid.stage { grid-template-columns: 1fr 1fr; } .grid.stage > .sunc { grid-column: 1 / -1; max-width: 640px; justify-self: center; width: 100%; }
     .clockdl { flex: 0 0 auto; }
@@ -307,7 +308,7 @@
     .grid > section, .grid > .stack > section { display: flex; flex-direction: column; }
     .grid > .stack > section:last-child { flex: 1 1 auto; }
     svg.fillc { flex: 1 0 auto; height: 0 !important; }
-    #kpchart.fillc { min-height: 150px; } #dstChart.fillc, #crChart.fillc { min-height: 200px; } #swChart.fillc { min-height: 190px; }
+    #kpchart.fillc { min-height: 150px; } #dstChart.fillc, #crChart.fillc, #magChart.fillc { min-height: 200px; } #swChart.fillc { min-height: 190px; }
     .grid > section > .help:last-child, .grid > section > details:last-child, .sunc > .why:last-child, #globe + .help { margin-top: auto; }
     #globe { margin-bottom: 14px; }
     .steps { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: space-evenly; }
@@ -771,7 +772,7 @@
     <div id="locBox" class="hidden"><input id="locQ" type="search" placeholder="Search any city or village…" autocomplete="off" enterkeyhint="search">
       <div id="locRes"></div><button class="locbtn" id="locGps">USE MY LOCATION</button></div>
     <canvas id="globe" role="img" aria-label="Globe with the NOAA live aurora forecast around the North Pole and your place marked"></canvas>
-    <div class="help">The <b style="color:var(--green)">green glow</b> is NOAA's live aurora map around the North Pole. The yellow dot is you. The further south the green reaches towards it, the better our chances. <span id="ovTime"></span></div>
+    <div class="help">The <b style="color:var(--green)">green glow</b> <span id="gHelpT">is NOAA's live aurora map around the North Pole. The yellow dot is you. The further south the green reaches towards it, the better our chances.</span> <span id="ovTime"></span></div>
   </section></div>
   </div>
   <section class="card app kpwide" id="kpChartCard">
@@ -779,6 +780,10 @@
     <div class="lbl">Kp · past 7 days + 3-day forecast</div><div class="lbl">3 H BLOCKS</div>
   </div>
   <svg id="kpchart"></svg>
+  <div id="o27" class="hidden"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:12px"><div class="lbl">Next 4 weeks · NOAA 27-day outlook</div><div class="lbl" id="o27i"></div></div>
+    <svg id="o27svg" style="width:100%;height:70px;display:block" role="img" aria-label="NOAA's largest expected Kp for each of the next 27 days"></svg>
+    <div class="help" style="margin-top:4px">The Sun turns once every ~27 days, so coronal holes and active regions that sent storms once often come back. Bars = NOAA's largest expected Kp per day.</div>
+    <details id="o3d" class="hidden" style="margin-top:8px"><summary class="lbl" style="cursor:pointer">NOAA forecaster's notes · next 3 days (in English)</summary><div id="o3dTxt" class="help"></div></details></div>
 </section>
 </section>
 <div class="chap xfull chx sg4" style="--chimg:url(img/ch1-sun-earth.jpg);--chc:#FFE600"><span aria-hidden="true">1</span><div><h2>The Sun</h2><p>Everything starts at the Sun: active regions flare, CMEs (clouds of solar plasma) leave and coronal holes blow fast wind. The wind then takes 1–4 days to cross 150 million km — play the Sun and NOAA's solar wind model on one clock.</p><nav class="chlinks" aria-label="In this chapter"><a href="#sunEarth">The Sun now</a><a href="#secReg">Flares and coronal holes</a><a href="#secDen">Solar wind forecast</a><a href="#secCyc">Solar cycle</a></nav><svg class="chfib" viewBox="0 0 377 12" preserveAspectRatio="xMinYMid meet" aria-hidden="true"><line x1="0" y1="6" x2="377" y2="6"/><line x1="0" x2="0" y1="3" y2="9"/><line x1="8" x2="8" y1="3" y2="9"/><line x1="13" x2="13" y1="3" y2="9"/><line x1="21" x2="21" y1="3" y2="9"/><line x1="34" x2="34" y1="3" y2="9"/><line x1="55" x2="55" y1="1" y2="11"/><line x1="89" x2="89" y1="3" y2="9"/><line x1="144" x2="144" y1="1" y2="11"/><line x1="233" x2="233" y1="3" y2="9"/><line x1="377" x2="377" y1="1" y2="11"/></svg></div></div>
@@ -891,7 +896,7 @@
 </section>
 
 <section class="card frame xfull" id="frShield" aria-label="Earth's magnetic shield"><div class="lbl ulbl">Earth's magnetic shield</div>
-<div class="grid two-col">
+<div class="grid two-col shg">
   <section class="card app" id="secDst">
     <div class="lbl">Earth's magnetic field · Dst index · Kyoto / NOAA</div>
     <h2>How hard storms squeeze Earth's field</h2>
@@ -905,6 +910,13 @@
     <div class="enlsum" id="crSum">Loading…</div>
     <svg id="crChart" class="fillc"></svg>
     <div class="help">Particles from deep space hit the air and make neutrons that a monitor counts. When a CME passes Earth, its magnetic cloud sweeps some of them away: the count drops by a few percent within hours — a <b>Forbush decrease</b>, a real fingerprint of the Sun at the ground.</div>
+  </section>
+  <section class="card app" id="secMag" style="display:none">
+    <div class="lbl">The field near you · INTERMAGNET observatory · 1-minute data</div>
+    <h2>What a magnetometer near you feels</h2>
+    <div class="enlsum" id="magSum">Loading…</div>
+    <svg id="magChart" class="fillc" role="img" aria-label="Change of the horizontal magnetic field at the nearest live observatory over the last 3 days"></svg>
+    <div class="help">The horizontal pull of Earth's field at the nearest observatory with live data, against its 3-day middle. Calm days show only a slow daily wave of ~20–40 nT; a storm shakes it by 100 nT or more within hours. Surlari (Romania) reports a month late, so a neighbour is used. A rough guide.</div>
   </section>
   </div>
 </section>
@@ -980,10 +992,10 @@
   <div class="fctl"><div class="pbtn" id="enlFPlay">▶</div><div class="pbtn spd" style="font:700 10px 'JetBrains Mono',monospace">1×</div><input type="range" id="enlFSlide" min="0" max="0" value="0"><span class="lbl" id="enlFT" style="min-width:150px;text-align:right">–</span><span class="lbl">PINCH · DRAG</span><div class="x" id="enlX">✕</div></div></div></div>
 <div id="toast"></div>
 <script src="i18n.js?v=b936034a"></script>
-<script src="i18n.ro.js?v=ab68cd83"></script>
-<script src="i18n.de.js?v=072b955c"></script>
+<script src="i18n.ro.js?v=78cda7b8"></script>
+<script src="i18n.de.js?v=6eb8d89f"></script>
 <script src="land.js?v=d495927a"></script>
-<script src="globe.js?v=fa6d06d5"></script>
+<script src="globe.js?v=234d5b26"></script>
 <script src="tonight.js?v=91a2449f"></script>
 <script src="regions.js?v=09151bc5"></script>
 <script src="space3d.js?v=c2408d09"></script>
@@ -1069,9 +1081,10 @@ function verdict() {
   $('vword').textContent = lv[0]; $('vword').style.color = lv[1]; $('vcard').style.setProperty('--glow', lv[2]);
   $('vword').classList.toggle('aur', kp >= N + 1);   // likely: written in aurora colours
   const P = { p: TOWN.name, n: N };
-  let t = kp >= N + 1 ? T('A solar storm strong enough for {p} is forecast — the aurora may be visible to the eye low in the north from dark places.', P)
-    : kp >= N ? T('Forecast right at the limit for {p} — a glow on the northern horizon is possible, best caught with a phone\'s night mode.', P)
-    : kp >= N - 1 ? T('Close, but usually still too far north for {p}. Worth checking again later tonight.', P)
+  const so = TOWN.lat < 0;   // southern places: look south, towards the South Pole
+  let t = kp >= N + 1 ? T(so ? 'A solar storm strong enough for {p} is forecast — the aurora may be visible to the eye low in the south from dark places.' : 'A solar storm strong enough for {p} is forecast — the aurora may be visible to the eye low in the north from dark places.', P)
+    : kp >= N ? T(so ? 'Forecast right at the limit for {p} — a glow on the southern horizon is possible, best caught with a phone\'s night mode.' : 'Forecast right at the limit for {p} — a glow on the northern horizon is possible, best caught with a phone\'s night mode.', P)
+    : kp >= N - 1 ? T(so ? 'Close, but usually still too far from the pole for {p}. Worth checking again later tonight.' : 'Close, but usually still too far north for {p}. Worth checking again later tonight.', P)
     : T('{p} needs about Kp {n} to see the aurora. Nothing like that is forecast tonight.', P);
   if (kp >= N - 1 && clouds != null) t += ' ' + (clouds > 70 ? T('Clouds will likely block the view.') : clouds > 40 ? T('Some clouds — look for gaps.') : T('Skies look mostly clear.'));
   $('vtext').textContent = t;
@@ -1116,6 +1129,7 @@ const SUNF = [
   ['0171', 'AIA 171', '#FFB300', T('<b>Quiet corona, ~600,000 °C.</b> The glowing loops follow the Sun\'s magnetic field.')],
   ['0193', 'AIA 193', '#00AAFF', T('<b>Hot corona, ~1 million °C.</b> Dark patches are coronal holes: they blow fast solar wind that reaches Earth 2–4 days later.')],
   ['0304', 'AIA 304', '#FF4400', T('<b>Just above the surface, ~50,000 °C.</b> Dark threads (filaments) can lift off and become CMEs.')],
+  ['HA', 'H-alpha', '#FF6F6F', T('<b>The chromosphere in hydrogen light (GONG: six ground telescopes round the world).</b> Dark threads are filaments: when one lifts off, a CME often follows. Bright patches are active regions; a flare flashes white.')],
   ['0094', 'AIA 094', '#44FF88', T('<b>Flaring regions, ~6 million °C.</b> Bright spots are active, flare-prone areas.')],
   ['0131', 'AIA 131', '#00E5CC', T('<b>Hottest flare gas, ~10 million °C.</b> A sudden bright flash is a solar flare.')],
   ['1600', 'AIA 1600', '#FFDD00', T('<b>Upper surface.</b> Bright patches mark strong magnetism around sunspots.')],
@@ -1134,7 +1148,7 @@ const toPos = t => { const x = axis(); return x ? Math.round(Math.max(0, Math.mi
 const toTime = v => { const x = axis(); return x ? x.a + (x.b - x.a) * v / 1000 : Date.now(); };
 const nearestT = (n, tOf, t) => { let lo = 0, hi = n - 1; while (lo < hi) { const m = (lo + hi) >> 1; if (tOf(m) < t) lo = m + 1; else hi = m; } return lo > 0 && Math.abs(tOf(lo - 1) - t) < Math.abs(tOf(lo) - t) ? lo - 1 : lo; };
 const CLIPS = 'https://github.com/ori0nori0ff/ori0nori0ff.github.io/releases/download/sun-clips/';
-const hiRes = u => u.replace('_1024_', '_2048_').replace('_M_512.jpg', '_M_1k.jpg').replace('_Ic_flat_512.jpg', '_Ic_flat_1k.jpg').replace('_c3_512.jpg', '_c3_1024.jpg');
+const hiRes = u => u.replace('_1024_', '_2048_').replace('_M_512.jpg', '_M_1k.jpg').replace('_Ic_flat_512.jpg', '_Ic_flat_1k.jpg').replace('_c3_512.jpg', '_c3_1024.jpg').replace('/HA/hac/', '/HA/hag/');
 const latestOf = f => f[4] || 'https://sdo.gsfc.nasa.gov/assets/img/latest/latest_1024_' + f[0] + '.jpg';
 const sun = { F: null, k: 0, i: 0, play: false, timer: null, imgs: [], seq: 0 };
 $('sunPlay').textContent = $('sunFPlay').textContent = '▶';   // nothing plays until asked (one shared clock)
@@ -1694,7 +1708,9 @@ else { const host = $('s3dHost'); host.style.display = 'none';
   // full screen lives on <body> (a card's styles would trap position:fixed); back into its card when you leave
   new MutationObserver(() => { if (PHONE() && !host.classList.contains('s3d-fs')) { host.style.display = 'none'; $('s3dGo').before(host); } }).observe(host, { attributes: true, attributeFilter: ['class'] }); }
 $('s3dGo').onclick = () => { const host = $('s3dHost'); document.body.appendChild(host); host.style.display = 'block'; make3d(); if (window.space3d) { if (!host.classList.contains('s3d-fs')) host.querySelector('.s3d-full').click(); space3d.setTime(sy.on ? sy.t : Date.now()); } };
-function drawGlobe() { if (window.AuroraGlobe) AuroraGlobe.draw($('globe'), { ov: S.ov, lat0: Math.min(75, Math.max(50, TOWN.lat + 13)), lon0: TOWN.lon - 7, viewLine: true, label: true, here: TOWN }); }
+function drawGlobe() { if (window.AuroraGlobe) AuroraGlobe.draw($('globe'), { ov: S.ov, lat0: TOWN.lat < 0 ? Math.max(-75, Math.min(-50, TOWN.lat - 13)) : Math.min(75, Math.max(50, TOWN.lat + 13)), lon0: TOWN.lon - 7, viewLine: true, label: true, here: TOWN });
+  const so = TOWN.lat < 0, h = $('gHelpT'); if (h) h.textContent = T(so ? "is NOAA's live aurora map around the South Pole (the southern lights, aurora australis). The yellow dot is you. The further north the green reaches towards it, the better our chances." : "is NOAA's live aurora map around the North Pole. The yellow dot is you. The further south the green reaches towards it, the better our chances.");   // southern places: the globe turns to the South Pole
+  $('globe').setAttribute('aria-label', T(so ? 'Globe with the NOAA live aurora forecast around the South Pole and your place marked' : 'Globe with the NOAA live aurora forecast around the North Pole and your place marked')); }
 addEventListener('resize', () => { drawGlobe(); });
 
 async function load() {
@@ -1743,7 +1759,7 @@ function drawKpNow(k) {
   const g = gScale(k); $('kpScale').textContent = 'G' + g + ' · ' + G_TXT[g];
   [...$('gauge').children].forEach((s, i) => { s.style.background = i < Math.round(k) || (i === 0 && k > 0) ? kpColor(i + 1) : '#232830'; });
   const N = need();
-  $('kpWords').innerHTML = k >= N ? T('Strong enough for {p} —<br>look north from a dark site!', { p: esc(BV.name) }) : k >= 5 ? T('Geomagnetic storm.<br>Watch for more.') : k >= 4 ? T('Active field.<br>Not enough here (need {n}).', { n: N }) : T('Quiet field.') + '<br>' + (N >= 6 ? T('No aurora this far south.') : T('Little aurora tonight.'));
+  $('kpWords').innerHTML = k >= N ? T(BV.lat < 0 ? 'Strong enough for {p} —<br>look south from a dark site!' : 'Strong enough for {p} —<br>look north from a dark site!', { p: esc(BV.name) }) : k >= 5 ? T('Geomagnetic storm.<br>Watch for more.') : k >= 4 ? T('Active field.<br>Not enough here (need {n}).', { n: N }) : T('Quiet field.') + '<br>' + (N >= 6 ? T(BV.lat < 0 ? 'No aurora this far north.' : 'No aurora this far south.') : T('Little aurora tonight.'));
 }
 
 /* ── Kp chart (SVG) ──────────────────────────────────── */
@@ -2026,7 +2042,33 @@ async function loadCycles() {
 }
 
 
+/* ── NOAA's 27-day outlook (largest Kp per day) + the forecaster's 3-day notes (text products, same server) ── */
+function drawO27() { const R = S.o27; if (!R || !R.length) return; $('o27').classList.remove('hidden');
+  const svg = $('o27svg'), W = svg.clientWidth || 340, H = 70, L = 18, B = 14, Tp = 6, n = R.length, bw = (W - L - 4) / n;
+  const y = k => H - B - k / 9 * (H - B - Tp), N = need(); let s = '';
+  [0, 5, 9].forEach(k => { s += `<line x1="${L}" x2="${W - 4}" y1="${y(k)}" y2="${y(k)}" stroke="#232830"/><text x="0" y="${y(k) + 3}" fill="#6B7280" font-size="8" font-family="JetBrains Mono">${k}</text>`; });
+  R.forEach((r, i) => { const x0 = L + i * bw, h = Math.max(1.5, H - B - y(r.k)), d = new Date(r.t);
+    const lab = d.toLocaleDateString(LOC, { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+    s += `<rect x="${x0 + .75}" y="${H - B - h}" width="${Math.max(1, bw - 1.5)}" height="${h}" rx="1.5" fill="${kpColor(r.k)}" fill-opacity=".8"><title>${lab} · ${window.T('max Kp')} ${r.k} · Ap ${r.a} · F10.7 ${r.f}</title></rect>`;
+    if (d.getUTCDay() === 1 || i === 0) s += `<text x="${x0 + 1}" y="${H - 3}" fill="#8B9BAE" font-size="8" font-family="JetBrains Mono">${d.toLocaleDateString(LOC, { day: 'numeric', month: 'short', timeZone: 'UTC' }).toUpperCase()}</text>`; });
+  s += `<line x1="${L}" x2="${W - 4}" y1="${y(N)}" y2="${y(N)}" stroke="#FF4444" stroke-dasharray="4 3" stroke-opacity=".6"/>`;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.innerHTML = s;
+  const mx = R.reduce((a, r) => r.k > a.k ? r : a, R[0]);
+  $('o27i').textContent = window.T('MAX KP {k}', { k: mx.k }) + ' · ' + new Date(mx.t).toLocaleDateString(LOC, { day: 'numeric', month: 'short', timeZone: 'UTC' }).toUpperCase(); }
+async function loadO27() { const r = await fetch(API + 'text/27-day-outlook.txt', { cache: 'no-store' }); if (!r.ok) return;
+  const M = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 }, out = [];
+  (await r.text()).split('\n').forEach(l => { const m = l.match(/^(\d{4}) (\w{3}) (\d\d)\s+(\d+)\s+(\d+)\s+(\d+)/); if (m && m[2] in M) out.push({ t: Date.UTC(+m[1], M[m[2]], +m[3]), f: +m[4], a: +m[5], k: +m[6] }); });
+  S.o27 = out.filter(o => o.t > Date.now() - 864e5); drawO27(); }
+async function loadO3d() { const r = await fetch(API + 'text/3-day-forecast.txt', { cache: 'no-store' }); if (!r.ok) return;
+  const t = await r.text(), one = s => s.replace(/\s+/g, ' ').trim(), rat = [...t.matchAll(/Rationale:\s*([\s\S]*?)(?:\n\s*\n|$)/g)].map(m => one(m[1]));
+  const g = t.match(/greatest expected 3 hr Kp[^]*?is ([\d.]+)( \(NOAA Scale\s+(G\d)\))?/), s1 = t.match(/S1 or greater\s+([^\n]+)/), r12 = t.match(/R1-R2\s+([^\n]+)/), r3 = t.match(/R3 or greater\s+([^\n]+)/);
+  const row = (k, c, head, txt) => `<p style="margin:6px 0 0"><b style="color:${c}">${k}</b> · ${esc(head)}${txt ? ' — ' + esc(txt) : ''}</p>`;
+  $('o3dTxt').innerHTML = row('G', '#3FD98A', 'max Kp ' + (g ? g[1] + (g[3] ? ' (' + g[3] + ')' : '') : '?'), rat[0])
+    + row('S', '#FFB347', 'S1+ ' + (s1 ? one(s1[1]) : '?'), rat[1]) + row('R', '#FFE600', 'R1–R2 ' + (r12 ? one(r12[1]) : '?') + ' · R3+ ' + (r3 ? one(r3[1]) : '?'), rat[2])
+    + `<p style="margin:6px 0 0;opacity:.7">${esc(one((t.match(/:Issued:([^\n]+)/) || ['', ''])[1]))}</p>`;
+  $('o3d').classList.remove('hidden'); }
 async function loadDeep(force) {
+  loadO27().catch(() => {}); loadO3d().catch(() => {});
   await Promise.allSettled([
     j(API + 'json/planetary_k_index_1m.json').then(a => { S.kpNow = +a[a.length - 1].estimated_kp; drawKpNow(S.kpNow); }),
     j(API + 'products/noaa-planetary-k-index-forecast.json').then(a => { S.kpList = a; drawKpChart(a); }),
@@ -2047,9 +2089,9 @@ async function loadDeep(force) {
 }
 if (window.ResizeObserver) { const seen = new WeakMap(); const ro = new ResizeObserver(es => es.forEach(e => { const h = Math.round(e.contentRect.height), w = Math.round(e.contentRect.width), k = w + 'x' + h;
     if (seen.get(e.target) === k) return; seen.set(e.target, k);
-    if (e.target.id === 'kpchart' && S.kpList) drawKpChart(S.kpList); if (e.target.id === 'swChart' && swTab !== 'g') drawSw(); if (e.target.id === 'srXChart' && S.gr) srXray(); })); ['kpchart', 'swChart'].forEach(id => ro.observe($(id)));
+    if (e.target.id === 'kpchart' && S.kpList) { drawKpChart(S.kpList); drawO27(); } if (e.target.id === 'swChart' && swTab !== 'g') drawSw(); if (e.target.id === 'srXChart' && S.gr) srXray(); })); ['kpchart', 'swChart'].forEach(id => ro.observe($(id)));
   const sx = () => { const c = $('srXChart'); if (c) ro.observe(c); else setTimeout(sx, 1500); }; sx(); }
-addEventListener('resize', () => { if (S.kpList) drawKpChart(S.kpList); if (S.cyc) drawCycles(); if (S.wind) drawWind(); if (swTab !== 'g') drawSw(); });
+addEventListener('resize', () => { if (S.kpList) drawKpChart(S.kpList); drawO27(); if (S.cyc) drawCycles(); if (S.wind) drawWind(); if (swTab !== 'g') drawSw(); });
 window.redrawDeep = () => { if (S.kpNow != null) drawKpNow(S.kpNow); if (S.kpList) drawKpChart(S.kpList); };
 loadDeep(); setInterval(loadDeep, 10 * 60000);
 })();
@@ -2191,7 +2233,38 @@ function drawLong() {
     + `<div>${r != null ? T_('Sunspots vs earthquakes, month by month: correlation <b>r = {r}</b>.', { r: r.toFixed(2) }) + ' ' + (Math.abs(r) < .2 ? T_('Close to 0 means no link.') : Math.abs(r) < .4 ? T_('A weak link — it may be chance.') : T_('A noticeable link in this range — worth a closer look, but it is not proof.')) : T_('Choose a longer range for the month-by-month test.')}</div>`;
 }
 const T_ = (s, o) => window.T(s, o);
+// the field at the nearest live INTERMAGNET observatory (BGS GIN, CORS *): horizontal component H over 3 days, minus its median
+const MAGS = [['PAG', 'Panagyurishte, Bulgaria', 42.51, 24.18], ['THY', 'Tihany, Hungary', 46.90, 17.89], ['BEL', 'Belsk, Poland', 51.84, 20.79], ['FUR', 'Fürstenfeldbruck, Germany', 48.17, 11.28],
+  ['WNG', 'Wingst, Germany', 53.74, 9.07], ['LER', 'Lerwick, Shetland', 60.13, -1.18], ['ABK', 'Abisko, Sweden', 68.36, 18.82], ['SOD', 'Sodankylä, Finland', 67.37, 26.63],
+  ['BOU', 'Boulder, USA', 40.14, -105.24], ['FRD', 'Fredericksburg, USA', 38.20, -77.37], ['CMO', 'College, Alaska', 64.87, -147.86], ['KAK', 'Kakioka, Japan', 36.23, 140.19],
+  ['CNB', 'Canberra, Australia', -35.32, 149.36], ['HER', 'Hermanus, South Africa', -34.43, 19.23], ['EYR', 'Eyrewell, New Zealand', -43.42, 172.35]];
+async function loadMag() {
+  if (window.STORM) { $('secMag').style.display = 'none'; return; }   // storm mode: no archive for this one
+  const d0 = new Date(Date.now() - 2 * 864e5).toISOString().slice(0, 10), near = MAGS.slice().sort((a, b) => kmTo(a[2], a[3]) - kmTo(b[2], b[3]));
+  for (const [code, name, la, lo] of near.slice(0, 3)) {
+    try { const r = await j(`https://imag-data.bgs.ac.uk/GIN_V1/GINServices?Request=GetData&observatoryIagaCode=${code}&samplesPerDay=minute&dataStartDate=${d0}&dataDuration=3&publicationState=best-avail&Format=json`);
+      const ok = v => v != null && Math.abs(v) < 88000, pts = [];
+      r.datetime.forEach((t, i) => { const h = r.H ? r.H[i] : ok(r.X && r.X[i]) && ok(r.Y && r.Y[i]) ? Math.hypot(r.X[i], r.Y[i]) : null; if (ok(h)) pts.push([Date.parse(t), h]); });
+      if (pts.length < 300 || Date.now() - pts[pts.length - 1][0] > 3 * 3.6e6) continue;   // no fresh data from this one: try the next
+      const md = pts.map(p => p[1]).sort((a, b) => a - b)[pts.length >> 1], P = [];
+      for (let i = 0; i < pts.length; i += 5) P.push([pts[i][0], +(pts[i][1] - md).toFixed(1)]);   // 5-minute steps are enough for the chart
+      D.mag = { code, name, km: Math.round(kmTo(la, lo)), P, last: pts.slice(-180) }; drawMag(); return;
+    } catch (e) { /* try the next observatory */ }
+  }
+  $('secMag').style.display = 'none';
+}
+function drawMag() {
+  const M = D.mag; if (!M) return; $('secMag').style.display = ''; const P = M.P, svg = $('magChart'), H = Math.max(200, svg.clientHeight || 0), L = 36, R = 8, T = 10, B = 18;
+  const from = P[0][0], to = Math.max(Date.now(), P[P.length - 1][0]), ext = Math.max(60, ...P.map(p => Math.abs(p[1]))) * 1.1;
+  const f = frame(svg, H, from, to, L, R, T, B), y = v => T + (ext - v) / (2 * ext) * (H - T - B); let s = '';
+  [-100, -50, 0, 50, 100].filter(v => Math.abs(v) < ext).forEach(v => { s += `<line x1="${L}" x2="${f.W - R}" y1="${y(v)}" y2="${y(v)}" stroke="${v ? '#1E2530' : '#3A4350'}"/>` + txt(L - 4, y(v) + 3, (v > 0 ? '+' : '') + v, '#6B7788', 8.5, 'end'); });
+  let d = ''; P.forEach((p, i) => { d += (i ? 'L' : 'M') + f.x(p[0]).toFixed(1) + ' ' + y(p[1]).toFixed(1); });
+  s += `<path d="${d}" fill="none" stroke="#C9A7FF" stroke-width="1.5"/>`; f.done(s);
+  const v = M.last.map(p => p[1]), rg = Math.round(Math.max(...v) - Math.min(...v)), lv = rg >= 100 ? T_('storm-level shaking') : rg >= 50 ? T_('active') : rg >= 20 ? T_('a little unsettled') : T_('calm');
+  $('magSum').innerHTML = T_('{s} ({k} km away). Swing in the last 3 hours <b>{r} nT</b> — {l}.', { s: esc(M.name), k: M.km, r: rg, l: lv });
+}
 async function loadEarth() {
+  loadMag().catch(() => {});
   await Promise.allSettled([
     j(API + 'products/kyoto-dst.json').then(a => { D.dst = a.map(r => [Date.parse(r.time_tag + 'Z'), +r.dst]).filter(p => isFinite(p[1])); drawDst(); }),
     j('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson').then(g => { D.eq = g.features.map(f => ({ t: f.properties.time, m: f.properties.mag, place: f.properties.place, lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] })); }),
@@ -2202,9 +2275,9 @@ async function loadEarth() {
   ]);
   drawCr(); drawEq(); drawVo(); drawLong();
 }
-const redraw = () => { drawDst(); drawCr(); if (D.eq) { drawMap(); drawEqTime(); } drawLong(); };
+const redraw = () => { drawDst(); drawCr(); drawMag(); if (D.eq) { drawMap(); drawEqTime(); } drawLong(); };
 let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(redraw, 150); });
-if (window.ResizeObserver) { const seen = new WeakMap(); new ResizeObserver(es => es.forEach(e => { const k = Math.round(e.contentRect.width) + 'x' + Math.round(e.contentRect.height); if (seen.get(e.target) === k) return; seen.set(e.target, k); e.target.id === 'dstChart' ? drawDst() : drawCr(); })).observe($('dstChart')); }
+if (window.ResizeObserver) { const seen = new WeakMap(); const ro = new ResizeObserver(es => es.forEach(e => { const k = Math.round(e.contentRect.width) + 'x' + Math.round(e.contentRect.height); if (seen.get(e.target) === k) return; seen.set(e.target, k); e.target.id === 'dstChart' ? drawDst() : e.target.id === 'magChart' ? drawMag() : drawCr(); })); ro.observe($('dstChart')); ro.observe($('magChart')); }
 loadEarth(); setInterval(loadEarth, 15 * 60000);
 window.earthReport = () => ({ dst: $('dstChart'), cr: $('secCr').style.display === 'none' ? null : $('crChart'), map: $('eqMap'), eqt: $('eqTime'), lg: $('lgChart'), sums: ['dstSum', 'crSum', 'eqSum', 'voSum'].map(id => $(id).textContent), corr: [...$('lgCorr').children].map(d => d.textContent), vo: (D.earth && D.earth.ongoing) || [] });
 })();
@@ -2456,6 +2529,6 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-repl
   hx.onclick = () => { const b = document.getElementById('xpBtn'); if (b) b.click(); sync(); };
   new MutationObserver(sync).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] }); sync(); })();</script>
 <script src="tiles.js?v=1c4eef56"></script>
-<script src="alerts.js?v=3d949f62"></script>
+<script src="alerts.js?v=9fa6b2d7"></script>
 </body>
 </html>

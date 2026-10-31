@@ -51,7 +51,7 @@
         let best = null; fc.forEach(r => { const t = utc(r.time_tag), kp = +r.kp; if (r.observed === 'observed' && now - t < 2 * 864e5 && kp >= N && (!best || kp > best.kp)) best = { t, kp }; });
         if (best) out.push({ id: 'kpo:' + best.t, k: 'aurora', t: best.t, title: T('Kp {k} reached — enough for {p}', { k: best.kp.toFixed(1), p: P.name }), line: T('{p} needs Kp {n}. If the sky was clear and dark, the aurora could be seen.', { p: P.name, n: N }) });
         const l = k1[k1.length - 1]; if (l && +l.estimated_kp >= N) { const t = utc(l.time_tag);
-          out.push({ id: 'kpn:' + Math.floor(t / 108e5), k: 'aurora', t, title: T('Kp {k} now — aurora possible from {p}', { k: (+l.estimated_kp).toFixed(1), p: P.name }), line: T('Look north from a dark place, away from city lights.') }); }
+          out.push({ id: 'kpn:' + Math.floor(t / 108e5), k: 'aurora', t, title: T('Kp {k} now — aurora possible from {p}', { k: (+l.estimated_kp).toFixed(1), p: P.name }), line: T(P.lat < 0 ? 'Look south from a dark place, away from city lights.' : 'Look north from a dark place, away from city lights.') }); }
         let tn = null; fc.forEach(r => { const t = utc(r.time_tag) + 54e5, kp = +r.kp, h = hourIn(t, P.tz || undefined);
           if (r.observed !== 'observed' && t > now && t - now < 864e5 && (h >= 18 || h < 6) && kp >= N && (!tn || kp > tn.kp)) tn = { t, kp }; });
         if (tn) out.push({ id: 'kpf:' + new Date(tn.t - 216e5).toISOString().slice(0, 10) + ':' + Math.round(tn.kp), k: 'aurora', t: tn.t, title: T('Kp {k} expected tonight — enough for {p}', { k: tn.kp.toFixed(1), p: P.name }), line: T('NOAA forecast. Check the clouds and the best hours in the forecast.') }); }),

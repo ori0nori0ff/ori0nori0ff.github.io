@@ -90,14 +90,14 @@
       if (sinP0 * Math.sin(p) + cosP0 * Math.cos(p) * Math.cos(dl) < 0) return null;
       return [cx + R * Math.cos(p) * Math.sin(dl), cy - R * (cosP0 * Math.sin(p) - sinP0 * Math.cos(p) * Math.cos(dl))];
     };
-    // view line ≈ equatorward edge of the oval (≥ 8 %) pushed ~7° south
+    // view line ≈ equatorward edge of the oval (≥ 8 %) pushed ~7° towards the equator (southern oval when the view is centred south)
     if (o.viewLine && o.ov) {
       g.save(); g.setLineDash([5 * dpr, 4 * dpr]); g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 1.2 * dpr; g.beginPath();
-      let pen = false;
+      let pen = false; const sg = o.lat0 < 0 ? -1 : 1;
       for (let lon = -180; lon <= 180; lon += 2) {
         let edge = null;
-        for (let lat = 40; lat <= 85; lat++) if (ovAt(o.ov, lat, lon) >= 8) { edge = lat; break; }
-        const q = edge == null ? null : proj(edge - 7, lon);
+        for (let a = 40; a <= 85; a++) if (ovAt(o.ov, sg * a, lon) >= 8) { edge = sg * a; break; }
+        const q = edge == null ? null : proj(edge - 7 * sg, lon);
         if (!q) { pen = false; continue; }
         pen ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); pen = true;
       }
@@ -121,12 +121,12 @@
   }
 
   /**
-   * Kp needed to see the aurora (low on the northern horizon) from a place, from its geomagnetic latitude
+   * Kp needed to see the aurora (low on the poleward horizon) from a place, from its geomagnetic latitude
    * (dipole pole 80.7° N 72.7° W). Brașov ≈ 43.6° → 7, Paris ≈ 6.5, London ≈ 5.5, Stockholm ≈ 4, Tromsø ≈ 1. An estimate.
    */
   function kpNeed(lat, lon) {
-    const r = Math.PI / 180, P = 80.7 * r, L = -72.7 * r, a = Math.abs(lat) * r;   // southern hemisphere: mirror (rough)
-    const m = Math.asin(Math.sin(a) * Math.sin(P) + Math.cos(a) * Math.cos(P) * Math.cos(lon * r - L)) / r;
+    const r = Math.PI / 180, P = 80.7 * r, L = -72.7 * r, a = lat * r;
+    const m = Math.abs(Math.asin(Math.sin(a) * Math.sin(P) + Math.cos(a) * Math.cos(P) * Math.cos(lon * r - L))) / r;   // |geomagnetic latitude|: works for both hemispheres
     const T = [[67, 1], [62, 2.5], [58, 4], [53, 5.5], [50, 6.5], [43.6, 7], [40, 8], [36, 9]];
     if (m >= T[0][0]) return 1;
     for (let i = 1; i < T.length; i++) if (m >= T[i][0]) { const [m0, k0] = T[i - 1], [m1, k1] = T[i]; return Math.round((k1 + (k0 - k1) * (m - m1) / (m0 - m1)) * 2) / 2; }
