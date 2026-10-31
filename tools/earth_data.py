@@ -253,11 +253,10 @@ def cosmic():
 
 # CMEs for the 3D view: NASA DONKI (CCMC) analyses — when each cloud passed 21.5 solar radii, its direction,
 # width and speed (the cone model NOAA's ENLIL runs use)
-def cmes():
-    a, b = TODAY - dt.timedelta(days=12), TODAY + dt.timedelta(days=1)
-    r = None
-    for u in [f'https://kauai.ccmc.gsfc.nasa.gov/DONKI/WS/get/CMEAnalysis?startDate={a}&endDate={b}&mostAccurateOnly=true&speed=0&halfAngle=0&catalog=ALL',
-              f'https://api.nasa.gov/DONKI/CMEAnalysis?startDate={a}&endDate={b}&mostAccurateOnly=true&speed=0&halfAngle=0&catalog=ALL&api_key=' + os.environ.get('NASA_KEY', 'DEMO_KEY')]:
+def donki_get(kind, q):
+    """One DONKI list (CCMC first, then api.nasa.gov); None when both fail (DONKI is often down for days)."""
+    for u in [f'https://kauai.ccmc.gsfc.nasa.gov/DONKI/WS/get/{kind}?{q}',
+              f'https://api.nasa.gov/DONKI/{kind}?{q}&api_key=' + os.environ.get('NASA_KEY', 'DEMO_KEY')]:
         r = get(u, timeout=90, tries=2)
         if not isinstance(r, list):   # CCMC answers only over IPv4 from some runners
             try:
@@ -265,8 +264,14 @@ def cmes():
             except Exception:   # noqa: BLE001
                 r = None
         if isinstance(r, list):
-            break
+            return r
         print('donki: no list from', u.split('?')[0], file=sys.stderr)
+    return None
+
+
+def cmes():
+    a, b = TODAY - dt.timedelta(days=12), TODAY + dt.timedelta(days=1)
+    r = donki_get('CMEAnalysis', f'startDate={a}&endDate={b}&mostAccurateOnly=true&speed=0&halfAngle=0&catalog=ALL')
     if not isinstance(r, list):
         return None
     out = []
@@ -279,6 +284,59 @@ def cmes():
             continue
     print('cmes', len(out))
     return sorted(out, key=lambda c: c['t'])
+
+# The DONKI event log (flares, CMEs, particle storms, shocks at L1 / Earth, geomagnetic storms, fast streams), linked into
+# chains by DONKI's own `linkedEvents`. aurora/data/donki.json = {updated, ev: {id: [kind, t_ms, info, [linked ids]]}}, 60 days,
+# merged with the last file so a DONKI outage keeps what we had.
+def ms(s):
+    try:
+        return int(dt.datetime.fromisoformat(str(s).replace('Z', '+00:00')).timestamp() * 1000)
+    except (TypeError, ValueError):
+        return None
+
+def donki_log():
+    old = load('aurora/data/donki.json', {}).get('ev', {})
+    a, b = TODAY - dt.timedelta(days=30), TODAY + dt.timedelta(days=1)
+    q, ev, got = f'startDate={a}&endDate={b}', {}, 0
+    def add(i, kind, t, info, links):
+        if i and t:
+            ev[i] = [kind, t, info, [l.get('activityID') for l in (links or []) if l.get('activityID')]]
+    for kind in ['FLR', 'CME', 'SEP', 'IPS', 'GST', 'HSS']:
+        r = donki_get(kind, q)
+        if r is None:
+            continue
+        got += 1
+        for e in r:
+            L = e.get('linkedEvents')
+            if kind == 'FLR':
+                add(e.get('flrID'), 'FLR', ms(e.get('peakTime') or e.get('beginTime')), {'c': e.get('classType'), 'loc': e.get('sourceLocation'), 'ar': e.get('activeRegionNum')}, L)
+            elif kind == 'CME':
+                an = next((x for x in (e.get('cmeAnalyses') or []) if x.get('isMostAccurate')), None) or ((e.get('cmeAnalyses') or [None])[0] or {})
+                hit = any((im.get('location') or '') == 'Earth' for x in (e.get('cmeAnalyses') or []) for en in (x.get('enlilList') or []) for im in (en.get('impactList') or []) if im) \
+                    or any((en.get('isEarthGB') or en.get('isEarthMinorImpact')) for x in (e.get('cmeAnalyses') or []) for en in (x.get('enlilList') or []))
+                add(e.get('activityID'), 'CME', ms(e.get('startTime')), {'loc': e.get('sourceLocation'), 'ar': e.get('activeRegionNum'), 'v': an.get('speed'), 'half': an.get('halfAngle'), 'earth': bool(hit)}, L)
+            elif kind == 'SEP':
+                add(e.get('sepID'), 'SEP', ms(e.get('eventTime')), {}, L)
+            elif kind == 'IPS':
+                add(e.get('activityID'), 'IPS', ms(e.get('eventTime')), {'at': e.get('location')}, L)
+            elif kind == 'GST':
+                kp = max([float(k.get('kpIndex') or 0) for k in (e.get('allKpIndex') or [])] or [0])
+                add(e.get('gstID'), 'GST', ms(e.get('startTime')), {'kp': kp}, L)
+            elif kind == 'HSS':
+                add(e.get('hssID'), 'HSS', ms(e.get('eventTime')), {}, L)
+    if not got:
+        print('donki log: DONKI down, keeping', len(old), 'events', file=sys.stderr)
+        return
+    cut = (time.time() - 60 * 86400) * 1000
+    old.update(ev)
+    keep = {i: v for i, v in old.items() if v[1] >= cut}
+    json.dump({'updated': int(time.time() * 1000), 'ev': keep}, open('aurora/data/donki.json', 'w'), separators=(',', ':'))
+    print('donki log', len(keep), 'events,', got, 'of 6 lists')
+
+try:
+    donki_log()
+except Exception as e:   # noqa: BLE001 — never stop the rest of the job
+    print('donki log failed', e, file=sys.stderr)
 
 cm = cmes()
 if cm is not None:

@@ -77,6 +77,16 @@ for d in days():
 for fid, found in hmi.items():
     out['filters'][fid] = thin(found, 3)
 
+# GONG H-alpha (NSO, six ground telescopes round the world): 650 px colour stills every minute -> every 30 min
+ha = {}
+for d in days():
+    base = f'https://gong2.nso.edu/HA/hac/{d:%Y%m}/{d:%Y%m%d}/'
+    for m in re.finditer(r'(\d{14})\wh\.jpg', get(base)):
+        t = ts(m.group(1), '%Y%m%d%H%M%S')
+        if t >= cut:
+            ha[t] = base + m.group(0)
+out['filters']['HA'] = thin(ha, 30)
+
 for k, v in out['filters'].items():
     print(f'{k:6s} {len(v):4d} frames', (dt.datetime.fromtimestamp(v[-1][0] / 1000, UTC).strftime('%d.%m %H:%M') if v else '-'))
 os.makedirs('aurora/sun', exist_ok=True)
