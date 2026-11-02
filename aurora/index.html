@@ -7,7 +7,7 @@
 <script>try { const q = new URLSearchParams(location.search).get('lite'); if (q === '1' || (q !== '0' && localStorage.getItem('aurora.lite') === 'on')) document.documentElement.classList.add('lite'); } catch (e) {}   // light mode for slower PCs</script>
 <script>if (innerWidth >= 1000 && new URLSearchParams(location.search).get('tiles') !== '0') { document.documentElement.classList.add('tpre'); setTimeout(() => document.documentElement.classList.remove('tpre'), 6000); }</script>
 <script>try { const t = new URLSearchParams(location.search).get('theme') || localStorage.getItem('aurora.theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}</script>
-<script src="storm.js?v=5c5de561"></script>
+<script src="storm.js?v=5dc63f50"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Orion's Space Observer</title>
 <meta name="description" content="Can we see the northern lights tonight? Live aurora forecast, the Sun right now, the solar wind and Kp — hour by hour.">
@@ -1030,9 +1030,9 @@
 <script src="globe.js?v=234d5b26"></script>
 <script src="tonight.js?v=91a2449f"></script>
 <script src="regions.js?v=09151bc5"></script>
-<script src="space3d.js?v=c2408d09"></script>
+<script src="space3d.js?v=0322b5bc"></script>
 <script type="importmap">{ "imports": { "three": "./lib/three/three.module.min.js", "three/addons/": "./lib/three/addons/" } }</script>
-<script src="earthgl.js?v=0e05773a" type="module"></script>   <!-- the Earth view of the 3D module (three.js); the app keeps earth3d.js -->
+<script src="earthgl.js?v=ab4d6baf" type="module"></script>   <!-- the Earth view of the 3D module (three.js); the app keeps earth3d.js -->
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
@@ -1089,8 +1089,9 @@ var PHONE = () => innerWidth < 760;   // phones get the compact layout (tonight 
 const S = {};
 
 /* ── verdict: tonight 20:00 → 05:00 local ── */
+const NOWT = () => window.STORM ? STORM.at : Date.now();   // "now" for the live numbers: the time machine's moment
 function tonight() {
-  const now = new Date(), loc = new Date(now.toLocaleString('en-US', { timeZone: TZ })), off = loc - new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
+  const now = new Date(NOWT()), loc = new Date(now.toLocaleString('en-US', { timeZone: TZ })), off = loc - new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
   const s = new Date(loc), e = new Date(loc);
   if (loc.getHours() < 5) e.setHours(5, 0, 0, 0); else { s.setHours(Math.max(20, loc.getHours()), 0, 0, 0); e.setDate(e.getDate() + 1); e.setHours(5, 0, 0, 0); }
   return [s - off, e - off];
@@ -1133,7 +1134,7 @@ function verdict() {
 
 /* ── Kp chart: 3-hour bars, next ~3 days ── */
 function kpChart() {
-  const now = Date.now(), pts = (S.kpList || []).map(p => ({ t: Date.parse(p.time_tag + 'Z'), k: +p.kp })).filter(p => p.t + 3 * 3.6e6 > now).slice(0, 24);
+  const now = NOWT(), pts = (S.kpList || []).map(p => ({ t: Date.parse(p.time_tag + 'Z'), k: +p.kp })).filter(p => p.t + 3 * 3.6e6 > now).slice(0, 24);
   if (!pts.length) { $('kp').textContent = 'No forecast right now.'; return; }
   const W = 520, H = 170, L = 24, B = 26, bw = (W - L) / pts.length, y = k => H - B - k / 9 * (H - B - 8);
   let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Kp forecast">`;
@@ -1303,7 +1304,7 @@ const frameT = u => { const m = u.match(/(\d{8})T(\d{2})(\d{2})(\d{2})/); return
 const dayHm = t => new Date(t).toLocaleString(LOC, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: TZ }).replace(/,/g, '').toUpperCase();
 const dayD = t => new Date(t).toLocaleDateString(LOC, { day: 'numeric', month: 'short', timeZone: TZ }).toUpperCase();
 function enlSummary() {
-  const now = Date.now(), F = S.enl.filter(p => p.t >= now);
+  const now = NOWT(), F = S.enl.filter(p => p.t >= now);
   if (!F.length) { $('enlSum').textContent = T('This model run has no forecast left — waiting for the next one.'); return; }
   const pn = F.reduce((a, p) => p.n > a.n ? p : a), pv = F.reduce((a, p) => p.v > a.v ? p : a), cme = F.find(p => p.cme);
   const strong = pn.n >= 20 || pv.v >= 600;
@@ -1559,7 +1560,7 @@ PLAYS.forEach(id => { const b = $(id); if (b) b.onclick = syToggle; });
 window.syAuto = fromStart => { let off = false; try { off = localStorage.getItem('aurora.motion') === 'off'; } catch (e) {} if (REDUCED || off || sy.timer || sy.held) return;
   // a retry still waiting for the pictures also respects a stop by hand
   let n = 0; const go = () => { if (sy.timer || sy.held) return; if (syRange()) { if (fromStart) { sy.dir = 1; sy.t = sy.a; } syStart(); } else if (n++ < 40) setTimeout(go, 1500); }; go(); };
-if (innerWidth >= 1000 && !document.documentElement.classList.contains('lite')) setTimeout(() => syAuto(true), 2500);   // on opening the page the clock plays from the start of the loop
+if (innerWidth >= 1000 && !document.documentElement.classList.contains('lite') && !window.STORM) setTimeout(() => syAuto(true), 2500);   // time machine: the clock waits for you (one clock for the page + 3D)   // on opening the page the clock plays from the start of the loop
 // the Sun viewer moves to the next filter by itself every 45 s (⚙ → off: aurora.sunauto=off); a pick by hand pauses it for 3 minutes
 (() => { let hold = 0; const off = () => { try { return localStorage.getItem('aurora.sunauto') === 'off'; } catch (e) { return false; } };
   $('sunChips').addEventListener('click', e => { if (e.isTrusted) hold = Date.now() + 180e3; });
@@ -1746,24 +1747,29 @@ function drawGlobe() { if (window.AuroraGlobe) AuroraGlobe.draw($('globe'), { ov
   $('globe').setAttribute('aria-label', T(so ? 'Globe with the NOAA live aurora forecast around the South Pole and your place marked' : 'Globe with the NOAA live aurora forecast around the North Pole and your place marked')); }
 addEventListener('resize', () => { drawGlobe(); });
 
-async function load() {
-  const [s, e] = tonight();
-  await Promise.allSettled([
+let wxDay = '';
+const nowParts = (full = true) => [
     j(API + 'json/planetary_k_index_1m.json').then(a => { S.kpNow = +a[a.length - 1].estimated_kp; }),
-    j(API + 'products/noaa-planetary-k-index-forecast.json').then(a => { S.kpList = a; }),
-    j('https://api.open-meteo.com/v1/forecast?latitude=' + TOWN.lat + '&longitude=' + TOWN.lon + '&hourly=cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high&daily=sunset&forecast_days=2&timezone=auto').then(w => { S.wx = w; if (w.timezone) TZ = w.timezone; }),
-    j(API + 'json/ovation_aurora_latest.json').then(o => { S.ov = AuroraGlobe.grid(o); $('ovTime').textContent = T('NOAA forecast for {t}.', { t: hhmm(o['Forecast Time']) }); drawGlobe(); }),
+    (d => d === wxDay ? 0 : j('https://api.open-meteo.com/v1/forecast?latitude=' + TOWN.lat + '&longitude=' + TOWN.lon + '&hourly=cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high&daily=sunset&forecast_days=2&timezone=auto').then(w => { S.wx = w; wxDay = d; if (w.timezone) TZ = w.timezone; }))(window.STORM ? new Date(STORM.at).toISOString().slice(0, 10) : 'live:' + Math.floor(Date.now() / 6e5)),
+    full && j(API + 'json/ovation_aurora_latest.json').then(o => { S.ov = AuroraGlobe.grid(o); $('ovTime').textContent = T('NOAA forecast for {t}.', { t: hhmm(o['Forecast Time']) }); drawGlobe(); }),
     j(API + 'products/summary/solar-wind-speed.json').then(a => { const v = +a[0].proton_speed;
       $('swV').innerHTML = Math.round(v) + '<span style="font-size:13px;color:#8B9BAE"> km/s</span>'; $('swV').style.color = v >= 600 ? '#FF7A3D' : v >= 450 ? '#E8C766' : '#E0E0E0';
       $('swVt').textContent = v >= 600 ? T('Fast — storm fuel.') : v >= 450 ? T('A bit fast.') : T('Calm (300–450 is normal).'); S.swV = v; }),
     j(API + 'products/summary/solar-wind-mag-field.json').then(a => { const bz = +a[0].bz_gsm;
       $('swBz').innerHTML = (bz > 0 ? '+' : '') + bz + '<span style="font-size:13px;color:#8B9BAE"> nT</span>'; $('swBz').style.color = bz <= -10 ? '#FF4444' : bz <= -5 ? '#FFA040' : '#E0E0E0';
-      $('swBzt').textContent = bz <= -10 ? T('Strongly south — aurora ON.') : bz <= -5 ? T('South — helps the aurora.') : bz < 0 ? T('Slightly south.') : T('North — aurora stays quiet.'); S.bz = bz; }),
+      $('swBzt').textContent = bz <= -10 ? T('Strongly south — aurora ON.') : bz <= -5 ? T('South — helps the aurora.') : bz < 0 ? T('Slightly south.') : T('North — aurora stays quiet.'); S.bz = bz; })];
+const setUpd = () => { $('upd').textContent = window.STORM ? T('Time machine · {w} · {t}', { w: STORM.week ? T(STORM.label) : new Date(STORM.now).toLocaleDateString(LOC, { day: 'numeric', month: 'long', year: 'numeric' }), t: dayHm(NOWT()) }) : T('Live · updated {t} local time', { t: hhmm(Date.now()) }); };
+// time machine: the clock moved → the live numbers, the verdict, the ENLIL summary, the 3D shield follow that moment
+// while the clock plays only the light numbers (no OVATION globe, no 1-min wind): heavy work every second made the 3D model stutter
+window.tmNow = async (settle, move3d) => { await Promise.allSettled([...nowParts(settle), window.deepNow ? deepNow(settle) : 0]); verdict(); if (S.enl && S.enl.length) enlSummary(); setUpd(); if (move3d) dispatchEvent(new Event('powhau-tm')); };
+async function load() {
+  await Promise.allSettled([...nowParts(),
+    j(API + 'products/noaa-planetary-k-index-forecast.json').then(a => { S.kpList = a; }),
     loadEnlil().catch(() => { $('enlSum').textContent = T('The solar wind model could not be loaded right now.'); }),
     loadSun(),
   ]);
   verdict(); if (!S.kpList) { $('vword').textContent = T('No data'); $('vtext').textContent = T('NOAA could not be reached. Try again in a minute.'); }
-  $('upd').textContent = window.STORM ? (STORM.week ? T('Time machine · {w} · {t}', { w: T(STORM.label), t: hhmm(Date.now()) }) : T('Time machine · {w} · {t}', { w: new Date(STORM.now).toLocaleDateString(LOC, { day: 'numeric', month: 'long', year: 'numeric' }), t: hhmm(Date.now()) })) : T('Live · updated {t} local time', { t: hhmm(Date.now()) });
+  setUpd();
 }
 load(); setInterval(load, 10 * 60000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
@@ -2100,19 +2106,21 @@ async function loadO3d() { const r = await fetch(API + 'text/3-day-forecast.txt'
     + row('S', '#FFB347', 'S1+ ' + (s1 ? one(s1[1]) : '?'), rat[1]) + row('R', '#FFE600', 'R1–R2 ' + (r12 ? one(r12[1]) : '?') + ' · R3+ ' + (r3 ? one(r3[1]) : '?'), rat[2])
     + `<p style="margin:6px 0 0;opacity:.7">${esc(one((t.match(/:Issued:([^\n]+)/) || ['', ''])[1]))}</p>`;
   $('o3d').classList.remove('hidden'); }
-async function loadDeep(force) {
-  loadO27().catch(() => {}); loadO3d().catch(() => {});
-  await Promise.allSettled([
+const deepParts = () => [
     j(API + 'json/planetary_k_index_1m.json').then(a => { S.kpNow = +a[a.length - 1].estimated_kp; drawKpNow(S.kpNow); }),
-    j(API + 'products/noaa-planetary-k-index-forecast.json').then(a => { S.kpList = a; drawKpChart(a); }),
     j(API + 'products/noaa-scales.json').then(sc => { const n = sc['0'];
       $('scG').textContent = 'G' + (n.G.Scale || 0); $('scS').textContent = 'S' + (n.S.Scale || 0); $('scR').textContent = 'R' + (n.R.Scale || 0);
       $('scG').style.color = +n.G.Scale ? kpColor(+n.G.Scale + 4) : '#6EE7A0'; $('scGt').textContent = n.G.Text && n.G.Text !== 'none' ? T(n.G.Text) : T('Geomagnetic'); }),
-    j(API + 'products/alerts.json').then(al => { const since = Date.now() - 3 * 864e5, out = [];
+    j(API + 'products/alerts.json').then(al => { const since = NOWT() - 3 * 864e5, out = [];
       al.forEach(a => { const t = Date.parse(a.issue_datetime.replace(' ', 'T') + 'Z'); if (t < since || !/geomagnetic/i.test(a.message)) return;
         const m = a.message.match(/^(ALERT|WARNING|WATCH|EXTENDED WARNING|CANCEL WATCH|SUMMARY)[^\r\n]*/m); if (m) out.push({ t, line: m[0] }); });
       $('alerts').innerHTML = out.length ? out.slice(0, 5).map(a => `<div class="alert"><b>${esc(a.line)}</b><span>${new Date(a.t).toLocaleString(LOC, { weekday: 'short', hour: '2-digit', minute: '2-digit', timeZone: TZ }).toUpperCase()}</span></div>`).join('')
-        : '<div class="loading">' + T('NO GEOMAGNETIC ALERTS') + '</div>'; }),
+        : '<div class="loading">' + T('NO GEOMAGNETIC ALERTS') + '</div>'; })];
+window.deepNow = full => Promise.allSettled([...deepParts(), full && loadWind(true).then(() => drawSw())]);
+async function loadDeep(force) {
+  loadO27().catch(() => {}); loadO3d().catch(() => {});
+  await Promise.allSettled([...deepParts(),
+    j(API + 'products/noaa-planetary-k-index-forecast.json').then(a => { S.kpList = a; drawKpChart(a); }),
     loadWind(force),
     goes('e', force).then(D => { const e2 = D.ser['>=2 MeV'] || [], mx = e2.reduce((a, p) => Math.max(a, p[1]), 0);
       $('scE').textContent = mx >= 1000 ? 'HIGH' : 'OK'; $('scE').style.color = mx >= 1000 ? '#FFA040' : '#6EE7A0'; }).catch(() => {}),
@@ -2471,6 +2479,18 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-repl
   window.tmGo = (v, anchor) => { if (v === 'tm') return openTM(anchor); if (on) set(''); };
   document.querySelectorAll('.stormseg button').forEach(b => { b.setAttribute('aria-pressed', String(on ? b.dataset.storm === 'tm' : !b.dataset.storm)); b.onclick = () => tmGo(b.dataset.storm, b); });
   if (!on) return;
+  // TIME MACHINE v2: follow the shared clock (sy) — while it plays every ~1.5 s, after a drag once it stops; NOW = the end of the week
+  // the 3D model's time + shield jump only once the clock rests (settled), never while it plays
+  { let prev = 0, last = 0, busy = false, done = STORM.at, settled = true, a3 = STORM.at;
+    setInterval(async () => { if (busy || typeof sy === 'undefined' || !sy.on || !sy.t || !window.tmNow) return;
+      const t = Math.max(STORM.t0 || 0, Math.min(STORM.now, sy.t)), moving = t !== prev, rest = !moving && !sy.timer; prev = t;
+      const far = Math.abs(t - done) >= 10 * 6e4;
+      // the 3D model open big on screen: no work while the clock plays (each update stole a frame or two → the camera shook)
+      const h3 = document.getElementById('s3dHost'), r3 = h3 && h3.getBoundingClientRect(), big3d = r3 && r3.width > 500 && r3.bottom > 0 && r3.top < innerHeight;
+      if (rest && !big3d && a3 !== t && !far && settled) { a3 = t; STORM.setAt(t, true); dispatchEvent(new Event('powhau-tm')); return; }   // the 3D closed again: now it catches up
+      if (!(far || (rest && !settled)) || (moving && (big3d || performance.now() - last < 1500))) return;
+      // the 3D model's own clock moves to the page clock only while it is not open big (moving it under your eyes broke its slider + CMEs)
+      busy = true; last = performance.now(); done = t; settled = rest; if (rest && !big3d) a3 = t; STORM.setAt(t, rest && !big3d); try { await tmNow(rest, rest && !big3d); } finally { busy = false; } }, 400); }
   const bar = document.createElement('div'); bar.className = 'stormbar'; bar.setAttribute('role', 'status');
   bar.innerHTML = `<span><b>${T('TIME MACHINE')}</b> · ${STORM.week ? T('Time machine: {w} — real data of that week, not live. Drag the clock to move through it.', { w: T(STORM.label) }) : T('This page shows {t} — the peak of the G5 storm of May 2024. Real data of that day, not live.', { t: new Date(STORM.now).toLocaleString(LOC, { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: TZ }) })}</span><button type="button">${T('Back to live')}</button>`;
   bar.querySelector('button').onclick = () => set('');

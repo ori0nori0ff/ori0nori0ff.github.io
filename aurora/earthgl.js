@@ -584,9 +584,10 @@ ${SUNLIB}${MOONV}
     const shue = (n, v, bz) => { const P = Math.max(.1, 1.6726e-6 * n * v * v); return { P, R: Math.max(4.5, Math.min(14, (10.22 + 1.29 * Math.tanh(.184 * (bz + 8.14))) * Math.pow(P, -1 / 6.6))), al: Math.max(.45, Math.min(.8, (.58 - .007 * bz) * (1 + .024 * Math.log(P)))) }; };
     // the solar wind at L1 now (NOAA real-time, newest first; the spacecraft in use = active, else any good row)
     const pick = (j, ks) => { const ok = r => ks.every(k => r[k] != null && isFinite(r[k])); return j.find(r => r.active && ok(r)) || j.find(ok); };
-    Promise.all(['wind', 'mag'].map(k => fetch(`https://services.swpc.noaa.gov/json/rtsw/rtsw_${k}_1m.json`).then(r => r.json()))).then(([w, m]) => {
+    const readL1 = () => Promise.all(['wind', 'mag'].map(k => fetch(`https://services.swpc.noaa.gov/json/rtsw/rtsw_${k}_1m.json`).then(r => r.json()))).then(([w, m]) => {
       const a = pick(w, ['proton_speed', 'proton_density']), b = pick(m, ['bz_gsm']); if (a) { S.n = a.proton_density; S.v = a.proton_speed; } if (b) S.bz = b.bz_gsm; S.ok = 1;
       const s = shue(S.n, S.v, S.bz); S.Rw = s.R; S.alw = s.al; S.P = s.P; }).catch(() => {});
+    readL1(); addEventListener('powhau-tm', readL1);   // time machine: the shield follows the page clock's moment
     const U2 = { time: U.wtime, fade: { value: 0 }, R0: { value: 10.5 }, al: { value: .58 }, cme: { value: 0 }, px: { value: 1 } };
     const add = { transparent: true, depthWrite: false, blending: THREE.AdditiveBlending };
     // a glowing shell: bright at the rim, faint streaks flowing tailward (tail = how far down the tail it stays visible, in its own units)
@@ -1231,7 +1232,7 @@ ${SUNLIB}${MOONV}
     if (orbitWait && !goal) { orbitOn = orbitWait; orbitWait = 0; }
     if (dyPlay && spd) { let t2 = now() + dyDir * Math.min(.1, dt0) * spd;
       if (t2 < T_MIN || t2 > T_MAX) { t2 = Math.max(T_MIN, Math.min(T_MAX, t2)); playSet(false); limAt = performance.now(); }
-      tOver = t2; di.value = localStr(t2); }
+      tOver = t2; di.value = localStr(t2); windOn(); }   // a fixed speed too switches the wind + CMEs on (only Auto did)
     else if (dyPlay) { const tn = now(); let k = 1; for (const m of (solar.cmeMarks ? solar.cmeMarks() : [])) if (m.tE != null) { const d = Math.abs(tn - m.tE) / 36e5; k = Math.min(k, d < 2 ? 1 / 24 : d < 6 ? 1 / 4 : 1); }
       setT(tn + dyDir * Math.min(.1, dt0) * (focus === 'ISS' ? 6e4 : 216e5 * k)); }
     solar.quiet = fastT() || Math.abs(now() - real()) > 30 * 864e5;   // the wind + CME data only cover days round today

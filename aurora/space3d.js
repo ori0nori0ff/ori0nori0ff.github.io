@@ -477,7 +477,7 @@
     // the solar system is the three.js scene: without WebGL2 only the stars, the galaxy and the spiral are left
     const noGL = () => { el.querySelector('.s3d-t').textContent = tr('The 3D solar system needs WebGL2 — not available in this browser.'); el.querySelector('.s3d-sub').textContent = tr('Nearby stars, the galaxy and the spiral still work.'); };
     function setMode(m, far) { modeAt = performance.now();
-      if (m === 'earth') { if (!window.Earth3D) return noGL(); if (!earth) try { earth = Earth3D.create(el, { wind: () => series, cmes: () => donki, places: opts.places ? opts.places() : [], time: () => Date.now(),   // its own clock: real time (or the date picked in it), not the page's playing clock — a forecast time has no pictures yet
+      if (m === 'earth') { if (!window.Earth3D) return noGL(); if (!earth) try { earth = Earth3D.create(el, { wind: () => series, cmes: () => donki, places: opts.places ? opts.places() : [], time: () => window.STORM && STORM.clock ? STORM.clock() : Date.now(),   // its own clock (time machine: the page clock's moment, running on): real time (or the date picked in it), not the page's playing clock — a forecast time has no pictures yet
  aurora: opts.aurora, paused: opts.paused, onOut: null }); } catch (e) { return noGL(); }   // flies out into the shield view   // fly out from Earth, still following it
         mode = 'earth'; el.classList.add('ea'); el.classList.remove('hx'); el.querySelectorAll('[data-m]').forEach(o => o.setAttribute('aria-pressed', o.dataset.m === m)); info = null;
         const pl = opts.places ? opts.places()[0] : null; if (opts.places) earth.setPlaces(opts.places()); earth.show(pl ? pl.lat : 45.6, pl ? pl.lon : 25.6, far); return; }

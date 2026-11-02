@@ -50,7 +50,7 @@
     if ((m = abs.match(/^https:\/\/wsrv\.nl\/\?url=([^&]+)/))) { const inner = map(decodeURIComponent(m[1]), kind); return inner && !/^https?:/.test(inner) ? inner : inner ? abs : ''; }
     if (/^https:\/\/api\.open-meteo\.com\/v1\/forecast/.test(abs)) {
       const q = new URL(abs); q.host = 'historical-forecast-api.open-meteo.com'; ['forecast_days', 'past_days', 'past_hours', 'forecast_hours'].forEach(k => q.searchParams.delete(k));
-      q.searchParams.set('start_date', day(M.now)); q.searchParams.set('end_date', day(M.now + 2 * 864e5)); return q.href;
+      q.searchParams.set('start_date', day(AT)); q.searchParams.set('end_date', day(AT + 2 * 864e5)); return q.href;
     }
     if (/earthquake\.usgs\.gov\/earthquakes\/feed\/v1\.0\/summary\/4\.5_week\.geojson/.test(abs))
       return `https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&minmagnitude=4.5&starttime=${new RD(M.now - 7 * 864e5).toISOString().slice(0, 19)}&endtime=${new RD(M.now).toISOString().slice(0, 19)}`;
@@ -58,10 +58,45 @@
     return u;
   }
 
+  // TIME MACHINE v2: the page's clock picks the moment (STORM.setAt); the "now" feeds (Kp now, wind + Bz now, L1 1-min, OVATION,
+  // NOAA scales, alerts) are then answered as they were at that moment, made from the week's data.json (5-min wind, 3-h Kp, X-rays).
+  // Charts keep the whole week. Until the clock moves, the baked files answer as before.
+  let AT = M.now, AT3 = M.now, moved = false, atReal = real(), DJ = null;
+  const dj = () => DJ || (DJ = F(PRE + 'data.json').then(r => r.ok ? r.json() : null).catch(() => null));
+  const J = o => new Response(JSON.stringify(o), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  const isoZ = t => new RD(t).toISOString().slice(0, 19);
+  const kpAt = D => { let k = 0; for (const [t, v] of D.kp) if (t <= AT) k = v; return k; };
+  const idxAt = D => Math.max(0, Math.min(D.v.length - 1, Math.floor((AT - D.t0) / D.step)));
+  const lastOf = (D, k, i) => { const a = D[k]; if (!a) return null; for (let j = i; j >= 0 && j > i - 24; j--) if (a[j] != null) return [D.t0 + j * D.step, a[j]]; return null; };
+  function ovation(k) {   // the same Kp-driven oval as tools/build_timemachine.py ovation()
+    const r = Math.PI / 180, PL = 80.8 * r, PO = -72.6 * r, c = 66.5 - 2.3 * k, w = 2.6 + .55 * k, amp = Math.min(100, 12 + 10 * k), d = new RD(AT), sun = -((d.getUTCHours() + d.getUTCMinutes() / 60) - 12) * 15, co = [];
+    for (let lo = 0; lo < 360; lo++) { const l = (lo <= 180 ? lo : lo - 360) * r, nt = .55 + .45 * -Math.cos(l - sun * r), cc = c - 2.5 * (nt - .5);
+      for (let la = -90; la <= 90; la++) { const f = la * r, ml = Math.asin(Math.sin(f) * Math.sin(PL) + Math.cos(f) * Math.cos(PL) * Math.cos(l - PO)) / r, v = amp * nt * Math.exp(-(((Math.abs(ml) - cc) / w) ** 2)); co.push([lo, la, v > 3 ? Math.round(v) : 0]); } }
+    return { 'Observation Time': isoZ(AT) + 'Z', 'Forecast Time': isoZ(AT + 35 * 6e4) + 'Z', 'Data Format': '[Longitude, Latitude, Aurora]', coordinates: co, type: 'MultiPoint' }; }
+  async function now(p, to) {
+    if (p === 'products/alerts.json') { const r = await F(to); if (!r.ok) return r; return J((await r.json()).filter(a => RD.parse(a.issue_datetime.replace(' ', 'T') + 'Z') <= AT)); }
+    const D = await dj(); if (!D) return null; const i = idxAt(D), k = kpAt(D);
+    if (p === 'json/planetary_k_index_1m.json') { const o = []; for (let t = AT - 60 * 6e4; t <= AT; t += 6e4) o.push({ time_tag: isoZ(t), kp_index: Math.round(k), estimated_kp: Math.round(k * 100) / 100, kp: String(Math.round(k)) }); return J(o); }
+    if (p === 'products/summary/solar-wind-speed.json') { const v = lastOf(D, 'v', i); return J(v ? [{ proton_speed: Math.round(v[1]), time_tag: isoZ(v[0]) + 'Z' }] : []); }
+    if (p === 'products/summary/solar-wind-mag-field.json') { const b = lastOf(D, 'bz', i), t = lastOf(D, 'bt', i); return J(b ? [{ bt: Math.round(t ? t[1] : 0), bz_gsm: Math.round(b[1]), time_tag: isoZ(b[0]) + 'Z' }] : []); }
+    if (p === 'json/rtsw/rtsw_mag_1m.json' || p === 'json/rtsw/rtsw_wind_1m.json') { const o = [], mag = p.includes('mag'), g = (k, j) => D[k] ? D[k][j] : null;
+      for (let j = i; j >= 0 && j > i - 576; j--) { const t = isoZ(D.t0 + j * D.step), bx = g('bx', j), by = g('by', j);
+        o.push(mag ? { time_tag: t, active: true, source: 'OMNI', bt: g('bt', j), bx_gsm: bx, by_gsm: by, bz_gsm: g('bz', j), phi_gsm: bx == null || by == null ? null : (Math.atan2(by, bx) * 180 / Math.PI + 360) % 360 }
+          : { time_tag: t, active: true, source: 'OMNI', proton_speed: g('v', j), proton_density: g('n', j), proton_temperature: g('tp', j) }); }
+      return J(o); }
+    if (p === 'json/ovation_aurora_latest.json') return J(ovation(k));
+    if (p === 'products/noaa-scales.json') { const g = k >= 8.99 ? 5 : k >= 4.66 ? Math.min(4, Math.floor(k + .34) - 4) : 0; let big = 0; for (let j = Math.max(0, i - 288); j <= i; j++) if (D.xr && D.xr[j] > big) big = D.xr[j];
+      const r = big >= 2e-3 ? 5 : big >= 1e-3 ? 4 : big >= 1e-4 ? 3 : big >= 5e-5 ? 2 : big >= 1e-5 ? 1 : 0, TX = ['none', 'minor', 'moderate', 'strong', 'severe', 'extreme'], d = new RD(AT);
+      return J({ 0: { DateStamp: isoZ(AT).slice(0, 10), TimeStamp: isoZ(AT).slice(11), R: { Scale: String(r), Text: TX[r] }, S: { Scale: '0', Text: 'none' }, G: { Scale: String(g), Text: TX[g] } } }); }
+    return null; }
+  const NOWF = new Set(['json/planetary_k_index_1m.json', 'products/summary/solar-wind-speed.json', 'products/summary/solar-wind-mag-field.json', 'json/rtsw/rtsw_mag_1m.json', 'json/rtsw/rtsw_wind_1m.json', 'json/ovation_aurora_latest.json', 'products/noaa-scales.json', 'products/alerts.json']);
+
   const F = window.fetch.bind(window);
   window.fetch = (input, init) => {
     const u = typeof input === 'string' ? input : input && input.url;
     const to = map(u, 'fetch');
+    if (moved && typeof u === 'string') { const abs = new URL(u, location.href).href, p = abs.startsWith(SWPC) ? strip(abs.slice(SWPC.length)) : '';
+      if (NOWF.has(p)) return now(p, to || u).then(r => r || (to === '' ? new Response('[]', { status: 404 }) : F(to, init))); }
     if (to === '') return Promise.resolve(new Response('[]', { status: 404, statusText: 'not in storm mode', headers: { 'Content-Type': 'application/json' } }));
     return F(to === u ? input : to, init);
   };
@@ -72,7 +107,11 @@
   const sa = Element.prototype.setAttribute;
   Element.prototype.setAttribute = function (k, v) { if (k === 'src' && (this instanceof HTMLImageElement || this instanceof HTMLMediaElement)) { this.src = v; return; } return sa.call(this, k, v); };
 
-  window.STORM = { id, now: M.now, sun: Object.keys(M.latest), label: id === 'may2024' ? '10 May 2024' : M.title, week: id !== 'may2024', t0: M.t0 };
+  window.STORM = { id, now: M.now, at: M.now, sun: Object.keys(M.latest), label: id === 'may2024' ? '10 May 2024' : M.title, week: id !== 'may2024', t0: M.t0,
+    // the page's clock → "now" of every live number; clock() = that moment, running on (the 3D model's time)
+    // settle = the clock stopped there: only then the 3D model's own time jumps (no jerks while the page clock plays)
+    setAt(t, settle) { if (!isFinite(t)) return; AT = this.at = Math.min(M.now, t); moved = true; if (settle) { AT3 = AT; atReal = real(); } },
+    clock() { return AT3 + (real() - atReal); } };
   document.documentElement.classList.add('storm');
   document.addEventListener('DOMContentLoaded', () => {
     // <img src> written straight into the HTML
