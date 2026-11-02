@@ -9,10 +9,10 @@ comes from data.json, so it adds no host, key or dependency to the weekly bot.
     python tools/build_timemachine.py --id w2026_40 --dir <aurora-replay checkout> --prefix /aurora-replay/
 
 What is estimated (and labelled on the page): Dst = hourly SYM-H, the aurora oval from Kp, the ENLIL "forecast at Earth" = what was
-measured, flares from the GOES curve (no regions), NOAA alerts from Kp; CMEs = NASA DONKI when baked in data.json. Not available: protons, regions, ENLIL speed view.
+measured, flares from the GOES curve (no regions), NOAA alerts from Kp; CMEs = NASA DONKI when baked in data.json. Not available: protons, regions.
 May 2024 keeps its own richer storm mode (tools/build_storm.py, storm/may2024/).
 """
-import argparse, json, math, pathlib
+import argparse, json, math, pathlib, re
 from datetime import datetime, timedelta, timezone
 from PIL import Image, ImageDraw
 
@@ -151,8 +151,9 @@ def scales_alerts(P, xr):
     put('products/alerts.json', al[::-1])
 
 def enlil():
-    """the week's CCMC density frames (already in the replay) recomposed into NOAA's 960×600 layout; the speed row stays dark"""
-    L = []; (SW / 'images/animations/enlil').mkdir(parents=True, exist_ok=True)
+    """the week's CCMC frames (already in the replay) recomposed into NOAA's 960×600 layout: density on top, speed below (weeks baked before the speed view: dark)"""
+    L = []; E = SW / 'images/animations/enlil'; E.mkdir(parents=True, exist_ok=True)
+    for f in E.glob('enlil_com2_*.jpg'): f.unlink()   # a re-bake starts clean (no frames left from an older run)
     def paste(dst, src, sc, sx, sy, dx, dy, r, half=False):
         q = src.crop((int(sx - r / sc), int(sy - r / sc), int(sx + r / sc), int(sy + r / sc))).resize((2 * r, 2 * r), Image.LANCZOS)
         m = Image.new('L', (2 * r, 2 * r), 0); dr = ImageDraw.Draw(m)
@@ -161,8 +162,11 @@ def enlil():
         dst.paste(q, (dx - r, dy - r), m)
     for e in D.get('enl') or []:
         t, p = dt(e[0]), e[1]
-        src = Image.open(WK / p).convert('RGB'); out = Image.new('RGB', (960, 600), (0, 0, 0))
-        paste(out, src, 73 / 97, 240, 312, 202, 184, 125); paste(out, src, 72 / 94, 493, 312, 358, 184, 125, half=True)
+        out = Image.new('RGB', (960, 600), (0, 0, 0))
+        for row, q in ((0, p), (264, e[3] if len(e) > 3 else None)):
+            if not q or not re.fullmatch(r'img/ENLV?/\d{4}_\d{4}\.jpg', q) or not (WK / q).exists(): continue   # only our own frame names
+            src = Image.open(WK / q).convert('RGB')
+            paste(out, src, 73 / 97, 240, 312, 202, 184 + row, 125); paste(out, src, 72 / 94, 493, 312, 358, 184 + row, 125, half=True)
         run = dt(e[2]).strftime('%Y-%m-%d %H:%MZ') if len(e) > 2 else '?'
         ImageDraw.Draw(out).text((300, 20), t.strftime('%Y-%m-%d %H:%MZ') + f'   NASA CCMC run {run} (time machine)', fill=(255, 238, 0))
         name = f'enlil_com2_{t:%Y%m%dT%H%M%S}.jpg'; out.save(SW / 'images/animations/enlil' / name, quality=70, optimize=True)

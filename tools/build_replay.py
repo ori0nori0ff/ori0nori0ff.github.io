@@ -24,6 +24,7 @@ A.add_argument('--id', default='may2024'); A.add_argument('--start', default='20
 A.add_argument('--title', default='The G5 storm of May 2024'); A.add_argument('--famous', action='store_true')
 A.add_argument('--index-only', action='store_true', help='only add the already baked week to index.json')
 A.add_argument('--light', action='store_true', help='weekly bot: fewer, smaller pictures (≈ 3–5 MB a week)')
+A.add_argument('--enl-only', action='store_true', help='only re-fetch the ENLIL frames (density + speed) of the already baked week')
 A.add_argument('--cme-only', action='store_true', help='only add the NASA DONKI CMEs to the already baked week')
 A.add_argument('--out', help='replay folder to write to (default web/aurora/replay; the bot gives its Pages checkout)')
 ARGS = A.parse_args()
@@ -201,13 +202,16 @@ def enlil():
             if T0 - timedelta(days=2) <= r < T1: per[r.date()] = r
         runs = sorted(per.values())
     if not runs: return [], []
-    gifs = {}
+    gifs, vel = {}, {}
     for r in runs:
         try: im = Image.open(io.BytesIO(get(f'{B}{r:%Y/%m}/{r:%Y%m%d_%H%M%S}_2.0_anim.tim-den.gif', 300))); im.seek(0)
         except Exception as e: print('  no run', r, e); continue
         s0 = enl_start(im, r)
-        if s0: gifs[r] = (im, s0)
-    out, used = [], []; (IMG / 'ENL').mkdir(parents=True, exist_ok=True)
+        if not s0: continue
+        gifs[r] = (im, s0)
+        try: vel[r] = Image.open(io.BytesIO(get(f"{B.replace('cme-density', 'cme-velocity')}{r:%Y/%m}/{r:%Y%m%d_%H%M%S}_2.0_anim.tim-vel.gif", 300)))   # the same run's speed view, same frames
+        except Exception as e: print('  no speed view for run', r, e)
+    out, used = [], []; (IMG / 'ENL').mkdir(parents=True, exist_ok=True); (IMG / 'ENLV').mkdir(parents=True, exist_ok=True)
     t = T0
     while t <= T1:   # each 6-hour frame from the newest run already made at that time (else the first run we have)
         have = [r for r in gifs if r <= t] or sorted(gifs)[:1]
@@ -215,7 +219,10 @@ def enlil():
             r = max(have); im, s0 = gifs[r]; k = round((t - s0).total_seconds() / 21600)
             if 0 <= k < im.n_frames:
                 im.seek(k); p = f'img/ENL/{t:%m%d_%H%M}.jpg'; im.convert('RGB').save(OUT / p, quality=58 if ARGS.light else 80, optimize=True)
-                out.append([ms(t), p, ms(r)])
+                row = [ms(t), p, ms(r)]
+                if r in vel and k < vel[r].n_frames:
+                    vel[r].seek(k); pv = f'img/ENLV/{t:%m%d_%H%M}.jpg'; vel[r].convert('RGB').save(OUT / pv, quality=58 if ARGS.light else 80, optimize=True); row.append(pv)
+                out.append(row)
                 if ms(r) not in used: used.append(ms(r))
         t += timedelta(hours=6)
     return out, used
@@ -253,6 +260,9 @@ def donki():
     out = sorted((o for o, _ in by.values()), key=lambda o: o['t']); print('  DONKI CMEs', len(out)); return out
 
 def main():
+    if ARGS.enl_only:
+        p = OUT / 'data.json'; D = json.loads(p.read_text(encoding='utf-8')); D['enl'], D['enlRuns'] = enlil()
+        p.write_text(json.dumps(D, separators=(',', ':')), encoding='utf-8'); return
     if ARGS.cme_only:
         p = OUT / 'data.json'; D = json.loads(p.read_text(encoding='utf-8')); c = donki()
         if c is not None: D['cme'] = c; p.write_text(json.dumps(D, separators=(',', ':')), encoding='utf-8')
