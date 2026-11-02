@@ -254,9 +254,9 @@ def cosmic():
 # CMEs for the 3D view: NASA DONKI (CCMC) analyses — when each cloud passed 21.5 solar radii, its direction,
 # width and speed (the cone model NOAA's ENLIL runs use)
 def donki_get(kind, q):
-    """One DONKI list (CCMC first, then api.nasa.gov); None when both fail (DONKI is often down for days)."""
-    for u in [f'https://kauai.ccmc.gsfc.nasa.gov/DONKI/WS/get/{kind}?{q}',
-              f'https://api.nasa.gov/DONKI/{kind}?{q}&api_key=' + os.environ.get('NASA_KEY', 'DEMO_KEY')]:
+    """One DONKI list; None when it fails. DONKI moved on 30 Sep 2026 to CCMC's own host (no key, at most 60 days per query);
+    the old kauai.ccmc host and api.nasa.gov/DONKI now answer a web page / a redirect instead of data."""
+    for u in [f'https://ccmc.gsfc.nasa.gov/DONKI-API/get/{kind}?{q}']:
         r = get(u, timeout=90, tries=2)
         if not isinstance(r, list):   # CCMC answers only over IPv4 from some runners
             try:
