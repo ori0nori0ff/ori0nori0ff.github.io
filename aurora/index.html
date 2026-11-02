@@ -7,7 +7,7 @@
 <script>try { const q = new URLSearchParams(location.search).get('lite'); if (q === '1' || (q !== '0' && localStorage.getItem('aurora.lite') === 'on')) document.documentElement.classList.add('lite'); } catch (e) {}   // light mode for slower PCs</script>
 <script>if (innerWidth >= 1000 && new URLSearchParams(location.search).get('tiles') !== '0') { document.documentElement.classList.add('tpre'); setTimeout(() => document.documentElement.classList.remove('tpre'), 6000); }</script>
 <script>try { const t = new URLSearchParams(location.search).get('theme') || localStorage.getItem('aurora.theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}</script>
-<script src="storm.js?v=5dc63f50"></script>
+<script src="storm.js?v=aef33b6d"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Orion's Space Observer</title>
 <meta name="description" content="Can we see the northern lights tonight? Live aurora forecast, the Sun right now, the solar wind and Kp — hour by hour.">
@@ -1024,15 +1024,15 @@
   <div class="fctl"><div class="pbtn" id="enlFPlay">▶</div><div class="pbtn spd" style="font:700 10px 'JetBrains Mono',monospace">1×</div><input type="range" id="enlFSlide" min="0" max="0" value="0"><span class="lbl" id="enlFT" style="min-width:150px;text-align:right">–</span><span class="lbl">PINCH · DRAG</span><div class="x" id="enlX">✕</div></div></div></div>
 <div id="toast"></div>
 <script src="i18n.js?v=b936034a"></script>
-<script src="i18n.ro.js?v=2b6e82f8"></script>
-<script src="i18n.de.js?v=0b1df2e7"></script>
+<script src="i18n.ro.js?v=8e7bbefc"></script>
+<script src="i18n.de.js?v=7664cc15"></script>
 <script src="land.js?v=d495927a"></script>
 <script src="globe.js?v=234d5b26"></script>
 <script src="tonight.js?v=91a2449f"></script>
 <script src="regions.js?v=09151bc5"></script>
 <script src="space3d.js?v=0322b5bc"></script>
 <script type="importmap">{ "imports": { "three": "./lib/three/three.module.min.js", "three/addons/": "./lib/three/addons/" } }</script>
-<script src="earthgl.js?v=ab4d6baf" type="module"></script>   <!-- the Earth view of the 3D module (three.js); the app keeps earth3d.js -->
+<script src="earthgl.js?v=f4058939" type="module"></script>   <!-- the Earth view of the 3D module (three.js); the app keeps earth3d.js -->
 <script>
 'use strict';
 const $ = id => document.getElementById(id);

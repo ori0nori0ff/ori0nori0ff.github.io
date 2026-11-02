@@ -111,7 +111,8 @@
     // the page's clock → "now" of every live number; clock() = that moment, running on (the 3D model's time)
     // settle = the clock stopped there: only then the 3D model's own time jumps (no jerks while the page clock plays)
     setAt(t, settle) { if (!isFinite(t)) return; AT = this.at = Math.min(M.now, t); moved = true; if (settle) { AT3 = AT; atReal = real(); } },
-    clock() { return AT3 + (real() - atReal); } };
+    clock() { return AT3 + (real() - atReal); },
+    data: () => dj() };   // the week's 5-min measurements (the 3D shield reads Bz from it)
   document.documentElement.classList.add('storm');
   document.addEventListener('DOMContentLoaded', () => {
     // <img src> written straight into the HTML

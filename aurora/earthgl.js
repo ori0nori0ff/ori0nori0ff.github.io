@@ -586,7 +586,13 @@ ${SUNLIB}${MOONV}
     const pick = (j, ks) => { const ok = r => ks.every(k => r[k] != null && isFinite(r[k])); return j.find(r => r.active && ok(r)) || j.find(ok); };
     const readL1 = () => Promise.all(['wind', 'mag'].map(k => fetch(`https://services.swpc.noaa.gov/json/rtsw/rtsw_${k}_1m.json`).then(r => r.json()))).then(([w, m]) => {
       const a = pick(w, ['proton_speed', 'proton_density']), b = pick(m, ['bz_gsm']); if (a) { S.n = a.proton_density; S.v = a.proton_speed; } if (b) S.bz = b.bz_gsm; S.ok = 1;
-      const s = shue(S.n, S.v, S.bz); S.Rw = s.R; S.alw = s.al; S.P = s.P; }).catch(() => {});
+      const s = shue(S.n, S.v, S.bz); S.Rw = s.R; S.alw = s.al; S.P = s.P;
+      if (!window.STORM) BZ = m.filter(r => r.bz_gsm != null && isFinite(r.bz_gsm) && (r.active || r.active == null)).map(r => [Date.parse(r.time_tag + 'Z'), +r.bz_gsm]).sort((a, b) => a[0] - b[0]); }).catch(() => {});
+    // Bz measured at L1 (north–south part of the wind's own magnetic field): live = NOAA's last 2 days, time machine = the whole week
+    let BZ = [];
+    if (window.STORM && STORM.data) STORM.data().then(D => { if (D && D.bz) BZ = D.bz.map((b, i) => [D.t0 + i * D.step, b]).filter(p => p[1] != null); }).catch(() => {});
+    const bzAt = t => { if (!BZ.length) return null; let lo = 0, hi = BZ.length - 1; while (hi - lo > 1) { const md = (lo + hi) >> 1; if (BZ[md][0] <= t) lo = md; else hi = md; }
+      const p = Math.abs(BZ[lo][0] - t) < Math.abs(BZ[hi][0] - t) ? BZ[lo] : BZ[hi]; return Math.abs(p[0] - t) < 45 * 6e4 ? p[1] : null; };
     readL1(); addEventListener('powhau-tm', readL1);   // time machine: the shield follows the page clock's moment
     const U2 = { time: U.wtime, fade: { value: 0 }, R0: { value: 10.5 }, al: { value: .58 }, cme: { value: 0 }, px: { value: 1 } };
     const add = { transparent: true, depthWrite: false, blending: THREE.AdditiveBlending };
@@ -683,6 +689,8 @@ ${SUNLIB}${MOONV}
         i: 'The solar wind drags the night side of the field into a tail hundreds of Earth radii long, far past the Moon. Energy stored in the tail is let go in substorms, which make the aurora flare up.' },
       { k: 'vab', t: () => tr('Van Allen belts'), s: 'particles trapped by the field',
         i: 'Two rings of charged particles held by the field: the inner belt (about 1.2–3 Earth radii from the centre, mostly protons) and the outer belt (about 3–7, mostly electrons). Storms can fill the outer belt with fast electrons that harm satellites.' },
+      { k: 'imf', t: () => bzNow == null ? '' : tr('Field of the wind · Bz {b} nT', { b: (bzNow > 0 ? '+' : '') + Math.round(bzNow) }), s: 'measured at L1 · red = south, blue = north', h: () => bzCard(),
+        i: 'The solar wind carries the Sun’s magnetic field. Its north–south part, Bz, decides how much of the wind’s energy gets in: pointing south (red) it joins the Earth’s field on the day side and the shield opens — storms and aurora; pointing north (blue) the shield stays closed, even in a fast CME. Measured at L1, about 30–60 min before it reaches us. Nobody can forecast it well from the Sun yet: a CME’s Bz is known only when it passes L1.' },
       { k: 'sw', t: () => wTitle, s: 'from the Sun · to scale, particles sped up ~100×',
         i: 'The solar wind: charged particles blowing out of the Sun at 300–800 km/s. Its speed here comes from NOAA’s real-time measurements at L1, 1.5 million km towards the Sun. A CME is a much faster, denser cloud: when one arrives the shield is squeezed and the aurora grows.' } ];
     let wTitle = '';
@@ -691,7 +699,20 @@ ${SUNLIB}${MOONV}
     const LB = PARTS.map(q => { const b = document.createElement('button'); b.type = 'button'; b.className = 'e3g-lb'; b.dataset.k = q.k; b.innerHTML = '<b></b><small></small>';
       b.querySelector('small').textContent = tr(q.s); b.onclick = () => partInfo(q); lab.appendChild(b); return b; });
     const AN = PARTS.map(() => ({ x: 0, y: 0, ok: false }));
-    const partInfo = q => { infoOf = null; info.innerHTML = `<div class="e3g-ih"><b>${q.t()}</b><button aria-label="${tr('Close')}">✕</button></div><p class="e3g-ip">${tr(q.i)}</p>`;
+    let bzNow = null, bzT = 0;
+    // Bz around the clock's time (−12 h … +24 h): below the line = south (red), the clock = a white line; the most southern moment named
+    const bzCard = () => { const a = bzT - 12 * 36e5, b = bzT + 24 * 36e5, P = BZ.filter(p => p[0] >= a && p[0] <= b); if (P.length < 6) return '';
+      const W2 = 300, H2 = 92, m = Math.max(10, ...P.map(p => Math.abs(p[1]))), X = t => ((t - a) / (b - a) * W2).toFixed(1), Y = v => (H2 / 2 - v / m * (H2 / 2 - 4)).toFixed(1);
+      const ln = P.map((p, i) => (i ? 'L' : 'M') + X(p[0]) + ',' + Y(p[1])).join(''), lo = P.reduce((q, p) => p[1] < q[1] ? p : q);
+      const when = new Date(lo[0]).toLocaleString(window.LOC || 'en-GB', { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      return `<svg viewBox="0 0 ${W2} ${H2}" width="100%" role="img" aria-label="${tr('Bz measured at L1, 12 hours before to 24 hours after this moment')}" style="display:block;margin:6px 0 4px">
+        <defs><clipPath id="bzS"><rect x="0" y="${H2 / 2}" width="${W2}" height="${H2 / 2}"/></clipPath><clipPath id="bzN"><rect x="0" y="0" width="${W2}" height="${H2 / 2}"/></clipPath></defs>
+        <path d="${ln}L${X(P[P.length - 1][0])},${H2 / 2}L${X(P[0][0])},${H2 / 2}Z" fill="rgba(255,82,66,.35)" clip-path="url(#bzS)"/><path d="${ln}L${X(P[P.length - 1][0])},${H2 / 2}L${X(P[0][0])},${H2 / 2}Z" fill="rgba(97,158,255,.3)" clip-path="url(#bzN)"/>
+        <path d="${ln}" fill="none" stroke="#E6EBF1" stroke-width="1.2"/><line x1="0" x2="${W2}" y1="${H2 / 2}" y2="${H2 / 2}" stroke="rgba(255,255,255,.3)"/>
+        <line x1="${X(bzT)}" x2="${X(bzT)}" y1="0" y2="${H2}" stroke="#fff" stroke-dasharray="2 2"/>
+        <text x="3" y="11" fill="#9FB0C3" font-size="10">+${Math.round(m)} nT ${tr('north')}</text><text x="3" y="${H2 - 3}" fill="#FF8A80" font-size="10">−${Math.round(m)} nT ${tr('south')}</text></svg>
+        <p class="e3g-ip" style="margin-top:0">${tr('Most southern: {b} nT on {t}.', { b: Math.round(lo[1]), t: when })}</p>`; };
+    const partInfo = q => { infoOf = null; info.innerHTML = `<div class="e3g-ih"><b>${q.t()}</b><button aria-label="${tr('Close')}">✕</button></div>${q.h ? q.h() : ''}<p class="e3g-ip">${tr(q.i)}</p>`;
       info.hidden = false; info.querySelector('.e3g-ih button').onclick = hideInfo; };
     const wp = new THREE.Vector3(), pv = new THREE.Vector3();
     const hidden = p => { const d = pv.copy(p).sub(camera.position), len = d.length(); d.divideScalar(len); const b = camera.position.dot(d), h = b * b - camera.position.lengthSq() + 1; if (h <= 0) return false; const t0 = -b - Math.sqrt(h); return t0 > 0 && t0 < len; };
@@ -722,11 +743,12 @@ ${SUNLIB}${MOONV}
       // a real CME aimed at the Earth (solar.js arrival times) follows the clock: the front sweeps in over the last 1.5 h (distance not to
       // scale in time), then the shield is squeezed by its speed, holds ~12 h and relaxes by ~30 h; dragging the clock back undoes it
       // the wind at the clock's time: live (NOAA now, with Bz) near now, else the wind series (measured past + ENLIL forecast, no Bz)
-      const wt = tOver != null && Math.abs(t - Date.now()) > 36e5 && solar.windAt ? solar.windAt(t) : null, vT = wt ? wt.v : S.v, hw = wt ? shue(wt.n || 5, wt.v, 0) : { R: S.Rw, al: S.alw };
+      const bzM = bzAt(t); bzNow = bzM; bzT = t;   // measured Bz at the clock's time (null when we have none: the forecast, or before the data)
+      const wt = tOver != null && Math.abs(t - Date.now()) > 36e5 && solar.windAt ? solar.windAt(t) : null, vT = wt ? wt.v : S.v, hw = wt ? shue(wt.n || 5, wt.v, bzM != null ? bzM : 0) : { R: S.Rw, al: S.alw };
       let c = 0, R = hw.R, al = hw.al; const rc = realCme(t);
       if (S.cme < 0 && rc) { const h = rc.hrs, u = h < 0 ? (h + 1.5) * 2 : 3 + h / .3 * 1.2; front.visible = h > -1.5 && u < 4.2 && !solar.wind;   // with the wind on, the real CME (bubble + rope + particles) reaches the shield itself
         if (front.visible) { front.position.set(45 - u * 15 + 14, 0, 0); front.scale.setScalar(14 + u * 3); front.material.uniforms.gate.value = Math.min(1, u * 2) * (1 - smooth(3, 4.2, u)); }
-        c = smooth(-.1, .6, h) * (1 - smooth(12, 30, h)); const hs = shue(10 + rc.v / 40, rc.v, -Math.min(30, 5 + rc.v / 50)); R = hw.R + (hs.R - hw.R) * c; al = hw.al + (hs.al - hw.al) * c; c *= Math.min(1, rc.v / 1100); }
+        c = smooth(-.1, .6, h) * (1 - smooth(12, 30, h)); const hs = shue(10 + rc.v / 40, rc.v, bzM != null ? bzM : -Math.min(30, 5 + rc.v / 50)); R = hw.R + (hs.R - hw.R) * c; al = hw.al + (hs.al - hw.al) * c; c *= Math.min(1, rc.v / 1100); }   // the real Bz when measured, else a typical storm value
       else if (S.cme < 0) front.visible = false;
       // the 💥 demo (no real CME near): 0–3 s the front sweeps in, then the shield is squeezed, holds, and relaxes
       if (S.cme >= 0) { S.cme += dt; const u = S.cme; front.visible = u < 4.2;
@@ -737,10 +759,11 @@ ${SUNLIB}${MOONV}
       if (Math.abs(al - alBuilt) > .02) { mp.geometry.dispose(); mp.geometry = lathe(al, 1); alBuilt = al; }
       mp.scale.setScalar(S.R0); bs.scale.setScalar(S.R0);
       U2.px.value = 1.1 * Math.tan(camera.fov * D2R / 2) * 2 / H; U3.dpr.value = renderer.getPixelRatio(); U3.spd.value = (c > .2 ? (S.cme < 0 && rc ? rc.v : 1500) : vT) / 60;
-      AU.auB.value = 1 + 3.5 * c; belts[2].material.uniforms.k.value = .25 + .5 * c;
+      // aurora: a CME's push counts only as much as its field points south (measured); a long southward Bz alone brightens it a little too
+      AU.auB.value = 1 + 3.5 * c * (bzM != null && S.cme < 0 ? Math.max(.12, Math.min(1.4, (3 - bzM) / 18)) : 1) + (bzM != null ? Math.max(0, -bzM - 5) / 15 : 0); belts[2].material.uniforms.k.value = .25 + .5 * c;
       g.updateMatrixWorld(true);
       wTitle = (S.cme >= 0 && c > .2 ? 'CME 1500 km/s' : rc && S.cme < 0 ? 'CME ' + Math.round(rc.v) + ' km/s' + (rc.hrs < 0 ? ' · ' + tr('arrives in {h} h', { h: Math.ceil(-rc.hrs) }) : '') : tr('solar wind') + ' ' + Math.round(vT) + ' km/s');
-      anchor(0, sw, S.R0 * 1.34, 0, 0); anchor(1, sw, S.R0 * .25, S.R0 * 1.25, 0); anchor(2, sw, -40, 8.5 * S.R0 / 10.5 * .6, 0); anchor(3, dip, 0, 0, 4.2); anchor(4, sw, 26, -8, 0); layout();
+      anchor(0, sw, S.R0 * 1.34, 0, 0); anchor(1, sw, S.R0 * .25, S.R0 * 1.25, 0); anchor(2, sw, -40, 8.5 * S.R0 / 10.5 * .6, 0); anchor(3, dip, 0, 0, 4.2); anchor(4, sw, 26, -8, 0); if (bzM != null) anchor(5, sw, S.R0 * 1.5, -S.R0 * .9, 0); else AN[5].ok = false; layout();   // the Bz callout: in front of the shield, no drawing
       return 75; }   // how far past the Earth the camera must see (the Moon, the tail)
     return { update, S, hit, info: q => partInfo(q), get on() { return on; }, set on(v) { on = v; }, impact() { S.cme = 0; } };
   })();
