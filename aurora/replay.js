@@ -283,22 +283,27 @@
     if (end) $('#rpStep').insertAdjacentHTML('beforeend', `<div class="rpyou">${T("Now it's yours: drag the slider, change the speed, click any step or chart.")}</div>`); }
   function guideMode() { guide = true; root.classList.remove('free'); $('#rpMode').textContent = T('⇄ Explore freely'); setStep(0, true); render(true); start(); }
 
+  // two lists: the hand-baked famous storms here + the weekly bot's weeks in the aurora-replay repo (same site, /aurora-replay/)
+  async function loadIX() { if (IX) return IX;
+    const get = async b => { try { return (await (await fetch(b + 'index.json?t=' + Math.floor(Date.now() / 36e5))).json()).map(e => Object.assign(e, { b })); } catch (e) { return []; } };
+    const [a, w] = await Promise.all([get('replay/'), get('/aurora-replay/')]), ids = new Set(a.map(e => e.id));
+    return IX = a.concat(w.filter(e => !ids.has(e.id))).sort((x, y) => y.t0 - x.t0); }
   /* the archive: every baked week (replay/index.json) with its daily Kp, biggest flare and deepest SYM-H; a pick reloads the replay */
   async function archive() {
     pause(); let box = $('#rpArc');
     if (!box) { root.insertAdjacentHTML('beforeend', `<div id="rpArc" class="rparcw" role="dialog" aria-label="${T('Storm archive')}"><div class="rparch"><h3>${T('Storm archive')}</h3>
       <label><input type="checkbox" id="rpArcS"> ${T('storms only (G1+)')}</label><button type="button" class="rpx" aria-label="${T('Close')}">✕</button></div><div class="rparcl"></div></div>`);
       box = $('#rpArc'); box.querySelector('.rpx').onclick = () => box.classList.remove('on'); $('#rpArcS').onchange = list; box.onclick = e => { if (e.target === box) box.classList.remove('on'); }; }
-    if (!IX) try { IX = await (await fetch('replay/index.json?t=' + Math.floor(Date.now() / 36e5))).json(); } catch (e) { IX = []; }
+    await loadIX();
     list(); box.classList.add('on'); (box.querySelector('.rparcl button') || box.querySelector('.rpx')).focus();
   }
   function list() {
     const only = $('#rpArcS').checked, fmt = x => new Date(x).toLocaleDateString(document.documentElement.lang || 'en', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
     $('#rpArc .rparcl').innerHTML = (IX || []).filter(e => !only || gOf(Math.max(...e.kp))).map(e => { const km = Math.max(...e.kp), g = gOf(km) ? 'G' + gOf(km) : '', W = e.kp.length * 14;
       const bars = e.kp.map((k, i) => `<rect x="${i * 14 + 1}" y="${36 - k / 9 * 36}" width="12" height="${Math.max(1.5, k / 9 * 36)}" rx="1.5" fill="${kpc(k)}"/>`).join('');
-      return `<button type="button" data-id="${e.id}" class="${e.id === ID ? 'on' : ''}"><svg viewBox="0 0 ${W} 36" width="${W}" height="36" aria-hidden="true">${bars}</svg>
+      return `<div class="rprow"><button type="button" data-id="${e.id}" class="${e.id === ID ? 'on' : ''}"><svg viewBox="0 0 ${W} 36" width="${W}" height="36" aria-hidden="true">${bars}</svg>
         <span class="t"><b>${esc(T(e.title))}</b><span>${fmt(e.t0)} – ${fmt(e.t1 - 1)}${e.famous ? ' · ★' : ''}</span></span>
-        <span class="bd">${g ? `<i style="background:${kpc(km)}">${g}</i>` : ''}${e.xr >= 1e-5 ? `<i class="fl">${xcls(e.xr)}</i>` : ''}<i class="sy">SYM-H ${Math.round(e.sym)}</i></span></button>`; }).join('')
+        <span class="bd">${g ? `<i style="background:${kpc(km)}">${g}</i>` : ''}${e.xr >= 1e-5 ? `<i class="fl">${xcls(e.xr)}</i>` : ''}<i class="sy">SYM-H ${Math.round(e.sym)}</i></span></button>${e.tm || e.id === 'may2024' ? `<a class="rpmain" href="?storm=${e.id}" title="${T('The whole page with the data of that week')}">⧉ ${T('Main page')}</a>` : ''}</div>`; }).join('')
       || `<p>${T('Nothing here yet.')}</p>`;
     $('#rpArc .rparcl').onclick = ev => { const b = ev.target.closest('[data-id]'); if (b) { $('#rpArc').classList.remove('on'); if (b.dataset.id !== ID) open(0, b.dataset.id); } };
   }
@@ -344,7 +349,7 @@
   function close() { pause(); if (root) root.classList.remove('on'); document.documentElement.classList.remove('rpon'); if (location.hash === '#replay') history.replaceState(null, '', location.pathname + location.search); }
 
   async function open(n, id) {
-    if (id && id !== ID) { if (root) { pause(); root.remove(); } root = null; D = null; ID = id; BASE = 'replay/' + id + '/'; cache.clear(); gT = -1; step = -1; guide = true; SUNK = 'HMIIF'; }
+    if (id && id !== ID) { const e = (await loadIX()).find(q => q.id === id); if (root) { pause(); root.remove(); } root = null; D = null; ID = id; BASE = (e && e.b || 'replay/') + id + '/'; cache.clear(); gT = -1; step = -1; guide = true; SUNK = 'HMIIF'; }
     document.documentElement.classList.add('rpon');
     if (!D) { const w = document.createElement('div'); w.id = 'rpLoad'; w.textContent = ID === 'may2024' ? T('Loading the May 2024 storm…') : T('Loading the storm…'); document.body.appendChild(w);
       try { D = await (await fetch(BASE + 'data.json')).json(); } catch (e) { w.textContent = T('Could not load the replay.'); setTimeout(() => w.remove(), 2500); document.documentElement.classList.remove('rpon'); return; }

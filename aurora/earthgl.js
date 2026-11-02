@@ -956,18 +956,28 @@ ${SUNLIB}${MOONV}
     return best; }
   const dfmt = t => new Date(t).toLocaleString(window.LOC || 'en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   // famous moments: the clock jumps there, the camera flies to the right place, a card says what happened
-  const UT = (y, mo, d, h, mi) => Date.UTC(y, mo - 1, d, h, mi || 0);
+  const UT = (y, mo, d, h, mi) => Date.UTC(y, mo - 1, d, h || 0, mi || 0);
   const MOM = [
     ['🌑', UT(1999, 8, 11, 11, 3), 'Total solar eclipse over Romania', 'The last total eclipse seen from Romania: the shadow crossed the country, longest near Râmnicu Vâlcea (2 min 23 s).', { ecl: 1 }],
     ['🌑', UT(2024, 4, 8, 18, 17), 'The Great North American Eclipse', 'Totality from Mexico to Canada, up to 4 min 28 s, watched by tens of millions.', { ecl: 1 }],
     ['🌑', UT(2026, 8, 12, 17, 46), 'Total eclipse over Spain', 'Greenland, Iceland and Spain, near sunset in Spain. The first total eclipse in mainland Europe since 1999.', { ecl: 1 }],
     ['🌑', UT(2027, 8, 2, 10, 7), 'The eclipse of the century', 'Totality up to 6 min 23 s over Egypt (Luxor), Spain and North Africa: the longest on land between 1991 and 2114.', { ecl: 1 }],
-    ['⚡', UT(2024, 5, 10, 20, 30), 'The G5 storm of May 2024', 'The strongest geomagnetic storm since 2003: a string of CMEs from region 13664 hit Earth; aurora was seen as far south as Romania, Spain and Mexico. The magnetic shield is shown squeezed by the wind.', { body: 'Earth', km: 120000, ms: 1 }],
+    ['⚡', UT(2024, 5, 10, 20, 30), 'The G5 storm of May 2024', 'The strongest geomagnetic storm since 2003: a string of CMEs from region 13664 hit Earth; aurora was seen as far south as Romania, Spain and Mexico. The magnetic shield is shown squeezed by the wind.', { body: 'Earth', km: 120000, ms: 1, id: 'may2024' }],
+    ['⚡', UT(2017, 9, 8, 13, 30), 'The G4 storm of September 2017', 'On 6 September region 12673 fired an X9.3 flare, the biggest of solar cycle 24. Its CME and an earlier one hit Earth on 7–8 September: Kp 8+ (G4).', { body: 'Earth', km: 120000, ms: 1, id: 'sep2017' }],
+    ['⚡', UT(2023, 4, 23, 19, 30), 'The G4 storm of April 2023', 'A CME launched with an M1.7 flare on 21 April reached Earth on 23 April: Kp 8− (G4), aurora seen far south in Europe and the United States.', { body: 'Earth', km: 120000, ms: 1, id: 'apr2023' }],
+    ['⚡', UT(2024, 10, 10, 22, 30), 'The G4 storm of October 2024', 'An X9.0 flare on 3 October, then an X1.8 on 9 October whose fast CME reached Earth on 10 October: Kp 8+ (G4), aurora seen across Europe.', { body: 'Earth', km: 120000, ms: 1, id: 'oct2024' }],
+    ['⚡', UT(2025, 11, 12, 1, 30), 'The G4 storm of November 2025', 'Region 4274 fired an X5.1 flare on 11 November; its fast CME and earlier ones hit Earth on 11–12 November: Kp 8+ (G4), aurora far south in Europe and the United States, and cosmic rays rose at the ground (a GLE).', { body: 'Earth', km: 120000, ms: 1, id: 'nov2025' }],
     ['☄', UT(2029, 4, 13, 21, 46), 'Apophis passes Earth', 'The 340 m asteroid passes about 32 000 km above the ground, inside the ring of geostationary satellites, visible to the naked eye from Europe and Africa. No risk of impact. Position here from its orbit (approximate this close).', { body: 'Earth', km: 90000, to: 'Apophis' }],
     ['☄', UT(1986, 2, 9, 11), 'Halley at perihelion, 1986', 'Halley’s comet closest to the Sun; the Giotto, Vega and Suisei probes flew past it in March. Next return: 2061.', { body: 'Halley', km: 4e7 }],
     ['☄', UT(1910, 4, 20), 'Halley at perihelion, 1910', 'A famous return: in May 1910 Earth passed through its tail.', { body: 'Halley', km: 4e7 }],
     ['🔴', UT(2003, 8, 27, 9, 51), 'Mars closest in 60 000 years', 'Mars came within 55.76 million km of Earth, the closest since about 57 600 BC.', { body: 'Mars', km: 6e7, to: 'Earth' }],
     ['🔴', UT(2018, 7, 27, 20, 22), 'Mars opposition + blood Moon', 'The same night: Mars at opposition (about 58 million km) and the longest total lunar eclipse of the century (1 h 43 min).', { ecl: 1 }]];
+  // the weekly archive (time machine): every strong storm (G4+) the bot baked joins the list, with a link to that week on the main page
+  fetch('/aurora-replay/index.json').then(r => r.ok ? r.json() : []).then(L => { const have = new Set(MOM.map(m => m[4].id));
+    for (const e of L) { if (!e.tm || have.has(e.id) || !e.kp) continue; const k = Math.max(...e.kp), g = k >= 8.99 ? 5 : k >= 7.66 ? 4 : 0; if (!g) continue;
+      const i = e.kp.indexOf(k), d = (e.t1 - e.t0) / e.kp.length;
+      MOM.push(['⚡', e.t0 + i * d + d / 2, e.title, tr('A strong geomagnetic storm: Kp reached {k} (G{g}), the field at the ground dipped to {s} nT.', { k: (Math.round(k * 3) / 3).toFixed(1), g, s: Math.round(e.sym) }), { body: 'Earth', km: 120000, ms: 1, id: e.id }]); }
+    }).catch(() => {});
   function goMoment(m) { const [, t, ti, tx, o] = m;
     if (o.ecl) { const L = solar.eclList(), e = L.reduce((a, x) => !a || Math.abs(x[2] - t) < Math.abs(a[2] - t) ? x : a, null);
       if (e && Math.abs(e[2] - t) < 2 * 864e5) { goEclipse(e, seenFrom(e, place())); const h = info.querySelector('.e3g-ih b'); if (h) h.textContent = tr(ti);
@@ -978,7 +988,7 @@ ${SUNLIB}${MOONV}
     flyToBody(o.body, o.km / (B.R * 6371), dir, true);
     if (o.ms) { const b = $('ms'); if (b && b.getAttribute('aria-pressed') !== 'true') setTimeout(() => b.click(), 300); }
     infoOf = null; info.innerHTML = `<div class="e3g-ih"><b>${tr(ti)}</b><button aria-label="${tr('Close')}">✕</button></div><div class="e3g-if"><div><small>${tr('When')}</small>${dfmt(t)}</div></div><p class="e3g-ip">${tr(tx)}</p>`
-      + (o.ms ? `<p class="e3g-ip"><a href="?storm=may2024" style="color:#FF8A8A">⚡ ${tr('See the whole page on that day (storm mode)')} ›</a></p>` : '');
+      + (o.ms ? `<p class="e3g-ip"><a href="?storm=${o.id}" style="color:#FFB347">${tr('See the whole page on that day (time machine)')} ›</a></p>` : '');
     info.hidden = false; info.querySelector('.e3g-ih button').onclick = hideInfo; }
   function evBuild() { const L = solar.eclList(), p = place(), key = p.lat + ',' + p.lon + ',' + L.length;
     evP.querySelector('.e3g-evt').textContent = evF === 'fam' ? tr('Famous moments') : tr('Eclipses') + ' 1900–2050';

@@ -4,10 +4,14 @@
    storm/may2024/) and shows a placeholder for what did not exist yet (CCOR coronagraphs). The page draws everything as usual. */
 (() => {
   const id = new URLSearchParams(location.search).get('storm');
-  if (id !== 'may2024') return;
-  const BASE = 'storm/may2024/', SWPC = 'https://services.swpc.noaa.gov/', NA = BASE + 'na.svg';
-  let M = { now: Date.UTC(2024, 4, 10, 20, 30), swpc: [], latest: {} };
-  try { const x = new XMLHttpRequest(); x.open('GET', BASE + 'manifest.json', false); x.send(); if (x.status === 200) M = JSON.parse(x.responseText); } catch (e) {}
+  if (!id || !/^\w+$/.test(id)) return;
+  // TIME MACHINE: any week of the replay archive (tools/build_timemachine.py → <week>/tm/), the hand-baked ones here or the weekly
+  // bot's in /aurora-replay/; the clock = the end of that week, so every 7-day chart holds the whole week
+  const sx = u => { try { const x = new XMLHttpRequest(); x.open('GET', u + 'manifest.json', false); x.send(); return x.status === 200 ? JSON.parse(x.responseText) : null; } catch (e) { return null; } };
+  let BASE = 'storm/may2024/', M = { now: Date.UTC(2024, 4, 10, 20, 30), swpc: [], latest: {}, prefix: 'replay/may2024/' };
+  if (id === 'may2024') M = Object.assign(M, sx(BASE) || {});
+  else { let w = null; for (const b of ['replay/' + id + '/tm/', '/aurora-replay/' + id + '/tm/']) { const m = sx(b); if (m) { w = [b, m]; break; } } if (!w) return; [BASE, M] = w; }
+  const SWPC = 'https://services.swpc.noaa.gov/', NA = BASE + 'na.svg', PRE = M.prefix || 'replay/may2024/', LIVE = M.live || [];
   const have = new Set(M.swpc);
 
   // the clock: "now" = the storm's moment, running on from there
@@ -25,13 +29,14 @@
     const abs = new URL(u, location.href).href;
     if (abs.startsWith(SWPC)) {
       const p = strip(abs.slice(SWPC.length));
-      if (p.startsWith('__replay/')) return 'replay/may2024/' + p.slice(9);
+      if (p.startsWith('__replay/')) return PRE + p.slice(9);
+      if (LIVE.some(q => p.startsWith(q))) return u;   // history anyway (solar cycle): the live file
       if (!have.has(p) && have.has(p.replace('-7-day', '-3-day'))) return BASE + 'swpc/' + p.replace('-7-day', '-3-day');   // the page asks for 7 days, the storm copy has 3
       return have.has(p) || (kind === 'img' && p.startsWith('images/animations/enlil/')) ? BASE + 'swpc/' + p : '';
     }
     if (abs.startsWith(location.origin)) {
       const p = strip(abs.slice(location.origin.length)).replace(/^.*\/aurora\//, '');
-      if (p === 'sun/frames.json' || p === 'data/earth.json' || p === 'data/cme.json' || p === 'data/journal.json') return BASE + p;
+      if (p === 'sun/frames.json' || p === 'data/earth.json' || p === 'data/cme.json' || (p === 'data/journal.json' && id === 'may2024')) return BASE + p;
       return u;
     }
     let m;
@@ -67,7 +72,7 @@
   const sa = Element.prototype.setAttribute;
   Element.prototype.setAttribute = function (k, v) { if (k === 'src' && (this instanceof HTMLImageElement || this instanceof HTMLMediaElement)) { this.src = v; return; } return sa.call(this, k, v); };
 
-  window.STORM = { id, now: M.now, sun: Object.keys(M.latest), label: '10 May 2024' };
+  window.STORM = { id, now: M.now, sun: Object.keys(M.latest), label: id === 'may2024' ? '10 May 2024' : M.title, week: id !== 'may2024', t0: M.t0 };
   document.documentElement.classList.add('storm');
   document.addEventListener('DOMContentLoaded', () => {
     // <img src> written straight into the HTML
