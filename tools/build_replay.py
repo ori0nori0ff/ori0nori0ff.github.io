@@ -49,7 +49,7 @@ def months():
     return out
 
 def omni():
-    print('OMNI 1-min'); b = {k: bins() for k in ('bt', 'bz', 'v', 'n', 'sym', 'ae')}
+    print('OMNI 1-min'); b = {k: bins() for k in ('bt', 'bz', 'v', 'n', 'sym', 'ae', 'bx', 'by', 'tp')}   # bx / by / tp: for the time machine (phi, temperature)
     for m in months():
         for line in get(f'https://spdf.gsfc.nasa.gov/pub/data/omni/high_res_omni/monthly_1min/omni_min{m:%Y%m}.asc', 300).decode().splitlines():
             c = line.split()
@@ -57,7 +57,7 @@ def omni():
             d = datetime(int(c[0]), 1, 1, tzinfo=timezone.utc) + timedelta(days=int(c[1]) - 1, hours=int(c[2]), minutes=int(c[3]))
             if not T0 <= d < T1: continue
             i = bi(d)
-            for k, col, bad in (('bt', 13, 9999), ('bz', 18, 9999), ('v', 21, 99999), ('n', 25, 999), ('sym', 41, 99999), ('ae', 37, 99999)):
+            for k, col, bad in (('bt', 13, 9999), ('bz', 18, 9999), ('v', 21, 99999), ('n', 25, 999), ('sym', 41, 99999), ('ae', 37, 99999), ('bx', 14, 9999), ('by', 17, 9999), ('tp', 26, 9999999)):
                 x = float(c[col])
                 if abs(x) < bad: b[k][i].append(x)
     r = {}

@@ -7,7 +7,7 @@ Committing and pushing is left to the caller (the systemd service), so this scri
 
   python3 replay_weekly.py --repo <checkout>          bake what is due into <checkout>/<replay dir>
   python3 replay_weekly.py --repo <checkout> --dry    only print what is due
-build_replay.py + enlil_digits.json must sit next to this file; code is never run from the checkout (on the server all three
+build_replay.py + build_timemachine.py + enlil_digits.json must sit next to this file; code is never run from the checkout (on the server all three
 live root-owned in /usr/local/lib/orion-replay/).
 """
 import datetime as dt, json, pathlib, subprocess, sys, urllib.request
@@ -57,6 +57,8 @@ def main():
             if not dry:
                 subprocess.run([sys.executable, str(HERE / 'build_replay.py'), '--id', wid, '--start', w.isoformat(), '--days', '7',
                                 '--title', title, '--light', '--out', str(RP)], check=True)
+                # the same week on the main page (time machine): no downloads, made from data.json
+                subprocess.run([sys.executable, str(HERE / 'build_timemachine.py'), '--id', wid, '--dir', str(RP), '--prefix', arg('--prefix', '/aurora-replay/')], check=True)
             done += 1
         w += dt.timedelta(days=7)
     if not done: print('up to date (OMNI until', last, ')')
