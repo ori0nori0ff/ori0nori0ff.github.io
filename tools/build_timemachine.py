@@ -9,7 +9,7 @@ comes from data.json, so it adds no host, key or dependency to the weekly bot.
     python tools/build_timemachine.py --id w2026_40 --dir <aurora-replay checkout> --prefix /aurora-replay/
 
 What is estimated (and labelled on the page): Dst = hourly SYM-H, the aurora oval from Kp, the ENLIL "forecast at Earth" = what was
-measured, flares from the GOES curve (no regions), NOAA alerts from Kp. Not available: protons, regions, ENLIL speed view.
+measured, flares from the GOES curve (no regions), NOAA alerts from Kp; CMEs = NASA DONKI when baked in data.json. Not available: protons, regions, ENLIL speed view.
 May 2024 keeps its own richer storm mode (tools/build_storm.py, storm/may2024/).
 """
 import argparse, json, math, pathlib
@@ -175,7 +175,7 @@ def sun():
     put('products/animations/lasco-c2.json', [{'url': '/__replay/' + u, 'time_tag': iso(dt(t), 'Z')} for t, u in D['sun'].get('C2') or []])
     q = OUT / 'data/earth.json'; q.parent.mkdir(parents=True, exist_ok=True)
     q.write_text(json.dumps({'updated': NOWMS, 'ongoing': [], 'cosmic': {'station': 'OULU', 'pts': D.get('cr') or []}, 'gvpAsOf': NOW.strftime('%Y-%m-%d')}, separators=(',', ':')), encoding='utf-8')
-    (OUT / 'data/cme.json').write_text('{"cmes":[]}', encoding='utf-8')
+    (OUT / 'data/cme.json').write_text(json.dumps({'cmes': D.get('cme') or []}, separators=(',', ':')), encoding='utf-8')   # NASA DONKI (build_replay); none = the 3D uses the CMEs found in the wind
     L = {('HMIIC' if k == 'HMIIF' else k): PRE + fr[-1][1] for k, fr in D['sun'].items() if fr}
     (OUT / 'na.svg').write_text('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" fill="#07090C"/><circle cx="256" cy="256" r="150" fill="none" stroke="#2C3542" stroke-width="4" stroke-dasharray="10 10"/>'
         f'<text x="256" y="246" fill="#8E9AAB" font-family="sans-serif" font-size="26" text-anchor="middle">not available</text><text x="256" y="282" fill="#5C6878" font-family="sans-serif" font-size="20" text-anchor="middle">for this week</text></svg>', encoding='utf-8')

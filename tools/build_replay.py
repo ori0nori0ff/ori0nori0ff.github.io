@@ -8,7 +8,8 @@ Each run writes web/aurora/replay/<id>/ (data.json + img/…) and updates web/au
 title, span, daily max Kp, biggest flare, deepest SYM-H).
 Sources (all public): OMNI 1-min (NASA SPDF: solar wind at the bow shock + SYM-H, AE), GFZ Kp (OMNI2 as fallback), GOES XRS 1-min
 (LASP LISIRD: GOES-16, -18 or -15, whichever covers the week), NMDB Oulu neutron monitor, SDO AIA / HMI browse pictures, SOHO
-LASCO C2 / C3, NASA CCMC WSA-ENLIL runs (the newest run before each moment = what forecasters had then).
+LASCO C2 / C3, NASA CCMC WSA-ENLIL runs (the newest run before each moment = what forecasters had then), NASA DONKI CME analyses
+(ccmc.gsfc.nasa.gov/DONKI-API since 30 Sep 2026: direction, width, speed at 21.5 solar radii — the 3D model launches them).
 Run once per week; the page only reads the baked files (NASA sends no CORS headers for the pictures).
 """
 import argparse, io, json, math, pathlib, re, sys, urllib.request
@@ -23,6 +24,7 @@ A.add_argument('--id', default='may2024'); A.add_argument('--start', default='20
 A.add_argument('--title', default='The G5 storm of May 2024'); A.add_argument('--famous', action='store_true')
 A.add_argument('--index-only', action='store_true', help='only add the already baked week to index.json')
 A.add_argument('--light', action='store_true', help='weekly bot: fewer, smaller pictures (≈ 3–5 MB a week)')
+A.add_argument('--cme-only', action='store_true', help='only add the NASA DONKI CMEs to the already baked week')
 A.add_argument('--out', help='replay folder to write to (default web/aurora/replay; the bot gives its Pages checkout)')
 ARGS = A.parse_args()
 RP = pathlib.Path(ARGS.out) if ARGS.out else RP
@@ -231,7 +233,30 @@ def index(D):
     L = [e for e in (json.loads(ix.read_text(encoding='utf-8')) if ix.exists() else []) if e['id'] != ARGS.id] + [summary(D)]
     ix.write_text(json.dumps(sorted(L, key=lambda e: -e['t0']), separators=(',', ':')), encoding='utf-8')
 
+def donki():
+    """NASA DONKI cone analyses of the CMEs launched from 6 days before the week to its end (the ones that can reach Earth in it),
+    one per CME (DONKI keeps several analyses: the most accurate, NASA's M2M catalogue first). None when DONKI can't be reached."""
+    a, b = (T0 - timedelta(days=6)).date(), T1.date()
+    try:
+        L = json.loads(get(f'https://ccmc.gsfc.nasa.gov/DONKI-API/get/CMEAnalysis?startDate={a}&endDate={b}&mostAccurateOnly=true&speed=0&halfAngle=0&catalog=ALL'))
+    except Exception as e:
+        print('  no DONKI', e); return None
+    by = {}
+    for c in L:
+        try:
+            t = ms(datetime.fromisoformat(c['time21_5'].replace('Z', '+00:00'))); k = c.get('associatedCMEID') or c['time21_5']
+            o = {'t': t, 'lat': float(c.get('latitude') or 0), 'lon': float(c.get('longitude') or 0), 'half': float(c.get('halfAngle') or 30), 'v': float(c['speed']), 'type': c.get('type') or '', 'id': k}
+        except (KeyError, TypeError, ValueError):
+            continue
+        if o['v'] <= 0: continue
+        if k not in by or (c.get('catalog') == 'M2M_CATALOG' and by[k][1] != 'M2M_CATALOG'): by[k] = (o, c.get('catalog'))
+    out = sorted((o for o, _ in by.values()), key=lambda o: o['t']); print('  DONKI CMEs', len(out)); return out
+
 def main():
+    if ARGS.cme_only:
+        p = OUT / 'data.json'; D = json.loads(p.read_text(encoding='utf-8')); c = donki()
+        if c is not None: D['cme'] = c; p.write_text(json.dumps(D, separators=(',', ':')), encoding='utf-8')
+        return
     if ARGS.index_only: index(json.loads((OUT / 'data.json').read_text(encoding='utf-8'))); print('index updated'); return
     OUT.mkdir(parents=True, exist_ok=True)
     D = {'id': ARGS.id, 'title': ARGS.title, 't0': ms(T0), 't1': ms(T1), 'step': STEP * 60000, **omni(), **dict(zip(('xr', 'xs'), xray())), 'kp': kp(), 'cr': cosmic()}
@@ -241,6 +266,8 @@ def main():
     D['sun'] = {fid: [[ms(t), f'img/{fid}/{t:%m%d_%H%M}.jpg'] for f2, t, good in ok if f2 == fid and good] for fid in S}
     for k in D['sun']: D['sun'][k].sort()
     D['enl'], D['enlRuns'] = enlil()
+    c = donki()
+    if c is not None: D['cme'] = c
     (OUT / 'data.json').write_text(json.dumps(D, separators=(',', ':')), encoding='utf-8')
     index(D)
     print('done', OUT, f"{summary(D)['mb']} MB")
