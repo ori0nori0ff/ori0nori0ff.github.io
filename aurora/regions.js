@@ -36,21 +36,22 @@
       const h = hist[id]; if (!h) return null;
       let best = null, bd = 1e15; h.forEach(f => { const d = Math.abs(f[0] - t) * (f[3] ? .5 : 1); if (d < bd) { bd = d; best = f; } });
       return best && bd < 4 * DAY ? [best[1], best[2] + ROT * (t - best[0])] : null; };
+    const rid = v => /^\d{1,6}$/.test(String(v)) ? +v : null, nn = v => Number.isFinite(+v) ? +v : 0, cl = v => String(v == null ? '' : v).replace(/[^\w.+-]/g, '').slice(0, 12);   // NOAA fields end up in the page: keep only numbers / short codes
     const last = reg.reduce((a, r) => r.observed_date > a ? r.observed_date : a, '');
     const now = Date.now();
-    const regions = reg.filter(r => r.observed_date === last).map(r => ({ id: r.region, area: r.area || 0, cls: r.spot_class, mag: r.mag_class || '', n: r.number_spots,
-      c: r.c_flare_probability || 0, m: r.m_flare_probability == null ? null : r.m_flare_probability, x: r.x_flare_probability || 0, first: r.first_date }));
+    const regions = reg.filter(r => r.observed_date === last && rid(r.region) != null).map(r => ({ id: rid(r.region), area: nn(r.area), cls: cl(r.spot_class), mag: cl(r.mag_class), n: nn(r.number_spots),
+      c: nn(r.c_flare_probability), m: r.m_flare_probability == null ? null : nn(r.m_flare_probability), x: nn(r.x_flare_probability), first: r.first_date }));
     // X-ray flares (GOES), one per event (NOAA lists updates of the same event), C and up
     const seen = {}, flares = [];
     ev.filter(e => e.type === 'XRA' && /^[CMX]/.test(e.particulars1 || '')).forEach(e => { const k = e.begin_datetime;
-      if (seen[k]) { if (e.particulars1 > seen[k].cls) seen[k].cls = e.particulars1; return; }
+      if (seen[k]) { if (cl(e.particulars1) > seen[k].cls) seen[k].cls = cl(e.particulars1); return; }
       const t = utc(e.begin_datetime), o = fla.find(f => f.region === e.region && Math.abs(utc(f.begin_datetime) - t) < 30 * 60e3);
       const p = o ? pos(o.location) : e.region ? at(e.region, t) : null;
-      flares.push(seen[k] = { t, peak: e.max_datetime ? utc(e.max_datetime) : t, cls: e.particulars1, region: e.region || null, lat: p ? p[0] : null, lon: p ? p[1] : null }); });
+      flares.push(seen[k] = { t, peak: e.max_datetime ? utc(e.max_datetime) : t, cls: cl(e.particulars1), region: rid(e.region), lat: p ? p[0] : null, lon: p ? p[1] : null }); });
     flares.forEach(f => f.earth = f.lon != null && Math.abs(f.lon) < EARTH);
     regions.forEach(r => { const p = at(r.id, now); r.lat = p ? p[0] : null; r.lon = p ? p[1] : null; r.fl = flares.filter(f => f.region === r.id && now - f.t < DAY); });
     regions.sort((a, b) => (b.m * 3 + b.c * .2 + b.area / 50 + b.fl.length * 4) - (a.m * 3 + a.c * .2 + a.area / 50 + a.fl.length * 4));
-    cache = { regions, flares, prob: pr[0] || null, at, t: now }; cacheT = now;
+    cache = { regions, flares, prob: pr[0] ? { m_class_1_day: nn(pr[0].m_class_1_day), x_class_1_day: nn(pr[0].x_class_1_day) } : null, at, t: now }; cacheT = now;
     return cache;
   }
 

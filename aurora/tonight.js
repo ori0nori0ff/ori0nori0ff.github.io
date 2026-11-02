@@ -30,10 +30,10 @@
   /**
    * plan({lat, lon, need, kpList (NOAA Kp forecast rows), wx (Open-Meteo response with hourly.cloud_cover)})
    * → { hours: [{t, sun, cloud, kp, moonUp, ill, score}], best: {from, to, score, hour} | null }
-   * Hours: from now (or 17:00 if it's still day) for 15 hours.
+   * Hours: from now (o.now, default the clock; or 17:00 if it's still day) for 15 hours.
    */
   function plan(o) {
-    const now = Date.now(), H = 3600e3, hours = [];
+    const now = o.now || Date.now(), H = 3600e3, hours = [];
     let t0 = Math.floor(now / H) * H;
     for (let k = 0; k < 14 && sunAlt(t0, o.lat, o.lon) > -3; k++) t0 += H;   // still daytime → start at dusk
     const wxAt = (t, key) => { const w = o.wx; if (!w || !w.hourly || !w.hourly[key]) return null; const off = (w.utc_offset_seconds || 0) * 1000;

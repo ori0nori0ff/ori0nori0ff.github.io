@@ -859,7 +859,7 @@ ${SUNLIB}${MOONV}
             .sort((a, b) => b.data[0].date_created.localeCompare(a.data[0].date_created)).slice(0, 3)
             .map(x => ({ t: x.data[0].date_created.slice(0, 10), cap: x.data[0].title, src: x.links[0].href, href: `https://images.nasa.gov/details/${encodeURIComponent(x.data[0].nasa_id)}` })); } }
       const L = PHOTO[nm], q = v => v.replace(/[<>&"]/g, c => '&#' + c.charCodeAt(0) + ';'); if (!L.length) { host.innerHTML = ''; return; }
-      host.innerHTML = `<small>${tr('Latest pictures')} · NASA</small><div>` + L.map(x => `<a href="${q(x.href)}" target="_blank" rel="noopener" title="${q(x.cap)}"><img src="${q(x.src)}" alt="${q(x.cap)}" loading="lazy"><span>${x.t}</span></a>`).join('') + '</div>';
+      host.innerHTML = `<small>${tr('Latest pictures')} · NASA</small><div>` + L.filter(x => /^https:\/\//.test(String(x.href)) && /^https:\/\//.test(String(x.src))).map(x => `<a href="${q(x.href)}" target="_blank" rel="noopener noreferrer" title="${q(x.cap)}"><img src="${q(x.src)}" alt="${q(x.cap)}" loading="lazy"><span>${q(x.t)}</span></a>`).join('') + '</div>';
     } catch (e) { host.innerHTML = ''; } }
   const photoNode = nm => { if (PHN[nm]) return PHN[nm]; const h = PHN[nm] = document.createElement('div'); h.className = 'e3g-iph'; h.innerHTML = `<small>${tr('Latest pictures')} · ${tr('loading…')}</small>`; photos(nm, h); return h; };
   let infoOf = null, orbitOn = 0, orbitWait = 0, infoAt = 0, orbView = false;

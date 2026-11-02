@@ -27,7 +27,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-title" content="Orion's Space Observer">
 <meta name="application-name" content="Orion's Space Observer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://services.swpc.noaa.gov https://imag-data.bgs.ac.uk https://tiles.maps.eox.at https://s3.amazonaws.com https://api.open-meteo.com https://historical-forecast-api.open-meteo.com https://geocoding-api.open-meteo.com https://raw.githubusercontent.com https://earthquake.usgs.gov https://www.seismicportal.eu https://images-api.nasa.gov https://epic.gsfc.nasa.gov https://trek.nasa.gov https://astro.arcgis.com; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://services.swpc.noaa.gov https://imag-data.bgs.ac.uk https://tiles.maps.eox.at https://s3.amazonaws.com/elevation-tiles-prod/ https://api.open-meteo.com https://historical-forecast-api.open-meteo.com https://geocoding-api.open-meteo.com https://raw.githubusercontent.com/ori0nori0ff/ori0nori0ff.github.io/ https://earthquake.usgs.gov https://www.seismicportal.eu https://images-api.nasa.gov https://epic.gsfc.nasa.gov https://trek.nasa.gov https://astro.arcgis.com; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style>
   /* one clean font everywhere: Inter (OFL, self-hosted). The old family names (used in CSS and on the canvases) map to it too. */
@@ -1028,11 +1028,11 @@
 <script src="i18n.de.js?v=7664cc15"></script>
 <script src="land.js?v=d495927a"></script>
 <script src="globe.js?v=234d5b26"></script>
-<script src="tonight.js?v=91a2449f"></script>
-<script src="regions.js?v=09151bc5"></script>
-<script src="space3d.js?v=0322b5bc"></script>
+<script src="tonight.js?v=029a63c1"></script>
+<script src="regions.js?v=2d6a2103"></script>
+<script src="space3d.js?v=d61cb2b8"></script>
 <script type="importmap">{ "imports": { "three": "./lib/three/three.module.min.js", "three/addons/": "./lib/three/addons/" } }</script>
-<script src="earthgl.js?v=f4058939" type="module"></script>   <!-- the Earth view of the 3D module (three.js); the app keeps earth3d.js -->
+<script src="earthgl.js?v=33ff7630" type="module"></script>   <!-- the Earth view of the 3D module (three.js); the app keeps earth3d.js -->
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
@@ -1125,7 +1125,7 @@ function verdict() {
   $('fCloud').textContent = clouds == null ? '–' : clouds + '%';
   $('fDark').textContent = dark ? hhmm(dark) : '–';
   if (window.AuroraTonight && S.wx) {
-    const pl = AuroraTonight.plan({ lat: TOWN.lat, lon: TOWN.lon, need: N, kpList: S.kpList, wx: S.wx });
+    const pl = AuroraTonight.plan({ lat: TOWN.lat, lon: TOWN.lon, need: N, kpList: S.kpList, wx: S.wx, now: NOWT() });
     S.tnPlan = pl; S.tnNeed = N; S.kpT = kp; S.clouds = clouds; AuroraTonight.render($('tonight'), pl, hhmm, kpColor, N, sy.on ? sy.t : 0, { compact: PHONE(), head: false, ...(innerWidth >= 1000 ? { tiles: false, hor: 128 } : {}) }); $('tnTxt').textContent = S.tonight = AuroraTonight.sentence(pl, N, hhmm);
   }
   if (window.redrawDeep) redrawDeep();
@@ -1190,7 +1190,7 @@ const sunT = t => new Date(t).toLocaleString(LOC, { day: '2-digit', month: '2-di
 $('sunChips').innerHTML = SUNF.map((f, i) => `<button data-i="${i}" style="color:${f[2]};border-color:${f[2]}66">${f[1]}</button>`).join('');
 $('sunChips').onclick = e => { const b = e.target.closest('button'); if (b) sunPick(+b.dataset.i); };
 const flWhere = (RI, f) => { const i = RI && window.SunRegions && SunRegions.flareInfo(RI, f.begin_time); if (!i || !i.region) return '';
-  return `<span class="flw">${i.region}${i.lat != null ? ' · ' + SunRegions.where(i) : ''}${i.earth ? ' · <b>↯ ' + T('faced Earth') + '</b>' : ''}</span>`; };
+  return `<span class="flw">${esc(i.region)}${i.lat != null ? ' · ' + SunRegions.where(i) : ''}${i.earth ? ' · <b>↯ ' + T('faced Earth') + '</b>' : ''}</span>`; };
 (function () { const h = document.getElementById('srHost'); if (!h) return; let done = false; const go = () => { if (!done && window.SunRegions) { done = true; const api = SunRegions.mount(h, { limit: 6 });
     // PC: show as many regions as fit beside the Sun, so both columns end together (golden-ratio columns, equal heights)
     const fit = () => { const l = h.querySelector('.sr-l'), r = h.querySelector('.sr-r'); if (!l || !r || !api.count() || getComputedStyle(h).display !== 'grid') return;
@@ -1986,7 +1986,7 @@ async function srXray() {   // X-rays (GOES, last 7 days) + the biggest flares o
     const big = fl.filter(f => /^[MX]/.test(f.max_class)), show = (big.length ? big : fl.filter(f => /^C/.test(f.max_class)).sort((a, b) => b.max_xrlong - a.max_xrlong).slice(0, 3)).sort((a, b) => Date.parse(b.max_time) - Date.parse(a.max_time)).slice(0, 6);
     $('srXList').innerHTML = legend([['#FF5A5A', T('0.1–0.8 NM · SETS THE CLASS')], ['#5AA9FF', '0.05–0.4 NM']])
       + `<div class="lbl" style="margin-top:12px">${big.length ? T('M / X flares') : T('Biggest flares')} · ${T('last 7 days')}</div>`
-      + (show.length ? show.map(f => `<div class="flr" role="button" tabindex="0" data-t="${Date.parse(f.max_time)}" title="${T('Show this moment on the clock')}"><b style="color:${/^X/.test(f.max_class) ? '#FF4444' : /^M/.test(f.max_class) ? '#FFA040' : '#E0E0E0'}">${f.max_class}</b>${flWhere(RI, f)}<span>${dayHm(Date.parse(f.max_time))}</span></div>`).join('') : '<div class="loading">' + T('NO FLARES') + '</div>');
+      + (show.length ? show.map(f => `<div class="flr" role="button" tabindex="0" data-t="${Date.parse(f.max_time)}" title="${T('Show this moment on the clock')}"><b style="color:${/^X/.test(f.max_class) ? '#FF4444' : /^M/.test(f.max_class) ? '#FFA040' : '#E0E0E0'}">${esc(f.max_class)}</b>${flWhere(RI, f)}<span>${dayHm(Date.parse(f.max_time))}</span></div>`).join('') : '<div class="loading">' + T('NO FLARES') + '</div>');
   } catch (e) { $('srXNow').textContent = T('GOES data unavailable right now.'); }
 }
 window.srXray = srXray;
@@ -2610,7 +2610,7 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-repl
   const hx = t.querySelector('.hx'), sync = () => hx.setAttribute('aria-pressed', String(document.documentElement.classList.contains('xp')));
   hx.onclick = () => { const b = document.getElementById('xpBtn'); if (b) b.click(); sync(); };
   new MutationObserver(sync).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] }); sync(); })();</script>
-<script src="tiles.js?v=de5a3d11"></script>
+<script src="tiles.js?v=68f66763"></script>
 <script src="alerts.js?v=9fa6b2d7"></script>
 </body>
 </html>

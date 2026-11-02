@@ -95,7 +95,8 @@
   const layout = () => { const ed = H.classList.contains('tledit'); box.style.gridTemplateColumns = CF.w.map((w, i) => `minmax(0, ${vis(cols[i]).length || ed ? w : 0}fr)`).join(' ');
     box.style.columnGap = cols.filter((c, i) => CF.w[i] > .001 && (vis(c).length || ed)).length > 1 ? '' : '0px';
     cols.forEach(c => { c.style.gridTemplateRows = vis(c).map(t => `minmax(0, ${CF.h[t.dataset.p] || 1}fr)`).join(' ') || 'none'; }); };
-  const apply = c => { if (c && c.cols) { CF = { w: c.w && c.w.length === 3 ? c.w : CF.w, h: c.h || {}, hide: c.hide || [] }; c.cols.forEach((ks, i) => ks.forEach(k => { const t = tl(k); if (t && cols[i]) cols[i].appendChild(t); })); }
+  const apply = c => { if (c && c.cols) { const okN = (v, a, b) => typeof v === 'number' && isFinite(v) && v >= a && v <= b, hh = {}; if (c.h && typeof c.h === 'object') for (const k in c.h) if (P.some(p => p[0] === k) && okN(c.h[k], .01, 20)) hh[k] = c.h[k];
+    CF = { w: Array.isArray(c.w) && c.w.length === 3 && c.w.every(v => okN(v, 0, 20)) ? c.w : CF.w, h: hh, hide: Array.isArray(c.hide) ? c.hide.filter(k => P.some(p => p[0] === k)) : [] }; c.cols.forEach((ks, i) => ks.forEach(k => { const t = tl(k); if (t && cols[i]) cols[i].appendChild(t); })); }
     box.querySelectorAll('.tl[data-p]').forEach(t => { t.hidden = CF.hide.includes(t.dataset.p); }); layout(); };
   const save = () => { try { localStorage.setItem(CK, JSON.stringify(cur())); } catch (e) {} };
   try { apply(JSON.parse(localStorage.getItem(CK))); } catch (e) {}

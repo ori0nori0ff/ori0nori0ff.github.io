@@ -370,7 +370,8 @@
               .sort((a, b) => b.data[0].date_created.localeCompare(a.data[0].date_created)).slice(0, 4)
               .map(x => ({ t: x.data[0].date_created.slice(0, 10), cap: x.data[0].title, src: x.links[0].href, href: `https://images.nasa.gov/details/${encodeURIComponent(x.data[0].nasa_id)}` })); } }
         const L = PHOTO[nm]; if (!L.length) { host.innerHTML = ''; return; }
-        host.innerHTML = `<div class="s3d-phl">${tr('Latest pictures')} · NASA</div><div class="s3d-phg">` + L.map(x => `<a href="${x.href}" target="_blank" rel="noopener" title="${x.cap.replace(/"/g, '&quot;')}"><img src="${x.src}" alt="${x.cap.replace(/"/g, '&quot;')}" loading="lazy"><span>${x.t}</span></a>`).join('') + `</div>`;
+        const q = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]), ok = u => /^https:\/\//.test(String(u));
+        host.innerHTML = `<div class="s3d-phl">${tr('Latest pictures')} · NASA</div><div class="s3d-phg">` + L.filter(x => ok(x.href) && ok(x.src)).map(x => `<a href="${q(x.href)}" target="_blank" rel="noopener noreferrer" title="${q(x.cap)}"><img src="${q(x.src)}" alt="${q(x.cap)}" loading="lazy"><span>${q(x.t)}</span></a>`).join('') + `</div>`;
       } catch (e) { host.innerHTML = ''; } }
     function showInfo(nm) { if (nm === 'Sun') return;
       const box = el.querySelector('.s3d-info'), t = mode === 'helix' ? hTime : time, p = planet(nm, t), r = Math.hypot(...p), a = EL[nm][0][0], v = 29.78 * Math.sqrt(2 / r - 1 / a), E = planet('Earth', t), de = Math.hypot(p[0] - E[0], p[1] - E[1], p[2] - E[2]);
