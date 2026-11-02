@@ -37,6 +37,10 @@ N = len(D['v']); TT = [T0 + i * STEP for i in range(N)]
 col = lambda k: D.get(k) or [None] * N
 phi = lambda bx, by: None if bx is None or by is None else round(math.degrees(math.atan2(by, bx)) % 360, 2)
 
+def gof(k):
+    """NOAA G scale from Kp: 5- already counts as Kp 5 (G1), 9- is still G4, only 9 = G5"""
+    return 5 if k >= 8.99 else min(4, int(k + .34) - 4) if k >= 4.66 else 0
+
 def hourly(k):
     """hourly means of a 5-min series: {hour start ms: value}"""
     out = {}
@@ -85,7 +89,7 @@ def cme_hours(H):
 
 def kp():
     P = [(dt(t), v) for t, v in D['kp']]
-    scale = lambda k: None if k < 5 else 'G' + str(min(5, int(k + .34) - 4))
+    scale = lambda k: 'G' + str(gof(k)) if gof(k) else None
     put('products/noaa-planetary-k-index-forecast.json', [{'time_tag': iso(t), 'kp': round(k, 2), 'observed': 'observed' if t + timedelta(hours=3) <= NOW else 'estimated', 'noaa_scale': scale(k)} for t, k in P])
     rows, t = [], NOW - timedelta(hours=6)
     while t <= NOW:
@@ -132,7 +136,7 @@ def ovation(k):
 
 def scales_alerts(P, xr):
     k_now = ([v for t, v in P if t <= NOW] or [0])[-1]
-    g = 0 if k_now < 5 else min(5, int(k_now + .34) - 4)
+    g = gof(k_now)
     big = max([f['max_xrlong'] for f in xr if f['max_time'] > iso(NOW - timedelta(hours=24), 'Z')] or [0])
     r = 5 if big >= 2e-3 else 4 if big >= 1e-3 else 3 if big >= 1e-4 else 2 if big >= 5e-5 else 1 if big >= 1e-5 else 0
     T = {0: 'none', 1: 'minor', 2: 'moderate', 3: 'strong', 4: 'severe', 5: 'extreme'}
@@ -140,7 +144,7 @@ def scales_alerts(P, xr):
     al, seen = [], set()
     for t, v in P:
         for lv in (5, 6, 7, 8, 9):
-            if v >= lv - .34 and lv not in seen:
+            if v >= (8.99 if lv == 9 else lv - .34) and lv not in seen:
                 seen.add(lv); tt = t + timedelta(minutes=30)
                 al.append({'product_id': f'K0{lv}A', 'issue_datetime': tt.strftime('%Y-%m-%d %H:%M:%S.000'),
                            'message': f'ALERT: Geomagnetic K-index of {lv} (time machine: reconstructed from GFZ Kp)\r\nThreshold Reached: {tt:%Y %b %d %H%M} UTC\r\nNOAA Scale: G{lv - 4}'})
