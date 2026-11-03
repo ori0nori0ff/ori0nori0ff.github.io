@@ -5,11 +5,12 @@
 (() => {
   if (new URLSearchParams(location.search).get('tiles') === '0' || innerWidth < 1000) return;   // ?tiles=0 = the old long page
   const $ = id => document.getElementById(id), T = window.T || (s => s), H = document.documentElement;
+  let rpT = null;   // the time machine week's title (its replay tile)
   const P = [   // key, panel, colour, title, side, live line
     ['sun', 'sunEarth', '#FFE600', 'The Sun Now', 'L', () => first('#enlSum')], ['flares', 'frSun', '#FFB020', 'Flares and coronal holes', 'L', () => txt('ptSun')],
     ['wind', 'frWind', '#7BE0FF', 'Solar wind and storm levels', 'L', () => txt('ptEarth')], ['shield', 'frShield', '#5AC8FF', 'Magnetic shield and cosmic rays', 'L', () => first('#dstSum')],
     ['forecast', 'frForecast', '#39FF9E', 'NOAA Aurora Forecast', 'C'],
-    ['earth', 'frEarth', '#3EE08F', 'Sun–Earth record · earthquakes', 'R', () => first('#eqSum')], ['replay', null, '#FF5A5A', 'Storm replay', 'R', () => T('The May 2024 G5 storm, step by step')],
+    ['earth', 'frEarth', '#3EE08F', 'Sun–Earth record · earthquakes', 'R', () => first('#eqSum')], ['replay', null, '#FF5A5A', 'Storm replay', 'R', () => rpT ? T(rpT) : T('The May 2024 G5 storm, step by step')],
     ['cycle', 'secCyc', '#FFD24A', 'Solar cycle', 'R', () => first('#cycSum')], ['3d', 'sec3d', '#B9A7FF', '3D model', 'R', () => first('#s3dHost .s3d-sub') || T('Planets, wind and CMEs on one clock')]];
   const FCW = 900;   // the forecast is laid out this wide, then shrunk to the middle column
   const txt = id => { const e = $(id); return e && e.textContent.trim() || ''; };
@@ -140,6 +141,12 @@
   live(); setInterval(live, 4000);
   // the replay tile: the CME of 11 May 2024 in SOHO LASCO C3 (from the replay) — a picture, so it is not mistaken for today's Kp
   box.querySelector('.tlrp').innerHTML = `<b>${T('CME · 11 MAY 2024 · SOHO LASCO C3')}</b>`;
+  // time machine: that week's own CME picture + title (poster = replay/index.json, picked by tools/build_replay.py)
+  if (window.STORM && STORM.id !== 'may2024') (async () => { const rp = box.querySelector('.tlrp');
+    for (const b of ['replay/', '/aurora-replay/']) { let e; try { e = (await (await fetch(b + 'index.json?t=' + Math.floor(Date.now() / 36e5))).json()).find(q => q.id === STORM.id); } catch (x) {}
+      if (!e) continue; rpT = e.title || null; const p = e.poster; if (!p) return;
+      rp.style.backgroundImage = `url(${b}${e.id}/${p.img})`;
+      rp.innerHTML = `<b>${p.cme ? 'CME · ' : ''}${new Date(p.t).toLocaleDateString(typeof LOC !== 'undefined' ? LOC : 'en', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).replace('.', '').toUpperCase()} · SOHO LASCO C3</b>`; live(); return; } })();
   // the window: one module, or two side by side
   const ov = document.createElement('div'); ov.id = 'tlOv'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true');
   const pane = n => `<div class="tlp" id="tlP${n}"><div class="ph"><span></span><button type="button" data-shut="${n}" aria-label="${T('Close')}">✕</button></div><div class="tlb"></div></div>`;
@@ -163,7 +170,7 @@
   const hash = () => { const h = '#p-' + S[0] + (split && S[1] ? '+' + S[1] : ''); if (location.hash !== h) history.pushState({}, '', h); };
   function open(key, push = true, target) {
     const p = P.find(q => q[0] === key); if (!p) return;
-    if (!p[1]) { close(); if (window.openReplay) openReplay(); return; }   // the replay has its own full screen
+    if (!p[1]) { close(); if (window.openReplay) openReplay(0, window.STORM ? STORM.id : undefined); return; }   // the replay has its own full screen
     ov.classList.add('on'); document.body.style.overflow = 'hidden'; show(act, key, target); if (key === 'sun' && window.syAuto) syAuto(); ov.setAttribute('aria-label', T(p[3])); if (push) hash();
   }
   function setSplit(on, key) {
