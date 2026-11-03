@@ -1,0 +1,1 @@
+try { const q = new URLSearchParams(location.search).get('lite'); if (q === '1' || (q !== '0' && localStorage.getItem('aurora.lite') === 'on')) document.documentElement.classList.add('lite'); } catch (e) {}   // light mode for slower PCs

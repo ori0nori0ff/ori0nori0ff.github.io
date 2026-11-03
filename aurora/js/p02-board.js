@@ -1,0 +1,1 @@
+if (innerWidth >= 1000 && new URLSearchParams(location.search).get('tiles') !== '0') { document.documentElement.classList.add('tpre'); setTimeout(() => document.documentElement.classList.remove('tpre'), 6000); }

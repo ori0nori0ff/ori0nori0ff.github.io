@@ -1,0 +1,1 @@
+/* sacred:js */(()=>{const go=()=>document.querySelectorAll('.card').forEach((c,i)=>{c.classList.add('sg'+i%7);c.classList.toggle('sgb',i%2===1)});go();new MutationObserver(go).observe(document.body,{childList:true,subtree:false});setTimeout(go,4000)})();
