@@ -1353,6 +1353,8 @@ window.I18N_DICT.de = {
   "light s": "Lichtsekunden",
   "days": "Tage",
   "years": "Jahre",
+  "All CMEs": "Alle CMEs",
+  "Off: only the CMEs aimed at the Earth. On: every CME NASA DONKI lists, in every direction": "Aus: nur die CMEs, die auf die Erde zielen. An: alle CMEs aus NASA DONKI, in jede Richtung",
   "Solar wind + CMEs": "Sonnenwind + CMEs",
   "3D quality": "3D-Qualität",
   "Auto": "Auto",

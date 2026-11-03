@@ -1353,6 +1353,8 @@ window.I18N_DICT.ro = {
   "light s": "s-lumină",
   "days": "zile",
   "years": "ani",
+  "All CMEs": "Toate CME-urile",
+  "Off: only the CMEs aimed at the Earth. On: every CME NASA DONKI lists, in every direction": "Oprit: doar CME-urile îndreptate spre Pământ. Pornit: toate CME-urile din NASA DONKI, în orice direcție",
   "Solar wind + CMEs": "Vânt solar + CME",
   "3D quality": "Calitate 3D",
   "Auto": "Auto",

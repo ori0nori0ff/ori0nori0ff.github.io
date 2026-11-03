@@ -10,7 +10,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
-import { createSolar } from './solar.js?v=ed5618ba';
+import { createSolar } from './solar.js?v=179ba626';
 
 const tr = (s, o) => window.T ? window.T(s, o) : String(s).replace(/\{(\w+)\}/g, (m, k) => o && o[k] != null ? o[k] : m);
 const D2R = Math.PI / 180, BASE = new URL('./', import.meta.url).href, T = BASE + 'img/earth/';
@@ -90,7 +90,7 @@ function create(host, opts) {
     <div class="e3g-lay"><button data-k="layers" aria-expanded="false">☰ ${tr('Layers')} ▾</button><div class="e3g-lp" hidden>
       <button class="eo" data-k="cl" aria-pressed="true">${tr('Clouds')}</button><button class="eo" data-k="cn" aria-pressed="false">${tr('Clouds: NASA')}</button><button class="eo" data-k="au" aria-pressed="true">${tr('Aurora')}</button>
       <div class="e3g-row eo"><button data-k="ms" aria-pressed="false">🧲 ${tr('Magnetic shield')}</button><button data-k="cme">💥 ${tr('CME impact')}</button></div>
-      <button data-k="sun" aria-pressed="false">${tr('Real Sun')}</button><button data-k="sp" aria-pressed="true">${tr('Auto-rotate')}</button><button data-k="rs" aria-pressed="false">${tr('Real scale')}</button><button data-k="gd" aria-pressed="false">${tr('Names and orbits')}</button><button data-k="sw" aria-pressed="false">${tr('Solar wind + CMEs')}</button><button data-k="blt" aria-pressed="false">${tr('Asteroid + Kuiper belts')}</button><div class="e3g-row"><button data-k="sf" aria-pressed="false">${tr('Sun’s magnetic field')}</button><button data-k="dw" aria-pressed="false">🌀 ${tr('Without the solar wind')}</button></div></div></div>
+      <button data-k="sun" aria-pressed="false">${tr('Real Sun')}</button><button data-k="sp" aria-pressed="true">${tr('Auto-rotate')}</button><button data-k="rs" aria-pressed="false">${tr('Real scale')}</button><button data-k="gd" aria-pressed="false">${tr('Names and orbits')}</button><div class="e3g-row"><button data-k="sw" aria-pressed="false">${tr('Solar wind + CMEs')}</button><button data-k="ca" aria-pressed="false">${tr('All CMEs')}</button></div><button data-k="blt" aria-pressed="false">${tr('Asteroid + Kuiper belts')}</button><div class="e3g-row"><button data-k="sf" aria-pressed="false">${tr('Sun’s magnetic field')}</button><button data-k="dw" aria-pressed="false">🌀 ${tr('Without the solar wind')}</button></div></div></div>
     <div class="e3g-time"><div class="e3g-ecb" hidden></div><input type="datetime-local" class="e3g-date" data-k="date" aria-label="${tr('Date and time')}"><button data-k="now">${tr('Now')}</button>
       <div class="e3g-tod eo" title="${tr('Time of day here (local Sun time)')}">☀<button data-k="todB" aria-label="${tr('Earlier')}">‹</button><input type="range" data-k="tod" min="0" max="1435" step="5" aria-label="${tr('Time of day here (local Sun time)')}"><button data-k="todF" aria-label="${tr('Later')}">›</button><span></span></div>
       <div class="e3g-tod so" title="${tr('Move the clock (±10 days): orange = a CME leaves the Sun, red = it reaches the Earth')}">☄<button data-k="dyB" aria-label="${tr('Earlier')}">‹</button><div class="e3g-dw"><i class="e3g-mk"></i><input type="range" data-k="dy" min="-14400" max="14400" step="30" aria-label="${tr('Move the clock (±10 days): orange = a CME leaves the Sun, red = it reaches the Earth')}"></div><button data-k="dyF" aria-label="${tr('Later')}">›</button><span></span></div>
@@ -1098,6 +1098,8 @@ ${SUNLIB}${MOONV}
   $('layers').onclick = () => pop($('layers'), lp, lp.hidden);
   el.addEventListener('pointerdown', e => { if (!e.target.closest('.e3g-bl,[data-k="bodies"]')) pop($('bodies'), bl, false); if (!e.target.closest('.e3g-ev,[data-k="ev"]')) pop($('ev'), evP, false); if (!e.target.closest('.e3g-lay')) pop($('layers'), lp, false); });
   $('blt').onclick = e => { solar.belt = !solar.belt; press(e.currentTarget, solar.belt); };
+  press($('ca'), solar.cmeAll); $('ca').title = tr('Off: only the CMEs aimed at the Earth. On: every CME NASA DONKI lists, in every direction');
+  $('ca').onclick = e => { solar.cmeAll = !solar.cmeAll; press(e.currentTarget, solar.cmeAll); mkSeen = null; };
   $('rs').onclick = e => { solar.realScale = !solar.realScale; press(e.currentTarget, solar.realScale); };
   $('gd').onclick = e => { solar.guides = !solar.guides; press(e.currentTarget, solar.guides); };
   let windMine = false;   // once you switch the wind yourself, the clock never switches it back on

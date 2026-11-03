@@ -444,7 +444,10 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
   // the slider's marks: when each CME leaves the Sun and (if it is aimed at us) reaches the Earth
   const cmeMarks = () => cmes.map(c => { const va = kmsAU(c.v), hit = Math.cos(c.lat * D2R) * Math.cos(c.lon * D2R) >= Math.cos(Math.max(5, c.half) * D2R);
     return { t0: c.t - .1 / va * DAY, tE: hit ? c.t + .9 / va * DAY : null, v: c.v, est: !!c.est }; });
-  function setCmes(list) { if (list) donki = list.filter(c => c.v > 0); cmes = donki && donki.length ? donki : fromEnlil(); }
+  // the switch in Layers: only the CMEs aimed at the Earth (default) or every CME NASA DONKI lists (most leave in other directions)
+  let cmeAll = false; try { cmeAll = localStorage.getItem('aurora.cmeall') === '1'; } catch (e) {}
+  const hitE = c => Math.cos(c.lat * D2R) * Math.cos(c.lon * D2R) >= Math.cos(Math.max(5, c.half) * D2R);
+  function setCmes(list) { if (list) donki = list.filter(c => c.v > 0); const L = donki && donki.length ? donki : fromEnlil(); cmes = cmeAll ? L : L.filter(hitE); }
   const CP = 1600, NC = 12, cGeo = new THREE.BufferGeometry(), ca = new Float32Array(CP * 4);
   for (let i = 0; i < CP; i++) { const sh = i < 1100; ca.set(sh ? [(i + .5) / 1100, i * 2.39996, 1, Math.random()] : [Math.random(), Math.random() * 6.283, 0, Math.random()], i * 4); }
   cGeo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(CP * 3), 3)); cGeo.setAttribute('c', new THREE.BufferAttribute(ca, 4));
@@ -679,5 +682,5 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
     if (k > 0 && k < d && c.lengthSq() - k * k < 1) return;
     const R = issG.scale.x, ic = issDraw.c || (issDraw.c = new THREE.PerspectiveCamera()); ic.copy(cam); ic.near = Math.max(d - 1.6 * R, R * .02); ic.far = d + 1.6 * R; ic.updateProjectionMatrix();
     r.clearDepth(); r.render(issScene, ic); }
-  return { get sun() { return SUN; }, issDraw, poseISS, scene, cam, update, screen, bodies, pick, eclAt, eclList, eclMoon, eclSun, hdHas, hdOn, hdGround, helio, eclToWorld, toWorld: p => toW(p, new THREE.Vector3()), fromWorld: v => v.clone().applyMatrix3(Mi), get realScale() { return realScale; }, set realScale(v) { realScale = v; }, setWind, setCmes, cmeAtEarth, cmeMarks, windAt, get wind() { return windOn; }, set quiet(v) { quiet = v; }, set wind(v) { windOn = v; }, get field() { return fieldOn; }, set field(v) { fieldOn = v; }, get bare() { return fieldMode === 2; }, set bare(v) { fieldMode = v ? 2 : 1; }, get belt() { return beltOn; }, set belt(v) { beltOn = v; }, get guides() { return guides; }, set guides(v) { guides = v; orbits.visible = v; lab.style.display = v ? '' : 'none'; } };
+  return { get sun() { return SUN; }, issDraw, poseISS, scene, cam, update, screen, bodies, pick, eclAt, eclList, eclMoon, eclSun, hdHas, hdOn, hdGround, helio, eclToWorld, toWorld: p => toW(p, new THREE.Vector3()), fromWorld: v => v.clone().applyMatrix3(Mi), get realScale() { return realScale; }, set realScale(v) { realScale = v; }, setWind, setCmes, get cmeAll() { return cmeAll; }, set cmeAll(v) { cmeAll = !!v; try { localStorage.setItem('aurora.cmeall', cmeAll ? '1' : '0'); } catch (e) {} setCmes(); }, cmeAtEarth, cmeMarks, windAt, get wind() { return windOn; }, set quiet(v) { quiet = v; }, set wind(v) { windOn = v; }, get field() { return fieldOn; }, set field(v) { fieldOn = v; }, get bare() { return fieldMode === 2; }, set bare(v) { fieldMode = v ? 2 : 1; }, get belt() { return beltOn; }, set belt(v) { beltOn = v; }, get guides() { return guides; }, set guides(v) { guides = v; orbits.visible = v; lab.style.display = v ? '' : 'none'; } };
 }
