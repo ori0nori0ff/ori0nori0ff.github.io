@@ -687,11 +687,11 @@ ${SUNLIB}${MOONV}
     a.dem.ht.needsUpdate = true; }
   function stitch(t) { const n = 1 << t.z; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { if (!dx && !dy || t.y + dy < 0 || t.y + dy >= n) continue;
       const b = tiles.get(t.z + '/' + ((t.x + dx + n) % n) + '/' + (t.y + dy)); if (b && b.dem && b !== t) { ring(t, b, dx, dy); ring(b, t, -dx, -dy); } } }
-  function groundAt(lat, lon) {   // metres under a point, from the finest heights we have
+  function groundAt(lat, lon, nd = 0) {   // metres under a point, from the finest heights we have (nd when no height tile covers it)
     const my = Math.log(Math.tan(Math.PI / 4 + Math.max(-1.48, Math.min(1.48, lat)) / 2));
     for (let z = HD.ZT; z >= 2; z--) { const n = 1 << z, fx = (lon + Math.PI) / (2 * Math.PI) * n, fy = (1 - my / Math.PI) / 2 * n, t = tiles.get(z + '/' + (fx | 0) + '/' + (fy | 0));
       if (t && t.dem) { const h = t.dem.h, u = Math.min(254.999, Math.max(0, (fx % 1) * 256 - .5)), v = Math.min(254.999, Math.max(0, (fy % 1) * 256 - .5)), i = u | 0, j = v | 0, a = u - i, b = v - j, k = j * 256 + i;   // bilinear, like the mesh
-        return Math.max(0, (h[k] * (1 - a) + h[k + 1] * a) * (1 - b) + (h[k + 256] * (1 - a) + h[k + 257] * a) * b); } } return 0; }
+        return Math.max(0, (h[k] * (1 - a) + h[k + 1] * a) * (1 - b) + (h[k + 256] * (1 - a) + h[k + 257] * a) * b); } } return nd; }
   const gR = (lat, lon) => (groundAt(lat, lon) * U.ex.value + 400) / 6371000;   // the drawn ground, Earth radii above the sea-level sphere
   const gMax = v => { const la = Math.asin(Math.max(-1, Math.min(1, v.y))), lo = Math.atan2(-v.z, v.x), e = 9e-6; let m = gR(la, lo);   // a few metres around too: the mesh between its vertices
     for (const [a, b] of [[e, 0], [-e, 0], [0, e], [0, -e]]) m = Math.max(m, gR(la + a, lo + b / Math.max(.05, Math.cos(la)))); return m; };
@@ -801,7 +801,7 @@ ${SUNLIB}${MOONV}
   const rainPass = { enabled: false, needsSwap: false, clear: false, renderToScreen: false, setSize(w, h) { rainRT.setSize(Math.max(1, w >> 1), Math.max(1, h >> 1)); }, dispose() {},
     render(r, w, rb) { rainQ.material.uniforms.tDepth.value = (airPass.enabled ? w : rb).depthTexture; const o = r.getRenderTarget(), ac = r.autoClear; r.autoClear = false;   // after the air pass: the scene's depth is in w
       r.setRenderTarget(rainRT); rainQ.render(r); r.setRenderTarget(rb); rainC.render(r); r.setRenderTarget(o); r.autoClear = ac; } };
-  // ── the cloud volume, below ~500 km and on medium / high only: layers from 0.6 to 12 km chosen from the IR brightness (cLay, an estimate),
+  // ── the cloud volume, below ~500 km and on medium / high only: layers from 0.6 to 12 km above the region's ground (cvB) chosen from the IR brightness (cLay, an estimate),
   // ray-marched after the scene (it stops at the ground's depth) and laid over it before the air. Where the clouds are comes from the map
   // (~10 km a pixel, the same coverage + cDet edges as the flat layer and the ground shadow); their puffy 3D shapes inside it are generated
   // noise (cnRT), not measured. Light: a few samples toward the Sun (dark bases, bright tops), a forward-scattering phase (silver lining round
@@ -810,7 +810,8 @@ ${SUNLIB}${MOONV}
   // tileable 3D noise, 128³ RGBA, built once on the GPU (16 slices a frame, no download): r = Perlin-Worley (round puffs, 4 cells a tile),
   // g / b / a = Worley fbm with 4 / 8 / 16 cells a tile (erodes the edges). The usual recipe of real-time cloud renderers (Schneider 2015)
   const CNN = 128, cnRT = new THREE.WebGL3DRenderTarget(CNN, CNN, CNN, { depthBuffer: false });
-  Object.assign(cnRT.texture, { wrapS: THREE.RepeatWrapping, wrapT: THREE.RepeatWrapping, wrapR: THREE.RepeatWrapping, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, generateMipmaps: false });
+  // with mipmaps: sampled at the pixel's footprint (textureLod in shp), finer octaves average out instead of aliasing into salt-and-pepper dots from far
+  Object.assign(cnRT.texture, { wrapS: THREE.RepeatWrapping, wrapT: THREE.RepeatWrapping, wrapR: THREE.RepeatWrapping, minFilter: THREE.LinearMipmapLinearFilter, magFilter: THREE.LinearFilter, generateMipmaps: true });
   const cnQ = new FullScreenQuad(new THREE.ShaderMaterial({ uniforms: { zs: { value: 0 } }, depthTest: false, depthWrite: false,
     vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }`, fragmentShader: /* glsl */`
     uniform float zs; varying vec2 vUv;
@@ -826,23 +827,24 @@ ${SUNLIB}${MOONV}
     void main() { vec3 p = vec3(vUv, zs);
       float pf = clamp(.5 + per(p * 4., 4.) * .9 + per(p * 8., 8.) * .45 + per(p * 16., 16.) * .22, 0., 1.), w = wf(p, 4.);
       gl_FragColor = vec4(clamp((pf - (w - 1.)) / (2. - w), 0., 1.), w, wf(p, 8.), wor(p * 16., 16.) * .7 + wor(p * 32., 32.) * .3); }` }));
-  let cnZ = 0;   // slices built so far
+  let cnZ = 0, cvT = 0, cvG = 0;   // slices built so far; cvT / cvG: next ground check (s), the clouds' reference ground (m)
   const cnBuild = r => { const o = r.getRenderTarget();
-    for (let k = 0; k < 16 && cnZ < CNN; k++, cnZ++) { cnQ.material.uniforms.zs.value = (cnZ + .5) / CNN; r.setRenderTarget(cnRT, cnZ); cnQ.render(r); }
+    for (let k = 0; k < 16 && cnZ < CNN; k++, cnZ++) { cnRT.texture.generateMipmaps = cnZ === 0 || cnZ === CNN - 1; /* on at the first slice (the storage is made with its mip levels then), the chain built after the last */ cnQ.material.uniforms.zs.value = (cnZ + .5) / CNN; r.setRenderTarget(cnRT, cnZ); cnQ.render(r); }
     r.setRenderTarget(o); };
-  const cvU = { tDepth: { value: null }, pxA: { value: .001 }, projInv: airPass.uniforms.projInv, camW: airPass.uniforms.camW, toObj: airPass.uniforms.toObj, cn: airPass.uniforms.cn,
+  const cvU = { tDepth: { value: null }, pxA: { value: .001 }, cvB: { value: .4 } /* km of drawn ground under the clouds, see the frame loop */, projInv: airPass.uniforms.projInv, camW: airPass.uniforms.camW, toObj: airPass.uniforms.toObj, cn: airPass.uniforms.cn,
     clouds: U.clouds, cN: { value: cnRT.texture }, sun: U.sun, camO: U.camO, cloudShift: U.cloudShift, cloudR: U.cloudR, cVol: U.cVol, airK: U.airK, lightsOn: U.lightsOn, eMoon: U.eMoon, eSun: U.eSun };
   const CVFS = /* glsl */`
-    uniform sampler2D tDepth, clouds; uniform highp sampler3D cN; uniform mat4 projInv, camW; uniform mat3 toObj; uniform vec2 cn; uniform vec3 sun, camO; uniform float cloudShift, cloudR, cVol, pxA;
+    uniform sampler2D tDepth, clouds; uniform highp sampler3D cN; uniform mat4 projInv, camW; uniform mat3 toObj; uniform vec2 cn; uniform vec3 sun, camO; uniform float cloudShift, cloudR, cVol, pxA, cvB;
     varying vec2 vUv; ${SUNT}${CNOISE}${AIRT}
     vec2 hit(vec3 o, vec3 d, float r) { float b = dot(o, d), c = dot(o, o) - r * r, h = b * b - c; if (h < 0.) return vec2(1e9, -1e9); h = sqrt(h); return vec2(-b - h, -b + h); }
     float hg(float c, float g) { float k = 1. + g * g - 2. * g * c; return (1. - g * g) / (12.566 * k * sqrt(k)); }
-    // the puff noise at q (km), tile L km: two scales so the 128³ tile does not repeat visibly; fades to its mean once a cell is under ~2 pixels
-    float shp(vec3 q, float L, float pk) { float s = texture(cN, q / L).r * .65 + texture(cN, q / (L * 3.3) + vec3(.37, .11, .73)).r * .35;
-      return mix(.47, s, smoothstep(pk * 1.5, pk * 3., L * .25)); }
+    // the puff noise at q (km), tile L km: two scales so the 128³ tile does not repeat visibly. Read from the mip level where a texel spans ~2 pixels
+    // (pk km): details under that average out (unfiltered they aliased into salt-and-pepper dots from far: measured 4x the speckle of no noise at 287 km)
+    float nL(float pk, float L) { return log2(max(pk * 256. / L, 1.)); }
+    float shp(vec3 q, float L, float pk) { return textureLod(cN, q / L, nL(pk, L)).r * .65 + textureLod(cN, q / (L * 3.3) + vec3(.37, .11, .73), nL(pk, L * 3.3)).r * .35; }
     // density 0…1 at p (Earth radii); hk = Earth radii per km; x = how high inside its layer 0…1 (the sky light dims toward the base)
     float dens(vec3 p, float hk, float lod, float tx, bool fine, out float x) {
-      float r = length(p), h = (r - 1.) / hk; x = 0.; if (h < .6 || h > 12.) return 0.;
+      float r = length(p), h = (r - 1.) / hk - cvB; x = 0.; if (h < .6 || h > 12.) return 0.;   // h: km above the region's drawn ground (cvB)
       vec3 n = p / r;
       vec2 u = vec2(fract(atan(-n.z, n.x) / 6.2831853 + .5 + cloudShift), .5 + asin(clamp(n.y, -1., 1.)) / 3.1415927);
       float b = textureLod(clouds, u, lod).r; if (b < .06) return 0.;
@@ -861,13 +863,13 @@ ${SUNLIB}${MOONV}
       float d = clamp((shp(q, L, pk) * pr - (1. - cov)) / max(cov, .1), 0., 1.);
       if (d <= 0.) return 0.;
       // erosion by the finer Worley noise: wispy toward the base, billowy toward the top; each octave only once it is wider than ~2 pixels
-      if (fine) { vec3 dn = texture(cN, q / 1.4 + vec3(.5, .2, .8)).gba, cs = vec3(.35, .175, .09);
+      if (fine) { vec3 dn = textureLod(cN, q / 1.4 + vec3(.5, .2, .8), nL(pk, 1.4)).gba, cs = vec3(.35, .175, .09);
         dn = mix(vec3(.5), dn, smoothstep(pk * 1.5, pk * 3., cs)); float e = dot(dn, vec3(.55, .3, .15));
         d = clamp((d - .38 * mix(1. - e, e, clamp(x * 3., 0., 1.))) / .62, 0., 1.); }
       return clamp(d * 3., 0., 1.) * k; }
     void main() {
       vec4 v = projInv * vec4(vUv * 2. - 1., 1., 1.); vec3 dv = normalize(v.xyz / v.w);
-      vec3 o = camO, d = normalize(toObj * (mat3(camW) * dv)); float hk = (cloudR - 1.) / 4., rb = 1. + .6 * hk, rt = 1. + 12. * hk;
+      vec3 o = camO, d = normalize(toObj * (mat3(camW) * dv)); float hk = (cloudR - 1.) / 4., rb = 1. + (.6 + cvB) * hk, rt = 1. + (12. + cvB) * hk;
       gl_FragColor = vec4(0., 0., 0., 1.);
       vec2 a = hit(o, d, rt); if (a.x > a.y || a.y < 0.) return;
       float z = texture2D(tDepth, vUv).x, ts = 1e9; if (z < 1.) { float vz = 2. * cn.x * cn.y / ((cn.y + cn.x) - (z * 2. - 1.) * (cn.y - cn.x)); ts = vz / max(-dv.z, 1e-4); }
@@ -902,8 +904,8 @@ ${SUNLIB}${MOONV}
       // It dims the picture behind the clouds; light scattered by the clouds keeps ~25 % (the 2D shadow in shade() gives way to this, see cVol)
       float sf = 1.;
       if (ts < 1e8) { vec3 pg = o + d * ts; float hg0 = length(pg) - 1., mg = dot(pg / (1. + hg0), sun);
-        if (mg > .02 && hg0 < 11. * hk) { float od = 0., xs, txg = ts * pxA / .001534, lg = log2(max(txg, 1.));
-          for (int k = 0; k < 6; k++) { float hh = .6 + 11.4 * (float(k) + .5) / 6.; od += dens(pg + sun * max(hh * hk - hg0, 0.) / mg, hk, lg, max(txg, .02), false, xs) * 22.8 / mg; }   // 12 / km × 11.4 / 6 km
+        if (mg > .02 && hg0 < (11. + cvB) * hk) { float od = 0., xs, txg = ts * pxA / .001534, lg = log2(max(txg, 1.));
+          for (int k = 0; k < 6; k++) { float hh = .6 + cvB + 11.4 * (float(k) + .5) / 6.; od += dens(pg + sun * max(hh * hk - hg0, 0.) / mg, hk, lg, max(txg, .02), false, xs) * 22.8 / mg; }   // 12 / km × 11.4 / 6 km
           sf = mix(1., exp(-od), .75 * smoothstep(.02, .15, mg) * airT(o, pg)); } }   // seen through the air the shadow fades like the ground
       // laid over the picture AFTER the air pass (cvPass): the air pass took the clouds for open sky and added the whole sky's glow on top (milky
       // clouds seen from below). Instead the clouds dim the aired picture (Tr) and get their own haze up to each step (airT, Hz)
@@ -1747,6 +1749,14 @@ ${SUNLIB}${MOONV}
     airPass.uniforms.projInv.value.copy(camera.projectionMatrixInverse); airPass.uniforms.camW.value.copy(camera.matrixWorld); airPass.uniforms.toObj.value.setFromMatrix4(inv); airPass.uniforms.cn.value.set(camera.near, camera.far); airPass.enabled = air.visible && scene.visible;
     U.cVol.value = VOL && focus === 'Earth' && U.cloudOn.value && U.morph.value < .01 ? 1 - smooth(350, 500, (U.camO.value.length() - 1) * 6371) : 0;   // the flat layer turns into the volume from 500 to 350 km
     cvPass.enabled = U.cVol.value > 0 && scene.visible; if (VOL && cnZ < CNN) cnBuild(renderer);   // the cloud noise: the first 8 frames
+    // the cloud layers stand on the region's drawn ground, not on the sea-level sphere: the drawn ground is the relief × ex + 400 m, so at
+    // Brasov (563 m) a 0.6 km base over the sphere lay ~400 m inside the terrain and the camera flew inside the low layer (a beige wall).
+    // Reference = the lowest ground within ~15 km of the camera (the valley floor the air mass sits on); hills and mountains above it may
+    // reach into the clouds, as real ones do. Twice a second, eased so the layers never jump
+    if (cvPass.enabled) { if ((cvT -= dt) <= 0) { cvT = .5; const la = Math.asin(cl.y), lo = Math.atan2(-cl.z, cl.x); let m = groundAt(la, lo, null);
+        for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, g = groundAt(la + 15 / 6371 * Math.cos(a), lo + 15 / 6371 * Math.sin(a) / Math.max(.05, Math.cos(la)), null); if (g != null && (m == null || g < m)) m = g; }
+        if (m != null) cvG = m; }
+      cvU.cvB.value += ((cvG * U.ex.value + 400) / 1000 - cvU.cvB.value) * Math.min(1, dt); }
     rainPass.enabled = airPass.enabled && U.rainOn.value > 0 && focus === 'Earth' && km < 150 && U.morph.value < .01; rainQ.material.uniforms.rainK.value = 1 - smooth(60, 150, km);
     composer.render();
     if (P && pHold === 0 && readyAt) try { localStorage.setItem('aurora.s3dsnap', renderer.domElement.toDataURL('image/jpeg', .7)); } catch (e) {}
