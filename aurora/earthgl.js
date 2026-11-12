@@ -850,17 +850,27 @@ ${SUNLIB}${MOONV}
       float b = textureLod(clouds, u, lod).r; if (b < .06) return 0.;
       float c = smoothstep(.07, .75, b + cDet(u, tx) * .7 * sqrt(b)); if (c < .01) return 0.;
       vec4 w = cLay(b) * c; vec3 q = p / hk; float pk = tx * 10.;   // q in km; pk = one pixel in km
-      // the layer at this height (the towers may overlap the others: the denser wins). pr = the shape of the layer from base to top
-      float xl = (h - .6) / (.9 + 1.2 * c), xm = (h - 3.) / (.9 + 1.6 * c), xh = (h - 8.) / 3.5, xt = (h - .8) / 11.2, cov = 0., pr = 0., L = 7., k = 1.;
-      if (xl >= 0. && xl <= 1.) { cov = w.x; x = xl; pr = smoothstep(0., .08, x) * (1. - .8 * x * x); }   // cumulus: flat base, domes
+      // variety inside one map pixel (generated, not measured): a slow noise ~50 km wide makes some cells thicker and denser than their
+      // neighbours (towering cumulus next to small ones, clear lanes between), instead of one pattern repeated over the whole region
+      float wv = smoothstep(.15, .85, textureLod(cN, q / 53. + vec3(.13, .61, .29), nL(pk, 53.)).r);
+      // stratocumulus (an estimate from the data): full cover with warm, low tops -> a flatter deck, tops near one height, rolls
+      float sc = smoothstep(.75, .95, c) * (1. - smoothstep(.3, .45, b)), tl = mix((.9 + 1.2 * c) * (.55 + .9 * wv), .45 + .5 * wv, sc);
+      // the layer at this height (the towers may overlap the others: the denser wins). pr = the shape of the layer from base to top.
+      // st = share of a stretched shape (rolls, cirrus streaks, anvils) read in a local east / up / north frame; sx / sy = its east / vertical squeeze
+      float xl = (h - .6) / tl, xm = (h - 3.) / (.9 + 1.6 * c), xh = (h - 8.) / 3.5, xt = (h - .8) / 11.2, cov = 0., pr = 0., L = 7., k = 1., st = 0., sx = 1., sy = 1.;
+      if (xl >= 0. && xl <= 1.) { cov = min(w.x * mix(.75 + .5 * wv, 1., sc), 1.); x = xl; st = sc; sx = .35; L = mix(7., 5., sc);   // cumulus: flat base, domes; stratocumulus: flat top
+        pr = mix(smoothstep(0., .08, x) * (1. - .8 * x * x), smoothstep(0., .12, x) * (1. - smoothstep(.7, 1., x)), sc); }
       else if (xm >= 0. && xm <= 1.) { cov = w.y; x = xm; pr = smoothstep(0., .15, x) * (1. - smoothstep(.55, 1., x)); L = 3.5; k = .7; }   // altocumulus: thin, small cells
-      else if (xh >= 0. && xh <= 1.) { cov = w.z; x = xh; pr = smoothstep(0., .3, x) * (1. - smoothstep(.45, 1., x)); k = .06;   // cirrus: thin, streaked along the east
-        vec3 e = normalize(vec3(n.z, 0., -n.x) + 1e-5); q -= e * dot(q, e) * .9; L = 9.; }
-      if (xt >= 0. && xt <= 1. && w.w > .01) { float pt = smoothstep(0., .04, xt) * (1. - smoothstep(.7, 1., xt)) * (1. - .3 * xt);
-        if (w.w * pt > cov * pr) { cov = w.w; x = xt; pr = pt; L = 9.; k = 1.; } }   // storm towers
+      else if (xh >= 0. && xh <= 1.) { cov = w.z; x = xh; pr = smoothstep(0., .3, x) * (1. - smoothstep(.45, 1., x)); k = .06; st = 1.; sx = .15; L = 9.; }   // cirrus: thin, streaked along the east
+      // storm towers: narrower columns below, an anvil spreading under a flat top (the coldest, brightest tops are mostly anvil)
+      if (xt >= 0. && xt <= 1. && w.w > .01) { float an = smoothstep(.62, .8, xt), ct = min(w.w * mix(.8, 1.4, an), 1.), pt = smoothstep(0., .04, xt) * (1. - smoothstep(.92, 1., xt)) * (1. - .3 * xt);
+        if (ct * pt > cov * pr) { cov = ct; x = xt; pr = pt; L = 9.; k = 1.; st = an; sx = .6; sy = .3; } }
       if (cov * pr < .01) return 0.;
+      // the stretched frame (one seam on the 180° meridian): rolls / streaks along the east stand in for a wind direction (no wind data here)
+      float sh = st < .99 ? shp(q, L, pk) : 0.;
+      if (st > .01) { float la = asin(clamp(n.y, -1., 1.)), lo = atan(-n.z, n.x); sh = mix(sh, shp(vec3(lo * 6371. * cos(la) * sx, h * sy, la * 6371.), L, pk), st); }
       // coverage remap: sparse cover keeps only the tops of the noise (separate puffs), full cover leaves holes only
-      float d = clamp((shp(q, L, pk) * pr - (1. - cov)) / max(cov, .1), 0., 1.);
+      float d = clamp((sh * pr - (1. - cov)) / max(cov, .1), 0., 1.);
       if (d <= 0.) return 0.;
       // erosion by the finer Worley noise: wispy toward the base, billowy toward the top; each octave only once it is wider than ~2 pixels
       if (fine) { vec3 dn = textureLod(cN, q / 1.4 + vec3(.5, .2, .8), nL(pk, 1.4)).gba, cs = vec3(.35, .175, .09);
@@ -897,8 +907,12 @@ ${SUNLIB}${MOONV}
         vec3 n = normalize(p); float mu = dot(n, sun), day = smoothstep(-.05, .03, mu) * eclF(n);
         float od = 0., s0 = 0., xs;
         for (int k = 0; k < 3; k++) { float s1 = .35 * exp2(float(k) * 1.3); od += dens(p + sun * (s0 + s1) * .5 * hk, hk, lod + 1., max(tx, .15), false, xs) * (s1 - s0) * 12.; s0 = s1; }
-        float lum = exp(-od) * ph + exp(-od * .3) * (.11 + .15 * ph) + exp(-od * .08) * .05;   // single scattering + a cheap stand-in for the light scattered many times
-        vec3 S = vec3(1.04, 1.03, 1.) * sunT(mu) * lum * 4.5 * day + vec3(.5, .63, .95) * (.08 + .3 * x) * smoothstep(-.1, .25, mu);   // sky light from above: darker toward the base
+        // "powder": thin outer parts of a dense cloud get less light scattered many times than its core, so their sunlit side is darker
+        // (deep crevices between the domes); not where the Sun shines through toward the eye (silver lining) and not in thin cirrus
+        float pw = 1. - .45 * smoothstep(.03, .12, de) * exp(-de * 5.) * (1. - smoothstep(.3, .9, cth));
+        float lum = exp(-od) * ph * pw + exp(-od * .3) * (.11 + .15 * ph) + exp(-od * .08) * .05;   // single scattering + a cheap stand-in for the light scattered many times
+        // sky light from above: darker toward the base, blue by day, violet-grey at dusk
+        vec3 S = vec3(1.04, 1.03, 1.) * sunT(mu) * lum * 4.5 * day + mix(vec3(.42, .36, .5), vec3(.5, .63, .95), smoothstep(.02, .3, mu)) * (.05 + .33 * x * x) * smoothstep(-.1, .25, mu);
         float e = exp(-de * 12. * ds / hk), ta = airT(o, p); L += Tr * S * (1. - e) * ta; Hz += Tr * (1. - e) * (1. - ta); Tr *= e; if (Tr < .02) break; }   // extinction up to 12 per km (real cumulus ~20–50)
       // the clouds' shadow on the ground, from the same 3D shapes: from the ground point (scene depth) toward the Sun through the layers, 6 steps.
       // It dims the picture behind the clouds; light scattered by the clouds keeps ~25 % (the 2D shadow in shade() gives way to this, see cVol)
