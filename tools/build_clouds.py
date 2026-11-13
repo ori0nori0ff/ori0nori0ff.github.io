@@ -1,5 +1,5 @@
 """Today's real clouds for the web 3D: NOAA GMGSI (Global Mosaic of Geostationary Satellite Imagery, long-wave IR, hourly, all
-geostationary satellites incl. Meteosat, ±72.7°, public on AWS noaa-gmgsi-pds) → web/aurora/img/earth/clouds_now.jpg (4096×2048 grey,
+geostationary satellites incl. Meteosat, ±72.7°, public on AWS noaa-gmgsi-pds) → web/aurora/img/earth/clouds_now.jpg (8192×4096 grey,
 equirectangular like clouds.jpg) + clouds_now.json {t}.
 IR sees cold, not clouds: cold ground (Siberia, Tibet, winter land) looks white too. So each pixel's clear-sky background = its warmest
 value over the last ~2 days (16 files, 3 h apart); a cloud = how much colder than that it is now, plus very cold tops always.
@@ -12,6 +12,7 @@ from PIL import Image, ImageFilter
 arg = lambda k, d: pathlib.Path(sys.argv[sys.argv.index(k) + 1]) if k in sys.argv else d
 OUT = arg('--out', pathlib.Path(__file__).resolve().parents[1] / 'web/aurora/img/earth'); OUT.mkdir(parents=True, exist_ok=True)
 BASE = arg('--base', OUT / 'clouds.jpg')
+WO, HO = 8192, 4096   # output size (equirectangular). The source has 4999 px over 360° (~8 km): beyond that it is interpolation
 B = 'https://noaa-gmgsi-pds.s3.amazonaws.com/'
 def get(u, t=120):
     for k in range(4):
@@ -45,12 +46,14 @@ def build():
     c = np.maximum(c, np.clip((now - 185) / 60, 0, 1))   # very cold tops are always cloud
     ok = np.isfinite(now) & np.isfinite(bg); c[~ok] = 0
     ok = ok & (np.abs(np.linspace(72.7, -72.7, now.shape[0]))[:, None] < 69)   # fade out before the edge of the mosaic
-    H, W = now.shape                                # 3000 × 4999, lat 72.7 … -72.7, lon -180 … 180
-    big = Image.fromarray((c * 255).astype(np.uint8)).resize((4096, int(4096 * H / W)), Image.LANCZOS)
-    okm = Image.fromarray((ok * 255).astype(np.uint8)).resize(big.size, Image.BILINEAR).filter(ImageFilter.GaussianBlur(14))
-    base = Image.open(BASE).convert('L')     # 4096 × 2048, lat 90 … -90
-    y0 = round((90 - 72.72) / 180 * 2048); band = Image.new('L', (4096, 2048), 0); band.paste(big, (0, y0))
-    m = Image.new('L', (4096, 2048), 0); m.paste(okm, (0, y0)); m = m.filter(ImageFilter.GaussianBlur(24))
+    # 3000 × 4999, lat 72.7 … -72.7, lon -180 … 180: the pixels are NOT square (0.0485° lat × 0.072° lon). The band must be resized to
+    # its share of the 180° grid; resized with its own aspect (until 13 Nov 2026) it came out 1.49× too tall and every cloud south of
+    # 73° N sat at the wrong latitude (50° N showed the clouds of ~39° N; checked against IMERG rain: no match before, match after)
+    big = Image.fromarray((c * 255).astype(np.uint8)).resize((WO, round(2 * 72.72 / 180 * HO)), Image.LANCZOS)
+    okm = Image.fromarray((ok * 255).astype(np.uint8)).resize(big.size, Image.BILINEAR).filter(ImageFilter.GaussianBlur(28))
+    base = Image.open(BASE).convert('L').resize((WO, HO), Image.LANCZOS)     # the NASA composite (4096 × 2048, lat 90 … -90), for the poles
+    y0 = round((90 - 72.72) / 180 * HO); band = Image.new('L', (WO, HO), 0); band.paste(big, (0, y0))
+    m = Image.new('L', (WO, HO), 0); m.paste(okm, (0, y0)); m = m.filter(ImageFilter.GaussianBlur(48))
     out = Image.composite(band, base, m)
     out.save(OUT / 'clouds_now.jpg', quality=85, optimize=True)
     t = re.search(r'_s(\d{12})', k).group(1)
