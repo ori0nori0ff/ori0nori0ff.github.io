@@ -470,7 +470,7 @@ ${SUNLIB}${MOONV}
   
   // aurora, from NOAA OVATION (both hemispheres): (1) a diffuse plasma glow painted from the probability map, shimmering,
   // (2) continuous curtains along the oval — a sharp bright green lower edge ~100 km, rays, folds that drift, red tops
-  const AU = { time: { value: 0 }, auB: { value: 1 } };   // auB: brighter during a CME hit
+  const AU = { time: { value: 0 }, auB: { value: 1 }, auD: { value: 1 } };   // auB: brighter during a CME hit; auD: how dark the observer's sky is (see the loop)
   const NOISE = /* glsl */`float hs(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
     float vn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f); return mix(mix(hs(i), hs(i + vec2(1, 0)), f.x), mix(hs(i + vec2(0, 1)), hs(i + vec2(1, 1)), f.x), f.y); }
     float fbm(vec2 p) { float s = 0., a = .5; for (int i = 0; i < 4; i++) { s += a * vn(p); p *= 2.03; a *= .5; } return s; }`;
@@ -478,8 +478,8 @@ ${SUNLIB}${MOONV}
   // bottom (Chapman profile), red oxygen 630 nm high up ~230 km, a faint violet N2+ fringe at the very bottom. Seen from above it is a soft veil,
   // at the limb the long path makes the bright layered band; it only adds light, so over the night side it melts into the dark
   const AU_LO = 1 + 85 / 6371, AU_HI = 1 + 520 / 6371, AUS = Q === "low" ? 48 : Q === "medium" ? 72 : 96;   // max steps; each ray takes ~25 km steps
-  const glow = new THREE.Mesh(new THREE.SphereGeometry(AU_HI, 160, 80), new THREE.ShaderMaterial({ uniforms: { ...U, ...AU }, vertexShader: VS, transparent: true, side: THREE.BackSide, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, fragmentShader: /* glsl */`
-    uniform sampler2D aumap; uniform vec3 rsun, camO; uniform float time, morph, auB; varying vec3 vO; ${NOISE}
+  const glow = new THREE.Mesh(new THREE.SphereGeometry(AU_HI, 160, 80), new THREE.ShaderMaterial({ uniforms: { ...U, ...AU }, vertexShader: VS, transparent: true, side: THREE.BackSide, depthWrite: false, blending: THREE.AdditiveBlending, fragmentShader: /* glsl */`
+    uniform sampler2D aumap; uniform vec3 rsun, camO; uniform float time, morph, auB, auD; uniform mat4 projectionMatrix, modelMatrix; varying vec3 vO; ${NOISE}
     const float RI = ${AU_LO.toFixed(5)}, RO = ${AU_HI.toFixed(5)};
     vec2 hit(vec3 o, vec3 d, float r) { float b = dot(o, d), c = dot(o, o) - r * r, h = b * b - c; if (h < 0.) return vec2(1e9, -1e9); h = sqrt(h); return vec2(-b - h, -b + h); }
     vec3 em(vec3 p) { float r = length(p); vec3 n = p / r; float h = (r - 1.) * 6371.;
@@ -501,14 +501,17 @@ ${SUNLIB}${MOONV}
       vec3 acc = vec3(0.);
       for (int i = 0; i < ${AUS}; i++) { if (float(i) >= ns) break; float s = (float(i) + j) * dt; acc += em(o + d * (s < L0 ? s0 + s : s1 + s - L0)); }
       vec3 col = acc * dt * 30.; col *= 1.2 / (1.2 + max(col.r, col.g)); col *= min(1., .82 / max(max(col.r, col.g), 1e-4));   // soft cap at the limb, colour kept, below the bloom threshold (no pumping)
-      col = any(isnan(col)) || any(isinf(col)) ? vec3(0.) : col * auB; gl_FragColor = vec4(col * (1. - morph), 1.); }` }));
+      col = any(isnan(col)) || any(isinf(col)) ? vec3(0.) : col * auB * auD; gl_FragColor = vec4(col * (1. - morph), 1.);
+      /* depth of the first emitting point (85 km up, or where the ray enters the shell): the drawn ground and HD tiles nearer than that hide the glow.
+         The back face itself lies behind the Earth, so it cannot be depth-tested as it is. */
+      vec4 vz = viewMatrix * modelMatrix * vec4(o + d * (L0 > 0. ? s0 : s1), 1.); vec4 cz = projectionMatrix * vz; gl_FragDepth = clamp(cz.z / cz.w * .5 + .5, 0., 1.); }` }));
   glow.rotation.y = -Math.PI / 2; glow.renderOrder = 3; scene.add(glow);
   const curtMat = new THREE.ShaderMaterial({ uniforms: { ...U, ...AU }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
     vertexShader: /* glsl */`attribute vec3 b; attribute float pr; attribute float hgt; uniform float time, morph; varying float vP; varying float vH; varying float vL; varying vec3 vO; ${NOISE}
       void main() { vP = pr; vH = hgt; vL = b.x + b.z * 1.7; float lat = b.y + (fbm(vec2(b.x * 5. + time * .035, b.z * 3.)) - .5) * 2.6 * .01745 + sin(b.x * 23. + time * .2 + b.z) * .12 * .01745;   // folds that wander
         float r = 1. + (95. + hgt * 230.) / 6371.; vec3 p = vec3(r * cos(lat) * cos(b.x), r * sin(lat), -r * cos(lat) * sin(b.x)); vO = p;
         gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(p, 1.); gl_Position.w += morph * 1e4; }`,
-    fragmentShader: /* glsl */`uniform vec3 rsun, camO; uniform float time, auB; varying float vP; varying float vH; varying float vL; varying vec3 vO; ${NOISE}
+    fragmentShader: /* glsl */`uniform vec3 rsun, camO; uniform float time, auB, auD; varying float vP; varying float vH; varying float vL; varying vec3 vO; ${NOISE}
       void main() {
         // no detail finer than a pixel (that is what blinked): the fine rays fade out once they get smaller than a pixel
         float aS = 1. - smoothstep(.3, 1., fwidth(vL * 900.)), aR = 1. - smoothstep(.3, 1., fwidth(vL * 160.));
@@ -521,7 +524,7 @@ ${SUNLIB}${MOONV}
         vec3 n = normalize(vO), ea = normalize(vec3(n.z, 0., -n.x) + vec3(1e-5)), no = cross(n, ea);
         float face = smoothstep(.05, .3, abs(dot(no, normalize(camO - vO)))), tall = smoothstep(3., 10., 1. / max(fwidth(vH), 1e-4));
         vec3 col = c * vP * rays * wave * prof * dark * 2.4 * face * tall;
-        col = any(isnan(col)) || any(isinf(col)) ? vec3(0.) : col * auB; gl_FragColor = vec4(col * min(1., .8 / max(max(col.r, col.g), 1e-4)), 1.); }` });
+        col = any(isnan(col)) || any(isinf(col)) ? vec3(0.) : col * auB * auD; gl_FragColor = vec4(col * min(1., .8 / max(max(col.r, col.g), 1e-4)), 1.); }` });
   const curtains = new THREE.Mesh(new THREE.BufferGeometry(), curtMat); curtains.rotation.y = -Math.PI / 2; curtains.renderOrder = 3; scene.add(curtains);
   const aurora = { get visible() { return glow.visible; }, set visible(v) { glow.visible = curtains.visible = v; U.auOn.value = v ? 1 : 0; } };
   fetch('https://services.swpc.noaa.gov/json/ovation_aurora_latest.json').then(r => r.json()).then(j => {
@@ -589,6 +592,10 @@ ${SUNLIB}${MOONV}
     // 32-bit floats hold a point on the unit sphere to ~0.8 m only. So a vertex is built as a small offset from its tile's centre (u0, with east e0 and
     // north n0 there; cs = cos / sin of its latitude) and added to that centre as seen from the camera (cV, worked out in 64 bits on the CPU): centimetres.
     float sh(float x) { return abs(x) < .05 ? x * (1. + x * x / 6.) : .5 * (exp(x) - exp(-x)); }
+    // GPU sin() is accurate only in ABSOLUTE terms (measured 13 Nov 2026: errors 1e-8 to 2e-7 for any x): for the small angles here (dl ~ 1e-5 on
+    // a z18 tile) that is up to ~1 % of sin(dl), ~1 m on the ground, so the east / west borders of two tiles no longer met and the skirt under the
+    // gap stood up as a wall. The series to x^7 is exact to float32 (< 1e-12) for |x| < .2.
+    float sn(float x) { float q = x * x; return abs(x) < .2 ? x * (1. - q / 6. * (1. - q / 20. * (1. - q / 42.))) : sin(x); }
     float ht(vec2 i) { return max(texture2D(hmap, (i + 1.5) / 258.).r, 0.); }   // the height map is 258 × 258: 256 own pixels + a ring of the neighbours' edge pixels
     void main() { vT = uv;
       // skirt: the border again, pulled down AND 2 % of the tile outwards, under the neighbour. Two tiles never meet to the last bit, so a hairline stays
@@ -600,8 +607,8 @@ ${SUNLIB}${MOONV}
       vec2 p = (hsub.xy + uv * hsub.z) * 256. - .5, i = floor(p), f = p - i;
       float h = mix(mix(ht(i), ht(i + vec2(1., 0.)), f.x), mix(ht(i + vec2(0., 1.)), ht(i + 1.), f.x), f.y);
       float dl = (uq.x - .5) * rect.y, dmy = (.5 - uq.y) * rect.w, cl = 2. / (exp(my) + exp(-my));   // cl = cos(lat) = 1 / cosh(my)
-      float sd = sh(dmy * .5) * (exp(my - dmy * .5) + exp(dmy * .5 - my)) * cl * cs.x, hv = 2. * sin(dl * .5) * sin(dl * .5);   // sd = sin(lat − lat0), hv = 1 − cos(lon − lon0)
-      vec3 dn = e0 * (cl * sin(dl)) + n0 * (sd + cl * cs.y * hv) - u0 * (sd * sd / (1. + sqrt(max(1. - sd * sd, 0.))) + cl * cs.x * hv), n = u0 + dn;
+      float sd = sh(dmy * .5) * (exp(my - dmy * .5) + exp(dmy * .5 - my)) * cl * cs.x, hv = 2. * sn(dl * .5) * sn(dl * .5);   // sd = sin(lat − lat0), hv = 1 − cos(lon − lon0)
+      vec3 dn = e0 * (cl * sn(dl)) + n0 * (sd + cl * cs.y * hv) - u0 * (sd * sd / (1. + sqrt(max(1. - sd * sd, 0.))) + cl * cs.x * hv), n = u0 + dn;
       float hh = (h * ex + 400.) / 6371000. - sk * skirt;
       vO = n; vP = n * (1. + hh); vLat = lat; vG = vec2(lon / 6.2831853 + .5, lat / 3.1415927 + .5);
       gl_Position = projectionMatrix * vec4(cV + mat3(modelViewMatrix) * (dn + n * hh), 1.); }`;
@@ -832,24 +839,42 @@ ${SUNLIB}${MOONV}
     for (let k = 0; k < 16 && cnZ < CNN; k++, cnZ++) { cnRT.texture.generateMipmaps = cnZ === 0 || cnZ === CNN - 1; /* on at the first slice (the storage is made with its mip levels then), the chain built after the last */ cnQ.material.uniforms.zs.value = (cnZ + .5) / CNN; r.setRenderTarget(cnRT, cnZ); cnQ.render(r); }
     r.setRenderTarget(o); };
   const cvU = { tDepth: { value: null }, pxA: { value: .001 }, cvB: { value: .4 } /* km of drawn ground under the clouds, see the frame loop */, projInv: airPass.uniforms.projInv, camW: airPass.uniforms.camW, toObj: airPass.uniforms.toObj, cn: airPass.uniforms.cn,
-    clouds: U.clouds, cN: { value: cnRT.texture }, sun: U.sun, camO: U.camO, cloudShift: U.cloudShift, cloudR: U.cloudR, cVol: U.cVol, airK: U.airK, lightsOn: U.lightsOn, eMoon: U.eMoon, eSun: U.eSun };
+    clouds: U.clouds, cN: { value: cnRT.texture }, sun: U.sun, camO: U.camO, cloudShift: U.cloudShift, cloudR: U.cloudR, cVol: U.cVol, airK: U.airK, lightsOn: U.lightsOn, eMoon: U.eMoon, eSun: U.eSun, rain: U.rain, rainOn: U.rainOn };
   const CVFS = /* glsl */`
     uniform sampler2D tDepth, clouds; uniform highp sampler3D cN; uniform mat4 projInv, camW; uniform mat3 toObj; uniform vec2 cn; uniform vec3 sun, camO; uniform float cloudShift, cloudR, cVol, pxA, cvB;
-    varying vec2 vUv; ${SUNT}${CNOISE}${AIRT}
+    varying vec2 vUv; ${SUNT}${CNOISE}${RAINF}${AIRT}
     vec2 hit(vec3 o, vec3 d, float r) { float b = dot(o, d), c = dot(o, o) - r * r, h = b * b - c; if (h < 0.) return vec2(1e9, -1e9); h = sqrt(h); return vec2(-b - h, -b + h); }
     float hg(float c, float g) { float k = 1. + g * g - 2. * g * c; return (1. - g * g) / (12.566 * k * sqrt(k)); }
+    // sunT for a point hkm above sea level: only the air above it dims the beam (Rayleigh scale height 8 km, haze 1.2 km). With the
+    // sea-level sunT the 4-12 km tops got the ground's orange low-Sun light (measured at a 11 deg Sun: mean cloud colour 147,133,124 = beige)
+    vec3 sunTh(float mu, float hkm) { float m = max(mu, 0.) + .035;
+      vec3 t = exp(-(vec3(12.3, 28.8, 70.6) * .0042 * exp(-hkm / 8.) + 21. * 1.1 * .0011 * exp(-hkm / 1.2)) * (1. / m - 1. / 1.035));
+      return mix(vec3(1.), t * smoothstep(-.03, .02, mu) + vec3(.02, .01, .005) * (1. - smoothstep(-.03, .02, mu)), lightsOn); }
     // the puff noise at q (km), tile L km: two scales so the 128³ tile does not repeat visibly. Read from the mip level where a texel spans ~2 pixels
     // (pk km): details under that average out (unfiltered they aliased into salt-and-pepper dots from far: measured 4x the speckle of no noise at 287 km)
     float nL(float pk, float L) { return log2(max(pk * 256. / L, 1.)); }
-    float shp(vec3 q, float L, float pk) { return textureLod(cN, q / L, nL(pk, L)).r * .65 + textureLod(cN, q / (L * 3.3) + vec3(.37, .11, .73), nL(pk, L * 3.3)).r * .35; }
+    float shq(vec3 q, float L, float pk, vec3 o) { return textureLod(cN, q / L + o, nL(pk, L)).r * .65 + textureLod(cN, q / (L * 3.3) + o + vec3(.37, .11, .73), nL(pk, L * 3.3)).r * .35; }
+    // from far a 7 km tile's 1.75 km cells are under ~2 pixels: the mip level kept only its texel lattice -> a regular dot "pavement" on full
+    // decks (switch test at 412 km: shape noise constant = gone, erosion constant = unchanged). So the tile grows with the pixel (cells >= ~8 px),
+    // two power-of-2 scales blended so it never jumps: far decks get bigger, irregular clumps instead of a lattice
+    float shp(vec3 q, float L, float pk) { float s = max(log2(pk * 32. / L), 0.), f = floor(s), r = s - f, L0 = L * exp2(f);
+      return mix(shq(q, L0, pk, fract(vec3(.31, .17, .53) * f)), shq(q, L0 * 2., pk, fract(vec3(.31, .17, .53) * (f + 1.))), r); }
     // density 0…1 at p (Earth radii); hk = Earth radii per km; x = how high inside its layer 0…1 (the sky light dims toward the base)
     float dens(vec3 p, float hk, float lod, float tx, bool fine, out float x) {
       float r = length(p), h = (r - 1.) / hk - cvB; x = 0.; if (h < .6 || h > 12.) return 0.;   // h: km above the region's drawn ground (cvB)
       vec3 n = p / r;
       vec2 u = vec2(fract(atan(-n.z, n.x) / 6.2831853 + .5 + cloudShift), .5 + asin(clamp(n.y, -1., 1.)) / 3.1415927);
-      float b = textureLod(clouds, u, lod).r; if (b < .06) return 0.;
+      // lod is for a 4096 px map (tx in 4096-texels); lk = the extra levels of a larger map (1 for today's 8192 map, 0 for the NASA 4096 one)
+      float lk = log2(float(textureSize(clouds, 0).x) / 4096.), b = textureLod(clouds, u, lod + lk).r;
+      // rain falls only from cloud: where IMERG measures rain the volume has cloud too, as the flat layer has (~.8 cover from .6 mm/h);
+      // without it those clouds vanished below 350 km (seen at 8 S 22 E). Rate decoded as in rainAt; textureLod, as everywhere in the march
+      vec4 rq = textureLod(rain, u, lod); if (rainOn > .5 && rq.a > .004) b = max(b, .07 + .5 * smoothstep(.05, .6, rq.a * .1 * pow(10., max(rq.r / rq.a * 127.5 - 1., 0.) / 40.)));
+      if (b < .06) return 0.;
       float c = smoothstep(.07, .75, b + cDet(u, tx) * .7 * sqrt(b)); if (c < .01) return 0.;
       vec4 w = cLay(b) * c; vec3 q = p / hk; float pk = tx * 10.;   // q in km; pk = one pixel in km
+      // storm towers only in small, isolated cold clusters: where the map is bright over ~200 km (a front, or today's IR map saturated at 1:
+      // 33 % of central Europe > .86 on 13 Nov) it is a stratiform deck, not convection. Without this a 12 km flat slab covered the front
+      w.w *= 1. - smoothstep(.45, .7, textureLod(clouds, u, max(lod, 4.5) + lk).r);
       // variety inside one map pixel (generated, not measured): a slow noise ~50 km wide makes some cells thicker and denser than their
       // neighbours (towering cumulus next to small ones, clear lanes between), instead of one pattern repeated over the whole region
       float wv = smoothstep(.15, .85, textureLod(cN, q / 53. + vec3(.13, .61, .29), nL(pk, 53.)).r);
@@ -861,7 +886,7 @@ ${SUNLIB}${MOONV}
       if (xl >= 0. && xl <= 1.) { cov = min(w.x * mix(.75 + .5 * wv, 1., sc), 1.); x = xl; st = sc; sx = .35; L = mix(7., 5., sc);   // cumulus: flat base, domes; stratocumulus: flat top
         pr = mix(smoothstep(0., .08, x) * (1. - .8 * x * x), smoothstep(0., .12, x) * (1. - smoothstep(.7, 1., x)), sc); }
       else if (xm >= 0. && xm <= 1.) { cov = w.y; x = xm; pr = smoothstep(0., .15, x) * (1. - smoothstep(.55, 1., x)); L = 3.5; k = .7; }   // altocumulus: thin, small cells
-      else if (xh >= 0. && xh <= 1.) { cov = w.z; x = xh; pr = smoothstep(0., .3, x) * (1. - smoothstep(.45, 1., x)); k = .06; st = 1.; sx = .15; L = 9.; }   // cirrus: thin, streaked along the east
+      else if (xh >= 0. && xh <= 1.) { cov = w.z; x = xh; pr = smoothstep(0., .3, x) * (1. - smoothstep(.45, 1., x)); k = .025; st = 1.; sx = .15; L = 9.; }   // cirrus: thin (vertical optical depth ~.5), streaked along the east; the decks below show through
       // storm towers: narrower columns below, an anvil spreading under a flat top (the coldest, brightest tops are mostly anvil)
       if (xt >= 0. && xt <= 1. && w.w > .01) { float an = smoothstep(.62, .8, xt), ct = min(w.w * mix(.8, 1.4, an), 1.), pt = smoothstep(0., .04, xt) * (1. - smoothstep(.92, 1., xt)) * (1. - .3 * xt);
         if (ct * pt > cov * pr) { cov = ct; x = xt; pr = pt; L = 9.; k = 1.; st = an; sx = .6; sy = .3; } }
@@ -876,6 +901,10 @@ ${SUNLIB}${MOONV}
       if (fine) { vec3 dn = textureLod(cN, q / 1.4 + vec3(.5, .2, .8), nL(pk, 1.4)).gba, cs = vec3(.35, .175, .09);
         dn = mix(vec3(.5), dn, smoothstep(pk * 1.5, pk * 3., cs)); float e = dot(dn, vec3(.55, .3, .15));
         d = clamp((d - .38 * mix(1. - e, e, clamp(x * 3., 0., 1.))) / .62, 0., 1.); }
+      // thin margins: at 12 / km over km-long paths any density > ~.05 was opaque, so the deck ended in a 1-pixel cut along the smooth map
+      // contour (alpha jump .55 per edge pixel at 412 km). Where the cover c is low only the noise's cores (high d) stay dense, the rest thins
+      // out (c^4) and fades in softly from d = 0: edges made of puffs and wisps. Inside a deck c ~ 1: unchanged
+      d *= mix(mix(c * c * c * c, 1., smoothstep(.6, .95, d)) * smoothstep(0., .25, d), 1., smoothstep(.75, .95, c));
       return clamp(d * 3., 0., 1.) * k; }
     void main() {
       vec4 v = projInv * vec4(vUv * 2. - 1., 1., 1.); vec3 dv = normalize(v.xyz / v.w);
@@ -906,13 +935,20 @@ ${SUNLIB}${MOONV}
         ne = 0; u += du;
         vec3 n = normalize(p); float mu = dot(n, sun), day = smoothstep(-.05, .03, mu) * eclF(n);
         float od = 0., s0 = 0., xs;
-        for (int k = 0; k < 3; k++) { float s1 = .35 * exp2(float(k) * 1.3); od += dens(p + sun * (s0 + s1) * .5 * hk, hk, lod + 1., max(tx, .15), false, xs) * (s1 - s0) * 12.; s0 = s1; }
+        // the same eroded density as the view ray (fine = true): without the erosion the samples toward the Sun started inside the uneroded
+        // cloud, so the very surface the camera sees lay in shadow (measured: 62 % of the seen cloud got < 10 % of the Sun -> lavender sheets)
+        for (int k = 0; k < 3; k++) { float s1 = .35 * exp2(float(k) * 1.3); od += dens(p + sun * (s0 + s1) * .5 * hk, hk, lod + 1., max(tx, .15), true, xs) * (s1 - s0) * 12.; s0 = s1; }
         // "powder": thin outer parts of a dense cloud get less light scattered many times than its core, so their sunlit side is darker
         // (deep crevices between the domes); not where the Sun shines through toward the eye (silver lining) and not in thin cirrus
         float pw = 1. - .45 * smoothstep(.03, .12, de) * exp(-de * 5.) * (1. - smoothstep(.3, .9, cth));
-        float lum = exp(-od) * ph * pw + exp(-od * .3) * (.11 + .15 * ph) + exp(-od * .08) * .05;   // single scattering + a cheap stand-in for the light scattered many times
+        float ss = exp(-od) * ph * pw, ms = exp(-od * .3) * (.11 + .15 * ph) + exp(-od * .08) * .05;   // single scattering + a cheap stand-in for the light scattered many times
+        // the light scattered many times inside a deck entered its top from the Sun's beam (flux ~ mu) and from the sky dome (blue): at a low Sun
+        // the sky's share grows (an estimate, ~40 % at 8 deg). With the beam's colour alone the fog inside a low deck was beige at an 8 deg Sun
+        // (sRGB 202,190,165, measured); the single scattering keeps the beam's colour (warm sunlit tops)
+        float fm = .6 + .4 * smoothstep(.05, .5, mu); vec3 sT = vec3(1.04, 1.03, 1.) * sunTh(mu, (length(p) - 1.) / hk);
         // sky light from above: darker toward the base, blue by day, violet-grey at dusk
-        vec3 S = vec3(1.04, 1.03, 1.) * sunT(mu) * lum * 4.5 * day + mix(vec3(.42, .36, .5), vec3(.5, .63, .95), smoothstep(.02, .3, mu)) * (.05 + .33 * x * x) * smoothstep(-.1, .25, mu);
+        // 3.8 (was 4.5 with the shadow error): the same mean brightness under a high Sun as before (measured .721 vs .729)
+        vec3 S = (sT * ss + (sT * fm + vec3(.62, .7, .85) * (1. - fm)) * ms) * 3.8 * day + mix(vec3(.42, .36, .5), vec3(.5, .63, .95), smoothstep(.02, .3, mu)) * (.05 + .33 * x * x) * smoothstep(-.1, .25, mu);
         float e = exp(-de * 12. * ds / hk), ta = airT(o, p); L += Tr * S * (1. - e) * ta; Hz += Tr * (1. - e) * (1. - ta); Tr *= e; if (Tr < .02) break; }   // extinction up to 12 per km (real cumulus ~20–50)
       // the clouds' shadow on the ground, from the same 3D shapes: from the ground point (scene depth) toward the Sun through the layers, 6 steps.
       // It dims the picture behind the clouds; light scattered by the clouds keeps ~25 % (the 2D shadow in shade() gives way to this, see cVol)
@@ -1726,6 +1762,9 @@ ${SUNLIB}${MOONV}
     { const ch = solar.fromWorld(camera.position); solar.update(t, [hE[0] + ch.x, hE[1] + ch.y, hE[2] + ch.z], W, H, nearOn, renderer.getPixelRatio()); feed(t); BLT.update(t, dt); eclFrame(t); }
     { const k = solar.cam.far * .45 / 900; stars.scale.set(-k, k, k); }
     inv.copy(earth.matrixWorld).invert(); U.camO.value.copy(camera.position).applyMatrix4(inv);
+    // in the air, a sky lit by the Sun outshines the aurora: seen only once the Sun is below about -6 deg here (fade -3..-9 deg, an approximation);
+    // above ~30-80 km the sky is black, and the emission point's own darkness (in the shaders) decides alone
+    { const cm = U.camO.value.length(), sEl = U.rsun.value.dot(U.camO.value) / cm; AU.auD.value = Math.max(1 - smooth(-.1564, -.0523, sEl), smooth(30, 80, (cm - 1) * 6371)); }
     U.airK.value = 1 + 2.3 * smooth(.16, 2, U.camO.value.length() - 1);   // the air: real thickness below ~1000 km, stretched only for the far view (see AIRC)
     // exposure like an eye / a camera: up for the night side and dusk (city lights), down for the noon ground; eased over ~1 s.
     // Real Sun near the Earth only: far out (whole globe) and with the studio light it stays at today's 1.05. Every 4th frame: litView is cheap.
