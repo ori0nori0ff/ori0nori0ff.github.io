@@ -14,12 +14,14 @@ const clamp = (x, a, b) => Math.max(a, Math.min(b, x)), smooth = (a, b, x) => { 
 // per model: points not in the file (metres, craft frame). Estimates read off the model, labelled.
 export const MODELS = {
   f16: { url: new URL('models/f16/f16.gltf', import.meta.url), credit: 'F-16D 3D model: alexskyrex-5de5f7 (CGTrader, Royalty Free licence, not redistributable)',
-    // estimate (S4; was (0, 1.42, -4.55) in S3b, 11° over the HUD glass, so a horizon could never lie on it): ~25 cm in front of the scanned
-    // seat's head rest; the boresight crosses the scanned HUD combiner 2.5° under its top (the F-16's waterline sits near the HUD's top)
+    // where the BMS cockpit's origin (its eye) sits in the craft (estimate from S4: ~25 cm in front of the seat's head rest)
     eye: [0, 1.29, -4.70],
-    // S3b: the photogrammetry cockpit (loaded the first time the Cockpit view is used) and the ejection seat (rear seat; front seat seen from outside)
-    cockpit: { url: new URL('models/f16-cockpit/f16-cockpit.gltf', import.meta.url),
-      credit: 'Cockpit: "F-16C Cockpit Photogrammetry" by VTX (Sketchfab), CC BY-NC-SA 4.0, reduced and placed (same licence)',
+    // the pilot's head = eye + BMS head_translation_offset (Data/Art/CkptArt/3dCkpit.dat: forward 0.1 ft, down 0.02 ft); flight/instruments/f16.js
+    // uses the same point for the HUD (keep both equal)
+    head: [0, 1.29 - .0061, -4.70 - .0305],
+    // the Falcon BMS 4.38 cockpit (model 888, tools/build_bms_cockpit.py; loaded the first time the Cockpit view is used): node origin = the BMS eye, placed at `eye`
+    cockpit: { url: new URL('models/f16-cockpit/bms-cockpit.glb', import.meta.url),
+      credit: 'Cockpit: Falcon BMS 4.38 F-16 cockpit model (Benchmark Sims), used with permission',
       cut: [[-.4, .75, -5.9], [.4, 1.75, -4.25]] },   // box (craft frame) where the F-16D body's own cockpit block is not drawn while the cockpit is shown
     seat: { url: new URL('models/seat/seat.gltf', import.meta.url), credit: 'Ejection seat: "Fighter Jet Ejection Seat" by k.botond431 (Sketchfab), CC BY 4.0, scaled',
       at: [[0, .2, -4.55], [0, .3, -2.75]] },   // estimates: front seat (outside views only), rear seat (raised)
@@ -103,23 +105,34 @@ export async function createGfx(F, core, o) {
         sh.fragmentShader = 'uniform float uCut; uniform vec3 uCutA, uCutB; varying vec3 vCut;\n' + sh.fragmentShader.replace('#include <clipping_planes_fragment>',
           'if (uCut > .5 && all(greaterThan(vCut, uCutA)) && all(lessThan(vCut, uCutB))) discard;\n#include <clipping_planes_fragment>'); };
       m.customProgramCacheKey = () => 'bodycut'; n.material = m; }); }
-  // S3b: the scanned cockpit, loaded the first time the Cockpit view is used (10 MB); its texture holds the scan's own (baked) light
-  const ck = { obj: null, loading: null, off: false, scan: null };
-  function loadCockpit() { const t1 = performance.now();
-    ck.loading = new GLTFLoader().loadAsync(M.cockpit.url.href).then(g => { const c = g.scene, st = { loadMs: performance.now() - t1, tris: 0, gpuBytes: 0 }, t2 = performance.now(), geo = new Set(), tex = new Set();
-      c.name = 'Cockpit'; c.traverse(n => { if (!n.isMesh) return; const m = n.material; geo.add(n.geometry); st.tris += n.geometry.index.count / 3;
-        if (m.name === 'HudGlass') { m.transparent = true; m.opacity = .12; m.depthWrite = false; m.metalness = 0; m.roughness = .05; n.castShadow = false; n.renderOrder = 6; }
-        else { m.metalness = 0; m.roughness = .85; m.emissive.setRGB(1, 1, 1); m.emissiveMap = m.map; ck.scan = m; n.castShadow = n.receiveShadow = true; if (m.map) { m.map.anisotropy = Math.min(8, R.capabilities.getMaxAnisotropy()); tex.add(m.map); } } });
-      for (const t of tex) { R.initTexture(t); st.gpuBytes += t.image.width * t.image.height * 4 * 4 / 3; }
-      for (const gg of geo) { for (const a of Object.values(gg.attributes)) st.gpuBytes += a.array.byteLength; st.gpuBytes += gg.index.array.byteLength; }
-      model.add(c); c.visible = false; ck.obj = c; st.uploadMs = performance.now() - t2; stats.cockpit = st;
-      // high quality on a PC: the 8192² texture (6 MB more, ~360 MB GPU memory instead of ~90 MB) replaces the 4096² one once loaded
-      const q = o.quality || (() => { try { return localStorage.getItem('aurora.q3d'); } catch (e) { return null; } })() || 'high';
-      if ((o.scan ? o.scan === 'hi' : q === 'high') && ck.scan && R.capabilities.maxTextureSize >= 8192 && !matchMedia('(pointer: coarse)').matches) {
-        const t3 = performance.now(); new THREE.TextureLoader().loadAsync(new URL('cockpit_base_8k.jpg', M.cockpit.url).href).then(tx => { const m = ck.scan, old = m.map;
-          tx.flipY = false; tx.colorSpace = old.colorSpace; tx.anisotropy = old.anisotropy; tx.wrapS = old.wrapS; tx.wrapT = old.wrapT; R.initTexture(tx);
-          m.map = m.emissiveMap = tx; m.needsUpdate = true; old.dispose(); st.hiMs = performance.now() - t3; st.gpuBytes += (8192 * 8192 - 4096 * 4096) * 4 * 4 / 3; })
-          .catch(e => console.warn('cockpit 8k texture', e)); } })
+  // the BMS cockpit, loaded the first time the Cockpit view is used: geometry 7.5 MB + textures (o.scan 'hi' = tex/4k ~17 MB, else tex/2k ~5 MB).
+  // Night: the 'lit' map holds the backlit lettering (R) and BMS's baked flood light (G); ck.back / ck.flood (0..1) scale them.
+  const ck = { obj: null, loading: null, off: false, back: { value: 0 }, flood: { value: 0 } };
+  function loadCockpit() { const t1 = performance.now(), dir = new URL('models/f16-cockpit/tex/' + (o.scan === 'hi' ? '4k' : '2k') + '/', import.meta.url), tl = new THREE.TextureLoader();
+    const aniso = Math.min(8, R.capabilities.getMaxAnisotropy()), texs = new Map(), waits = [];
+    const T = (f, srgb) => { if (texs.has(f)) return texs.get(f); let ok; waits.push(new Promise(r => { ok = r; }));
+      const t = tl.load(new URL(f, dir).href, ok, undefined, e => { console.warn('cockpit texture', f, e); ok(); }); t.flipY = false; t.wrapS = t.wrapT = THREE.RepeatWrapping;
+      t.repeat.set(2, 2); t.offset.set(-.5, -.5); t.anisotropy = aniso; if (srgb) t.colorSpace = THREE.SRGBColorSpace; texs.set(f, t); return t; };   /* stored uv = (uv + .5) / 2 (build script) */
+    const nightHook = m => { m.onBeforeCompile = sh => { sh.uniforms.uBack = ck.back; sh.uniforms.uFlood = ck.flood;
+      sh.fragmentShader = 'uniform float uBack, uFlood;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>',
+        'vec4 litT = texture2D(emissiveMap, vEmissiveMapUv); totalEmissiveRadiance = uBack * litT.r * vec3(.55, 1., .62) + uFlood * litT.g * diffuseColor.rgb * vec3(1., .93, .8);'); };
+      m.customProgramCacheKey = () => 'bmsnight'; };
+    const pbr = (k, lit, nrm = true) => { const orm = T(k + '_orm.jpg'), m = new THREE.MeshStandardMaterial({ map: T(k + '_alb.' + (k === 'canopy' ? 'png' : 'jpg'), true),
+      aoMap: orm, roughnessMap: orm, metalnessMap: orm, roughness: 1, metalness: 1, aoMapIntensity: .8 });
+      if (nrm) { m.normalMap = T(k + '_nrm.jpg'); m.normalScale.set(1, 1); }   /* DirectX maps (green = down the image; measured 2026-11-14: corr(dR/drow, dG/dcol) > 0 on pit1 / pit2 / seat); flipY false -> +v = down = three's +B, so no flip */
+      if (lit) { m.emissiveMap = T(k + '_lit.jpg'); m.emissive.setRGB(1, 1, 1); nightHook(m); } return m; };
+    const MAT = { 'CM50Pit1': () => pbr('pit1', true), 'CM50pit1Main': () => pbr('pit1', true), 'CM50Pit2': () => pbr('pit2', true), 'CM50Pit2Main': () => pbr('pit2', true),
+      'Seat': () => pbr('seat'), 'F-16CM_50_1': () => pbr('skin'),
+      'Canopy': () => { const m = pbr('canopy'); m.alphaTest = .5; return m; },
+      'CM50Pit LIghts': () => { const t = T('lights.png', true); return new THREE.MeshStandardMaterial({ map: t, emissiveMap: t, emissive: new THREE.Color(.25, .25, .25), transparent: true, alphaTest: .02, roughness: .3, metalness: 0 }); },
+      'Canopy Glass': () => new THREE.MeshPhysicalMaterial({ color: new THREE.Color(.43, .42, .35), transparent: true, opacity: .1, depthWrite: false, roughness: .05, metalness: 0, side: THREE.DoubleSide }) };
+    ck.loading = new GLTFLoader().loadAsync(M.cockpit.url.href).then(g => { const c = g.scene, st = { loadMs: performance.now() - t1, tris: 0, gpuBytes: 0 }, t2 = performance.now(), made = {};
+      c.name = 'Cockpit'; c.position.set(...M.eye); c.traverse(n => { if (!n.isMesh) return; const nm = n.material.name; st.tris += n.geometry.index.count / 3;
+        for (const a of Object.values(n.geometry.attributes)) st.gpuBytes += a.array.byteLength; st.gpuBytes += n.geometry.index.array.byteLength;
+        n.material = made[nm] || (made[nm] = (MAT[nm] || (() => new THREE.MeshStandardMaterial({ color: 0x333333 })))());
+        const glass = nm === 'Canopy Glass'; n.castShadow = !glass && nm !== 'CM50Pit LIghts'; n.receiveShadow = !glass; if (glass) n.renderOrder = 6; });
+      Promise.all(waits).then(() => { for (const t of texs.values()) { if (!t.image || !t.image.width) continue; R.initTexture(t); st.gpuBytes += t.image.width * t.image.height * 4 * 4 / 3; } st.texMs = performance.now() - t1; st.texN = texs.size; });
+      model.add(c); c.visible = false; ck.obj = c; st.uploadMs = performance.now() - t2; stats.cockpit = st; })
       .catch(e => { console.warn('cockpit model', e); }); }
   // hinged parts (glTF extras.hinge = axis in the craft frame, node origin on the hinge line)
   const hinge = {}; model.traverse(n => { if (n.userData && n.userData.hinge) hinge[n.name] = { n, ax: new THREE.Vector3(...n.userData.hinge).normalize(), q0: n.quaternion.clone() }; });
@@ -172,10 +185,21 @@ export async function createGfx(F, core, o) {
     shPass(THREE.ZeroFactor, THREE.OneFactor, THREE.OneFactor, THREE.ZeroFactor, 1)], shM = shMs[0].uniforms.uA;
   const shadows = []; model.traverse(n => { if (n.isMesh && n.castShadow) shadows.push([n, shMs.map((mt, k) => { const m = new THREE.Mesh(n.geometry, mt); m.matrixAutoUpdate = false;
     m.renderOrder = 1 + k * .1; m.frustumCulled = false; shG.add(m); return m; })]); });
-  const poolM = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, uniforms: { uI: { value: 0 } },
-    vertexShader: 'varying vec2 vU; void main() { vU = uv * 2. - 1.; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }',
-    fragmentShader: 'uniform float uI; varying vec2 vU; void main() { float r = dot(vU, vU); gl_FragColor = vec4(vec3(1., .95, .85) * uI * exp(-r * 3.5) * step(r, 1.), 1.); }' });
+  // landing / taxi light on the ground: per pixel E = I(beam angles) cos(incidence) / d² from the lamp on the nose gear, all in craft metres.
+  // Beam I(ax, ay) = I0 [flat-topped core e^(−r³/2), r = angle / σ, + 2 % gaussian spill at 2σ]; screen value = colour · uMax · (1 − e^(−E·uK)) (soft roll-off, never a flat white disc).
+  const poolU = { uM: { value: new THREE.Matrix4() }, uL: { value: new THREE.Vector3() }, uN: { value: new THREE.Vector3() }, uD: { value: new THREE.Vector3() },
+    uX: { value: new THREE.Vector3(1, 0, 0) }, uY: { value: new THREE.Vector3() }, uS: { value: new THREE.Vector2() }, uI0: { value: 0 }, uR: { value: 600 } };
+  const poolM = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, uniforms: poolU,
+    vertexShader: 'uniform mat4 uM; varying vec3 vP; void main() { vP = (uM * vec4(position, 1.)).xyz; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }',
+    fragmentShader: 'uniform vec3 uL, uN, uD, uX, uY; uniform vec2 uS; uniform float uI0, uR; varying vec3 vP;\n' +
+      'void main() { vec3 v = vP - uL; float d = length(v); vec3 l = v / d; float ca = dot(l, uD); if (ca < .05) discard;\n' +
+      '  vec2 a = vec2(atan(dot(l, uX), ca), atan(dot(l, uY), ca)) / uS; float r2 = dot(a, a);\n' +
+      '  float I = exp(-.5 * r2 * sqrt(r2)) + .02 * exp(-.5 * r2 / 4.); float E = uI0 * I * max(0., -dot(l, uN)) / (d * d) * (1. - smoothstep(.7 * uR, uR, d));\n' +
+      '  gl_FragColor = vec4(vec3(1., .9, .76) * .7 * (1. - exp(-E * .02)), 1.); }' });   /* .7 = uMax, .02 = uK (1/lx): tuned by pixel reads */
   const pool = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), poolM); pool.renderOrder = 2; pool.frustumCulled = false; craft.add(pool);
+  // the two lamps (estimates; the F-16 LANDING / TAXI switch is not modelled: taxi below 6 m and 30 m/s, else landing): depression below the body
+  // axis, σ horizontal / vertical, peak intensity I0 (cd; PAR-46-class sealed beams are ~10⁵ cd). Landing is aimed low for the ~13° approach AoA.
+  const LAMPS = { taxi: { dep: 1.5, sh: 9, sv: 2.5, I0: 8e4 }, land: { dep: 14, sh: 4.5, sv: 3, I0: 2e5 } };   /* 14°: at 13° AoA on a 3° path the beam axis meets the ground ~14 heights ahead */
   // ── contrail: a camera-facing ribbon through the nozzle's past positions (W, doubles), vertices relative to the craft (metres, float32-safe)
   const CN = 900, CHZ = QL.chz, CAGE = QL.cage;   // samples, Hz, life in s (estimate: persistence depends on the humidity, unknown here)
   const trail = [], tPos = new Float32Array(CN * 2 * 3), tSide = new Float32Array(CN * 2), tA = new Float32Array(CN * 2), tIdx = [];
@@ -199,7 +223,7 @@ export async function createGfx(F, core, o) {
     if (fw.lengthSq() < 1e-8) fw.set(0, 0, -1).applyQuaternion(P.quat).cross(up); fw.normalize();
     const Z = fw.negate(), X = vS.crossVectors(up, Z).normalize(); cam.quat.setFromRotationMatrix(mT.makeBasis(X, up, Z)).multiply(qT.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -.25));
     const q = qT.copy(cam.quat); if (look) q.multiply(look); cam.pos.set(0, 0, orbit.dist / R_E).applyQuaternion(q).add(P.pos); } };
-  const def = o.def; if (def) { const v = def.views; v[0] = { ...v[0], eye: M.eye.slice(), tilt: -.19, fov: 62 }; /* S3b / S4: cockpit 62° vertical (Earth camera 35°), 11° down: HUD + MFDs + ADI in view */ if (!v.some(x => x.name === 'Orbit')) v.push(orbit); }
+  const def = o.def; if (def) { const v = def.views; v[0] = { ...v[0], eye: (M.head || M.eye).slice(), tilt: -.19, fov: 62 }; /* S3b / S4: cockpit 62° vertical (Earth camera 35°), 11° down: HUD + MFDs + ADI in view */ if (!v.some(x => x.name === 'Orbit')) v.push(orbit); }
   const onWheel = e => { if (!F.piloting || !def || def.views[core.view] !== orbit) return; orbit.dist = clamp(orbit.dist * Math.exp(Math.sign(e.deltaY) * .15), 6, 3000); };
   R.domElement.addEventListener('wheel', onWheel, { passive: true });
 
@@ -217,7 +241,7 @@ export async function createGfx(F, core, o) {
     // the sky map (~20 ms to build): only when the local vertical or the Sun moved by > 1° (≥ 7 min of flight at 250 m/s), or the air thinned by > 10 %
     if (envAt < 0 || skyU.up.value.dot(up) < .99985 || skyU.sun.value.dot(sun) < .99985 || Math.abs(air.rho - envRho) > .1 * envRho + 1e-4) { envAt = t; envRho = air.rho; envUpdate(up, sun, air.rho); }
     // camera layer near / far (the contrail reaches ~20 km behind)
-    const tr = trail.length > 1; o.camera.near = (tr ? Math.max(.05, Math.min(d - 20, 1)) : Math.max(.05, d - 20)) / R_E; o.camera.far = (d + (tr ? 25000 : 60)) / R_E;
+    const tr = trail.length > 1; o.camera.near = (tr ? Math.max(.05, Math.min(d - 20, 1)) : Math.max(.05, d - 20)) / R_E; o.camera.far = (d + (tr ? 25000 : pool.visible ? 60 + pool.scale.y : 60)) / R_E;   /* the light on the ground: last frame's quad length */
     if (!stats.modelOn) return;
     // control surfaces (deg; signs: elev +, flaperon + = trailing edge down; S&L aileron + = right flaperon down; rudder + = trailing edge left)
     const el = srf.elev || 0, ai = srf.ail || 0, ru = srf.rud || 0, aoa = h.aoa || 0, gear = srf.gear == null ? 1 : srf.gear;
@@ -244,7 +268,7 @@ export async function createGfx(F, core, o) {
     for (const x of [navR, navG, navT]) x.visible = !inCock;
     if (M.cockpit && inCock && !ck.loading && o.scan !== 'none') loadCockpit();
     const ckOn = inCock && !!ck.obj && !ck.off; if (ck.obj) ck.obj.visible = ckOn; cutU.value = ckOn ? 1 : 0; if (seats[0]) seats[0].visible = !ckOn;
-    if (ck.scan) ck.scan.emissiveIntensity = .04 + .3 * dl;   // estimate: instrument / flood light at night + sky light through the canopy by day
+    ck.back.value = .6 * (1 - dl); ck.flood.value = .12 * (1 - dl);   // estimates: backlit lettering + flood light, faded in with the dusk
     if (nodes.Canopy) nodes.Canopy.visible = !inCock;   // its two halves overlap on the centre line: a dark seam right in the pilot's view
     strobe.visible = !inCock && (t / 1000) % 1.2 < .06; strobe.material.color.setScalar(8 * night); land.visible = gear > .95; land.material.color.setRGB(3 * night, 2.9 * night, 2.6 * night);
     // ground: tangent plane under the craft in body axes (origin height = agl + rest), sun direction in body axes
@@ -256,13 +280,18 @@ export async function createGfx(F, core, o) {
       shM.value = .55 * (1 - hO / 300) * smooth(.05, .3, ul);
       for (const [n, ms] of shadows) { const v = n.visible && n.parent.visible; for (const m of ms) m.visible = v; if (!v) continue;
         rel.copy(n.matrix); for (let p = n.parent; p && p !== model; p = p.parent) { p.updateMatrix(); rel.premultiply(p.matrix); } for (const m of ms) m.matrix.multiplyMatrices(S4, rel); } }
-    // landing light pool: where the beam (3° down from the nose line) meets the plane, within 400 m, gear down
-    { const dir = vT.set(0, -Math.sin(3 * D2R), -Math.cos(3 * D2R)), den = uB.dot(dir), dist = den < -1e-3 ? -(uB.dot(landP) + hO) / den : -1;
-      pool.visible = land.visible && dist > 0 && dist < 400 && hO < 200; if (inCock) land.visible = false;
-      if (pool.visible) { const c = vS.copy(landP).addScaledVector(dir, dist).addScaledVector(uB, .05), w = 2 * dist * Math.tan(9 * D2R) + 2, l = w / Math.max(.08, -den);
-        pool.position.copy(c); const fwd = dir.clone().addScaledVector(uB, -dir.dot(uB)).normalize(), X = new THREE.Vector3().crossVectors(fwd, uB);
-        pool.quaternion.setFromRotationMatrix(mT.makeBasis(X, fwd, uB)); pool.scale.set(w, Math.min(l, 6 * w), 1);
-        poolM.uniforms.uI.value = 1.5 * Math.pow(1 - dl, 2) * clamp(400 / (dist * dist + 40), 0, 1.5); } }   // ~10-50 lx vs 10⁴-10⁵ lx of daylight: seen only at dusk / night
+    // landing / taxi light on the ground: a quad on the ground plane under the beam (from below the lamp to the beam's upper 3.5σ edge, ≤ uR),
+    // lit per pixel; gear down, lamp < 300 m above the ground. Night only: ~1-100 lx vs 10⁴-10⁵ lx of daylight
+    { const L = LAMPS[hO < 6 && (h.tas || 0) < 30 ? 'taxi' : 'land'], a = L.dep * D2R, dir = vT.set(0, -Math.sin(a), -Math.cos(a)), hL = uB.dot(landP) + hO, Rm = poolU.uR.value;
+      const fwd = vU.copy(dir).addScaledVector(uB, -dir.dot(uB)), fl = fwd.length();
+      pool.visible = land.visible && hL > .05 && hL < 300 && fl > .2 && dl < .9; if (inCock) land.visible = false;
+      if (pool.visible) { fwd.multiplyScalar(1 / fl); const X = new THREE.Vector3().crossVectors(fwd, uB);
+        const eUp = Math.asin(clamp(-uB.dot(dir), -1, 1)) - 3.5 * L.sv * D2R;   // depression below the ground plane of the beam's upper edge
+        const far = eUp > .002 ? Math.min(Rm, hL / Math.tan(eUp)) : Rm, w = 2 * (far * Math.tan(Math.min(60, 5 * L.sh) * D2R) + 1);
+        pool.position.copy(landP).addScaledVector(uB, .03 - hL).addScaledVector(fwd, far / 2); pool.quaternion.setFromRotationMatrix(mT.makeBasis(X, fwd, uB));
+        pool.scale.set(w, far + 2, 1); pool.updateMatrix(); poolU.uM.value.copy(pool.matrix);
+        poolU.uL.value.copy(landP); poolU.uN.value.copy(uB); poolU.uD.value.copy(dir); poolU.uY.value.set(0, Math.cos(a), -Math.sin(a));
+        poolU.uS.value.set(L.sh * D2R, L.sv * D2R); poolU.uI0.value = L.I0 * Math.pow(1 - dl, 2); } }
     // contrail (Schmidt-Appleman criterion simplified: T < 235 K, i.e. above ~8.2 km in the US 1976 atmosphere; engine running)
     const want = on && air.T < 235 && altMSL > 7500 && !s.onGround;
     if (want && t - lastSample > 1000 / CHZ) { const x = vT.copy(exitP).applyQuaternion(P.quat).multiplyScalar(1 / R_E).add(P.pos);

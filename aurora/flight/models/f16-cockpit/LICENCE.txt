@@ -1,16 +1,11 @@
-f16-cockpit.gltf, f16-cockpit.bin, cockpit_base.jpg, cockpit_base_8k.jpg
+bms-cockpit.glb and tex/2k, tex/4k are converted from the Falcon BMS 4.38 F-16CM block 50 cockpit model
+(Data/TerrData/Objects/Models/888, textures of model 1052 for a few outer skin parts), (c) Benchmark Sims.
+Used on this page with the site owner's permission (checked by the owner, 2026-11-14). Not covered by the licence of the
+surrounding code; not to be reused elsewhere without the rights holder's permission.
 
-This work is based on "F-16C Cockpit Photogrammetry"
-(https://sketchfab.com/3d-models/f-16c-cockpit-photogrammetry-41cdec4eac10453c8a272579d0e2c9fa)
-by VTX (https://sketchfab.com/VTX_car), licensed under CC BY-NC-SA 4.0
-(https://creativecommons.org/licenses/by-nc-sa/4.0/).
+Conversion (tools/build_bms_cockpit.py, deterministic): BML unpacked, switch branch 0 kept, DOFs at rest, left-handed feet ->
+right-handed metres, duplicate vertices merged, quantised (KHR_mesh_quantization); textures downsized to 4096 / 2048 px JPEG / PNG,
+ARMW repacked to occlusion-roughness-metalness, normal maps rebuilt from BC5, night map = backlit lettering (R) + flood light (G).
 
-This is a modified version, shared under the same licence (CC BY-NC-SA 4.0): attribution, no commercial use,
-modified copies under the same licence. It is not covered by the licence of the surrounding code.
-
-Changes (2026-11-14, tools/f16_cockpit_blender.py, Blender 5.2):
-- kept the photogrammetry scan and the HUD combiner glass; removed the reference airframe, canopy and other parts;
-- cut away the scan outside the cockpit tub (|x| > 0.46 m, above 1.42 m in the craft frame);
-- reduced from 961 636 to 180 000 triangles (Blender collapse decimation);
-- base colour texture 8192 px PNG -> 4096 px JPEG (quality 85) + 8192 px JPEG (quality 88); specular map dropped; new simple materials;
-- scaled from decimetres to metres and moved into the F-16D craft frame of this page (windscreen tips matched).
+The earlier photogrammetry scan ("F-16C Cockpit Photogrammetry" by VTX, CC BY-NC-SA 4.0) was removed on 2026-11-14.
+The instrument face crops in tex/ keep their own note (tex/LICENCE.txt).

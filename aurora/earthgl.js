@@ -202,7 +202,11 @@ function create(host, opts) {
     cloudFade: { value: 1 }, cloudR: { value: 1 + 4 / 6371 }, aumap: { value: null }, auOn: { value: 1 }, hdA: { value: 0 }, pxk: { value: 1000 }, wtime: { value: 0 }, ex: { value: 1.5 }, altF: { value: 1 }, airK: { value: 1 },
     eMoon: { value: new THREE.Vector4(0, 0, 0, 0) }, eSun: { value: new THREE.Vector4(1, 0, 0, 23481) }, cVol: { value: 0 },   // cVol: 0 = the flat cloud layer, 1 = the cloud volume (close up, see cvPass)
     rain: { value: Object.assign(new THREE.DataTexture(new Uint8Array(4), 1, 1), { needsUpdate: true }) }, rainOn: { value: 0 },   // measured rain (see rainLoad); none until it loads
-    wK: { value: waveSet() } };   // the sea's waves (see waves() in TFS)
+    wK: { value: waveSet() },   // the sea's waves (see waves() in TFS)
+    // terrain shadows toward the Sun (air pass vTer, glint gVis): zTop = the highest drawn ground around (Earth radii), tsK = strength 0…1,
+    // tsB = 3 pixels as an angle (the start is lifted that much so a surface never shadows itself); pv* = the previous frame's linear depth and camera
+    zTop: { value: 1e-4 }, tsK: { value: 0 }, tsB: { value: .003 }, pvD: { value: null }, pvM: { value: new THREE.Matrix4() }, pvP: { value: new THREE.Matrix4() }, pvK: { value: 0 } };
+  const TSN = Q === 'low' ? 0 : Q === 'medium' ? 6 : 8;   // steps of those shadow rays (0 = off)
   // S6 wind textures for the clouds (WINDF); filled by windTex() once flight/wind.js has loaded
   const wTx = () => { const t = new THREE.DataTexture(new Float32Array(360 * 181 * 4), 360, 181, THREE.RGBAFormat, THREE.FloatType);   // read by texelFetch only
     Object.assign(t, { magFilter: THREE.NearestFilter, minFilter: THREE.NearestFilter, needsUpdate: true }); return t; };
@@ -272,6 +276,30 @@ function create(host, opts) {
       return (h < 5.6 ? mix(a.ba, a.rg, clamp((h - 1.5) / 4.1, 0., 1.)) : mix(a.rg, b, clamp((h - 5.6) / 4.8, 0., 1.))) * wOn; }`;
   const SHADE = /* glsl */`${SUNT}${CNOISE}${RAINF}${WINDF}
     uniform sampler2D night, clouds, aumap; uniform vec3 sun, camO; uniform float morph, cloudOn, cloudShift, cloudFade, cloudR, auOn, airK, cVol;
+    uniform sampler2D pvD; uniform mat4 pvM, pvP; uniform float pvK, zTop, tsB;
+    // the glint is a direct beam: a ridge between the water and the Sun takes it. The scene pass cannot read its own depth, so this marches
+    // toward the Sun (${TSN} steps, crowded near P) through the PREVIOUS frame's depth (pvD: linear, half size; pvM / pvP: that frame's camera).
+    // One frame late; an occluder outside that picture casts nothing. Hit = the ray passes behind the drawn surface within one step's depth
+    // ssRay: that march along any direction dir; returns (hit strength 0…1, faded at the picture's edge; the hit's uv in pvD; distance P -> hit)
+    vec4 ssRay(vec3 P, vec3 dir, float dist) { ${TSN ? `if (pvK <= 0.) return vec4(0.);
+      float rp = length(P), c = dot(P, dir) / rp; vec3 p = P + P / rp * dist * tsB * 2.;   /* lifted 6 px (the depth is half size) */
+      float h = length(p) - 1.; if ((c > 0. ? h : (h + 1.) * sqrt(max(1. - c * c, 0.)) - 1.) > zTop) return vec4(0.);   /* the ray never comes down to the highest ground */
+      float sl = min(-c + sqrt(c * c + 2. * max(zTop - h, 0.)), .03), j = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(.06711056, .00583715))));   /* how far until it is above zTop (sphere) */
+      vec3 pv = (pvM * vec4(p, 1.)).xyz, sv = mat3(pvM) * dir; float zp = -pv.z;
+      for (int k = 0; k < ${TSN}; k++) { float u = (float(k) + j) / ${TSN}.; vec3 qv = pv + sv * (sl * u * u); if (qv.z > -1e-7) { zp = -qv.z; continue; }
+        vec4 cp = pvP * vec4(qv, 1.); vec2 uv = cp.xy / cp.w * .5 + .5; float e = min(min(uv.x, uv.y), min(1. - uv.x, 1. - uv.y)); if (e < 0.) break;
+        float zq = -qv.z, zs = textureLod(pvD, uv, 0.).r;
+        if (zs < zq * .9998 && zs > zp - (zq - zp)) return vec4(pvK * smoothstep(0., .03, e), uv, sl * u * u);
+        zp = zq; }
+      return vec4(0.);` : 'return vec4(0.);'} }
+    float gVis(vec3 P, float dist) { return 1. - ssRay(P, sun, dist).x; }
+    // the water's mirror under a ridge: where the reflected ray R hits the drawn ground, mirror that ground (pvD.gba = the previous frame's
+    // colour before the air pass) seen through the sea-level air between (single scattering with the open ray's own source J = skyc / (1 - e^-tv),
+    // same extinction as the air pass; that air is dark when P itself is in a ridge's shadow, gVis: else the backlit haze made the mirrored ridge
+    // 30 x brighter than the ridge). A ray that leaves the picture keeps the sky
+    vec3 rRef(vec3 P, vec3 R, float dist, vec3 skyc, vec3 tv) { vec4 hr = ssRay(P, R, dist); if (hr.x <= 0.) return skyc;
+      vec3 Ts = exp(-(vec3(36.9, 86.4, 211.8) + 147.4) / airK * hr.w);
+      return mix(skyc, textureLod(pvD, hr.yz, 0.).gba * Ts + skyc / max(1. - exp(-tv), 1e-4) * (1. - Ts) * gVis(P, dist), hr.x); }
     vec3 shade(vec3 n, vec3 P, vec3 N, vec3 Nw, float rough, vec3 d, float w, vec2 g, float rk) {
       vec3 ea = normalize(vec3(n.z, 0., -n.x) + vec3(1e-5)), no = cross(n, ea);
       vec3 Vd = camO - P; float dist = length(Vd); vec3 V = Vd / dist;
@@ -295,11 +323,13 @@ function create(host, opts) {
         // the sky mirrored: single scattering seen from sea level along the reflected ray R, the same air as the air pass at its real scale heights.
         // Per kind (Rayleigh / Mie) the optical depth up to space is B·H over the slant (Chapman; a level ray ~ sqrt(pi R / 2H) air masses). The air
         // that scatters sits ~1 scale height up: it gets the sunlight with about half the ground's optical depth (sqrt of sunT) and a little longer
-        // (the sky glows ~4 deg after sunset). Blue by day, paler to the horizon, orange / pink at dusk, black at night. Approximation, no multiple scattering
+        // Same scale (7) as the air pass. The low air a grazing ray crosses is in the Earth's shadow once the Sun sets there, so the mirror goes dark
+        // with it (was 21 x and the Sun lifted 2.3 deg: measured the sea 3-10 x brighter than the sky above it, gold with the Sun 3 deg down).
+        // Blue by day, paler to the horizon, orange at dusk, black at night. Approximation, no multiple scattering
         vec3 R = reflect(-V, Nw); float cr = max(dot(R, n), 0.), mr = dot(R, sun);
         vec3 tR = vec3(.04635, .10852, .26602) / (cr + .0283); float tM = .025192 / (cr + .0109); vec3 tv = tR + 1.1 * tM;
         float pR = .0596831 * (1. + mr * mr), pM = .1193662 * .4224 * (1. + mr * mr) / (2.5776 * pow(1.5776 - 1.52 * mr, 1.5));
-        vec3 skyc = 21. * (tR * pR + tM * pM) * (1. - exp(-tv)) / tv * sqrt(sunT(mu + .04)) * smoothstep(-.12, -.02, mu) * ef;
+        vec3 skyc = 7. * (tR * pR + tM * pM) * (1. - exp(-tv)) / tv * sqrt(sunT(max(mu, 0.))) * smoothstep(-.02, .01, mu) * ef; skyc = rRef(P, R, dist, skyc, tv);
         col = mix(col, col * (1. - Fv) + skyc * Fv, w);
         // the glint is a direct beam: on its way up to the camera it loses the full colour of the air it crosses (redder and dimmer when grazing).
         // The air pass dims the ground by a greyed copy of that (right for diffuse light, multiple scattering); give the glint the difference here.
@@ -308,7 +338,8 @@ function create(host, opts) {
         vec2 odV = max(Ha * exp(-max(rP - 1., 0.) / Ha) / (max(dot(P, V) / rP, 0.) + cha) - Ha * exp(-max(rC - 1., 0.) / Ha) / (max(dot(camO, V) / rC, 0.) + cha), 0.);
         vec3 Tv = exp(-(Ba * odV.x + 134. / airK * 1.1 * odV.y)), Tg = mix(vec3(dot(Tv, vec3(.25, .45, .3))), Tv, .3);
         vec3 tGl = mix(vec3(1.), Tv / max(mix(vec3(1.), Tg, smoothstep(-.1, .15, mu)), 1e-4), 1. - morph);
-        col += vec3(1., .94, .82) * sT * tGl * min(5. * F * Dm / (4. * nv), 6.) * smoothstep(0., .06, nl) * w * (1. - c) * (1. - .8 * cs) * (.35 + .65 * lightsOn) * smoothstep(-.02, .1, mu) * ef;
+        float gl = min(5. * F * Dm / (4. * nv), 6.) * smoothstep(0., .06, nl) * w * (1. - c) * (1. - .8 * cs) * (.35 + .65 * lightsOn) * smoothstep(-.0047, .1, mu) * ef;   /* no glint before the Sun's disc (0.27 deg radius) clears this point's horizon */
+        if (gl > 1e-4) col += vec3(1., .94, .82) * sT * tGl * gl * gVis(P, dist);   /* none in a ridge's shadow */
       }
       if (wet > .01) col += sT * dl * wet * .15 * pow(max(dot(N, normalize(sun + V)), 0.), 40.) * (1. - .8 * cs);   // a wet sheen toward the Sun
       // aerial perspective: a blue veil, thicker toward the edge and with distance (Google-Earth look); clear right under you.
@@ -387,7 +418,7 @@ function create(host, opts) {
       return abs(dh) > 2e-7 ? t * H * (exp(-h0 / H) - exp(-h1 / H)) / dh : t * exp(-h0 / H); }
     float airT(vec3 o, vec3 p) { return exp(-(BR.g * odA(o, p, HR) + BM * 1.1 * odA(o, p, HM))); }`;
   const AIRFS = /* glsl */`
-    uniform sampler2D tDiffuse, tDepth; uniform mat4 projInv, camW; uniform mat3 toObj; uniform vec2 cn; uniform vec3 sun, camO; uniform float morph; varying vec2 vUv; ${SUNT}${AIRC}
+    uniform sampler2D tDiffuse, tDepth, csT; uniform mat4 projInv, camW, proj; uniform mat3 toObj; uniform vec2 cn; uniform vec3 sun, camO, csC, csE, csN; uniform float morph, tsK, tsB, zTop, csOn, csH, cloudR, cvB; varying vec2 vUv; ${SUNT}${AIRC}
     const float G = .76;
     vec2 hit(vec3 o, vec3 d, float r) { float b = dot(o, d), c = dot(o, o) - r * r, h = b * b - c; if (h < 0.) return vec2(1e9, -1e9); h = sqrt(h); return vec2(-b - h, -b + h); }
     vec2 depthTo(vec3 p) {   // optical depth toward the Sun, analytic (Chapman-like): scale height over the slant of the path; level path = sqrt(pi R / 2H) air masses
@@ -396,6 +427,33 @@ function create(host, opts) {
       // the Sun below this point's horizon: its light came through the lower air first (down to the ray's lowest point and up again): the red of twilight
       if (c < 0.) od = 2. * H * exp(-max(r * sqrt(1. - c * c) - 1., 0.) / H) / ch - od;
       return od; }
+    // Shadowed air (light shafts; no Sun glowing through a ridge). Both only take light away (energy-safe); the view's extinction is unchanged.
+    // vTer: terrain between p and the Sun, screen space: from p (lifted 3 px so the ground never shadows itself) ${TSN} steps toward the Sun,
+    // crowded near p, each projected into this picture and compared with its depth (hit = the ray passes behind the drawn surface within one
+    // step's depth). Only occluders on screen count; it fades out at the picture's edge
+    float vTer(vec3 p, float t, float jj) { ${TSN ? `
+      float rp = length(p), c = dot(p, sun) / rp; p += p / rp * t * tsB; float h = length(p) - 1.;
+      if ((c > 0. ? h : (h + 1.) * sqrt(max(1. - c * c, 0.)) - 1.) > zTop) return 1.;   /* the ray toward the Sun never comes down to the highest ground */
+      float sl = min(-c + sqrt(c * c + 2. * max(zTop - h, 0.)), .03);   /* how far until it is above zTop (sphere), at most 190 km */
+      vec3 pv = ((p - camO) * toObj) * mat3(camW), sv = (sun * toObj) * mat3(camW); float zp = -pv.z;   /* object -> view: the inverse of d = toObj * (camW * dv) */
+      for (int k = 0; k < ${TSN}; k++) { float u = (float(k) + jj) / ${TSN}.; vec3 qv = pv + sv * (sl * u * u); if (qv.z > -cn.x) { zp = -qv.z; continue; }   /* not in front of the near plane (yet): skip the step (a break here let the air at the camera through: a dot lattice) */
+        vec4 cp = proj * vec4(qv, 1.); vec2 uv = cp.xy / cp.w * .5 + .5; float e = min(min(uv.x, uv.y), min(1. - uv.x, 1. - uv.y)); if (e < 0.) break;
+        float zq = -qv.z, zr = textureLod(tDepth, uv, 0.).x;
+        if (zr < 1.) { float zs = 2. * cn.x * cn.y / ((cn.y + cn.x) - (zr * 2. - 1.) * (cn.y - cn.x));
+          if (zs < zq * .9998 && zs > zp - (zq - zp)) return 1. - tsK * smoothstep(0., .03, e); }
+        zp = zq; }` : ''}
+      return 1.; }
+    // vCld: the cloud volume between p and the Sun, from csT: the volume's transmittance toward the Sun through the slab (0.6-12 km over cvB,
+    // at most 120 km of path, as the view rays), mapped on its base sphere around the camera (gnomonic, x = .3 u + .7 u|u| of csH, finer near the middle; built by CSFS with the cvPass
+    // densities). Inside the slab only the share above p counts (linear in height: an estimate). Like the cvPass ground shadow, 25 % stays
+    // (light the clouds scatter on). Outside the map: no shadow
+    float vCld(vec3 p) { if (csOn <= 0.) return 1.;
+      float hk = (cloudR - 1.) / 4., rb = 1. + (.6 + cvB) * hk, rt = 1. + (12. + cvB) * hk, r = length(p); if (r >= rt) return 1.;
+      float b = dot(p, sun), s = -b + sqrt(max(b * b - r * r + rb * rb, 0.));   /* along the Sun's line to the base (back down to it when p is inside the slab) */
+      vec3 v = normalize(p + sun * s); float cz = dot(v, csC); if (cz < .9) return 1.;
+      vec2 X = vec2(dot(v, csE), dot(v, csN)) / (cz * csH), uu = sign(X) * (sqrt(.09 + 2.8 * abs(X)) - .3) / 1.4; float m = max(abs(uu.x), abs(uu.y)); if (m >= 1.) return 1.;
+      float T = pow(textureLod(csT, uu * .5 + .5, 0.).r, clamp((rt - r) / (rt - rb), 0., 1.));
+      return mix(1., T, .75 * csOn * smoothstep(1., .9, m)); }
     void main() {
       vec4 base = texture2D(tDiffuse, vUv); vec4 v = projInv * vec4(vUv * 2. - 1., 1., 1.); vec3 dv = normalize(v.xyz / v.w);
       vec3 o = camO, d = normalize(toObj * (mat3(camW) * dv)); vec2 a = hit(o, d, RA); if (a.x > a.y || a.y < 0.) { gl_FragColor = base; return; }
@@ -420,6 +478,7 @@ function create(host, opts) {
         float rp = length(p), el = asin(clamp(dot(p, sun) / rp, -1., 1.)), dip = acos(min(1. / rp, 1.)), lit = smoothstep(-dip - .012, -dip + .012, el) * mix(1., smoothstep(-.17, .03, el), far);
         lit *= eclF(p);   // the Moon's shadow darkens the air too
         if (lit <= 0.) continue;
+        lit *= vCld(p); if (tsK > 0.) lit *= vTer(p, t, fract(j + float(i) * .618034));   // a ridge or a cloud between p and the Sun: light shafts
         den *= vec2(lit, lit);
         // sunlight reaching the point keeps its colour (red at dusk); along the view the blue lost by scattering is mostly given back by light scattered
         // again from the rest of the sky (multiple scattering): near-grey there, so a far horizon is pale blue-white, not yellow-brown
@@ -477,14 +536,17 @@ ${SUNLIB}${MOONV}
   // the crisp disc on top of the finished picture (after the bloom, which would melt a 0.5° disc into a blob): red-orange through the air at the horizon,
   // white from space, limb-darkened; hidden by the Earth's ball (mountains do not hide it)
   const sunDepth = { value: null }, sunRes = { value: new THREE.Vector2(1, 1) };   // the scene's depth (filled by the air pass each frame): mountains hide the disc too
-  const sunScene = new THREE.Scene(), sunD = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ uniforms: { ...sunQ.material.uniforms, tDepth: sunDepth, res: sunRes },
-    vertexShader: sunQ.material.vertexShader, fragmentShader: `uniform vec3 sun, camO; uniform vec4 eMoon; uniform mat3 toObj; uniform sampler2D tDepth; uniform vec2 res; varying vec3 vW; varying vec2 vQ; ${SUNLIB}${MOONV}
+  const sunScene = new THREE.Scene(), sunD = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ uniforms: { ...sunQ.material.uniforms, tDepth: sunDepth, res: sunRes, cvT: { value: null }, cvOn: { value: 0 } },
+    vertexShader: sunQ.material.vertexShader, fragmentShader: `uniform vec3 sun, camO; uniform vec4 eMoon; uniform mat3 toObj; uniform sampler2D tDepth, cvT; uniform vec2 res; uniform float cvOn; varying vec3 vW; varying vec2 vQ; ${SUNLIB}${MOONV}
       void main() { if (texture2D(tDepth, gl_FragCoord.xy / res).r > .5) discard; vec3 d = normalize(toObj * normalize(vW - cameraPosition)); float x = acos(clamp(dot(d, sun), -1., 1.)) / RD, px = max(fwidth(x), .02);
         float cov = smoothstep(1. + px, 1. - px, x);
         if (eMoon.w > .5) { float y = acos(clamp(dot(d, mDir()), -1., 1.)) / mRad(), py = max(fwidth(y), .02); cov *= smoothstep(1. - py, 1. + py, y); }   // the Moon in front of it
         if (cov <= 0.) discard;
         float b = dot(camO, d), cd = sqrt(max(dot(camO, camO) - b * b, 0.)), vis = b < 0. ? smoothstep(1.00005, 1.0004, cd) : 1.;
-        vec3 tr = trans(camO, d); float m = max(tr.r, max(tr.g, tr.b)), a = cov * vis * clamp(m * 300., 0., 1.);
+        // behind the cloud volume: its transmittance T on this pixel. The disc is ~1e5 x the sky, so it still shows full through thin cloud (T > .03,
+        // optical depth < 3.5), a pale disc down to T ~ .002 (depth ~6), then nothing (approximation: a camera exposed for the scene)
+        float cT = cvOn > .5 ? smoothstep(.002, .03, texture2D(cvT, gl_FragCoord.xy / res).a) : 1.;
+        vec3 tr = trans(camO, d); float m = max(tr.r, max(tr.g, tr.b)), a = cov * vis * clamp(m * 300., 0., 1.) * cT;
         float ld = 1. - .4 * (1. - sqrt(max(1. - x * x, 0.)));
         vec3 hue = pow(tr / max(m, 1e-6), vec3(1. / 2.2)), col = mix(hue, vec3(1., .97, .9), .55 * ld * ld) * ld;   // white-gold middle, the air's colour toward the rim
         gl_FragColor = vec4(col * a, 1.); }`, transparent: true, blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false }));   // added on top: always the brightest thing
@@ -780,19 +842,31 @@ ${SUNLIB}${MOONV}
   { const np = new RenderPass(scene, camera), r0 = np.render.bind(np); np.clear = false; np.render = (r, w, rb, ...a) => { r.setRenderTarget(rb); r.clearDepth(); r0(r, w, rb, ...a); }; composer.addPass(np); }   // the Earth's scene: its own depth, over the far layer
   composer.renderTarget2.depthTexture = new THREE.DepthTexture(rt.width, rt.height);   // its own depth: a clone shares one GL texture, and without MSAA the air pass would read the depth it is drawing into (black screen)
   const airPass = new ShaderPass({ uniforms: { tDiffuse: { value: null }, tDepth: { value: null }, projInv: { value: camera.projectionMatrixInverse }, camW: { value: camera.matrixWorld },
-      toObj: { value: new THREE.Matrix3() }, cn: { value: new THREE.Vector2() }, camO: U.camO, sun: U.sun, morph: U.morph },
+      toObj: { value: new THREE.Matrix3() }, cn: { value: new THREE.Vector2() }, camO: U.camO, sun: U.sun, morph: U.morph, proj: { value: camera.projectionMatrix },
+      csT: { value: null }, csC: { value: new THREE.Vector3(0, 1, 0) }, csE: { value: new THREE.Vector3(1, 0, 0) }, csN: { value: new THREE.Vector3(0, 0, -1) }, csH: { value: 300 / 6371 }, csOn: { value: 0 }, cvB: { value: .4 } },
     vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`, fragmentShader: AIRFS });
-  { const r0 = airPass.render.bind(airPass); airPass.render = (r, w, rb, dt, m) => { airPass.uniforms.tDepth.value = rb.depthTexture; r0(r, w, rb, dt, m); }; }
+  { const r0 = airPass.render.bind(airPass); airPass.render = (r, w, rb, dt, m) => { airPass.uniforms.tDepth.value = rb.depthTexture;
+      if (airPass.uniforms.csOn.value > 0) { const o = r.getRenderTarget(); r.setRenderTarget(csRT); csQ.render(r); r.setRenderTarget(o); }   // the clouds' shadow map for the shafts (vCld), this frame's clouds
+      r0(r, w, rb, dt, m); }; }
   // a mask "ground here" saved right after the scene (the disc of the Sun reads it at the very end of the frame, when that depth may have changed)
   { const maskRT = new THREE.WebGLRenderTarget(rt.width, rt.height, { type: THREE.UnsignedByteType, depthBuffer: false });
     const q = new FullScreenQuad(new THREE.ShaderMaterial({ uniforms: { tDepth: { value: null } }, depthTest: false, depthWrite: false,
       vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }`,
       fragmentShader: `uniform sampler2D tDepth; varying vec2 vUv; void main() { gl_FragColor = vec4(texture2D(tDepth, vUv).x < 1. ? 1. : 0., 0., 0., 1.); }` }));
     sunDepth.value = maskRT.texture;
-    composer.addPass({ enabled: true, needsSwap: false, clear: false, renderToScreen: false, setSize(w, h) { maskRT.setSize(w, h); sunRes.value.set(w, h); }, dispose() {},
-      render(r, w, rb) { q.material.uniforms.tDepth.value = rb.depthTexture; const o = r.getRenderTarget(); r.setRenderTarget(maskRT); q.render(r); r.setRenderTarget(o); } }); }
+    // and the linear depth (Earth radii, 1e9 = sky) at half size with this frame's camera, for the next frame's glint shadow (gVis in SHADE);
+    // gba = the scene's colour before the air, for the next frame's water mirror (rRef in SHADE)
+    const pvRT = new THREE.WebGLRenderTarget(Math.ceil(rt.width / 2), Math.ceil(rt.height / 2), { type: THREE.FloatType, depthBuffer: false, minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter });
+    const pq = TSN ? new FullScreenQuad(new THREE.ShaderMaterial({ uniforms: { tDepth: q.material.uniforms.tDepth, tCol: { value: null }, cn: { value: null } }, depthTest: false, depthWrite: false, vertexShader: q.material.vertexShader,
+      fragmentShader: `uniform sampler2D tDepth, tCol; uniform vec2 cn; varying vec2 vUv; void main() { float z = texture2D(tDepth, vUv).x; gl_FragColor = vec4(z < 1. ? 2. * cn.x * cn.y / ((cn.y + cn.x) - (z * 2. - 1.) * (cn.y - cn.x)) : 1e9, texture2D(tCol, vUv).rgb); }` })) : null;
+    U.pvD.value = pvRT.texture;
+    composer.addPass({ enabled: true, needsSwap: false, clear: false, renderToScreen: false, setSize(w, h) { maskRT.setSize(w, h); sunRes.value.set(w, h); pvRT.setSize(Math.ceil(w / 2), Math.ceil(h / 2)); }, dispose() {},
+      render(r, w, rb) { q.material.uniforms.tDepth.value = rb.depthTexture; const o = r.getRenderTarget(); r.setRenderTarget(maskRT); q.render(r);
+        if (pq) { pq.material.uniforms.cn.value = airPass.uniforms.cn.value; pq.material.uniforms.tCol.value = rb.texture; r.setRenderTarget(pvRT); pq.render(r);
+          U.pvM.value.multiplyMatrices(camera.matrixWorldInverse, earth.matrixWorld); U.pvP.value.copy(camera.projectionMatrix); U.pvK.value = U.tsK.value; }
+        r.setRenderTarget(o); } }); }
   { }   // the buffer the scene went into this frame
-  Object.assign(airPass.uniforms, { camO: U.camO, sun: U.sun, morph: U.morph, airK: U.airK, lightsOn: U.lightsOn, eMoon: U.eMoon, eSun: U.eSun });   // ShaderPass copies its uniforms: hand it the live ones
+  Object.assign(airPass.uniforms, { camO: U.camO, sun: U.sun, morph: U.morph, airK: U.airK, lightsOn: U.lightsOn, eMoon: U.eMoon, eSun: U.eSun, zTop: U.zTop, tsK: U.tsK, tsB: U.tsB, cloudR: U.cloudR });   // ShaderPass copies its uniforms: hand it the live ones
   // rain first, then the cloud volume over it: seen from above, the clouds hide the shafts under them
   // rain shafts under the cloud layer, seen when low (< ~150 km). Where and how hard it rains is measured (IMERG, ~10 km); the shafts' shape is
   // generated: noise a few km wide, leaning with height (wind shear), thinning near the ground. Extinction ~0.25 R^0.7 per km for rain (R in mm/h,
@@ -875,14 +949,14 @@ ${SUNLIB}${MOONV}
     void main() { vec3 p = vec3(vUv, zs);
       float pf = clamp(.5 + per(p * 4., 4.) * .9 + per(p * 8., 8.) * .45 + per(p * 16., 16.) * .22, 0., 1.), w = wf(p, 4.);
       gl_FragColor = vec4(clamp((pf - (w - 1.)) / (2. - w), 0., 1.), w, wf(p, 8.), wor(p * 16., 16.) * .7 + wor(p * 32., 32.) * .3); }` }));
-  let cnZ = 0, cvT = 0, cvG = 0;   // slices built so far; cvT / cvG: next ground check (s), the clouds' reference ground (m)
+  let cnZ = 0, cvT = 0, cvG = 0, tsT = 0;   // slices built so far; cvT / cvG: next ground check (s), the clouds' reference ground (m)
   const cnBuild = r => { const o = r.getRenderTarget();
     for (let k = 0; k < 16 && cnZ < CNN; k++, cnZ++) { cnRT.texture.generateMipmaps = cnZ === 0 || cnZ === CNN - 1; /* on at the first slice (the storage is made with its mip levels then), the chain built after the last */ cnQ.material.uniforms.zs.value = (cnZ + .5) / CNN; r.setRenderTarget(cnRT, cnZ); cnQ.render(r); }
     r.setRenderTarget(o); };
   const cvU = { tDepth: { value: null }, pxA: { value: .001 }, cvB: { value: .4 } /* km of drawn ground under the clouds, see the frame loop */, projInv: airPass.uniforms.projInv, camW: airPass.uniforms.camW, toObj: airPass.uniforms.toObj, cn: airPass.uniforms.cn,
     clouds: U.clouds, cN: { value: cnRT.texture }, sun: U.sun, camO: U.camO, cloudShift: U.cloudShift, cloudR: U.cloudR, cVol: U.cVol, airK: U.airK, lightsOn: U.lightsOn, eMoon: U.eMoon, eSun: U.eSun, rain: U.rain, rainOn: U.rainOn,
     wA: U.wA, wB: U.wB, wTau: U.wTau, wOn: U.wOn };
-  const CVFS = /* glsl */`
+  const CVLIB = /* glsl */`
     uniform sampler2D tDepth, clouds; uniform highp sampler3D cN; uniform mat4 projInv, camW; uniform mat3 toObj; uniform vec2 cn; uniform vec3 sun, camO; uniform float cloudShift, cloudR, cVol, pxA, cvB;
     varying vec2 vUv; ${SUNT}${CNOISE}${RAINF}${WINDF}${AIRT}
     vec2 hit(vec3 o, vec3 d, float r) { float b = dot(o, d), c = dot(o, o) - r * r, h = b * b - c; if (h < 0.) return vec2(1e9, -1e9); h = sqrt(h); return vec2(-b - h, -b + h); }
@@ -961,7 +1035,8 @@ ${SUNLIB}${MOONV}
       // contour (alpha jump .55 per edge pixel at 412 km). Where the cover c is low only the noise's cores (high d) stay dense, the rest thins
       // out (c^4) and fades in softly from d = 0: edges made of puffs and wisps. Inside a deck c ~ 1: unchanged
       d *= mix(mix(c * c * c * c, 1., smoothstep(.6, .95, d)) * smoothstep(0., .25, d), 1., smoothstep(.75, .95, c));
-      return clamp(d * 3., 0., 1.) * k; }
+      return clamp(d * 3., 0., 1.) * k; }`;
+  const CVFS = /* glsl */`${CVLIB}
     void main() {
       vec4 v = projInv * vec4(vUv * 2. - 1., 1., 1.); vec3 dv = normalize(v.xyz / v.w);
       vec3 o = camO, d = normalize(toObj * (mat3(camW) * dv)); float hk = (cloudR - 1.) / 4., rb = 1. + (.6 + cvB) * hk, rt = 1. + (12. + cvB) * hk;
@@ -1021,6 +1096,29 @@ ${SUNLIB}${MOONV}
   const cvVS = `varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }`;
   const cvRT = new THREE.WebGLRenderTarget(2, 2, { type: THREE.HalfFloatType, depthBuffer: false });
   const cvQ = new FullScreenQuad(new THREE.ShaderMaterial({ uniforms: cvU, depthTest: false, depthWrite: false, vertexShader: cvVS, fragmentShader: CVFS }));
+  // the clouds' shadow map for the air's light shafts (vCld in AIRFS): per texel a point xb on the slab's base sphere around the camera, and the
+  // transmittance of the cloud volume from xb toward the Sun through the slab (CSM even steps, the cvPass densities, exact sphere crossings).
+  // Texel ~0.5 km in the middle (high), ~2.7 km at the edge, 300 km out. Built each frame in the air pass while the volume is on
+  const CSN = Q === 'high' ? 384 : 256, CSM = Q === 'high' ? 16 : 10, csRT = new THREE.WebGLRenderTarget(CSN, CSN, { type: THREE.HalfFloatType, depthBuffer: false });
+  airPass.uniforms.csT.value = csRT.texture; airPass.uniforms.cvB = cvU.cvB;
+  const csQ = new FullScreenQuad(new THREE.ShaderMaterial({ uniforms: { ...cvU, csC: airPass.uniforms.csC, csE: airPass.uniforms.csE, csN: airPass.uniforms.csN, csH: airPass.uniforms.csH },
+    depthTest: false, depthWrite: false, vertexShader: cvVS, fragmentShader: /* glsl */`${CVLIB}
+    uniform vec3 csC, csE, csN; uniform float csH;
+    void main() { vec2 u = vUv * 2. - 1., X = (.3 * u + .7 * u * abs(u)) * csH;   /* the map's mapping, inverted in vCld */
+      float hk = (cloudR - 1.) / 4., rb = 1. + (.6 + cvB) * hk; vec3 xb = normalize(csC + csE * X.x + csN * X.y) * rb;
+      float B = dot(xb, sun); gl_FragColor = vec4(1., 0., 0., 1.); if (B <= 0.) return;   /* the Sun under this point's horizon: the Earth's shadow there, not the clouds' */
+      float Rm = 1. + (6.3 + cvB) * hk, sm = -B + sqrt(B * B + Rm * Rm - rb * rb);
+      if (wOn > 0.) { vec3 pm = normalize(xb + sun * sm); vec2 gw = vec2(atan(-pm.z, pm.x) / 6.2831853 + .5, .5 + asin(clamp(pm.y, -1., 1.)) / 3.1415927);   /* one wind, at the path's middle (as cvPass) */
+        gWa = wFetch(wA, gw); gWb = wFetch(wB, gw).rg; gD = cAdv(gw) - gw; gD.x -= floor(gD.x + .5); }
+      // tx = .01 (a "pixel" of 100 m): the puffs' base shapes, the ones the camera sees within ~100 km (dens grows its noise tile with the pixel:
+      // the texel's own size, 0.5-2.7 km, gave other shapes than the view). Far out the texels are wider than the puffs: point samples there
+      float od = 0., xs, tx = .01, lod = 0.;
+      // even steps up to the slab's top, but like the view rays in cvPass at most 120 km, fading from 60 km: a low Sun's line crosses the slab over
+      // ~200 km, and the full path made the air dark under broken cloud while the Sun shone through a gap seen from the same place. The
+      // eroded density (fine) of the view rays, so the gaps are the ones the camera sees
+      float Rt = 1. + (12. + cvB) * hk, se = min(-B + sqrt(B * B + Rt * Rt - rb * rb), 120. * hk), ds = se / ${CSM}.;
+      for (int k = 0; k < ${CSM}; k++) { float s = (float(k) + .5) * ds; od += dens(xb + sun * s, hk, lod, tx, true, xs) * (1. - smoothstep(60. * hk, 120. * hk, s)) * ds / hk * 12.; }   /* 12 per km, as the view ray */
+      gl_FragColor = vec4(exp(-od), 0., 0., 1.); }` }));
   // 4 bilinear taps 0.75 texel out (spr): a soft upscale that also hides the per-pixel jitter of the steps (0.3 px at full resolution left a hatch
   // on the cloud edges: measured ~1.3× the pixel noise), depth-aware (UPS)
   const cvC = new FullScreenQuad(new THREE.ShaderMaterial({ uniforms: { tLo: { value: cvRT.texture }, tDepth: cvU.tDepth, cn: airPass.uniforms.cn, spr: { value: .75 } }, depthTest: false, depthWrite: false, transparent: true,
@@ -1048,7 +1146,9 @@ ${SUNLIB}${MOONV}
     fragmentShader: `uniform sampler2D tDiffuse; uniform float ctr; varying vec2 vUv; void main() { vec4 c = texture2D(tDiffuse, vUv); vec3 k = any(isnan(c.rgb)) || any(isinf(c.rgb)) ? vec3(0.) : max(c.rgb, 0.); k *= min(1., 4. / max(max(k.r, k.g), max(k.b, 1e-4)));
       if (ctr != 1.) k = .18 * pow(k / .18, vec3(ctr)); gl_FragColor = vec4(k, 1.); }` });
   composer.addPass(cleanPass);
-  if (Q !== 'low') composer.addPass(new UnrealBloomPass(new THREE.Vector2(W, H), .35, .6, .88));
+  // threshold: by night .88 (city lights, aurora); by day 1.6 (set per frame), above the clear sky round the Sun (measured 1.0-1.6, about white paper
+  // in sunlight): at .88 a third of the sky bloomed into a white cone. Only what is far brighter than the sky (glint, the Sun) glows by day
+  const bloom = Q !== 'low' ? new UnrealBloomPass(new THREE.Vector2(W, H), .35, .6, .88) : null; if (bloom) composer.addPass(bloom);
   composer.addPass(new OutputPass());
   { const sp = new RenderPass(sunScene, camera); sp.clear = false; composer.addPass(sp);   // the Sun's disc over the finished picture, then out to the screen
     composer.addPass(new ShaderPass({ uniforms: { tDiffuse: { value: null } }, vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`,
@@ -1640,7 +1740,7 @@ ${SUNLIB}${MOONV}
   const pad = v => String(v).padStart(2, '0'), localStr = t => { const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
   $('fly').onclick = () => fly ? flyOff() : flyOn();
   // S4 flight menu (flight/menu.js, loaded on the first click): pick a craft and fly it in this view
-  $('craft').onclick = () => { if (fly) flyOff(); import('./flight/menu.js?v=aa20fee5').then(m => m.openMenu(api, host, $('craft'))).catch(e => console.error('flight menu', e)); };
+  $('craft').onclick = () => { if (fly) flyOff(); import('./flight/menu.js?v=7c500a55').then(m => m.openMenu(api, host, $('craft'))).catch(e => console.error('flight menu', e)); };
   const di = $('date'); di.onchange = () => { const t = Date.parse(di.value); if (isFinite(t)) tOver = Math.max(Date.UTC(1800, 0, 1), Math.min(Date.UTC(2050, 0, 1), t)); };
   $('now').onclick = () => { playSet(false, 1); spd = 0; $('dyS').value = '0'; tOver = null; di.value = localStr(now()); };
   // time of day at the place you look at: local Sun time (UTC + longitude / 15) on the same day; moving it switches the real Sun on
@@ -1878,6 +1978,8 @@ ${SUNLIB}${MOONV}
         ctrT = 1 + .1 * nad * (1 - smooth(400, 1200, kmE)) * wE; }
       const ke = 1 - Math.exp(-dt * 2.5); renderer.toneMappingExposure += (expT - renderer.toneMappingExposure) * ke; cleanPass.uniforms.ctr.value += (ctrT - cleanPass.uniforms.ctr.value) * ke;
       if (Math.abs(cleanPass.uniforms.ctr.value - 1) < 1e-3 && ctrT === 1) cleanPass.uniforms.ctr.value = 1; }
+    sunD.material.uniforms.cvT.value = cvRT.texture; sunD.material.uniforms.cvOn.value = cvPass.enabled ? 1 : 0;   // the disc dims behind the cloud volume
+    if (bloom) bloom.threshold =.88 + .72 * smooth(-.05, .1, U.camO.value.dot(U.sun.value) / Math.max(U.camO.value.length(), 1e-9)) * U.lightsOn.value;   // day 1.6, night .88 (see bloom)
     sunQ.visible = sunD.visible = realSun;
     { const up = U.camO.value.clone().normalize(), sky = smooth(-.12, .06, up.dot(U.sun.value)) * (1 - smooth(25, 110, (D - 1) * 6371));   // a daytime sky around the camera
       // like an eye or a camera exposure: much sunlit ground, air limb or the Sun in the frame hides the stars at any height;
@@ -1912,6 +2014,18 @@ ${SUNLIB}${MOONV}
         for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, g = groundAt(la + 15 / 6371 * Math.cos(a), lo + 15 / 6371 * Math.sin(a) / Math.max(.05, Math.cos(la)), null); if (g != null && (m == null || g < m)) m = g; }
         if (m != null) cvG = m; }
       cvU.cvB.value += ((cvG * U.ex.value + 400) / 1000 - cvU.cvB.value) * Math.min(1, dt); }
+    // shadows toward the Sun in the air (vTer, vCld) and on the glint (gVis). zTop = the highest drawn ground within ~150 km (+300 m), twice a
+    // second: a shadow ray that stays above it cannot hit the relief (higher ground farther out is missed)
+    U.tsK.value = TSN && focus === 'Earth' && U.morph.value < .01 ? 1 - smooth(100, 300, km) : 0;
+    if (U.tsK.value > 0) { airPass.uniforms.proj.value.copy(camera.projectionMatrix); U.tsB.value = 6 * Math.tan(camera.fov * D2R / 2) / composer.renderTarget1.height;
+      if ((tsT -= dt) <= 0) { tsT = .5; const la = Math.asin(cl.y), lo = Math.atan2(-cl.z, cl.x); let m = groundAt(la, lo, null) ?? 0;
+        for (const r of [10, 30, 70, 150]) for (let k = 0; k < 12; k++) { const a = k * Math.PI / 6, g = groundAt(la + r / 6371 * Math.cos(a), lo + r / 6371 * Math.sin(a) / Math.max(.05, Math.cos(la)), null); if (g != null && g > m) m = g; }
+        U.zTop.value = (m * U.ex.value + 700) / 6371000; } }
+    airPass.uniforms.csOn.value = TSN && cvPass.enabled && cnZ >= CNN ? U.cVol.value : 0;
+    // the shadow map stays put until the camera is 30 km from its middle: recentred each frame its texels slid over the clouds and the
+    // sub-texel holes twinkled (point samples)
+    if (airPass.uniforms.csOn.value > 0 && airPass.uniforms.csC.value.dot(U.camO.value) / U.camO.value.length() < Math.cos(30 / 6371)) {
+      const c = airPass.uniforms.csC.value.copy(U.camO.value).normalize(); airPass.uniforms.csE.value.set(c.z, 0, -c.x).normalize(); airPass.uniforms.csN.value.crossVectors(c, airPass.uniforms.csE.value); }
     rainPass.enabled = airPass.enabled && U.rainOn.value > 0 && focus === 'Earth' && km < 150 && U.morph.value < .01; rainQ.material.uniforms.rainK.value = 1 - smooth(60, 150, km);
     composer.render();
     if (P && pHold === 0 && readyAt) try { localStorage.setItem('aurora.s3dsnap', renderer.domElement.toDataURL('image/jpeg', .7)); } catch (e) {}

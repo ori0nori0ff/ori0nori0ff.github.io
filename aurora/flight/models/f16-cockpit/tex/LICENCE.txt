@@ -1,0 +1,10 @@
+bms-cockpit.glb and tex/{4k,2k}/*: converted from the site owner's Falcon BMS 4.38 installation (Benchmark Sims).
+  - cockpit model 888 (F-16CM block 50): geometry, moving parts (DOFs) and the CM50Pit*, Seat, Canopy textures
+  - airframe model 1052: a crop of its skin atlas (skin_*), used by a few outer parts of the cockpit model
+Used with permission, as stated by the site owner on 2026-11-14 (free to use).
+NOT covered by the code licence of this repository. Do not reuse outside this site without checking Benchmark Sims' own terms.
+
+Made by tools/build_bms_cockpit.py (pipeline: docs/bms-model-pipeline.md):
+  *_alb   albedo                       *_nrm  normal map (z rebuilt)        *_orm  AO / roughness / metalness
+  *_lit   R = instrument backlight (BMS EMM mask x albedo brightness), G = flood light
+  lights  small lamp lenses (BMS EMM2)

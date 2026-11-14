@@ -285,7 +285,7 @@ export function buildRocketMesh(THREE, R, makePlume) {
 // ── a rocket flight inside a flight session (flight/session.js): model, views, HUD, orbit lines, panel. o = { rocket, pad, inc, alt (km), entry }
 export async function setupRocket(S, o, ui, { sunL, createCore, createScreenHud }) {
   const F = S.F, THREE = F.THREE;
-  const [{ createOrbit, gravityModule, createOrbitView }, { makePlume, makePlasma }] = await Promise.all([import('./orbit.js?v=11d73788'), import('./gfx.js?v=2d4add6b')]);
+  const [{ createOrbit, gravityModule, createOrbitView }, { makePlume, makePlasma }] = await Promise.all([import('./orbit.js?v=11d73788'), import('./gfx.js?v=1c8662a6')]);
   const R = await loadRocket(o.rocket), orb = createOrbit({ helio: F.solar.helio }), ctx = S.ctx = { orb, node: null, sas: 'pad', last: null };
   const RK = S.rocket = createRocket(R, ctx, { pad: o.pad, inc: o.inc, alt: (o.alt || 200) * 1e3, F, wait: 1500, entry: o.entry ? { alt: 120e3, v: 7830, gamma: -1.5 } : null });
   const K = RK.K, pad = K.pad, { root, parts } = buildRocketMesh(THREE, R, makePlume); S.craft.add(root);

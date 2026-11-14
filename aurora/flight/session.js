@@ -76,7 +76,7 @@ export async function startFlight(earth, host, o = {}) {
   let onPose = null, extraTick = null, extraDispose = null, credit = '', P0 = null;
 
   if (kind === 'f16') {
-    const [{ loadAircraft }, { createGfx }, { createF16Cockpit }] = await Promise.all([import('./aero.js?v=5dfff859'), import('./gfx.js?v=2d4add6b'), import('./instruments/f16.js?v=584608da')]);
+    const [{ loadAircraft }, { createGfx }, { createF16Cockpit }] = await Promise.all([import('./aero.js?v=5dfff859'), import('./gfx.js?v=1c8662a6'), import('./instruments/f16.js?v=a6cddb97')]);
     const ac = await loadAircraft(new URL('aircraft/f16.json', import.meta.url)), def = ac.def;
     const core = S.core = createCore(F, def, RWY, { mods: ac.mods });
     try { S.gfx = await createGfx(F, core, { scene: cs, camera: cc, craft, sun: sunL, amb, model: 'f16', def, quality, scan }); }   /* credits: only in the 3D view's Sources list (user, 2026-11-14) */
@@ -86,7 +86,7 @@ export async function startFlight(earth, host, o = {}) {
     onPose = (P, t) => { if (S.gfx) S.gfx.update(P, t); if (S.cockpit) S.cockpit.update(P, t); if (S.hud) S.hud.forceShow = !(S.gfx && S.gfx.cockpit); };
     o.atName = RWY.name;
   } else if (kind === 'rocket') {   // S5: flight/rocket.js builds the craft, views, panel
-    const { setupRocket } = await import('./rocket.js?v=912c77e4'), RK = await setupRocket(S, o, ui, { sunL, createCore, createScreenHud });
+    const { setupRocket } = await import('./rocket.js?v=21399c88'), RK = await setupRocket(S, o, ui, { sunL, createCore, createScreenHud });
     onPose = RK.onPose; extraTick = RK.tick; extraDispose = RK.dispose; credit = RK.credit;
   } else {
     const orbit = await import('./orbit.js?v=11d73788'), { createOrbit, gravityModule, orbiterModule, ORBITER, createOrbitView, BODIES } = orbit;
