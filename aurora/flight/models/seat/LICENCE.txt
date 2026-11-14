@@ -1,0 +1,8 @@
+seat.gltf, seat.bin, seat_0.jpg, seat_1.jpg, seat_2.jpg
+
+"Fighter Jet Ejection Seat" (https://sketchfab.com/3d-models/fighter-jet-ejection-seat-d7ba3a2437d64dfe8309f4a557db8cd7)
+by k.botond431 (https://sketchfab.com/k.botond431), licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/).
+Not covered by the licence of the surrounding code.
+
+Changes (2026-11-14, tools/f16_cockpit_blender.py, Blender 5.2): parts joined into one mesh, scaled to 1.20 m tall (estimate),
+turned to face forward and tilted 15° back, textures PNG -> 1024 px JPEG (quality 85).

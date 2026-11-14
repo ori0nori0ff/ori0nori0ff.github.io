@@ -1,0 +1,27 @@
+{
+  "name": "Falcon 9 Block 5 (two-stage medium launcher)",
+  "short": "Falcon 9",
+  "source": "Stage masses, thrust, Isp, burn times: SpaceX 'Falcon User's Guide' (2021) and spacex.com/vehicles/falcon-9 as summarised in the Wikipedia article 'Falcon 9 Block 5' / 'Falcon 9 Full Thrust' (figures quoted from memory, to verify against the user's guide). Capsule: Soyuz descent module figures as given in the Wikipedia article 'Soyuz (spacecraft)' (from memory, to verify). Flight profile for comparison: SpaceX launch webcast timelines (e.g. Crew missions: Max-Q ~T+1:02 to 1:12, MECO ~T+2:30, SECO-1 ~T+8:45, approximate).",
+  "licence": "Numbers are facts from public documents (not copyrightable); no text, drawing or logo copied. Everything marked 'estimate' is our own.",
+  "visual": "PLACEHOLDER: procedural cylinders and cones in stage colours, no livery, no logo",
+  "stages": [
+    { "name": "Stage 1", "len": 42.0, "dia": 3.66, "dry": 25600, "prop": 395700, "engines": 9, "thrustVac": 8227e3, "ispSL": 283, "ispVac": 312,
+      "throttle": [0.4, 1], "gimbal": 5, "sepDelay": 3, "ignDelay": 0, "plume": "kerolox", "color": "#E9ECEF", "band": "#1B1F24",
+      "note": "len includes the interstage (simplified); 162 s published burn includes throttling (full throttle here: ~147 s); gimbal 5 deg = estimate" },
+    { "name": "Stage 2", "len": 13.8, "dia": 3.66, "dry": 3900, "prop": 92670, "engines": 1, "thrustVac": 981e3, "ispSL": 200, "ispVac": 348,
+      "throttle": [0.39, 1], "gimbal": 5, "sepDelay": 2, "ignDelay": 7, "plume": "kerolox", "color": "#E9ECEF", "band": "#1B1F24",
+      "note": "ispSL never used (ignites high up); 397 s published burn; throttle range and gimbal = estimates" }
+  ],
+  "fairing": { "len": 13.1, "dia": 5.2, "mass": 1750, "color": "#F4F5F7", "note": "jettisoned when the free-molecular heating 1/2 rho v^3 drops below 1135 W/m2 (common fairing rule)" },
+  "payload": { "name": "Test payload: capsule + service module (estimate)", "mass": 10000, "len": 7.5, "dia": 3.0, "color": "#B9C2CC" },
+  "capsule": { "name": "Capsule (Soyuz descent-module figures)", "mass": 2950, "dia": 2.17, "cd": 1.3, "noseR": 2.2, "rcs": 3000, "color": "#6E7781",
+    "drogue": { "alt": 10500, "area": 24, "cd": 0.8, "vMax": 260 }, "main": { "alt": 7500, "area": 1000, "cd": 0.8, "vMax": 100 },
+    "deorbitPeri": 45000,
+    "note": "cd 1.3 hypersonic, ballistic (no lift), parachute areas, deploy altitudes and the deorbit perigee are estimates; soft-landing rockets not modelled" },
+  "aero": { "cd": [[0, 0.30], [0.6, 0.30], [0.85, 0.36], [1.0, 0.55], [1.15, 0.62], [1.3, 0.60], [1.6, 0.52], [2.0, 0.45], [3.0, 0.36], [5.0, 0.30], [10.0, 0.27]],
+    "noseLen": 8.0, "eta": 0.65, "cdc": 1.2,
+    "note": "ESTIMATE: axial drag vs Mach = a typical slender-launcher curve with the transonic peak near Mach 1.1-1.2, not measured data for this vehicle; normal force: Jorgensen, NASA TR R-474 (1977), potential part at 2/3 of the nose length, cross-flow part at the body centre" },
+  "guidance": { "kickV": 45, "kick": 13, "kickT": 8, "closedFrom": 1, "gMax": 4.5, "note": "kick tuned here for a 200 km orbit (estimate): 11 to 15 deg reach orbit, 13 gives MECO near 75 km; 17 deg and more fail" },
+  "rcs": 60000,
+  "holdDown": 2.5
+}

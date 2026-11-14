@@ -1,0 +1,30 @@
+{
+  "name": "Saturn V (Apollo 11, AS-506; three-stage heavy launcher)",
+  "short": "Saturn V",
+  "source": "Stage masses, thrust, Isp, event times: NASA 'Apollo 11 Press Kit' (1969), 'Saturn V Launch Vehicle Flight Evaluation Report AS-506 Apollo 11' (MSFC MPR-SAT-FE-69-9) and the Saturn V Flight Manual SA-503 (NASA TM X-72151), as summarised in the Wikipedia articles 'Saturn V', 'S-IC', 'S-II', 'S-IVB' (figures quoted from memory, to verify). Apollo 11 profile for comparison: Max-Q T+83 s at ~13.4 km, ~35 kPa (735 lb/ft2); S-IC CECO 135 s, OECO 161 s; S-II ignition ~164 s, LES jettison ~197 s, S-II CECO ~460 s, OECO ~548 s; S-IVB cutoff ~699 s; insertion ~709 s into ~186 x 183 km.",
+  "licence": "Numbers are facts from NASA documents (US Government works, public domain); no drawing or logo copied. Everything marked 'estimate' is our own.",
+  "visual": "PLACEHOLDER: procedural cylinders and cones in stage colours, no livery, no logo",
+  "stages": [
+    { "name": "S-IC", "len": 42.1, "dia": 10.1, "dry": 131000, "prop": 2150000, "engines": 5, "thrustVac": 38700e3, "ispSL": 263, "ispVac": 304,
+      "throttle": [1, 1], "gimbal": 6, "coeT": 135, "sepDelay": 1, "ignDelay": 1.5, "plume": "kerolox", "color": "#F1F1EE", "band": "#1A1A1A",
+      "note": "F-1 not throttleable: centre engine off at 135 s (CECO) as flown; dry includes the S-II aft interstage (simplified)" },
+    { "name": "S-II", "len": 24.9, "dia": 10.1, "dry": 36000, "prop": 443000, "engines": 5, "thrustVac": 5165e3, "ispSL": 200, "ispVac": 421,
+      "throttle": [1, 1], "gimbal": 7, "coeT": 460, "sepDelay": 1, "ignDelay": 3, "plume": "hydrolox", "color": "#F1F1EE", "band": "#1A1A1A",
+      "note": "J-2 mixture-ratio shift not modelled (constant thrust); ispSL estimate (never used)" },
+    { "name": "S-IVB", "len": 18.8, "dia": 6.6, "dry": 13300, "prop": 109500, "engines": 1, "thrustVac": 1033e3, "ispSL": 200, "ispVac": 421,
+      "throttle": [1, 1], "gimbal": 7, "sepDelay": 1, "ignDelay": 3, "plume": "hydrolox", "color": "#F1F1EE", "band": "#1A1A1A",
+      "note": "len and dry include the instrument unit; restart for TLI not modelled here" }
+  ],
+  "fairing": { "tower": true, "len": 10.0, "dia": 1.2, "mass": 4200, "jettisonT": 197, "color": "#C9CDD2", "note": "Launch escape system tower, jettisoned at ~197 s" },
+  "payload": { "name": "Apollo spacecraft (CSM + LM + adapter), dead mass", "mass": 45700, "len": 19.0, "dia": 3.9, "color": "#D5D8DC" },
+  "capsule": { "name": "Apollo command module", "mass": 5560, "dia": 3.91, "cd": 1.3, "noseR": 4.7, "rcs": 6000, "color": "#C0C4C8",
+    "drogue": { "alt": 7300, "area": 39, "cd": 0.8, "vMax": 200 }, "main": { "alt": 3200, "area": 1520, "cd": 0.8, "vMax": 90 },
+    "deorbitPeri": 45000,
+    "note": "flown here as a ballistic body (the real CM flies with L/D ~0.3); drogue 2 x 5 m and main 3 x 25.4 m canopies from the press kit, cd 0.8 = estimate; splashdown modelled as landing" },
+  "aero": { "cd": [[0, 0.35], [0.6, 0.35], [0.85, 0.42], [1.0, 0.62], [1.2, 0.70], [1.4, 0.66], [1.8, 0.55], [2.5, 0.45], [4.0, 0.36], [10.0, 0.30]],
+    "noseLen": 14.0, "eta": 0.65, "cdc": 1.2,
+    "note": "ESTIMATE: axial drag vs Mach shaped like published Saturn V wind-tunnel summaries (peak ~0.6-0.7 near Mach 1.2), not the actual tables; normal force: Jorgensen, NASA TR R-474 (1977)" },
+  "guidance": { "kickV": 30, "kick": 3.5, "kickT": 12, "closedFrom": 1, "note": "kick tuned here (estimate): 3 to 5 deg reach orbit, 3.5 gives the Apollo 11 max-Q; 6 deg and more lose control" },
+  "rcs": 400000,
+  "holdDown": 3
+}

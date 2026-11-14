@@ -1,0 +1,16 @@
+f16-cockpit.gltf, f16-cockpit.bin, cockpit_base.jpg, cockpit_base_8k.jpg
+
+This work is based on "F-16C Cockpit Photogrammetry"
+(https://sketchfab.com/3d-models/f-16c-cockpit-photogrammetry-41cdec4eac10453c8a272579d0e2c9fa)
+by VTX (https://sketchfab.com/VTX_car), licensed under CC BY-NC-SA 4.0
+(https://creativecommons.org/licenses/by-nc-sa/4.0/).
+
+This is a modified version, shared under the same licence (CC BY-NC-SA 4.0): attribution, no commercial use,
+modified copies under the same licence. It is not covered by the licence of the surrounding code.
+
+Changes (2026-11-14, tools/f16_cockpit_blender.py, Blender 5.2):
+- kept the photogrammetry scan and the HUD combiner glass; removed the reference airframe, canopy and other parts;
+- cut away the scan outside the cockpit tub (|x| > 0.46 m, above 1.42 m in the craft frame);
+- reduced from 961 636 to 180 000 triangles (Blender collapse decimation);
+- base colour texture 8192 px PNG -> 4096 px JPEG (quality 85) + 8192 px JPEG (quality 88); specular map dropped; new simple materials;
+- scaled from decimetres to metres and moved into the F-16D craft frame of this page (windscreen tips matched).

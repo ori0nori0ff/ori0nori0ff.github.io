@@ -146,10 +146,10 @@ function create(host, opts) {
       <div class="e3g-tod eo" title="${tr('Time of day here (local Sun time)')}">☀<button data-k="todB" aria-label="${tr('Earlier')}">‹</button><input type="range" data-k="tod" min="0" max="1435" step="5" aria-label="${tr('Time of day here (local Sun time)')}"><button data-k="todF" aria-label="${tr('Later')}">›</button><span></span></div>
       <div class="e3g-tod so" title="${tr('Move the clock (±10 days): orange = a CME leaves the Sun, red = it reaches the Earth')}">☄<button data-k="dyB" aria-label="${tr('Earlier')}">‹</button><div class="e3g-dw"><i class="e3g-mk"></i><input type="range" data-k="dy" min="-14400" max="14400" step="30" aria-label="${tr('Move the clock (±10 days): orange = a CME leaves the Sun, red = it reaches the Earth')}"></div><button data-k="dyF" aria-label="${tr('Later')}">›</button><span></span></div>
       <div class="e3g-tod e3g-play"><button data-k="dyR" aria-label="${tr('Play backwards')}" aria-pressed="false">◀</button><button data-k="dyP" aria-label="${tr('Play')}" aria-pressed="false">▶</button><select data-k="dyS" class="e3g-spd" aria-label="${tr('Speed')}">${SPD.map(([v, l], i) => `<option value="${i}">${tr(l)}</option>`).join('')}</select></div></div>
-    <div class="e3g-nav"><button data-k="fly" aria-pressed="false" title="${tr('Free flight: W A S D, drag to look, Esc to stop')}" aria-label="${tr('Free flight: W A S D, drag to look, Esc to stop')}">✈</button><button data-k="ang" aria-pressed="false" aria-label="${tr('Tilt')} / ${tr('Heading')}">∠</button><button data-k="cmp" aria-label="${tr('Reset to north')}"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 3l4 9h-8z" fill="#FF4D4D"/><path d="M12 21l-4-9h8z" fill="#E6EBF1"/></svg></button><button data-k="3d" aria-pressed="true" aria-label="${tr('3D view')}">3D</button><button data-k="zout" aria-label="${tr('Zoom out')}">−</button><button data-k="zin" aria-label="${tr('Zoom in')}">+</button></div>
+    <div class="e3g-nav"><button data-k="fly" aria-pressed="false" title="${tr('Free flight: W A S D, drag to look, Esc to stop')}" aria-label="${tr('Free flight: W A S D, drag to look, Esc to stop')}">✈</button><button data-k="craft" aria-expanded="false" title="${tr('Fly a craft: F-16 or spacecraft')}" aria-label="${tr('Fly a craft: F-16 or spacecraft')}"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 2l2 7 7 5v2l-7-2-1 5 3 2v1l-4-1-4 1v-1l3-2-1-5-7 2v-2l7-5z" fill="#E6EBF1"/></svg></button><button data-k="ang" aria-pressed="false" aria-label="${tr('Tilt')} / ${tr('Heading')}">∠</button><button data-k="cmp" aria-label="${tr('Reset to north')}"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 3l4 9h-8z" fill="#FF4D4D"/><path d="M12 21l-4-9h8z" fill="#E6EBF1"/></svg></button><button data-k="3d" aria-pressed="true" aria-label="${tr('3D view')}">3D</button><button data-k="zout" aria-label="${tr('Zoom out')}">−</button><button data-k="zin" aria-label="${tr('Zoom in')}">+</button></div>
     <div class="e3g-info" hidden aria-live="polite"></div>
     <div class="e3g-pnl" hidden><label>${tr('Tilt')}<input type="range" data-s="tilt" min="0" max="100" value="100"></label><label>${tr('Heading')}<input type="range" data-s="head" min="-180" max="180" value="0"></label><button data-k="north">${tr('Reset to north')}</button><small>${tr('Shift + drag or right-drag: tilt and turn')}</small></div>
-    <details class="e3g-attr"><summary>ⓘ ${tr('Sources')}</summary><div>NASA Blue Marble · Black Marble · SVS star map · NOAA GMGSI · NASA GPM IMERG (GIBS) · OVATION · ${tr('close-up')}: Sentinel-2 cloudless 2023 by EOX (CC BY-NC-SA 4.0)${esriKey() ? ' · Esri World Imagery (Powered by Esri — Esri, Maxar, Earthstar Geographics, and the GIS User Community)' : ''} · Mapzen Terrarium / AWS · ${tr('Moon')}: JAXA Kaguya TC · NASA LRO LOLA (Moon Trek) · ${tr('Mars')}: MRO CTX (NASA/JPL/MSSS/Caltech Murray Lab/Esri) · Viking · MOLA / HRSC (Mars Trek) · ${tr("small bodies")}: NASA/JPL SBDB · Ceres, Vesta: NASA Dawn (DLR / USGS) · Pluto: NASA New Horizons (USGS)</div></details>`;
+    <details class="e3g-attr"><summary>ⓘ ${tr('Sources')}</summary><div>NASA Blue Marble · Black Marble · SVS star map · NOAA GMGSI · NASA GPM IMERG (GIBS) · OVATION · ${tr('close-up')}: Sentinel-2 cloudless 2023 by EOX (CC BY-NC-SA 4.0)${esriKey() ? ' · Esri World Imagery (Powered by Esri — Esri, Maxar, Earthstar Geographics, and the GIS User Community)' : ''} · Mapzen Terrarium / AWS · ${tr('Moon')}: JAXA Kaguya TC · NASA LRO LOLA (Moon Trek) · ${tr('Mars')}: MRO CTX (NASA/JPL/MSSS/Caltech Murray Lab/Esri) · Viking · MOLA / HRSC (Mars Trek) · ${tr("small bodies")}: NASA/JPL SBDB · Ceres, Vesta: NASA Dawn (DLR / USGS) · Pluto: NASA New Horizons (USGS) · Flight (✈ craft): F-16D 3D model by alexskyrex-5de5f7 (CGTrader, Royalty Free licence, not redistributable) · <a href="https://sketchfab.com/3d-models/f-16c-cockpit-photogrammetry-41cdec4eac10453c8a272579d0e2c9fa" target="_blank" rel="noopener">"F-16C Cockpit Photogrammetry"</a> by <a href="https://sketchfab.com/VTX_car" target="_blank" rel="noopener">VTX</a>, <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener">CC BY-NC-SA 4.0</a> (reduced and placed; same licence) · <a href="https://sketchfab.com/3d-models/fighter-jet-ejection-seat-d7ba3a2437d64dfe8309f4a557db8cd7" target="_blank" rel="noopener">"Fighter Jet Ejection Seat"</a> by <a href="https://sketchfab.com/k.botond431" target="_blank" rel="noopener">k.botond431</a>, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a> (scaled) · F-16 aero data: NASA TP-1538 · wind: NOAA GFS</div></details>`;
   let W = 800, H = 600;
   const Q = opts.quality || (() => { try { const v = localStorage.getItem('aurora.q3d'); if (/^(low|medium|high)$/.test(v || '')) return v; } catch (e) {} return null; })() || (document.documentElement.classList.contains('lite') ? 'low' : 'high');   // low | medium | high (light mode → low)
   const renderer = new THREE.WebGLRenderer({ antialias: Q !== 'low', powerPreference: 'high-performance' });
@@ -175,7 +175,7 @@ function create(host, opts) {
     tgt.addScaledVector(cR, -dx * k).addScaledVector(cF, dy * k / Math.max(.35, Math.cos(tilt))).normalize();
     if (Math.abs(tgt.y) > .9999) { tgt.y = Math.sign(tgt.y) * .9999; tgt.normalize(); } };
   const turnBy = (dx, dy) => { headTo += dx * .006; tkTo = Math.max(0, Math.min(1, tkTo - dy * .004)); };
-  renderer.domElement.addEventListener('wheel', e => { e.preventDefault(); if (fly) { fly.sp = Math.max(.05, Math.min(20, fly.sp * Math.exp(-Math.sign(e.deltaY) * .25))); fhAt = 0; return; } goal = null; zoomBy(Math.exp(Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 150) * .0022)); }, { passive: false });
+  renderer.domElement.addEventListener('wheel', e => { e.preventDefault(); if (pilot) return; if (fly) { fly.sp = Math.max(.05, Math.min(20, fly.sp * Math.exp(-Math.sign(e.deltaY) * .25))); fhAt = 0; return; } goal = null; zoomBy(Math.exp(Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 150) * .0022)); }, { passive: false });
   renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
   const pins = new Map(); let pinch = 0, twist = 0, midY = 0, mode = '';
   renderer.domElement.addEventListener('mousedown', e => { if (e.button === 1) e.preventDefault(); });   // middle button = tilt + turn, not the browser's autoscroll
@@ -185,6 +185,7 @@ function create(host, opts) {
   renderer.domElement.addEventListener('pointermove', e => { const o = pins.get(e.pointerId); if (!o) return; const dx = e.clientX - o[0], dy = e.clientY - o[1]; pins.set(e.pointerId, [e.clientX, e.clientY]);
     if (pins.size === 2) { const [a, b] = [...pins.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), an = Math.atan2(b[1] - a[1], b[0] - a[0]), my = (a[1] + b[1]) / 2;
       if (pinch) { zoomBy(pinch / d); let da = an - twist; da = Math.atan2(Math.sin(da), Math.cos(da)); headTo -= da; turnBy(0, (my - midY) * 1.4); } pinch = d; twist = an; midY = my; return; }   // pinch = zoom, twist = turn, both fingers up / down = tilt
+    if (pilot) { pilotLook(dx, dy); return; }
     if (fly) { flyLook(dx, dy); return; }
     if (mode === 'turn') turnBy(dx, dy); else if (mode === 'pan') { panBy(dx, dy); vel = [dx, dy]; dragAt = performance.now(); } });
   const unpin = e => { pins.delete(e.pointerId); pinch = 0; if (!pins.size) { if (mode !== 'pan' || performance.now() - dragAt > 80) vel = [0, 0]; mode = ''; } }; renderer.domElement.addEventListener('pointerup', unpin); renderer.domElement.addEventListener('pointercancel', unpin);
@@ -202,6 +203,10 @@ function create(host, opts) {
     eMoon: { value: new THREE.Vector4(0, 0, 0, 0) }, eSun: { value: new THREE.Vector4(1, 0, 0, 23481) }, cVol: { value: 0 },   // cVol: 0 = the flat cloud layer, 1 = the cloud volume (close up, see cvPass)
     rain: { value: Object.assign(new THREE.DataTexture(new Uint8Array(4), 1, 1), { needsUpdate: true }) }, rainOn: { value: 0 },   // measured rain (see rainLoad); none until it loads
     wK: { value: waveSet() } };   // the sea's waves (see waves() in TFS)
+  // S6 wind textures for the clouds (WINDF); filled by windTex() once flight/wind.js has loaded
+  const wTx = () => { const t = new THREE.DataTexture(new Float32Array(360 * 181 * 4), 360, 181, THREE.RGBAFormat, THREE.FloatType);   // read by texelFetch only
+    Object.assign(t, { magFilter: THREE.NearestFilter, minFilter: THREE.NearestFilter, needsUpdate: true }); return t; };
+  Object.assign(U, { wA: { value: wTx() }, wB: { value: wTx() }, wTau: { value: 0 }, wOn: { value: 0 } });
   // one light model for the globe and the close-up tiles: n = up, P = the point, N = relief normal, Nw = water-surface normal, rough = wave slope variance,
   // d = colour, w = water 0…1, g = map uv, rk = how strongly the relief shades
   // the sunlight that reaches the ground through the air (Rayleigh + Mie, the same air as the shell): white at noon, gold then red at sunrise / sunset.
@@ -247,13 +252,31 @@ function create(host, opts) {
     uniform sampler2D rain; uniform float rainOn;
     vec2 rainAt(vec2 u, float lb) { vec4 r = texture2D(rain, u, lb); if (r.a < .004 || rainOn < .5) return vec2(0.);
       return vec2(r.a * .1 * pow(10., max(r.r / r.a * 127.5 - 1., 0.) / 40.), r.g / r.a); }`;
-  const SHADE = /* glsl */`${SUNT}${CNOISE}${RAINF}
+  // S6 real wind (GFS, flight/wind.js) moving the clouds: wA = 500 hPa (rg, the steering wind of the cloud map) + 850 hPa (ba), wB = 250 hPa (rg), m/s
+  // east / north, on the GFS 1° grid (texel i = lon i° E, row j = 90 - j° N). cAdv backtraces a map look-up: what is at u now was at
+  // u - V·tau at the cloud map's time (tau = now - map time, s; one step with the local wind: fine for hours, not days). wAt = the wind at
+  // h km (linear 850 -> 500 -> 250 hPa at ~1.5 / 5.6 / 10.4 km). wOn = 0 without wind (NASA map, storm replay, not loaded): no change
+  const WINDF = /* glsl */`
+    uniform sampler2D wA, wB; uniform float wTau, wOn;
+    // bilinear by hand (texelFetch, 32-bit): the GPU's own filter steps its weights in 1/256 of a texel (~0.4 km here), and times a drift of
+    // hours that made ~1 km jumps of the clouds on a grid of screen squares (seen at 13 000 ft, tau ~10 h: a "pixelated" sky)
+    vec4 wFetch(sampler2D t, vec2 u) { vec2 g = vec2(fract(u.x - .5) * 360., clamp(180. * (1. - u.y), 0., 180.)), i = floor(g), f = g - i;
+      int x0 = int(i.x) % 360, x1 = (x0 + 1) % 360, y0 = int(i.y), y1 = min(y0 + 1, 180);
+      return mix(mix(texelFetch(t, ivec2(x0, y0), 0), texelFetch(t, ivec2(x1, y0), 0), f.x), mix(texelFetch(t, ivec2(x0, y1), 0), texelFetch(t, ivec2(x1, y1), 0), f.x), f.y); }
+    // back along the wind in 4 steps (one step with the arrival point's wind folded the map where the wind changes fast: measured 20 % of
+    // the globe squeezed or folded at 12 h, 0 % with 4 steps and the drift capped softly at ~3 h, see windFrame)
+    vec2 cAdv(vec2 u) { if (wOn <= 0.) return u; float k = wTau * wOn / 40030174. * .25;
+      for (int i = 0; i < 4; i++) { vec2 w = wFetch(wA, u).rg; u -= vec2(w.x / max(cos((u.y - .5) * 3.1415927), .1), 2. * w.y) * k; }
+      return u; }
+    vec2 wAt(vec2 u, float h) { if (wOn <= 0.) return vec2(0.); vec4 a = wFetch(wA, u); vec2 b = wFetch(wB, u).rg;
+      return (h < 5.6 ? mix(a.ba, a.rg, clamp((h - 1.5) / 4.1, 0., 1.)) : mix(a.rg, b, clamp((h - 5.6) / 4.8, 0., 1.))) * wOn; }`;
+  const SHADE = /* glsl */`${SUNT}${CNOISE}${RAINF}${WINDF}
     uniform sampler2D night, clouds, aumap; uniform vec3 sun, camO; uniform float morph, cloudOn, cloudShift, cloudFade, cloudR, auOn, airK, cVol;
     vec3 shade(vec3 n, vec3 P, vec3 N, vec3 Nw, float rough, vec3 d, float w, vec2 g, float rk) {
       vec3 ea = normalize(vec3(n.z, 0., -n.x) + vec3(1e-5)), no = cross(n, ea);
       vec3 Vd = camO - P; float dist = length(Vd); vec3 V = Vd / dist;
       float ef = eclF(n), mu = dot(n, sun), vn = max(dot(n, V), 0.), dl = pow(smoothstep(-.02, .62, mu), 1.5) * ef;
-      vec2 cu = g + vec2(cloudShift, 0.); float cf = cloudOn * cloudFade, c = smoothstep(.12, .85, texture2D(clouds, cu).r) * cf;
+      vec2 cu = cAdv(g + vec2(cloudShift, 0.)); float cf = cloudOn * cloudFade, c = smoothstep(.12, .85, texture2D(clouds, cu).r) * cf;
       float zen = clamp(sqrt(max(1. - mu * mu, 0.)) / max(mu, .08), 0., 9.);   // tan of the Sun's zenith angle
       // cloud shadow: the cloud that blocks the Sun stands toward the Sun, h · tan(zenith) away (h = the layer's height, with the relief scale)
       vec2 sd = vec2(dot(sun, ea) / (40030. * max(length(n.xz), .05)), dot(sun, no) / 20015.) * 6371. / max(mu, .08), su = cu + sd * (cloudR - 1.);
@@ -317,10 +340,10 @@ function create(host, opts) {
   scene.add(earth);
   // clouds: their own layer just above the ground — puffy relief from the cloud density, bright tops toward the Sun, dark undersides
   const cloudMat = new THREE.ShaderMaterial({ uniforms: U, vertexShader: VS, transparent: true, depthWrite: false, fragmentShader: /* glsl */`
-    uniform sampler2D clouds, aumap; uniform vec3 sun, camO; uniform float morph, cloudOn, cloudShift, cloudFade, cloudR, auOn, airK, cVol; varying vec2 vUv; varying vec3 vO; ${SUNT}${CNOISE}${RAINF}
+    uniform sampler2D clouds, aumap; uniform vec3 sun, camO; uniform float morph, cloudOn, cloudShift, cloudFade, cloudR, auOn, airK, cVol; varying vec2 vUv; varying vec3 vO; ${SUNT}${CNOISE}${RAINF}${WINDF}
     float C(vec2 u) { return smoothstep(.1, .85, texture2D(clouds, u).r); }
     void main() { vec3 n = normalize(vO), ea = normalize(vec3(n.z, 0., -n.x) + vec3(1e-5)), no = cross(n, ea);
-      vec2 u = vUv + vec2(cloudShift, 0.), e = vec2(1. / 4096., 1. / 2048.);
+      vec2 u = cAdv(vUv + vec2(cloudShift, 0.)), e = vec2(1. / 4096., 1. / 2048.);
       float tx = length(fwidth(u * vec2(4096., 2048.))), cd = cDet(u, tx);   // fine detail close up (see CNOISE); off when far
       float b0 = texture2D(clouds, u).r, c = smoothstep(.1, .85, b0 + cd * .7 * sqrt(b0)) * cloudOn * cloudFade;
       float rr = rainAt(u, 0.).x, rk = smoothstep(.2, 8., rr);   // measured rain under this cloud: 0 dry … 1 heavy (≥ ~8 mm/h)
@@ -777,9 +800,9 @@ ${SUNLIB}${MOONV}
   // it may not draw into), then laid over the picture after the air pass and the clouds: colour + what the picture keeps (alpha), with its own haze (airT)
   const RAINFS = /* glsl */`
     uniform sampler2D tDepth, clouds; uniform mat4 projInv, camW; uniform mat3 toObj; uniform vec2 cn; uniform vec3 sun, camO; uniform float cloudOn, cloudFade, cloudShift, cloudR, rainK;
-    varying vec2 vUv; ${SUNT}${CNOISE}${RAINF}${AIRT}
+    varying vec2 vUv; ${SUNT}${CNOISE}${RAINF}${WINDF}${AIRT}
     vec2 hit(vec3 o, vec3 d, float r) { float b = dot(o, d), c = dot(o, o) - r * r, h = b * b - c; if (h < 0.) return vec2(1e9, -1e9); h = sqrt(h); return vec2(-b - h, -b + h); }
-    vec2 uvOf(vec3 p) { vec3 n = normalize(p); return vec2(atan(-n.z, n.x) / 6.2831853 + .5 + cloudShift, asin(clamp(n.y, -1., 1.)) / 3.1415927 + .5); }
+    vec2 uvOf(vec3 p) { vec3 n = normalize(p); return cAdv(vec2(atan(-n.z, n.x) / 6.2831853 + .5 + cloudShift, asin(clamp(n.y, -1., 1.)) / 3.1415927 + .5)); }
     void main() {
       vec4 v = projInv * vec4(vUv * 2. - 1., 1., 1.); vec3 dv = normalize(v.xyz / v.w), o = camO, d = normalize(toObj * (mat3(camW) * dv));
       gl_FragColor = vec4(0., 0., 0., 1.); vec2 a = hit(o, d, cloudR); if (a.x > a.y || a.y < 0.) return;
@@ -799,12 +822,30 @@ ${SUNLIB}${MOONV}
       float k = cov * rainK; gl_FragColor = vec4(L * k, mix(1., T + Hz, k)); }`;
   const rainRT = new THREE.WebGLRenderTarget(Math.max(1, rt.width >> 1), Math.max(1, rt.height >> 1), { type: THREE.HalfFloatType, depthBuffer: false });
   const FQV = `varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }`;
+  // depth-aware upscale of a ray-marched target (rain, cloud volume) onto the full picture: each texel weighs in only where the ground or sky it
+  // was marched against lies at about the same distance as this pixel's. A plain bilinear / blurred lookup mixed the sky's texel (cloud, rain
+  // far away) with the ridge's (march stopped a few km off) and drew a light line along every silhouette (measured: 51 % of the columns
+  // along a ridge > 8 levels lighter than both sides). spr = the 4 taps' offset in texels (0 = one bilinear tap)
+  const UPS = /* glsl */`
+    uniform sampler2D tLo, tDepth; uniform vec2 cn; uniform float spr;
+    float lz(float z) { return z >= 1. ? 1e30 : 2. * cn.x * cn.y / ((cn.y + cn.x) - (z * 2. - 1.) * (cn.y - cn.x)); }
+    vec4 ups(vec2 uv) {
+      vec2 S = vec2(textureSize(tLo, 0)), p = uv * S - .5; float zc = lz(texture2D(tDepth, uv).x), W = 0., K = 0., bw = -1.;
+      ivec2 b = ivec2(floor(p - spr)), mx = ivec2(S) - 1; vec4 acc = vec4(0.), best = vec4(0., 0., 0., 1.);
+      for (int j = 0; j < 4; j++) for (int i = 0; i < 4; i++) {
+        vec2 c = vec2(b + ivec2(i, j)), k1 = max(1. - abs(p + spr - c), 0.), k0 = max(1. - abs(p - spr - c), 0.);
+        float k = (k1.x + k0.x) * (k1.y + k0.y); if (k <= 0.) continue;   /* the taps' bilinear weights on this texel */
+        ivec2 q = clamp(ivec2(c), ivec2(0), mx); float zt = lz(texture2D(tDepth, (vec2(q) + .5) / S).x);   /* the depth this texel was marched against */
+        float r = min(abs(zt - zc) / min(zt, zc), 10.), d = exp(-r * r * 16.);   /* 25 % farther: weight 1/e; sky against ground: 0 */
+        vec4 v = texelFetch(tLo, q, 0); acc += v * k * d; W += k * d; K += k; if (d > bw) { bw = d; best = v; } }
+      return W > .01 * K ? acc / W : best; }`;
   const rainQ = new FullScreenQuad(new THREE.ShaderMaterial({ depthTest: false, depthWrite: false, vertexShader: FQV, fragmentShader: RAINFS,
     uniforms: { tDepth: { value: null }, rainK: { value: 0 }, projInv: airPass.uniforms.projInv, camW: airPass.uniforms.camW, toObj: airPass.uniforms.toObj, cn: airPass.uniforms.cn,
       sun: U.sun, camO: U.camO, airK: U.airK, clouds: U.clouds, cloudOn: U.cloudOn, cloudFade: U.cloudFade, cloudShift: U.cloudShift, cloudR: U.cloudR, rain: U.rain, rainOn: U.rainOn,
-      lightsOn: U.lightsOn, eMoon: U.eMoon, eSun: U.eSun } }));
+      wA: U.wA, wB: U.wB, wTau: U.wTau, wOn: U.wOn, lightsOn: U.lightsOn, eMoon: U.eMoon, eSun: U.eSun } }));
   const rainC = new FullScreenQuad(new THREE.ShaderMaterial({ depthTest: false, depthWrite: false, transparent: true, blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.SrcAlphaFactor,
-    uniforms: { tR: { value: rainRT.texture } }, vertexShader: FQV, fragmentShader: `uniform sampler2D tR; varying vec2 vUv; void main() { gl_FragColor = texture2D(tR, vUv); }` }));
+    uniforms: { tLo: { value: rainRT.texture }, tDepth: rainQ.material.uniforms.tDepth, cn: airPass.uniforms.cn, spr: { value: 0 } }, vertexShader: FQV, fragmentShader: `${UPS}
+      varying vec2 vUv; void main() { gl_FragColor = ups(vUv); }` }));
   const rainPass = { enabled: false, needsSwap: false, clear: false, renderToScreen: false, setSize(w, h) { rainRT.setSize(Math.max(1, w >> 1), Math.max(1, h >> 1)); }, dispose() {},
     render(r, w, rb) { rainQ.material.uniforms.tDepth.value = (airPass.enabled ? w : rb).depthTexture; const o = r.getRenderTarget(), ac = r.autoClear; r.autoClear = false;   // after the air pass: the scene's depth is in w
       r.setRenderTarget(rainRT); rainQ.render(r); r.setRenderTarget(rb); rainC.render(r); r.setRenderTarget(o); r.autoClear = ac; } };
@@ -839,10 +880,11 @@ ${SUNLIB}${MOONV}
     for (let k = 0; k < 16 && cnZ < CNN; k++, cnZ++) { cnRT.texture.generateMipmaps = cnZ === 0 || cnZ === CNN - 1; /* on at the first slice (the storage is made with its mip levels then), the chain built after the last */ cnQ.material.uniforms.zs.value = (cnZ + .5) / CNN; r.setRenderTarget(cnRT, cnZ); cnQ.render(r); }
     r.setRenderTarget(o); };
   const cvU = { tDepth: { value: null }, pxA: { value: .001 }, cvB: { value: .4 } /* km of drawn ground under the clouds, see the frame loop */, projInv: airPass.uniforms.projInv, camW: airPass.uniforms.camW, toObj: airPass.uniforms.toObj, cn: airPass.uniforms.cn,
-    clouds: U.clouds, cN: { value: cnRT.texture }, sun: U.sun, camO: U.camO, cloudShift: U.cloudShift, cloudR: U.cloudR, cVol: U.cVol, airK: U.airK, lightsOn: U.lightsOn, eMoon: U.eMoon, eSun: U.eSun, rain: U.rain, rainOn: U.rainOn };
+    clouds: U.clouds, cN: { value: cnRT.texture }, sun: U.sun, camO: U.camO, cloudShift: U.cloudShift, cloudR: U.cloudR, cVol: U.cVol, airK: U.airK, lightsOn: U.lightsOn, eMoon: U.eMoon, eSun: U.eSun, rain: U.rain, rainOn: U.rainOn,
+    wA: U.wA, wB: U.wB, wTau: U.wTau, wOn: U.wOn };
   const CVFS = /* glsl */`
     uniform sampler2D tDepth, clouds; uniform highp sampler3D cN; uniform mat4 projInv, camW; uniform mat3 toObj; uniform vec2 cn; uniform vec3 sun, camO; uniform float cloudShift, cloudR, cVol, pxA, cvB;
-    varying vec2 vUv; ${SUNT}${CNOISE}${RAINF}${AIRT}
+    varying vec2 vUv; ${SUNT}${CNOISE}${RAINF}${WINDF}${AIRT}
     vec2 hit(vec3 o, vec3 d, float r) { float b = dot(o, d), c = dot(o, o) - r * r, h = b * b - c; if (h < 0.) return vec2(1e9, -1e9); h = sqrt(h); return vec2(-b - h, -b + h); }
     float hg(float c, float g) { float k = 1. + g * g - 2. * g * c; return (1. - g * g) / (12.566 * k * sqrt(k)); }
     // sunT for a point hkm above sea level: only the air above it dims the beam (Rayleigh scale height 8 km, haze 1.2 km). With the
@@ -859,11 +901,15 @@ ${SUNLIB}${MOONV}
     // two power-of-2 scales blended so it never jumps: far decks get bigger, irregular clumps instead of a lattice
     float shp(vec3 q, float L, float pk) { float s = max(log2(pk * 32. / L), 0.), f = floor(s), r = s - f, L0 = L * exp2(f);
       return mix(shq(q, L0, pk, fract(vec3(.31, .17, .53) * f)), shq(q, L0 * 2., pk, fract(vec3(.31, .17, .53) * (f + 1.))), r); }
+    // the wind of this pixel's ray (WINDF's wA / wB at the middle of the ray inside the slab), read once in main(), not at every step
+    // (per step it cost 3.5 ms a frame at 3 km); a long grazing ray uses one wind for all of its length (an approximation)
+    vec4 gWa = vec4(0.); vec2 gWb = vec2(0.), gD = vec2(0.);
     // density 0…1 at p (Earth radii); hk = Earth radii per km; x = how high inside its layer 0…1 (the sky light dims toward the base)
     float dens(vec3 p, float hk, float lod, float tx, bool fine, out float x) {
       float r = length(p), h = (r - 1.) / hk - cvB; x = 0.; if (h < .6 || h > 12.) return 0.;   // h: km above the region's drawn ground (cvB)
       vec3 n = p / r;
-      vec2 u = vec2(fract(atan(-n.z, n.x) / 6.2831853 + .5 + cloudShift), .5 + asin(clamp(n.y, -1., 1.)) / 3.1415927);
+      vec2 u0 = vec2(fract(atan(-n.z, n.x) / 6.2831853 + .5 + cloudShift), .5 + asin(clamp(n.y, -1., 1.)) / 3.1415927);
+      vec2 u = u0 + gD;   // = cAdv, its shift taken once at the ray's middle
       // lod is for a 4096 px map (tx in 4096-texels); lk = the extra levels of a larger map (1 for today's 8192 map, 0 for the NASA 4096 one)
       float lk = log2(float(textureSize(clouds, 0).x) / 4096.), b = textureLod(clouds, u, lod + lk).r;
       // rain falls only from cloud: where IMERG measures rain the volume has cloud too, as the flat layer has (~.8 cover from .6 mm/h);
@@ -872,6 +918,10 @@ ${SUNLIB}${MOONV}
       if (b < .06) return 0.;
       float c = smoothstep(.07, .75, b + cDet(u, tx) * .7 * sqrt(b)); if (c < .01) return 0.;
       vec4 w = cLay(b) * c; vec3 q = p / hk; float pk = tx * 10.;   // q in km; pk = one pixel in km
+      // S6: the puffs ride the wind at their own height (wd, m/s east / north): the noise moves by -wv·tau (km) in the local east / north
+      // frame; the map moved with the 500 hPa wind (cAdv), so low decks drift slower than it and cirrus faster: shapes shear and change
+      vec2 wd = (h < 5.6 ? mix(gWa.ba, gWa.rg, clamp((h - 1.5) / 4.1, 0., 1.)) : mix(gWa.rg, gWb, clamp((h - 5.6) / 4.8, 0., 1.))) * wOn, wsh = wd * wTau * .001;
+      if (wOn > 0.) { vec3 ea = normalize(vec3(n.z, 0., -n.x) + vec3(1e-6)); q -= ea * wsh.x + cross(n, ea) * wsh.y; }   // local east / north
       // storm towers only in small, isolated cold clusters: where the map is bright over ~200 km (a front, or today's IR map saturated at 1:
       // 33 % of central Europe > .86 on 13 Nov) it is a stratiform deck, not convection. Without this a 12 km flat slab covered the front
       w.w *= 1. - smoothstep(.45, .7, textureLod(clouds, u, max(lod, 4.5) + lk).r);
@@ -891,9 +941,15 @@ ${SUNLIB}${MOONV}
       if (xt >= 0. && xt <= 1. && w.w > .01) { float an = smoothstep(.62, .8, xt), ct = min(w.w * mix(.8, 1.4, an), 1.), pt = smoothstep(0., .04, xt) * (1. - smoothstep(.92, 1., xt)) * (1. - .3 * xt);
         if (ct * pt > cov * pr) { cov = ct; x = xt; pr = pt; L = 9.; k = 1.; st = an; sx = .6; sy = .3; } }
       if (cov * pr < .01) return 0.;
-      // the stretched frame (one seam on the 180° meridian): rolls / streaks along the east stand in for a wind direction (no wind data here)
+      // the stretched frame (one seam on the 180° meridian): rolls / streaks lie along the wind (cloud streets, cirrus streaks); along the east
+      // without wind data. A frame turned by the local wind angle itself would warp (the angle varies, the coordinates are ~10^4 km), so the
+      // two nearest of 4 fixed directions (0 / 45 / 90 / 135°) are blended: off by up to 22.5° in between (an approximation)
       float sh = st < .99 ? shp(q, L, pk) : 0.;
-      if (st > .01) { float la = asin(clamp(n.y, -1., 1.)), lo = atan(-n.z, n.x); sh = mix(sh, shp(vec3(lo * 6371. * cos(la) * sx, h * sy, la * 6371.), L, pk), st); }
+      if (st > .01) { float la0 = asin(clamp(n.y, -1., 1.)), lo0 = atan(-n.z, n.x); vec2 en = vec2(lo0 * 6371. * cos(la0), la0 * 6371.) - wsh;
+        float ang = wOn > 0. && dot(wd, wd) > .25 ? mod(atan(wd.y, wd.x), 3.1415927) / .78539816 : 0., k0 = floor(ang), f0 = ang - k0;
+        float a0 = k0 * .78539816, a1 = a0 + .78539816; vec2 r0 = vec2(dot(en, vec2(cos(a0), sin(a0))), dot(en, vec2(-sin(a0), cos(a0)))), r1 = vec2(dot(en, vec2(cos(a1), sin(a1))), dot(en, vec2(-sin(a1), cos(a1))));
+        float ss = shp(vec3(r0.x * sx, h * sy, r0.y), L, pk); if (f0 > .01) ss = mix(ss, shp(vec3(r1.x * sx, h * sy, r1.y) + vec3(.37, 0., .71) * L, L, pk), f0);
+        sh = mix(sh, ss, st); }
       // coverage remap: sparse cover keeps only the tops of the noise (separate puffs), full cover leaves holes only
       float d = clamp((sh * pr - (1. - cov)) / max(cov, .1), 0., 1.);
       if (d <= 0.) return 0.;
@@ -919,6 +975,8 @@ ${SUNLIB}${MOONV}
       // (not mix(1e9, …): the GPU computes 1e9 + (b - 1e9) * ins, and in 32-bit floats that is 0, which hid every cloud seen from below 10 km)
       float ins = step(length(o), rt), tc = ins > .5 ? t0 + 120. * hk : 1e9;
       t1 = min(min(t1, ts), tc); if (t1 <= t0) return;
+      if (wOn > 0.) { vec3 pm = normalize(o + d * (t0 + t1) * .5); vec2 gw = vec2(atan(-pm.z, pm.x) / 6.2831853 + .5, .5 + asin(clamp(pm.y, -1., 1.)) / 3.1415927);
+        gWa = wFetch(wA, gw); gWb = wFetch(wB, gw).rg; gD = cAdv(gw) - gw; gD.x -= floor(gD.x + .5); }
       float T = t1 - t0, j = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(.06711056, .00583715))));
       float cth = dot(d, sun), ph = mix(hg(cth, .6), hg(cth, -.25), .3);
       vec3 L = vec3(0.); float Tr = 1., Hz = 0.;   // Hz: the share of the picture behind (already through the air pass) that the haze in front of the clouds gives back
@@ -963,10 +1021,12 @@ ${SUNLIB}${MOONV}
   const cvVS = `varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }`;
   const cvRT = new THREE.WebGLRenderTarget(2, 2, { type: THREE.HalfFloatType, depthBuffer: false });
   const cvQ = new FullScreenQuad(new THREE.ShaderMaterial({ uniforms: cvU, depthTest: false, depthWrite: false, vertexShader: cvVS, fragmentShader: CVFS }));
-  const cvC = new FullScreenQuad(new THREE.ShaderMaterial({ uniforms: { tCv: { value: cvRT.texture } }, depthTest: false, depthWrite: false, transparent: true,
+  // 4 bilinear taps 0.75 texel out (spr): a soft upscale that also hides the per-pixel jitter of the steps (0.3 px at full resolution left a hatch
+  // on the cloud edges: measured ~1.3× the pixel noise), depth-aware (UPS)
+  const cvC = new FullScreenQuad(new THREE.ShaderMaterial({ uniforms: { tLo: { value: cvRT.texture }, tDepth: cvU.tDepth, cn: airPass.uniforms.cn, spr: { value: .75 } }, depthTest: false, depthWrite: false, transparent: true,
     blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.SrcAlphaFactor, blendSrcAlpha: THREE.ZeroFactor, blendDstAlpha: THREE.OneFactor,   // scene × transmittance + cloud light
-    vertexShader: cvVS, fragmentShader: `uniform sampler2D tCv; varying vec2 vUv;   // 4 bilinear taps 0.75 px out: a soft upscale that also hides the per-pixel jitter of the steps
-      void main() { vec2 e = .75 / vec2(textureSize(tCv, 0)); /* 0.3 px at full resolution left a hatch on the cloud edges: measured ~1.3× the pixel noise */ gl_FragColor = .25 * (texture2D(tCv, vUv + vec2(e.x, e.y)) + texture2D(tCv, vUv + vec2(-e.x, e.y)) + texture2D(tCv, vUv + vec2(e.x, -e.y)) + texture2D(tCv, vUv - e)); }` }));
+    vertexShader: cvVS, fragmentShader: `${UPS}
+      varying vec2 vUv; void main() { gl_FragColor = ups(vUv); }` }));
   const cvPass = { enabled: false, needsSwap: false, clear: false, renderToScreen: false, setSize(w, h) { cvRT.setSize(Math.ceil(w / CVS), Math.ceil(h / CVS)); }, dispose() {},
     render(r, w, rb) { if (cnZ < CNN) return; cvU.tDepth.value = (airPass.enabled ? w : rb).depthTexture; /* the air pass swapped the buffers: the scene and its depth are in w */ cvU.pxA.value = 2 * Math.tan(camera.fov * D2R / 2) / cvRT.height; const o = r.getRenderTarget(), ac = r.autoClear;
       r.setRenderTarget(cvRT); cvQ.render(r); r.autoClear = false; r.setRenderTarget(rb); cvC.render(r); r.autoClear = ac; r.setRenderTarget(o); } };
@@ -975,6 +1035,13 @@ ${SUNLIB}${MOONV}
   composer.addPass(rainPass);   // the rain after the clouds: it falls close to the camera, under them
   composer.addPass({ enabled: true, needsSwap: false, clear: false, renderToScreen: false, setSize() {}, dispose() {},   // the ISS over the air (it flies above it), with its own depth
     render(r, w, rb) { const ac = r.autoClear; r.autoClear = false; r.setRenderTarget(rb); solar.issDraw(r, camera); r.autoClear = ac; } });
+  // api.flight().craftLayer: craft meshes over the finished scene (after air, clouds, rain), own depth + own near plane (the caller's camera2.near / far).
+  // Drawn relative to the camera: the layer's scene is moved by −camera.position (doubles on the CPU), camera2 sits at the origin, so every matrix the GPU
+  // gets is small (float32-safe; shadows later too). Not hidden by terrain or clouds in front of it (S3)
+  composer.addPass({ enabled: true, needsSwap: false, clear: false, renderToScreen: false, setSize() {}, dispose() {},
+    render(r, w, rb) { if (!craftL) return; const s = craftL.scene, c = craftL.camera, ac = r.autoClear; s.position.copy(camera.position).negate();
+      c.position.set(0, 0, 0); c.quaternion.copy(camera.quaternion); c.fov = camera.fov; c.aspect = camera.aspect; c.updateProjectionMatrix();
+      r.autoClear = false; r.setRenderTarget(rb); r.clearDepth(); r.render(s, c); r.autoClear = ac; } });
   // a safety net: a single NaN / Inf pixel from any shader would be smeared by the bloom into black blocks and a whole-screen flicker — clean it first
   // + the nadir contrast (ctr: a power around mid grey .18 in linear light, 1 = none)
   const cleanPass = new ShaderPass({ uniforms: { tDiffuse: { value: null }, ctr: { value: 1 } }, vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`,
@@ -1203,10 +1270,26 @@ ${SUNLIB}${MOONV}
   const CLN = 'https://raw.githubusercontent.com/ori0nori0ff/ori0nori0ff.github.io/clouds/', hr3 = Math.floor(Date.now() / 108e5);
   let cNow = null, cNowT = ''; const bCn = $('cn');
   const cUse = on => { U.clouds.value = on ? cNow : TX.clouds; bCn.textContent = on ? tr('Clouds: today') + (cNowT ? ' ' + cNowT : '') : tr('Clouds: NASA'); press(bCn, on); };
-  const cLoad = (base, done, fail) => { fetch(base + 'clouds_now.json?' + hr3).then(r => r.json()).then(j => { cNowT = j.t.slice(11, 16) + ' UTC'; if (cNow && U.clouds.value === cNow) cUse(true); }).catch(() => {});
+  const cLoad = (base, done, fail) => { fetch(base + 'clouds_now.json?' + hr3).then(r => r.json()).then(j => { cNowT = j.t.slice(11, 16) + ' UTC'; cNowMs = Date.parse(j.t); if (cNow && U.clouds.value === cNow) cUse(true); }).catch(() => {});
     new THREE.TextureLoader().load(base + 'clouds_now.jpg?' + hr3, t => { t.anisotropy = TX.clouds.anisotropy; cNow = t; done(); }, undefined, fail); };
   if (!(opts.storm ?? window.STORM)) cLoad(CLN, () => cUse(true), () => {}); else bCn.hidden = true;   // a storm replay is in the past: today's clouds would be wrong
   bCn.onclick = () => { if (cNow) cUse(U.clouds.value !== cNow); };
+  // S6: today's clouds move with the real wind (GFS via flight/wind.js, loaded lazily: first close-up under 3 000 km or a time speed above
+  // 60x, i.e. when the drift can be seen; flight mode loads it too). The textures hold the wind at the middle of the drift (map time + tau / 2),
+  // rebuilt when that moves by 15 min; tau is clamped to +/- 12 h (the GFS run's span). wOn eases in over ~2 s, so the clouds slide to place
+  let cNowMs = 0, wMod = null, wReq = false, wMid = -1e15, wEase = 0;
+  const windTex = mid => { const W = wMod, A = U.wA.value.image.data, B = U.wB.value.image.data, h = x => x;
+    const lv = [[4, A, 0], [2, A, 2], [6, B, 0]];   // GFS level index (wind.js: 4 = 500, 2 = 850, 6 = 250 hPa) -> texture, channel
+    for (const [l, T, c] of lv) { const g = W.level(l, mid); for (let k = 0, n = 360 * 181; k < n; k++) { T[k * 4 + c] = h(g[k * 2]); T[k * 4 + c + 1] = h(g[k * 2 + 1]); } }
+    U.wA.value.needsUpdate = U.wB.value.needsUpdate = true; wMid = mid; };
+  const windFrame = (t, dt, km) => {
+    const live = !!cNow && U.clouds.value === cNow && cNowMs > 0;
+    if (!wReq && live && (km < 3000 || (dyPlay && (spd || 216e5) > 6e4))) { wReq = true; import('./flight/wind.js?v=f82bd853').then(m => { wMod = m.sharedWind(); }).catch(() => {}); }
+    // tau saturates softly at ~3 h (the map's cadence): beyond it the clouds stop drifting instead of being stretched into streaks
+    // (a far clock is a guess anyway; at 12 h of drift the real field has formed and lost clouds the map cannot know)
+    const ok = live && wMod && wMod.ready, tau = ok ? 108e5 * Math.tanh((t - cNowMs) / 108e5) : 0;
+    if (ok && Math.abs(cNowMs + tau / 2 - wMid) > 9e5) windTex(cNowMs + tau / 2);
+    wEase = ok ? Math.min(1, wEase + dt / 2) : 0; U.wOn.value = wEase * wEase * (3 - 2 * wEase); U.wTau.value = tau / 1e3; };
   // rain now: NASA GPM IMERG precipitation rate (Early run, 30-min average, ~0.1°, ~4–7 h behind) from GIBS (CORS *, no key), live only.
   // The tiles' colours map back to the rate: GIBS colour map GPM_Precipitation_Rate, 110 rain then 110 snow colours, step k = 0.1 · 10^(k / 40) mm/h.
   // Texture: r = (k + 1) · 2 / 255 × coverage, g = snow, a = coverage (see RAINF); north up, lon −180° at u = 0, like the cloud map
@@ -1556,6 +1639,8 @@ ${SUNLIB}${MOONV}
     shield(); if (m) { setT(m.tE - 2 * 36e5); playSet(true); } else setTimeout(() => MSH.impact(), far ? 0 : 2600); };
   const pad = v => String(v).padStart(2, '0'), localStr = t => { const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
   $('fly').onclick = () => fly ? flyOff() : flyOn();
+  // S4 flight menu (flight/menu.js, loaded on the first click): pick a craft and fly it in this view
+  $('craft').onclick = () => { if (fly) flyOff(); import('./flight/menu.js?v=aa20fee5').then(m => m.openMenu(api, host, $('craft'))).catch(e => console.error('flight menu', e)); };
   const di = $('date'); di.onchange = () => { const t = Date.parse(di.value); if (isFinite(t)) tOver = Math.max(Date.UTC(1800, 0, 1), Math.min(Date.UTC(2050, 0, 1), t)); };
   $('now').onclick = () => { playSet(false, 1); spd = 0; $('dyS').value = '0'; tOver = null; di.value = localStr(now()); };
   // time of day at the place you look at: local Sun time (UTC + longitude / 15) on the same day; moving it switches the real Sun on
@@ -1654,11 +1739,12 @@ ${SUNLIB}${MOONV}
   const fh = document.createElement('div'); fh.className = 'e3g-fh'; fh.hidden = true; el.appendChild(fh);
   // in free flight the Sun is the real one (the studio lamp would light the night side too); the user's choice comes back on leaving,
   // unless they pressed "Real Sun" during the flight
-  function flyOn() { if (fly) return; fly = { off: camera.position.clone().sub(fc), q: camera.quaternion.clone(), sp: 1, sunAuto: !realSun }; spinOff(); goal = null; vel = [0, 0]; press($('fly'), true); fh.hidden = false;
+  function flyOn() { if (fly || pilot) return; fly = { off: camera.position.clone().sub(fc), q: camera.quaternion.clone(), sp: 1, sunAuto: !realSun }; spinOff(); goal = null; vel = [0, 0]; press($('fly'), true); fh.hidden = false;
     if (!realSun) { realSun = true; press($('sun'), true); } }
   function flyOff() { if (!fly) return; const o = fly.off; if (fly.sunAuto && realSun) { realSun = false; press($('sun'), false); } tgt.copy(o).normalize(); rng = rngTo = Math.max(rMin(), o.length() / Rf - 1); tkTo = 0;
     look0.copy(camera.getWorldDirection(new THREE.Vector3())); lookU = 0; fly = null; keys.clear(); press($('fly'), false); fh.hidden = true; }
   window.addEventListener('keydown', e => { if (!visible || e.ctrlKey || e.metaKey || e.altKey || e.target.closest?.('input,textarea,select,[contenteditable]')) return;
+    if (pilot) { if (e.code === 'Escape') { e.preventDefault(); pilotSet(false); } return; }   // pilot mode: the craft has its own keys (flight/core.js)
     if (e.code === 'Escape' && fly) { e.preventDefault(); flyOff(); return; } if (!KM.includes(e.code)) return; if (!fly && e.code.startsWith('Shift')) return; e.preventDefault(); flyOn(); keys.add(e.code); });
   window.addEventListener('keyup', e => keys.delete(e.code)); window.addEventListener('blur', () => keys.clear());
   const qT = new THREE.Quaternion(), vT = new THREE.Vector3();
@@ -1685,6 +1771,21 @@ ${SUNLIB}${MOONV}
       else { const hx = Math.atan2(best.v.x, -best.v.z), hy = Math.atan2(best.v.y, Math.hypot(best.v.x, best.v.z)), ar = Math.abs(hx) > Math.abs(hy) * 1.5 || best.v.z > 0 ? (hx < 0 ? '←' : '→') : (hy > 0 ? '↑' : '↓');
         line = `${ar} <b>${n}</b> ${deg}° · ${dist}`; } }
     fh.innerHTML = `✈ ${line}<small>W A S D · R / F ${tr('up / down')} · Q / E ${tr('roll')} · ${tr('drag = look')} · ${tr('wheel = speed')} ×${fly.sp < 1 ? fly.sp.toFixed(2) : fly.sp.toFixed(1)} · Shift · Esc</small>`; }
+  // pilot mode (api.flight().pilot, flight/core.js): a craft drives the camera instead of the ✈ keys. src() -> { pos: W (R⊕), quat: W, agl: m of the
+  // camera over the drawn ground }; drag = look around (pilot.look, a view quaternion); Esc leaves. No ground + 30 m clamp: the craft's contact model decides
+  var pilot = null; const frameCbs = new Set(); let craftL = null, FL = null;
+  function pilotSet(on, src) {
+    if (!on) { if (!pilot) return; const p = pilot; pilot = null; if (camera.fov !== 35) { camera.fov = 35; camera.updateProjectionMatrix(); } if (p.sunAuto && realSun) { realSun = false; press($('sun'), false); }
+      tgt.copy(camera.position).normalize(); rng = rngTo = Math.max(rMin(), camera.position.length() - 1); tkTo = 0; look0.copy(camera.getWorldDirection(new THREE.Vector3())); lookU = 0;
+      if (p.onOff) p.onOff(); return; }
+    if (pilot) { pilot.src = src; return; }
+    flyOff(); spinOff(); goal = null; vel = [0, 0]; hideInfo(); if (focus !== 'Earth') { focus = 'Earth'; Rf = 1; Mprev = null; }
+    pilot = { src, look: new THREE.Quaternion(), sunAuto: !realSun, onOff: null }; if (!realSun) { realSun = true; press($('sun'), true); } }
+  const pilotLook = (dx, dy) => { pilot.look.multiply(qT.setFromAxisAngle(vT.set(0, 1, 0), -dx * .003)).multiply(qT.setFromAxisAngle(vT.set(1, 0, 0), -dy * .003)).normalize(); };
+  function pilotStep() { const s = pilot.src(); if (!s) return; camera.position.copy(s.pos); camera.quaternion.copy(s.quat).multiply(pilot.look);
+    const fv = s.fov || 35; if (camera.fov !== fv) { camera.fov = fv; camera.updateProjectionMatrix(); }   /* S3b: the pilot view's own field of view (cockpit wider) */
+    hAG = Math.max(1.5, s.agl) / 6371000;   // drives the near plane (0.3 × this; the craft has its own pass), the relief factor and the tiles; ≥ 1.5 m keeps the far ground's depth precision
+    tgt.copy(s.pos).normalize(); rng = rngTo = Math.max(1e-9, s.pos.length() - 1); }
   let fpsN = 60, slow = 0, fast = 0, readyAt = 0, msX = 0, hE = [0, 0, 0], Mprev = null, lookU = 1; const fc = new THREE.Vector3(), look = new THREE.Vector3(), look0 = new THREE.Vector3(); const PRMIN = Math.min(Q === "low" ? .6 : 1, prCap()); let PRMAX = prCap();
   // three.js asks for the next frame only after this one returns: an error would freeze the picture, so it is caught (and logged once)
   let frameErr = false; const safeFrame = () => { try { frame(); } catch (e) { if (!frameErr) { frameErr = true; console.error('3D frame', e); } } };
@@ -1739,7 +1840,8 @@ ${SUNLIB}${MOONV}
       camera.position.copy(pos); camera.up.copy(tgt).multiplyScalar(st).addScaledVector(cF, ct); look.copy(tgt).multiplyScalar(Rf * (1 + gT)).add(fc);
       if (lookU < 1) { lookU = Math.min(1, lookU + dt / 1.4); const e = lookU * lookU * (3 - 2 * lookU), dn = look.clone().sub(pos).normalize(); look.copy(pos).add(look0.clone().lerp(dn, e).normalize()); }   // after a change of focus the view turns smoothly to the new body
       camera.lookAt(look);
-      if (fly) flyStep(dt);
+      for (const cb of frameCbs) try { cb(dt0, t); } catch (e) { console.error('flight frame', e); frameCbs.delete(cb); }   // api.flight().onFrame: physics before the camera, near / far and the tiles
+      if (pilot) pilotStep(); else if (fly) flyStep(dt);
       sH.value = Math.round((((head % (2 * Math.PI)) + 3 * Math.PI) % (2 * Math.PI) - Math.PI) / D2R); sT.value = Math.round(tkTo * 100);
       cmp.firstChild.style.transform = `rotate(${-head / D2R}deg)`; press(b3, tkTo > .05); }
     const D = camera.position.length();
@@ -1788,14 +1890,14 @@ ${SUNLIB}${MOONV}
       sunW.copy(U.sun.value).applyQuaternion(earth.quaternion); sunQ.position.copy(camera.position).addScaledVector(sunW, dd);
       sunQ.quaternion.copy(camera.quaternion); sunQ.scale.setScalar(dd * Math.tan(SUNA));
       sunD.position.copy(sunQ.position); sunD.quaternion.copy(camera.quaternion); sunD.scale.setScalar(dd * Math.tan(.0075)); sunQ.material.uniforms.toObj.value.setFromMatrix4(inv); }
-    { const exT = 1 + (HD.EX - 1) * smooth(Math.log(1500), Math.log(20000), Math.log((focus === 'Earth' ? Math.min(hAG, D - 1) : D - 1) * 6371000)); U.ex.value += (exT - U.ex.value) * Math.min(1, dt * 3);
+    { const exT = 1 + (HD.EX - 1) * smooth(Math.log(1500), Math.log(20000), Math.log((focus === 'Earth' ? Math.min(hAG, D - 1) : D - 1) * 6371000)); U.ex.value = pilot ? 1 : U.ex.value + (exT - U.ex.value) * Math.min(1, dt * 3);   // pilot: true relief, so the drawn ground = the craft's ground
       cloudLayer.scale.setScalar(U.cloudR.value); }   // eased: the relief never jumps with the camera. The clouds stay at their real 4 km:
       // scaling them with the relief made the whole cloud field stretch and drift while coming down from ~20 to ~1.5 km
     hd.visible = U.hdA.value > 0; if (hd.visible) hdUpdate(D); U.pxk.value = pxK; U.wtime.value += dt;
-    U.cloudShift.value = (t % 864e5) / 864e5 * .002;   // a slow drift so the clouds feel alive
+    U.cloudShift.value = (t % 864e5) / 864e5 * .002 * (1 - U.wOn.value);   // a slow drift so the clouds feel alive (until the real wind moves them)
     U.rainOn.value = rainUse && rainT && t > rainT - 108e5 && t < rainT + 324e5 ? 1 : 0; if (Date.now() > rainNext) rainLoad();   // the newest map is ~5–7 h old: shown from 3 h before to 9 h after its time
     auMat.uniforms.time.value += dt;
-    const km = focus === 'Earth' ? (D - 1) * 6371 : rng * Rf * 6371, cl = U.camO.value.clone().normalize();
+    const km = focus === 'Earth' ? (D - 1) * 6371 : rng * Rf * 6371; windFrame(t, dt, km); const cl = U.camO.value.clone().normalize();
     if (focus !== 'Earth' && solar.bodies[focus]) cl.copy(camera.position).sub(fc).applyQuaternion(solar.bodies[focus].mesh.quaternion.clone().invert()).normalize();   // another body: its own latitude / longitude
     todShow(t); if (el.classList.contains('sy') || el.classList.contains('mso')) dyShow(t); if (fly) flyHud();
     el.querySelector('.e3g-alt').innerHTML = `${focus !== 'Earth' ? tr(focus) + ' · ' : ''}${tr('Altitude')} ${km >= 1000 ? Math.round(km).toLocaleString(window.LOC || 'en-GB') : km.toFixed(km < 10 ? 1 : 0)} km${focus === 'Earth' && hAG * 6371 < 3 ? ' · ' + Math.round(hAG * 6371000) + ' m ' + tr('above the ground') : ''}<small>${plN && performance.now() < plT ? '<b style="color:#39FF9E">' + plN + '</b> · ' : ''}${(Math.asin(cl.y) / D2R).toFixed(2)}°, ${(Math.atan2(-cl.z, cl.x) / D2R).toFixed(2)}° · ${new Date(t).toLocaleString(window.LOC || 'en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}${tOver != null ? '' : ' · ' + tr('live')}</small>`;
@@ -1822,6 +1924,16 @@ ${SUNLIB}${MOONV}
       renderer.setAnimationLoop(safeFrame); },
     hide() { el.classList.remove('on'); visible = false; renderer.setAnimationLoop(null); },
     setTime() {}, flyTo() {}, setPlaces(p) { opts.places = p; }, shield() { shield(); },
+    // the flight hook (docs/flight-plan.md, Interfaces): live objects, no copies; lat / lon in radians, heights in metres, positions in W (R⊕)
+    flight() { return FL || (FL = { THREE, scene, camera, renderer, earthQuat: earth.quaternion, quality: Q,
+      solar: { bodies: solar.bodies, helio: solar.helio, eclToWorld: solar.eclToWorld, toWorld: solar.toWorld, fromWorld: solar.fromWorld },
+      groundAt: (la, lo) => groundAt(la, lo, null), groundDrawn: (la, lo) => { const g = groundAt(la, lo, null); return g == null ? null : g * U.ex.value + 400; },
+      bodyGround: (n, d) => solar.hdGround(n, d), sun: () => U.sun.value.clone().applyQuaternion(earth.quaternion),
+      clock: { now, set: t => setT(t), playing: () => dyPlay || tOver == null, rate: () => dyPlay ? dyDir * (spd || 216e5) : tOver == null ? 1e3 : 0,   // sim-ms per real s
+        setRate(r) { if (!(r > 0)) { playSet(false); return; } spd = r; $('dyS').value = String(SPD.findIndex(x => x[0] === r)); playSet(true, 1); } },
+      onFrame(cb) { frameCbs.add(cb); return () => frameCbs.delete(cb); },
+      pilot(on, src) { pilotSet(on, src); return pilot; }, get piloting() { return !!pilot; },
+      craftLayer(s, c) { craftL = s ? { scene: s, camera: c } : null; } }); },
     start(v) { startV = v; startN = 0; } };
   let startV = null, startN = 0;
   function goStart(v) { if (v === 'shield') shield(); else if (v === 'sys') flyToBody('Sun', undefined, null, true); else if (v && v !== 'Earth' && v !== 'earth' && solar.bodies[v]) flyToBody(v, undefined, null, true); }

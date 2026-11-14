@@ -1,0 +1,29 @@
+<!doctype html>
+<!-- Flight test page (docs/flight-plan.md, steps S0c / S2 / S1 / S4): the 3D Earth + the F-16 on runway 03 of Brasov-Ghimbav (LRBV);
+     ?craft=orbiter = the S1 orbit test (a placeholder spacecraft in a 400 km orbit).
+     Not linked from the live page. Same CSP as index.html (no new hosts); the import map is a byte copy (its hash is in the CSP). -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-yrjpRjSLoP9zzldD8l/6m31X7aAYNlEt6JWBegj8wXE='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://services.swpc.noaa.gov https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/IMERG_Precipitation_Rate_30min/ https://imag-data.bgs.ac.uk https://tiles.maps.eox.at https://s3.amazonaws.com/elevation-tiles-prod/ https://api.open-meteo.com https://historical-forecast-api.open-meteo.com https://geocoding-api.open-meteo.com https://raw.githubusercontent.com/ori0nori0ff/ori0nori0ff.github.io/ https://earthquake.usgs.gov https://www.seismicportal.eu https://images-api.nasa.gov https://epic.gsfc.nasa.gov https://trek.nasa.gov https://astro.arcgis.com https://ibasemaps-api.arcgis.com; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Flight test</title>
+<style>
+  @font-face { font-family: 'Inter'; font-weight: 500; font-display: swap; src: url(fonts/inter-latin-500-normal.woff2) format('woff2'); }
+  @font-face { font-family: 'Inter'; font-weight: 600; font-display: swap; src: url(fonts/inter-latin-600-normal.woff2) format('woff2'); }
+  html, body { margin: 0; height: 100%; background: #000; color: #E6EBF1; font: 500 13px Inter, system-ui, sans-serif; overflow: hidden; }
+  #fly3d { position: fixed; inset: 0; }
+  /* flight UI styles: flight/session.js (shared with the 3D view's flight menu) */
+</style>
+<script src="i18n.js"></script>
+<script src="i18n.ro.js"></script>
+<script src="i18n.de.js"></script>
+</head>
+<body>
+<div id="fly3d"></div>
+<script type="importmap">{ "imports": { "three": "./lib/three/three.module.min.js", "three/addons/": "./lib/three/addons/" } }</script>
+<script src="earthgl.js" type="module"></script>
+<script src="flight/fly-start.js" type="module"></script>
+</body>
+</html>

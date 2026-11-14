@@ -1,0 +1,16 @@
+F-16D 3D model (f16.gltf, f16.bin, f16_base.jpg, f16_normal.jpg, f16_orm.jpg)
+
+Author:   alexskyrex-5de5f7 (CGTrader)
+Source:   CGTrader, model "F-16D", bought / downloaded by the site owner
+Licence:  CGTrader Royalty Free licence: use in own projects, modify, commercial use = yes;
+          redistribution or re-uploading of the model file = NO.
+
+These files are NOT covered by the licence of this project's code. They are (c) the author and may not be
+copied, extracted or redistributed. When the source code is published, these files stay out of it.
+
+Changes made here (tools/f16_convert_blender.py, tools/f16_prep_tex.py, Blender 5.2):
+converted from F-16D.blend to glTF 2.0 (separate .bin + JPEG textures, because the page's security policy
+blocks the blob: URLs that embedded GLB textures need); scaled from feet to metres; origin moved to the flight
+model's reference centre of gravity; stabilators and rudder cut out of the fuselage, flaperons and leading-edge
+flaps split left / right, all with hinge axes; duplicate tyres removed, landing gear decimated; textures
+reduced from 9600 px to 2048 px; materials rebuilt as plain PBR.
