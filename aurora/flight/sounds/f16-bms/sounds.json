@@ -1,0 +1,800 @@
+{
+ "aero": {
+  "aero": {
+   "aoa": [
+    [
+     0.0,
+     1.0
+    ]
+   ],
+   "gain": [
+    [
+     0.0,
+     0.0
+    ],
+    [
+     0.1,
+     0.65
+    ],
+    [
+     0.8,
+     0.9
+    ],
+    [
+     1.0,
+     0.95
+    ],
+    [
+     2.3,
+     1.0
+    ]
+   ],
+   "pitch": [
+    [
+     0.0,
+     0.85
+    ],
+    [
+     3.0,
+     1.05
+    ]
+   ]
+  },
+  "airflow": {
+   "aoa": [
+    [
+     0.0,
+     0.9
+    ],
+    [
+     10.0,
+     1.0
+    ]
+   ],
+   "gain": [
+    [
+     0.0,
+     0.0
+    ],
+    [
+     0.1,
+     0.6
+    ],
+    [
+     1.0,
+     1.0
+    ]
+   ],
+   "pitch": [
+    [
+     0.0,
+     1.0
+    ]
+   ]
+  },
+  "aoaHigh": {
+   "aoa": [
+    [
+     0.0,
+     0.0
+    ],
+    [
+     5.0,
+     0.8
+    ],
+    [
+     8.0,
+     1.0
+    ]
+   ],
+   "gain": [
+    [
+     0.0,
+     0.0
+    ],
+    [
+     0.7,
+     1.0
+    ]
+   ],
+   "pitch": [
+    [
+     0.0,
+     1.0
+    ]
+   ]
+  },
+  "aoaLow": {
+   "aoa": [
+    [
+     0.0,
+     0.0
+    ],
+    [
+     6.0,
+     0.5
+    ],
+    [
+     15.0,
+     1.0
+    ]
+   ],
+   "gain": [
+    [
+     0.0,
+     0.0
+    ],
+    [
+     0.1,
+     0.8
+    ],
+    [
+     0.5,
+     1.0
+    ]
+   ],
+   "pitch": [
+    [
+     0.0,
+     1.0
+    ]
+   ]
+  }
+ },
+ "engine": {
+  "abExt": {
+   "gain": [
+    [
+     1.0,
+     0.0
+    ],
+    [
+     1.021,
+     1.0
+    ]
+   ],
+   "pitch": [
+    [
+     0.0,
+     0.8
+    ],
+    [
+     0.7,
+     1.0
+    ],
+    [
+     0.96,
+     1.2
+    ],
+    [
+     0.97,
+     1.0
+    ],
+    [
+     1.0,
+     0.9
+    ]
+   ]
+  },
+  "abInt": {
+   "gain": [
+    [
+     1.0,
+     0.0
+    ],
+    [
+     1.021,
+     1.0
+    ]
+   ],
+   "pitch": [
+    [
+     0.0,
+     1.0
+    ]
+   ]
+  },
+  "ext1": {
+   "gain": [
+    [
+     0.0,
+     0.0
+    ],
+    [
+     0.45,
+     0.8
+    ],
+    [
+     1.0,
+     1.0
+    ],
+    [
+     1.03,
+     1.0
+    ]
+   ],
+   "pitch": [
+    [
+     0.0,
+     0.3
+    ],
+    [
+     0.7,
+     1.0
+    ],
+    [
+     0.75,
+     1.3
+    ],
+    [
+     0.8,
+     1.5
+    ],
+    [
+     0.85,
+     1.7
+    ],
+    [
+     0.9,
+     1.7
+    ]
+   ]
+  },
+  "ext2": {
+   "gain": [
+    [
+     0.0,
+     0.0
+    ],
+    [
+     0.15,
+     0.6
+    ],
+    [
+     0.6,
+     0.9
+    ],
+    [
+     1.0,
+     1.0
+    ]
+   ],
+   "pitch": [
+    [
+     0.0,
+     0.3
+    ],
+    [
+     0.7,
+     1.0
+    ],
+    [
+     0.75,
+     1.3
+    ],
+    [
+     0.83,
+     1.6
+    ],
+    [
+     0.85,
+     1.8
+    ],
+    [
+     0.9,
+     1.8
+    ]
+   ]
+  },
+  "ext3": {
+   "gain": [
+    [
+     0.0,
+     0.0
+    ],
+    [
+     0.9,
+     0.5
+    ],
+    [
+     1.0,
+     0.0
+    ]
+   ],
+   "pitch": [
+    [
+     0.0,
+     0.0
+    ],
+    [
+     0.7,
+     1.0
+    ]
+   ]
+  },
+  "ext4": {
+   "gain": [
+    [
+     0.0,
+     0.0
+    ],
+    [
+     0.4,
+     0.0
+    ],
+    [
+     0.7,
+     0.6
+    ],
+    [
+     1.0,
+     1.0
+    ]
+   ],
+   "pitch": [
+    [
+     0.0,
+     0.0
+    ],
+    [
+     1.0,
+     1.47
+    ]
+   ]
+  },
+  "int1": {
+   "gain": [
+    [
+     0.0,
+     0.0
+    ],
+    [
+     0.18,
+     0.8
+    ],
+    [
+     0.68,
+     1.0
+    ],
+    [
+     0.94,
+     1.0
+    ],
+    [
+     0.97,
+     0.8
+    ]
+   ],
+   "pitch": [
+    [
+     0.0,
+     0.3
+    ],
+    [
+     0.7,
+     1.0
+    ],
+    [
+     0.75,
+     1.3
+    ],
+    [
+     0.8,
+     1.6
+    ],
+    [
+     0.85,
+     1.8
+    ],
+    [
+     0.9,
+     1.8
+    ]
+   ]
+  },
+  "int2": {
+   "gain": [
+    [
+     0.0,
+     0.0
+    ],
+    [
+     0.4,
+     0.6
+    ],
+    [
+     0.7,
+     0.8
+    ],
+    [
+     0.77,
+     1.0
+    ]
+   ],
+   "pitch": [
+    [
+     0.0,
+     0.3
+    ],
+    [
+     0.7,
+     1.0
+    ],
+    [
+     0.75,
+     1.0
+    ],
+    [
+     0.83,
+     1.01
+    ],
+    [
+     0.85,
+     1.01
+    ],
+    [
+     0.9,
+     1.01
+    ]
+   ]
+  },
+  "int3": {
+   "gain": [
+    [
+     0.0,
+     0.0
+    ],
+    [
+     0.18,
+     0.8
+    ],
+    [
+     0.68,
+     1.0
+    ],
+    [
+     0.8,
+     1.0
+    ],
+    [
+     0.94,
+     1.0
+    ]
+   ],
+   "pitch": [
+    [
+     0.0,
+     0.3
+    ],
+    [
+     0.7,
+     1.0
+    ],
+    [
+     0.75,
+     1.0
+    ],
+    [
+     0.83,
+     1.01
+    ],
+    [
+     0.85,
+     1.01
+    ],
+    [
+     0.9,
+     1.01
+    ]
+   ]
+  }
+ },
+ "externalVol": -1600.0,
+ "sounds": {
+  "abExt": {
+   "coneAtt": -2000.0,
+   "coneIn": 135.0,
+   "coneOut": 80.0,
+   "file": "f16sndabext.ogg",
+   "flags": "ELFHCR",
+   "id": 39,
+   "maxFt": 180000.0,
+   "minFt": 200.0,
+   "vol": 0.0
+  },
+  "abInt": {
+   "file": "f16sndabint1.ogg",
+   "flags": "ILH",
+   "id": 40,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": -500.0
+  },
+  "aero": {
+   "file": "airflowcanopy.ogg",
+   "flags": "ILFH",
+   "id": 298,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": 0.0
+  },
+  "airflow": {
+   "file": "airflow.ogg",
+   "flags": "OLF",
+   "id": 4,
+   "maxFt": 6000.0,
+   "minFt": 10.0,
+   "vol": 3000.0
+  },
+  "aoaHigh": {
+   "file": "aoahighspeed.ogg",
+   "flags": "ILH",
+   "id": 300,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": -400.0
+  },
+  "aoaLow": {
+   "file": "aoalowspeed.ogg",
+   "flags": "ILH",
+   "id": 299,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": -450.0
+  },
+  "bingo": {
+   "file": "bingo.ogg",
+   "flags": "V",
+   "id": 66,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": -950.0
+  },
+  "brake": {
+   "file": "wheelbrake.ogg",
+   "flags": "ILF",
+   "id": 172,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": 0.0
+  },
+  "ext1": {
+   "coneAtt": -1500.0,
+   "coneIn": 180.0,
+   "coneOut": 100.0,
+   "file": "f16sndext1.ogg",
+   "flags": "ELFHC",
+   "id": 35,
+   "maxFt": 12000.0,
+   "minFt": 10.0,
+   "vol": 0.0
+  },
+  "ext2": {
+   "coneAtt": -2500.0,
+   "coneIn": 45.0,
+   "coneOut": 100.0,
+   "file": "f16sndext2.ogg",
+   "flags": "ELFHC",
+   "id": 276,
+   "maxFt": 12000.0,
+   "minFt": 10.0,
+   "vol": 0.0
+  },
+  "ext3": {
+   "coneAtt": -2500.0,
+   "coneIn": 70.0,
+   "coneOut": 180.0,
+   "file": "f16sndext3.ogg",
+   "flags": "ELHC",
+   "id": 371,
+   "maxFt": 12000.0,
+   "minFt": 10.0,
+   "vol": 0.0
+  },
+  "ext4": {
+   "coneAtt": -1500.0,
+   "coneIn": 140.0,
+   "coneOut": 100.0,
+   "file": "burner-med.ogg",
+   "flags": "ELFHCR",
+   "id": 225,
+   "maxFt": 60000.0,
+   "minFt": 150.0,
+   "vol": 0.0
+  },
+  "gDnEnd": {
+   "file": "geardownend_nlg.ogg",
+   "flags": "O",
+   "id": 150,
+   "maxFt": 6000.0,
+   "minFt": 50.0,
+   "vol": 500.0
+  },
+  "gDnEndInt": {
+   "file": "geardownend_nlg_int.ogg",
+   "flags": "I",
+   "id": 60,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": -600.0
+  },
+  "gDnEndL": {
+   "file": "geardownend_lmlg.ogg",
+   "flags": "O",
+   "id": 333,
+   "maxFt": 6000.0,
+   "minFt": 50.0,
+   "vol": 500.0
+  },
+  "gDnEndLInt": {
+   "file": "geardownend_lmlg_int.ogg",
+   "flags": "I",
+   "id": 61,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": -900.0
+  },
+  "gDnLoop": {
+   "file": "geardownloop.ogg",
+   "flags": "OL",
+   "id": 148,
+   "maxFt": 6000.0,
+   "minFt": 50.0,
+   "vol": -850.0
+  },
+  "gDnStart": {
+   "file": "geardownstart_nlg.ogg",
+   "flags": "O",
+   "id": 149,
+   "maxFt": 6000.0,
+   "minFt": 50.0,
+   "vol": 0.0
+  },
+  "gDnStartInt": {
+   "file": "geardownstart_nlg_int.ogg",
+   "flags": "I",
+   "id": 59,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": -1300.0
+  },
+  "gUpEnd": {
+   "file": "gearupend_nlg.ogg",
+   "flags": "O",
+   "id": 146,
+   "maxFt": 6000.0,
+   "minFt": 50.0,
+   "vol": 0.0
+  },
+  "gUpEndInt": {
+   "file": "gearupend_nlg_int.ogg",
+   "flags": "I",
+   "id": 69,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": -1100.0
+  },
+  "gUpEndL": {
+   "file": "gearupend_lmlg.ogg",
+   "flags": "O",
+   "id": 330,
+   "maxFt": 6000.0,
+   "minFt": 50.0,
+   "vol": 0.0
+  },
+  "gUpLoop": {
+   "file": "gearuploop.ogg",
+   "flags": "OL",
+   "id": 170,
+   "maxFt": 6000.0,
+   "minFt": 50.0,
+   "vol": -850.0
+  },
+  "gUpStart": {
+   "file": "gearupstart_nlg.ogg",
+   "flags": "O",
+   "id": 147,
+   "maxFt": 6000.0,
+   "minFt": 50.0,
+   "vol": 0.0
+  },
+  "gearBeeps": {
+   "file": "to_l-beeps.ogg",
+   "flags": "IL",
+   "id": 301,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": -950.0
+  },
+  "gearWind": {
+   "file": "gearwind.ogg",
+   "flags": "IL",
+   "id": 175,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": 500.0
+  },
+  "handleDn": {
+   "file": "geardown.ogg",
+   "flags": "I",
+   "id": 118,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": -208.0
+  },
+  "handleUp": {
+   "file": "gearup.ogg",
+   "flags": "I",
+   "id": 119,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": -208.0
+  },
+  "int1": {
+   "file": "f16sndint1.ogg",
+   "flags": "ILFH",
+   "id": 34,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": 0.0
+  },
+  "int2": {
+   "file": "f16sndint2.ogg",
+   "flags": "ILFH",
+   "id": 278,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": 0.0
+  },
+  "int3": {
+   "file": "f16sndint3.ogg",
+   "flags": "ILFH",
+   "id": 303,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": 0.0
+  },
+  "maxg": {
+   "file": "nadiamaxg.ogg",
+   "flags": "V",
+   "id": 413,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": -950.0
+  },
+  "pullup": {
+   "file": "pullup.ogg",
+   "flags": "V",
+   "id": 68,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": -950.0
+  },
+  "rumble": {
+   "file": "rumble.ogg",
+   "flags": "SLF",
+   "id": 281,
+   "maxFt": 6000.0,
+   "minFt": 50.0,
+   "vol": 0.0
+  },
+  "rumbleInt": {
+   "file": "rumbleint.ogg",
+   "flags": "ILF",
+   "id": 169,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": 0.0
+  },
+  "touchdown": {
+   "file": "touchdown.ogg",
+   "flags": "E",
+   "id": 42,
+   "maxFt": 6000.0,
+   "minFt": 10.0,
+   "vol": 3000.0
+  }
+ },
+ "source": "Falcon BMS 4.38 (Benchmark Sims): Data/Sounds + Data/Sim/Acdata/F-16CM-50.txtpb",
+ "units": "vol, coneAtt: hundredths of a dB (BMS F4SndTbl); minFt / maxFt: feet; engine chart keys: rpm (1 = 100 %, afterburner > 1); aero chart keys: Mach (gain / pitch) and AoA deg (aoa)"
+}

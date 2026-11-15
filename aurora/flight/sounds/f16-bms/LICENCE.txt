@@ -1,0 +1,8 @@
+*.ogg and the charts in sounds.json: from the site owner's Falcon BMS 4.38 installation (Benchmark Sims).
+  - sounds: Data/Sounds (engine, aero, gear, ground, VMS 'Betty'), copied unchanged
+  - sound-table rows (loudness, distances, flags, cones): Data/Sounds/F4SndTbl.txt
+  - F-16CM-50 sound charts (gain / pitch vs rpm, Mach, AoA): Data/Sim/Acdata/F-16CM-50.txtpb
+Used with permission of the Falcon BMS team, as stated by the site owner on 2026-11-14 (free to use).
+NOT covered by the code licence of this repository. Do not reuse outside this site without checking Benchmark Sims' own terms.
+
+Made by tools/build_bms_sounds.py; played by web/aurora/flight/sound.js.

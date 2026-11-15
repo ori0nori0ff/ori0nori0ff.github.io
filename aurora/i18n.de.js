@@ -1603,5 +1603,10 @@ window.I18N_DICT.de = {
   "gear": "Fahrwerk",
   "extended": "ausgefahren",
   "retracted": "eingefahren",
-  "flight model: NASA TP-1538 tables; simple stability augmentation, not the real fly-by-wire": "Flugmodell: Tabellen aus NASA TP-1538; einfache Stabilitätserhöhung, nicht das echte Fly-by-Wire"
+  "flight model: NASA TP-1538 tables; simple stability augmentation, not the real fly-by-wire": "Flugmodell: Tabellen aus NASA TP-1538; einfache Stabilitätserhöhung, nicht das echte Fly-by-Wire",
+  "Sound": "Ton",
+  "Sound volume": "Lautstärke",
+  "Sound starts with your first click or key": "Der Ton startet mit dem ersten Klick oder Tastendruck",
+  "Sound not available": "Ton nicht verfügbar",
+  "Sound off": "Ton aus"
 };

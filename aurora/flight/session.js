@@ -76,14 +76,15 @@ export async function startFlight(earth, host, o = {}) {
   let onPose = null, extraTick = null, extraDispose = null, credit = '', P0 = null;
 
   if (kind === 'f16') {
-    const [{ loadAircraft }, { createGfx }, { createF16Cockpit }] = await Promise.all([import('./aero.js?v=5dfff859'), import('./gfx.js?v=683befb9'), import('./instruments/f16.js?v=a6cddb97')]);
+    const [{ loadAircraft }, { createGfx }, { createF16Cockpit }, { createSound }] = await Promise.all([import('./aero.js?v=5dfff859'), import('./gfx.js?v=683befb9'), import('./instruments/f16.js?v=a6cddb97'), import('./sound.js?v=4c62c633')]);
     const ac = await loadAircraft(new URL('aircraft/f16.json', import.meta.url)), def = ac.def;
     const core = S.core = createCore(F, def, RWY, { mods: ac.mods });
     try { S.gfx = await createGfx(F, core, { scene: cs, camera: cc, craft, sun: sunL, amb, model: 'f16', def, quality, scan }); }   /* credits: only in the 3D view's Sources list (user, 2026-11-14) */
     catch (e) { console.error('F-16 model', e); credit = '3D model not loaded'; }
     if (S.gfx && scan !== 'none') S.cockpit = createF16Cockpit(F, core, S.gfx, { quality }); else core.view = 1;   // no scanned cockpit: chase view, screen HUD in every view
     S.hud = createScreenHud(core, ui, { kind: 'air', hideInView: S.cockpit ? [0] : [] });
-    onPose = (P, t) => { if (S.gfx) S.gfx.update(P, t); if (S.cockpit) S.cockpit.update(P, t); if (S.hud) S.hud.forceShow = !(S.gfx && S.gfx.cockpit); };
+    S.snd = createSound(F, core, ui);   // Falcon BMS sounds (flight/sound.js); audio starts on the first click / key
+    onPose = (P, t) => { if (S.gfx) S.gfx.update(P, t); if (S.cockpit) S.cockpit.update(P, t); if (S.hud) S.hud.forceShow = !(S.gfx && S.gfx.cockpit); S.snd.update(P, t); };
     o.atName = RWY.name;
   } else if (kind === 'rocket') {   // S5: flight/rocket.js builds the craft, views, panel
     const { setupRocket } = await import('./rocket.js?v=cf331c1e'), RK = await setupRocket(S, o, ui, { sunL, createCore, createScreenHud });
@@ -156,7 +157,7 @@ export async function startFlight(earth, host, o = {}) {
   function stop() { clearInterval(timer); core.onPose = null; core.touch = null; if (S.touchUi) S.touchUi.dispose();
     const gpu = new Set(); cs.traverse(n => { if (n.geometry) gpu.add(n.geometry); for (const m of [].concat(n.material || [])) { gpu.add(m); for (const v of Object.values(m)) if (v && v.isTexture) gpu.add(v);
       if (m.uniforms) for (const u of Object.values(m.uniforms)) if (u && u.value && u.value.isTexture) gpu.add(u.value); } });   // freed after the modules let go (S7: nothing left on the GPU)
-    core.dispose(); if (S.cockpit) S.cockpit.dispose(); if (S.gfx) S.gfx.dispose(); if (S.hud) S.hud.dispose(); if (extraDispose) extraDispose();
+    core.dispose(); if (S.snd) S.snd.dispose(); if (S.cockpit) S.cockpit.dispose(); if (S.gfx) S.gfx.dispose(); if (S.hud) S.hud.dispose(); if (extraDispose) extraDispose();
     F.renderer.domElement.removeEventListener('wheel', onWheel); removeEventListener('keydown', onKey); removeEventListener('keyup', onKey);
     F.craftLayer(null); for (const x of gpu) x.dispose(); sunL.dispose(); ui.remove(); host.classList.remove('fl-on'); if (o.onExit) o.onExit(); }
   if (touch) S.touchUi = touchControls(S, ui, kind);

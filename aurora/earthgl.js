@@ -1767,7 +1767,7 @@ ${SUNLIB}${MOONV}
   const pad = v => String(v).padStart(2, '0'), localStr = t => { const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
   $('fly').onclick = () => fly ? flyOff() : flyOn();
   // S4 flight menu (flight/menu.js, loaded on the first click): pick a craft and fly it in this view
-  $('craft').onclick = () => { if (fly) flyOff(); import('./flight/menu.js?v=d3b6dcf2').then(m => m.openMenu(api, host, $('craft'))).catch(e => console.error('flight menu', e)); };
+  $('craft').onclick = () => { if (fly) flyOff(); import('./flight/menu.js?v=cfad6798').then(m => m.openMenu(api, host, $('craft'))).catch(e => console.error('flight menu', e)); };
   const di = $('date'); di.onchange = () => { const t = Date.parse(di.value); if (isFinite(t)) tOver = Math.max(Date.UTC(1800, 0, 1), Math.min(Date.UTC(2050, 0, 1), t)); };
   $('now').onclick = () => { playSet(false, 1); spd = 0; $('dyS').value = '0'; tOver = null; di.value = localStr(now()); };
   // time of day at the place you look at: local Sun time (UTC + longitude / 15) on the same day; moving it switches the real Sun on

@@ -1601,5 +1601,10 @@ window.I18N_DICT.ro = {
   "gear": "tren",
   "extended": "scos",
   "retracted": "retras",
-  "flight model: NASA TP-1538 tables; simple stability augmentation, not the real fly-by-wire": "model de zbor: tabele NASA TP-1538; stabilizare simplă, nu fly-by-wire-ul real"
+  "flight model: NASA TP-1538 tables; simple stability augmentation, not the real fly-by-wire": "model de zbor: tabele NASA TP-1538; stabilizare simplă, nu fly-by-wire-ul real",
+  "Sound": "Sunet",
+  "Sound volume": "Volumul sunetului",
+  "Sound starts with your first click or key": "Sunetul pornește la primul clic sau la prima tastă",
+  "Sound not available": "Sunet indisponibil",
+  "Sound off": "Sunet oprit"
 };
