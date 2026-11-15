@@ -1,4 +1,5 @@
-/* Runways on the 3D Earth: paint, a flat profile under them, and their lights. No new files or hosts: everything is drawn from the numbers below.
+/* Runways on the 3D Earth: paint, a flat profile under them, and their lights, drawn from the numbers below; plus airport buildings
+   (models/airports/, baked by tools/build_bms_airport.py: OSM footprints + Falcon BMS textures and control tower). No new hosts.
 
    - Paint: drawn inside the HD ground tiles' own fragment shader (earthgl.js TFS calls rwPaint), in runway coordinates that each tile's vertex
      shader works out from its own camera-safe offsets (rwT per tile, see tileVec). So the paint lies exactly on the drawn relief: no extra mesh,
@@ -15,7 +16,7 @@
 
 const R = 6371000;
 export const RUNWAYS = [
-  { id: 'LRBV', ends: ['03', '21'], a: [45.6960, 25.5128], b: [45.7165, 25.5342], w: 45, h: [535.8, 521.6], papi: 300 },
+  { id: 'LRBV', ends: ['03', '21'], a: [45.6960, 25.5128], b: [45.7165, 25.5342], w: 45, h: [535.8, 521.6], papi: 300, bld: true },   /* bld: models/airports/lrbv.bin */
 ];
 
 const nrm = (la, lo) => [Math.cos(la) * Math.cos(lo), Math.sin(la), -Math.cos(la) * Math.sin(lo)];   // same frame as earthgl.js nrmOf
@@ -127,16 +128,65 @@ export function createAirfield(THREE) {
     void main() { vec2 r = (gl_PointCoord - .5) * vS * 3.; float q = exp(-dot(r, r) / (.5 * vS * vS)); if (q < .01) discard; gl_FragColor = vec4(vC * q * 1.6, 1.); }`;
   let pts = null;
 
+  // ── buildings (each RUNWAYS entry with bld: true): OSM footprints extruded to their render_height + a Falcon BMS 4.38 control tower,
+  // baked by tools/build_bms_airport.py into models/airports/<icao>.bin (13 floats per vertex, metres from the runway centre, see there)
+  // + the shared bms2342.jpg. Fetched once the camera is within 60 km, drawn within 30 km of altitude like the lights. Same camera-relative
+  // frame as the lights; the ground under them is hb x ex + 400 m like the drawn relief; lit by earthgl's shade() (the vegetation's call).
+  const base = new URL('.', import.meta.url), btx = { value: null };
+  const AP = F.filter(r => r.bld).map(r => ({ r, geo: null, mesh: null, asked: false,
+    u: { cV: { value: new THREE.Vector3() }, e0: { value: v3(r.e) }, n0: { value: v3(r.n) }, u0: { value: v3(r.C) }, ll: { value: new THREE.Vector2(r.la, r.lo) }, btx } }));
+  const load = a => { a.asked = true; fetch(new URL(`models/airports/${a.r.id.toLowerCase()}.bin`, base)).then(r => { if (!r.ok) throw r.status; return r.arrayBuffer(); }).then(ab => {
+    const ib = new THREE.InterleavedBuffer(new Float32Array(ab), 13), gg = new THREE.BufferGeometry();
+    gg.setAttribute('position', new THREE.InterleavedBufferAttribute(ib, 3, 0)); gg.setAttribute('a1', new THREE.InterleavedBufferAttribute(ib, 4, 3));
+    gg.setAttribute('a2', new THREE.InterleavedBufferAttribute(ib, 2, 7)); gg.setAttribute('a3', new THREE.InterleavedBufferAttribute(ib, 4, 9));
+    a.geo = gg; }).catch(() => {}); };
+  const BVS = /* glsl */`
+    uniform vec3 cV, e0, n0, u0; uniform vec2 ll; uniform float ex; attribute vec4 a1, a3; attribute vec2 a2;
+    varying vec2 vTc; varying vec4 vTr; varying vec3 vO; varying vec3 vP; varying vec3 vN; varying vec2 vG;
+    void main() {
+      vec3 dn = (e0 * position.x + n0 * position.y) / ${R}. - u0 * ((position.x * position.x + position.y * position.y) / ${2 * R * R}.);
+      vec3 n = u0 + dn; float hh = (position.z * ex + 400. + a1.x) / ${R}.;
+      gl_Position = projectionMatrix * vec4(cV + mat3(modelViewMatrix) * (dn + n * hh), 1.);
+      vO = n; vP = n * (1. + hh); vN = e0 * a1.y + n0 * a1.z + u0 * a1.w; vTc = a2; vTr = a3;
+      float la = ll.x + position.y / ${R}., lo = ll.y + position.x / (${R}. * cos(ll.x));
+      vG = vec2(lo / 6.2831853 + .5, la / 3.1415927 + .5); }`;
+  const BFS = S => /* glsl */`
+    uniform sampler2D btx; varying vec2 vTc; varying vec4 vTr; varying vec3 vO; varying vec3 vP; varying vec3 vN; varying vec2 vG; ${S}
+    void main() {
+      bool whole = vTr.z > .999; vec2 uv = whole ? vTc : vTr.xy + fract(vTc) * vTr.zw, gx = dFdx(vTc), gy = dFdy(vTc);   /* repeated facade: grads of the unwrapped coords, no seam */
+      if (!whole) { gx *= vTr.zw; gy *= vTr.zw; }
+      vec3 d = textureGrad(btx, uv, gx, gy).rgb, n = normalize(vO), N = normalize(vN);
+      nOv = vec4(0., 0., 0., 1.);   /* no global city lights painted on walls */
+      gl_FragColor = vec4(shade(n, vP, N, N, .6, d, 0., vG, 1.), 1.);
+      /* at night (ESTIMATE): dark glass in the facades lit warm, about half the windows on (per cell of the atlas rect), and a faint apron flood light on the walls */
+      float nt = 1. - smoothstep(-.1, .05, dot(n, sun)); if (nt <= 0.) return;
+      float l = dot(d, vec3(.3, .5, .2)), wall = 1. - step(.5, abs(dot(N, n)));
+      vec2 cell = floor(vTc * vec2(9., 4.)) + floor(vTr.xy * 64.); float on = step(.5, fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453));
+      gl_FragColor.rgb += nt * wall * (vec3(1., .72, .42) * 1.4 * smoothstep(.16, .07, l) * on + d * .03); }`;
+  function buildings(hd, mvD, U, SHADE) {
+    if (!SHADE) return;
+    for (const a of AP) {
+      const near = U.camO.value.distanceTo(a.u.u0.value) * R;
+      if (!a.asked && near < 60000) load(a);
+      if (!a.geo || near > 60000) continue;
+      if (!btx.value) { const tx = btx.value = new THREE.TextureLoader().load(new URL('models/airports/bms2342.jpg', base).href); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 8; }
+      if (!a.mesh) { a.mesh = new THREE.Mesh(a.geo, new THREE.ShaderMaterial({ uniforms: { ...U, ...a.u }, vertexShader: BVS, fragmentShader: BFS(SHADE) }));
+        a.mesh.frustumCulled = false; a.mesh.renderOrder = 1; }
+      a.u.cV.value.copy(a.u.u0.value).applyMatrix4(mvD); hd.add(a.mesh);
+    }
+  }
+
   return {
     uniforms, GLSL, VS, tileVec, flat,
     // once per frame after the tiles (like veg.js): mvD = view x hd.matrixWorld, U = earthgl's shared uniforms, pxK = pixels per radian
-    update(hd, mvD, U, pxK, altM) {
+    update(hd, mvD, U, pxK, altM, SHADE) {
       if (altM > 30000) return;
+      if (this.bOn) buildings(hd, mvD, U, SHADE);
       if (!pts) pts = new THREE.Points(g, new THREE.ShaderMaterial({ uniforms: { ...lu, sun: U.sun, ex: U.ex }, vertexShader: LVS, fragmentShader: LFS,
         transparent: true, depthWrite: false, depthTest: true, blending: THREE.AdditiveBlending }));
       pts.frustumCulled = false; pts.renderOrder = 3; lu.pxK.value = pxK;
       lu.cV.value.copy(lu.u0.value).applyMatrix4(mvD); hd.add(pts);
     },
-    lights: L.length,
+    lights: L.length, bOn: true,   /* bOn: draw the airport buildings (a test switch) */
   };
 }

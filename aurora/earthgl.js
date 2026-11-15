@@ -12,7 +12,7 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 import { createVeg } from './veg.js?v=7e75086a';
 import { createNightOsm } from './nightosm.js?v=b082f45d';
-import { createAirfield } from './airfield.js?v=a063b7ff';
+import { createAirfield } from './airfield.js?v=f61f2df1';
 import { createSolar } from './solar.js?v=179ba626';
 
 const esriKey = () => { try { const k = (localStorage.getItem('aurora.esri') || '').trim(); return /^[\w.\-]{20,600}$/.test(k) ? k : ''; } catch (e) { return ''; } };   // the user's own Esri key (⚙), this device only
@@ -858,7 +858,7 @@ ${SUNLIB}${MOONV}
         else if (!l.ltP && (l.ltF || 0) < 4 && act < 24) loadLights(l); }
       hd.add(m); }
     VEG.update(hd, mvD, camN, altG * 6371000);   /* trees and bushes near the ground (veg.js) */
-    AF.update(hd, mvD, U, pxK, altG * 6371000);   /* runway lights (airfield.js) */
+    AF.update(hd, mvD, U, pxK, altG * 6371000, SHADE);   /* runway lights and the LRBV buildings (airfield.js) */
     OSM.update(hd, mvD, camN, altG * 6371000);   /* street-light points from OSM roads at night (nightosm.js) */
     if (tiles.size > HD.KEEP) for (const t of [...tiles.values()].sort((a, b) => a.used - b.used).slice(0, 200)) { if (t.used > frameNo - 600) break; if (t.imgP || t.demP || t.ltP) continue;   // over the limit: forget what you have not looked at for ~10 s (turning back finds it still there); never one that is still downloading
       t.img?.dispose(); t.lt?.dispose(); t.dem?.ht.dispose(); t.dem?.nt.dispose(); t.mesh?.material.dispose(); tiles.delete(t.k); }

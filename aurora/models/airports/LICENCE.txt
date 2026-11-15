@@ -1,0 +1,5 @@
+bms2342.jpg: texture KoreaObj/2342.dds and the control tower geometry in the <icao>.bin files (model 2061) from Falcon BMS 4.38
+(Data/TerrData/Objects), converted by tools/build_bms_airport.py. Used with the permission of the BMS team given to the site owner.
+Not covered by this project's own licence.
+Building footprints and heights in the <icao>.bin files: OpenStreetMap contributors (ODbL 1.0), via OpenFreeMap vector tiles.
+Ground heights: Terrarium tiles (Mapzen / AWS Open Data; sources as listed by the tile provider).
