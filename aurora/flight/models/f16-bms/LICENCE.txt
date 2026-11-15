@@ -1,0 +1,9 @@
+f16-bms.glb and tex/{4k,2k}/*: converted from the site owner's Falcon BMS 4.38 installation (Benchmark Sims).
+  - exterior model 1052 (F-16CM block 50): geometry, moving parts (DOFs), switches and the F-16CM_50 / set2 / Lights_CM50 textures
+  - pilot textures from model 1909
+Used with permission of the Falcon BMS team, as stated by the site owner on 2026-11-14 (free to use).
+NOT covered by the code licence of this repository. Do not reuse outside this site without checking Benchmark Sims' own terms.
+
+Made by tools/build_bms_exterior.py (pipeline: docs/bms-model-pipeline.md, section 8):
+  *_alb   albedo        *_nrm  normal map (z rebuilt)        *_orm  AO / roughness / metalness
+  emm     lamp lenses (BMS EMM)

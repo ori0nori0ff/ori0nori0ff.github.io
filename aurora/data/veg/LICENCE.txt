@@ -1,0 +1,3 @@
+Derived from ESA WorldCover 10 m 2021 v200 (CC BY 4.0): (c) ESA WorldCover project 2021 / Contains modified Copernicus
+Sentinel data (2021) processed by ESA WorldCover consortium. https://esa-worldcover.org
+Baked by tools/build_veg_map.py: share of tree cover, shrubland and grassland per pixel.

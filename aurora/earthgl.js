@@ -10,6 +10,8 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
+import { createVeg } from './veg.js?v=7e75086a';
+import { createNightOsm } from './nightosm.js?v=b082f45d';
 import { createSolar } from './solar.js?v=179ba626';
 
 const esriKey = () => { try { const k = (localStorage.getItem('aurora.esri') || '').trim(); return /^[\w.\-]{20,600}$/.test(k) ? k : ''; } catch (e) { return ''; } };   // the user's own Esri key (⚙), this device only
@@ -198,7 +200,7 @@ function create(host, opts) {
   const TX = { day: tex('day.jpg', true), night: tex('night.jpg', true), clouds: tex('clouds.jpg'), normal: tex('normal.jpg'), water: tex('water.png') };
   
   const U = { day: { value: TX.day }, night: { value: TX.night }, clouds: { value: TX.clouds }, nrm: { value: TX.normal }, water: { value: TX.water },
-    sun: { value: new THREE.Vector3(1, 0, 0) }, rsun: { value: new THREE.Vector3(1, 0, 0) }, lightsOn: { value: 0 }, camO: { value: new THREE.Vector3() }, morph: { value: 0 }, cloudOn: { value: 1 }, cloudShift: { value: 0 },
+    sun: { value: new THREE.Vector3(1, 0, 0) }, rsun: { value: new THREE.Vector3(1, 0, 0) }, lightsOn: { value: 0 }, nHd: { value: 1 }, camO: { value: new THREE.Vector3() }, morph: { value: 0 }, cloudOn: { value: 1 }, cloudShift: { value: 0 },
     cloudFade: { value: 1 }, cloudR: { value: 1 + 4 / 6371 }, aumap: { value: null }, auOn: { value: 1 }, hdA: { value: 0 }, pxk: { value: 1000 }, wtime: { value: 0 }, ex: { value: 1.5 }, altF: { value: 1 }, airK: { value: 1 },
     eMoon: { value: new THREE.Vector4(0, 0, 0, 0) }, eSun: { value: new THREE.Vector4(1, 0, 0, 23481) }, cVol: { value: 0 },   // cVol: 0 = the flat cloud layer, 1 = the cloud volume (close up, see cvPass)
     rain: { value: Object.assign(new THREE.DataTexture(new Uint8Array(4), 1, 1), { needsUpdate: true }) }, rainOn: { value: 0 },   // measured rain (see rainLoad); none until it loads
@@ -276,6 +278,7 @@ function create(host, opts) {
       return (h < 5.6 ? mix(a.ba, a.rg, clamp((h - 1.5) / 4.1, 0., 1.)) : mix(a.rg, b, clamp((h - 5.6) / 4.8, 0., 1.))) * wOn; }`;
   const SHADE = /* glsl */`${SUNT}${CNOISE}${RAINF}${WINDF}
     uniform sampler2D night, clouds, aumap; uniform vec3 sun, camO; uniform float morph, cloudOn, cloudShift, cloudFade, cloudR, auOn, airK, cVol;
+    vec4 nOv = vec4(0.);   /* close-up lights (HD tiles set it before shade()): rgb = linear light, a = how much it replaces the global night texture */
     uniform sampler2D pvD; uniform mat4 pvM, pvP; uniform float pvK, zTop, tsB;
     // the glint is a direct beam: a ridge between the water and the Sun takes it. The scene pass cannot read its own depth, so this marches
     // toward the Sun (${TSN} steps, crowded near P) through the PREVIOUS frame's depth (pvD: linear, half size; pvM / pvP: that frame's camera).
@@ -346,8 +349,9 @@ function create(host, opts) {
       // Only from far away (airK > 1): close up the air pass does the real haze, a veil on top of it would wash the ground out
       float hz = (.08 + .3 * pow(1. - vn, 2.)) * (1. - exp(-dist * 40.)) * (airK - 1.) / 2.3;
       col = mix(col, vec3(.36, .58, 1.) * 1.05 * max(mu * .9 + .1, 0.) * mix(vec3(1.), sT * vec3(1.6, 1.2, 1.), lightsOn * (1. - smoothstep(.1, .5, mu))), hz * dl * (1. - morph * .7));   // the veil turns warm at dusk
-      float deep = 1. - smoothstep(-.32, -.05, mu);   // city lights only where it is really night, not at dusk
-      vec3 lights = pow(texture2D(night, g).rgb, vec3(1.35)) * vec3(1., .8, .55) * 1.5 * deep * lightsOn * (1. - c * .75);
+      float deep = 1. - smoothstep(-.12, -.015, mu);   /* city lights switch on just after sunset (Sun -0.9 deg), full by the end of civil twilight (-6.9 deg) */
+      vec3 nt = mix(texture2D(night, g).rgb, nOv.rgb, nOv.a);   /* lights only (grey, black where no light): no moonlit land or ice to key out */
+      vec3 lights = pow(nt, vec3(1.35)) * vec3(1., .8, .55) * 1.5 * deep * lightsOn * (1. - c * .75);
       // the aurora above lights the ground and the clouds under it a little — green, only in the dark
       float av = texture2D(aumap, vec2(fract(g.x + .5), g.y), 2.).r * auOn * (1. - smoothstep(-.2, .05, mu));
       col += vec3(.1, 1., .35) * av * (.12 * dot(d, vec3(.33)) + .05 * c);
@@ -698,12 +702,16 @@ ${SUNLIB}${MOONV}
       vO = n; vP = n * (1. + hh); vLat = lat; vG = vec2(lon / 6.2831853 + .5, lat / 3.1415927 + .5);
       gl_Position = projectionMatrix * vec4(cV + mat3(modelViewMatrix) * (dn + n * hh), 1.); }`;
   const TFS = /* glsl */`
-    uniform sampler2D img, pimg, nmap; uniform vec3 psub, hsub; uniform vec4 rect, wo; uniform float fade, hdA, pxk, wtime, ex, lodR, altF;
+    uniform sampler2D img, pimg, nmap, limg, cimg; uniform vec3 psub, hsub, lsub; uniform vec4 rect, wo; uniform float fade, hdA, pxk, wtime, ex, lodR, altF, lA, nHd, oK;
     varying vec2 vT; varying vec2 vG; varying vec3 vO; varying vec3 vP; varying float vLat; ${SHADE}
     // waves: the slopes of WN gravity waves (deep-water speeds, see waveSet): wK = whole cycles per WP m (x, y), slope, phase.
     // fw = the pixel's footprint on the water in metres (from screen derivatives, so it grows at grazing views): a wave shorter than ~2–4 pixels
     // fades out instead of aliasing into moiré rings; its slopes then only widen the glint (rough, Cox–Munk)
     uniform vec4 wK[${WN}];
+    /* the lights tile (256 px, alpha) with a cubic B-spline from 4 bilinear taps: a 420 m pixel seen from a few km is a soft blob, not a lit rectangle */
+    vec4 bsw(float v) { vec4 n = vec4(1., 2., 3., 4.) - v, s = n * n * n; float x = s.x, y = s.y - 4. * s.x, z = s.z - 4. * s.y + 6. * s.x; return vec4(x, y, z, 6. - x - y - z) / 6.; }
+    float lit(vec2 uv) { uv = uv * 256. - .5; vec2 f = fract(uv); uv -= f; vec4 xc = bsw(f.x), yc = bsw(f.y), c = uv.xxyy + vec2(-.5, 1.5).xyxy, s = vec4(xc.xz + xc.yw, yc.xz + yc.yw), o = (c + vec4(xc.yw, yc.yw) / s) / 256.;
+      float sx = s.x / (s.x + s.y), sy = s.z / (s.z + s.w); return mix(mix(texture2D(limg, o.yw).a, texture2D(limg, o.xw).a, sx), mix(texture2D(limg, o.yz).a, texture2D(limg, o.xz).a, sx), sy); }
     vec2 waves(vec2 q, float t) { vec2 g = fwidth(q); float fw = max(g.x, g.y); vec2 s = vec2(0.);
       for (int i = 0; i < ${WN}; i++) { vec4 k = wK[i]; float kl = length(k.xy) / ${WP}., f = 1. - smoothstep(.25, .5, fw * kl); if (f <= 0.) continue;
         s += k.xy / (kl * ${WP}.) * k.z * f * cos(6.2831853 * dot(k.xy, q) / ${WP}. + k.w + t * sqrt(61.638 * kl)); }   // ω = √(g k), k = 2π kl
@@ -720,6 +728,8 @@ ${SUNLIB}${MOONV}
       float latN = 2. * atan(exp(rect.z)) - 1.5707963;
       vec2 sl = waves(vec2(wo.x + vT.x * wo.z, wo.y + (vLat - latN) * 6371000.), wtime) * wf;
       vec3 Nw = normalize(n - ea * sl.x - no * sl.y);
+      if (lA > 0.) { nOv = vec4(vec3(pow(lit(lsub.xy + vT * lsub.z), 2.2)), lA * nHd);   /* VIIRS lights in alpha, 8-bit display values: ~sRGB, like night.jpg */
+        nOv.rgb *= 1. - oK * texture2D(cimg, lsub.xy + vT * lsub.z).a; }   /* less where street-light points carry this light (nightosm.js) */
       gl_FragColor = vec4(shade(n, vP, N, Nw, mix(.045, .008, wf), d, w, vG, 1.3), hdA); }`;
   const tiles = new Map(), cv2 = new OffscreenCanvas(256, 256), cx2 = cv2.getContext('2d', { willReadFrequently: true });
   const tileOf = (z, x, y) => { const k = z + '/' + x + '/' + y; let t = tiles.get(k); if (!t) { t = { k, z, x, y, used: frameNo }; geomOf(t); tiles.set(k, t); } return t; };
@@ -749,6 +759,15 @@ ${SUNLIB}${MOONV}
       tx.anisotropy = Math.min(8, aniso); tx.minFilter = THREE.LinearMipmapLinearFilter; tx.generateMipmaps = true; tx.needsUpdate = true; t.img = tx;
       if (HD.key && !HD.ok) try { localStorage.removeItem('aurora.esriState'); } catch (e) {} HD.ok = true; })
     .catch(() => { t.fail = (t.fail || 0) + 1; if (es && t.fail >= 3) t.nod = 1; if (HD.key && !HD.ok && ++HD.bad >= 4) { HD.key = ''; try { localStorage.setItem('aurora.esriState', 'bad'); } catch (e) {} } }).finally(() => { act--; setTimeout(() => t.imgP = false, t.img ? 0 : 3000 * (t.fail || 1)); }); }
+  // close-up night lights: NASA Black Marble 2016 lights only (GIBS VIIRS_Night_Lights, public domain), black where there is no light, in the alpha
+  // channel; z8 = ~600 m at the equator, ~420 m at 46 N (the global night.jpg is ~5 km). A tile at z >= LZ0 uses its own lights tile, or its z8
+  // ancestor's part above z8 (both Web Mercator: the sub-square is exact). Loaded only for tiles on the night side.
+  const LZ = 8, LZ0 = 6, lightsOf = t => t.z <= LZ ? t : tileOf(LZ, t.x >> (t.z - LZ), t.y >> (t.z - LZ));
+  const LURL = (z, x, y) => `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Night_Lights/default/2016-01-01/GoogleMapsCompatible_Level8/${z}/${y}/${x}.png`;
+  function loadLights(t) { t.ltP = true; act++;
+    fetch(LURL(t.z, t.x, t.y)).then(r => { if (!r.ok) throw r.status; return r.blob(); }).then(b => createImageBitmap(b, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' })).then(bm => {
+      const tx = new THREE.Texture(bm); tx.flipY = false; tx.anisotropy = Math.min(8, aniso); tx.minFilter = THREE.LinearMipmapLinearFilter; tx.generateMipmaps = true; tx.needsUpdate = true; t.lt = tx; t.ltB = performance.now(); })
+    .catch(() => { t.ltF = (t.ltF || 0) + 1; }).finally(() => { act--; setTimeout(() => t.ltP = false, t.lt ? 0 : 5000 * (t.ltF || 1)); }); }
   function loadDem(t) { t.demP = true; act++; getBitmap(HD.dem(t.z, t.x, t.y)).then(bm => demQ.push([t, bm]))
     .catch(() => { t.fail = (t.fail || 0) + 1; setTimeout(() => t.demP = false, 3000 * t.fail); }).finally(() => act--); }
   // the Terrarium tiles have broken lines in places (rows up to 32 km high or 2 km deep, e.g. off Yemen): a pixel more than 250 m away from
@@ -791,7 +810,7 @@ ${SUNLIB}${MOONV}
   function meshOf(t) { if (t.mesh && t.mesh.material.uniforms.hmap.value === demOf(t).dem.ht) return t.mesh; t.mesh?.material.dispose(); const d = demOf(t), s = t.z > HD.ZT ? 1 / (1 << (t.z - HD.ZT)) : 1, m = t.z > HD.ZT ? 1 << (t.z - HD.ZT) : 1;
     const mat = new THREE.ShaderMaterial({ uniforms: { ...U, img: { value: t.img }, pimg: { value: t.img }, psub: { value: new THREE.Vector3(0, 0, 1) },
         hmap: { value: d.dem.ht }, nmap: { value: d.dem.nt }, hsub: { value: new THREE.Vector3((t.x % m) * s, (t.y % m) * s, s) }, rect: { value: new THREE.Vector4(t.lon0, t.dlon, t.my0, t.dmy) },
-        fade: { value: 1 }, lodR: { value: 1e9 }, skirt: { value: Math.max(t.rho * .05, 8e-6) }, wo: { value: new THREE.Vector4() },
+        fade: { value: 1 }, lodR: { value: 1e9 }, limg: { value: TX.night }, cimg: { value: OSM.cov(-1, -1) }, lsub: { value: new THREE.Vector3(0, 0, 1) }, lA: { value: 0 }, skirt: { value: Math.max(t.rho * .05, 8e-6) }, wo: { value: new THREE.Vector4() },
         cV: { value: new THREE.Vector3() }, e0: { value: t.e0 }, n0: { value: t.n0 }, u0: { value: t.u0 }, cs: { value: t.cs } }, vertexShader: TVS, fragmentShader: TFS, transparent: true, side: THREE.DoubleSide });
     { const p = setPar(mat.uniforms, t); if (!t.img) mat.uniforms.img.value = p.img; }
     t.mesh = new THREE.Mesh(t.z > HD.ZT && t.z <= HD.ZT + 2 ? tileGeo2 : tileGeo, mat); t.mesh.frustumCulled = false; t.mesh.renderOrder = 1; t.born = 0; return t.mesh; }
@@ -827,10 +846,18 @@ ${SUNLIB}${MOONV}
       else { if (!p) { u.pimg.value = t.img; u.psub.value.set(0, 0, 1); }
         if (u.img.value !== t.img || !t.born) { u.img.value = t.img; t.born = t.si >= frameNo - 2 ? now : now - 400; }   // fade in time only where the stand-in was on screen just now; otherwise the picture is simply there
         const f = Math.min(1, (now - t.born) / 400); u.fade.value = f * f * (3 - 2 * f); }
-      u.wo.value.set(((t.lon0 * R * cl) % WP + WP) % WP, ((t.latN * R) % WP + WP) % WP, t.dlon * R * cl, 0); hd.add(m); }
-    if (tiles.size > HD.KEEP) for (const t of [...tiles.values()].sort((a, b) => a.used - b.used).slice(0, 200)) { if (t.used > frameNo - 600) break; if (t.imgP || t.demP) continue;   // over the limit: forget what you have not looked at for ~10 s (turning back finds it still there); never one that is still downloading
-      t.img?.dispose(); t.dem?.ht.dispose(); t.dem?.nt.dispose(); t.mesh?.material.dispose(); tiles.delete(t.k); }
+      u.wo.value.set(((t.lon0 * R * cl) % WP + WP) % WP, ((t.latN * R) % WP + WP) % WP, t.dlon * R * cl, 0);
+      u.lA.value = 0; if (t.z >= LZ0 && U.lightsOn.value > 0 && t.c.dot(U.sun.value) < Math.sin(t.rho) + .1) { const l = lightsOf(t);   /* night side (or near it) only */
+        if (l.lt) { const s = t.z > LZ ? 1 / (1 << (t.z - LZ)) : 1, mm = t.z > LZ ? 1 << (t.z - LZ) : 1, f = Math.min(1, (now - l.ltB) / 400); u.limg.value = l.lt; u.lsub.value.set((t.x % mm) * s, (t.y % mm) * s, s); u.lA.value = f * f * (3 - 2 * f); u.cimg.value = OSM.cov(l.z === LZ ? l.x : -1, l.y); l.used = frameNo; }
+        else if (!l.ltP && (l.ltF || 0) < 4 && act < 24) loadLights(l); }
+      hd.add(m); }
+    VEG.update(hd, mvD, camN, altG * 6371000);   /* trees and bushes near the ground (veg.js) */
+    OSM.update(hd, mvD, camN, altG * 6371000);   /* street-light points from OSM roads at night (nightosm.js) */
+    if (tiles.size > HD.KEEP) for (const t of [...tiles.values()].sort((a, b) => a.used - b.used).slice(0, 200)) { if (t.used > frameNo - 600) break; if (t.imgP || t.demP || t.ltP) continue;   // over the limit: forget what you have not looked at for ~10 s (turning back finds it still there); never one that is still downloading
+      t.img?.dispose(); t.lt?.dispose(); t.dem?.ht.dispose(); t.dem?.nt.dispose(); t.mesh?.material.dispose(); tiles.delete(t.k); }
     return drawn.length; }
+  const VEG = createVeg({ THREE, Q, SHADE, U, tiles, groundAt: (la, lo) => groundAt(la, lo, null), camera, renderer });
+  const OSM = createNightOsm({ THREE, U, tiles, groundAt: (la, lo) => groundAt(la, lo, null), camera, renderer });
   const gmst = t => ((280.46061837 + 360.98564736629 * (t / 864e5 + 2440587.5 - 2451545)) % 360) * D2R;
   
   // bloom: city lights, the glint and the aurora glow a little (off on low)
@@ -1740,7 +1767,7 @@ ${SUNLIB}${MOONV}
   const pad = v => String(v).padStart(2, '0'), localStr = t => { const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
   $('fly').onclick = () => fly ? flyOff() : flyOn();
   // S4 flight menu (flight/menu.js, loaded on the first click): pick a craft and fly it in this view
-  $('craft').onclick = () => { if (fly) flyOff(); import('./flight/menu.js?v=7c500a55').then(m => m.openMenu(api, host, $('craft'))).catch(e => console.error('flight menu', e)); };
+  $('craft').onclick = () => { if (fly) flyOff(); import('./flight/menu.js?v=d3b6dcf2').then(m => m.openMenu(api, host, $('craft'))).catch(e => console.error('flight menu', e)); };
   const di = $('date'); di.onchange = () => { const t = Date.parse(di.value); if (isFinite(t)) tOver = Math.max(Date.UTC(1800, 0, 1), Math.min(Date.UTC(2050, 0, 1), t)); };
   $('now').onclick = () => { playSet(false, 1); spd = 0; $('dyS').value = '0'; tOver = null; di.value = localStr(now()); };
   // time of day at the place you look at: local Sun time (UTC + longitude / 15) on the same day; moving it switches the real Sun on
@@ -2041,7 +2068,7 @@ ${SUNLIB}${MOONV}
     // the flight hook (docs/flight-plan.md, Interfaces): live objects, no copies; lat / lon in radians, heights in metres, positions in W (R⊕)
     flight() { return FL || (FL = { THREE, scene, camera, renderer, earthQuat: earth.quaternion, quality: Q,
       solar: { bodies: solar.bodies, helio: solar.helio, eclToWorld: solar.eclToWorld, toWorld: solar.toWorld, fromWorld: solar.fromWorld },
-      groundAt: (la, lo) => groundAt(la, lo, null), groundDrawn: (la, lo) => { const g = groundAt(la, lo, null); return g == null ? null : g * U.ex.value + 400; },
+      groundAt: (la, lo) => groundAt(la, lo, null), osm: OSM, groundDrawn: (la, lo) => { const g = groundAt(la, lo, null); return g == null ? null : g * U.ex.value + 400; },
       bodyGround: (n, d) => solar.hdGround(n, d), sun: () => U.sun.value.clone().applyQuaternion(earth.quaternion),
       clock: { now, set: t => setT(t), playing: () => dyPlay || tOver == null, rate: () => dyPlay ? dyDir * (spd || 216e5) : tOver == null ? 1e3 : 0,   // sim-ms per real s
         setRate(r) { if (!(r > 0)) { playSet(false); return; } spd = r; $('dyS').value = String(SPD.findIndex(x => x[0] === r)); playSet(true, 1); } },

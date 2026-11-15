@@ -30,7 +30,7 @@ export function openMenu(earth, host, btn) {
   box.onclick = async e => { const b = e.target.closest('button'); if (!b) return; const c = b.dataset.c; if (!c) return;
     const o = { craft: c, rocket: val('rocket'), pad: val('pad') || (val('rocket') === 'saturn5' ? 'lc39a' : 'slc40'), cockpit: lite ? val('cockpit') : undefined };
     close(); if (c === 'close') return;
-    const { startFlight } = await import('./session.js?v=4c2e385e');
+    const { startFlight } = await import('./session.js?v=29604535');
     current = await startFlight(earth, host, { ...o, onExit: () => { current = null; } }); };
   function close() { if (box) box.remove(); box = null; if (btn) btn.setAttribute('aria-expanded', 'false'); }
   box.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); close(); } });

@@ -14,6 +14,31 @@ const clamp = (x, a, b) => Math.max(a, Math.min(b, x)), smooth = (a, b, x) => { 
 // per model: points not in the file (metres, craft frame). Estimates read off the model, labelled.
 export const MODELS = {
   f16: { url: new URL('models/f16/f16.gltf', import.meta.url), credit: 'F-16D 3D model: alexskyrex-5de5f7 (CGTrader, Royalty Free licence, not redistributable)',
+    // the Falcon BMS 4.38 F-16CM-50 airframe (model 1052, tools/build_bms_exterior.py): used instead of `url` unless o.ext === 'old' or it fails to load.
+    // Its root is already placed in the craft frame (canopy lined up with the BMS cockpit at `eye`). Lights / lamp / nozzle: read off the BMS model.
+    bms: { url: new URL('models/f16-bms/f16-bms.glb', import.meta.url), credit: 'Airframe: Falcon BMS 4.38 F-16CM-50 model (Benchmark Sims), used with permission',
+      // light lenses (centres of the Lights_CM50_2 geometry, measured 2026-11-15): wing tips (switch 8), fin tip (switch 7: tail light + strobe)
+      nav: { red: [-4.66, .39, 1.59], green: [4.66, .39, 1.59], tail: [0, 3.60, 5.53] }, strobe: [0, 3.62, 5.50],
+      land: [.2, -.82, -3.66],    // landing / taxi lamp lenses (switches 9 / 72) on the nose gear door (DOF 22): followed per frame through `lampSw`
+      lampSw: [9, 72], gearSw: [20, 21, 22],   // switches holding the nose / left / right gear legs (one branch each: on / off)
+      // gear sequence from the sim's gear value G (1 down .. 0 up), measured 2026-11-15 (door points inside each wheel's cylinder):
+      // the main doors (hinged on their outer edge) hang at 90 deg with the gear down, right in the wheel's path (overlap from leg 0.7 down);
+      // at >= 105 deg the path is clear down to leg 0.2. So, going up: doors 90 -> 110 deg (G 1 .. 0.9), legs 1 -> 0.2 (G 1 .. 0.35),
+      // doors shut (G 0.35 .. 0.05) with the legs held at 0.2; legs off once the doors pass 100 deg (hide = 100 / 110): below 90 deg the
+      // closing door cuts the tyre at every leg position 0-0.3 (the stowed wheel sits in the shut door's place; BMS hides the legs too).
+      // Down = the same reversed.
+      gearSeq: { legs: .35, lMin: .2, overAt: .9, over: 110, shut: .05, hide: .91 },
+      hideSw: [60, 73],           // ground equipment: 60 boarding ladder, 73 wheel chocks + "remove before flight" streamers (seen 2026-11-15)
+      // DOF signs (+1 / -1, our deg -> BMS rad), measured 2026-11-15 by the moved vertices at +0.3 rad: stab / flap + = trailing edge down,
+      // lef + = leading edge down, rudder + = trailing edge right (so -1). Nozzle DOF 39: 0 = open (exit ring r 0.50 m), + closes (0.3 -> 0.29 m);
+      // noz = the value at MIL (closed; estimate r ~0.35 m, F110 exit ~0.7 x open). Gear DOF values with the gear down (= the DOF's max; 0 = up, the rest pose)
+      sign: { stab: 1, flap: 1, lef: 1, rud: -1, noz: .22, gear: { 19: 1.92, 20: 1.48, 21: 1.48, 22: 1.31, 23: 1.62, 24: 1.62 } },
+      // gear struts (measured 2026-11-15): lowest tyre point with the gear down and the struts extended (craft frame, m); k = DOF value per metre the
+      // wheel moves up (58 nose: translate, -0.1 ft -> 29 mm; 59 / 60 mains: rotate, -0.1 rad -> 109 mm); max = stroke used (estimates; BMS clamps 60 at 0.087 rad)
+      // (static on the runway: wheels 31-83 mm below the ground without the struts, within 2 mm with them)
+      strut: [{ dof: 58, low: [.005, -1.500, -3.717], k: -1 / .29, max: .15 }, { dof: 59, low: [-1.219, -1.493, .370], k: -1 / 1.09, max: .095 },
+        { dof: 60, low: [1.218, -1.493, .371], k: -1 / 1.09, max: .095 }],
+      spin: { 50: .218, 51: .369, 52: .369 } },   // wheel DOFs: tyre radius (m); + = rolling forward (bottom moves aft)
     // where the BMS cockpit's origin (its eye) sits in the craft (estimate from S4: ~25 cm in front of the seat's head rest)
     eye: [0, 1.29, -4.70],
     // the pilot's head = eye + BMS head_translation_offset (Data/Art/CkptArt/3dCkpit.dat: forward 0.1 ft, down 0.02 ft); flight/instruments/f16.js
@@ -79,15 +104,50 @@ export async function createGfx(F, core, o) {
   sunL.shadow.bias = -.0004; sunL.shadow.normalBias = .02 / R_E;
 
   // ── the model
-  const t0 = performance.now(), gltf = await new GLTFLoader().loadAsync(M.url.href); stats.loadMs = performance.now() - t0;
+  const t0 = performance.now(); let gltf = null, bms = null;
+  if (M.bms && o.ext !== 'old') try { gltf = await new GLTFLoader().loadAsync(M.bms.url.href); bms = await bmsLook(gltf.scene); } catch (e) { console.warn('BMS airframe', e); gltf = bms = null; }
+  if (!gltf) gltf = await new GLTFLoader().loadAsync(M.url.href);
+  stats.loadMs = performance.now() - t0; stats.airframe = bms ? 'bms' : 'old';
   const model = gltf.scene, nodes = {}; craft.add(model);
-  // S3b: ejection seats (front + rear, one geometry); a missing seat file only drops the seats
+  // the BMS airframe: PBR materials from its textures (o.scan 'hi' = tex/4k ~8 MB, else tex/2k ~2.5 MB; waited for, so the first frame is complete),
+  // switches show branch 0, DOF nodes collected by number (driven in update with BMS's own limits / reverse / offset flags)
+  async function bmsLook(sc) { const dir = new URL('models/f16-bms/tex/' + (o.scan === 'hi' ? '4k' : '2k') + '/', import.meta.url), tl = new THREE.TextureLoader();
+    const aniso = Math.min(8, R.capabilities.getMaxAnisotropy()), texs = new Map(), waits = [];
+    const T = (f, srgb) => { if (texs.has(f)) return texs.get(f); let ok; waits.push(new Promise(r => { ok = r; }));
+      const t = tl.load(new URL(f, dir).href, ok, undefined, e => { console.warn('airframe texture', f, e); ok(); }); t.flipY = false; t.wrapS = t.wrapT = THREE.RepeatWrapping;
+      t.repeat.set(2, 2); t.offset.set(-.5, -.5); t.anisotropy = aniso; if (srgb) t.colorSpace = THREE.SRGBColorSpace; texs.set(f, t); return t; };   /* stored uv = (uv + .5) / 2 */
+    const pbr = (k, ext = 'jpg') => { const orm = T(k + '_orm.jpg'), m = new THREE.MeshStandardMaterial({ map: T(k + '_alb.' + ext, true), normalMap: T(k + '_nrm.jpg'),
+      aoMap: orm, roughnessMap: orm, metalnessMap: orm, roughness: 1, metalness: 1, aoMapIntensity: .8 }); m.normalScale.set(1, 1); return m; };   /* DirectX normal maps, as the cockpit */
+    const lamp = () => new THREE.MeshStandardMaterial({ color: 0x111111, emissiveMap: T('emm.jpg', true), emissive: new THREE.Color(0, 0, 0), roughness: .2, metalness: 0 });
+    const MAT = { 'F-16CM_50_1': () => pbr('skin'), 'PilotUS': () => pbr('pilot'),
+      'Serial_CM50_1': () => { const m = pbr('set2', 'png'); m.alphaTest = .5; return m; },
+      'Glass_CM50': () => { const m = pbr('set2', 'png'); m.transparent = true; m.opacity = .25; m.depthWrite = false; m.envMapIntensity = 1.4; return m; },
+      'Lights_CM50_2': lamp, 'Lights_CM50_3': lamp, 'Lights_CM50': () => { const m = lamp(); m.visible = false; return m; } };   /* afterburner shell: our plume draws the flame */
+    const made = {}, dofs = {}, sw = [];
+    sc.traverse(n => { const u = n.userData;
+      if (u && u.dof != null) { u.q0 = n.quaternion.clone(); u.p0 = n.position.clone(); (dofs[u.dof] = dofs[u.dof] || []).push(n); }
+      if (u && u.sw != null) { sw.push(n); n.visible = u.branch === 0 && !M.bms.hideSw.includes(u.sw); }
+      if (!n.isMesh) return; const nm = n.material.name; n.material = made[nm] || (made[nm] = (MAT[nm] || (() => new THREE.MeshStandardMaterial({ color: 0x777777 })))());
+      n.material.name = nm; if (nm === 'Glass_CM50') n.renderOrder = 6; });
+    await Promise.all(waits); return { dofs, sw, mats: made }; }
+  // a BMS DOF value v (rad, or ft for translate DOFs) on each of its nodes: flags 2 = reverse, 1 = clamp to [min, max], × multiplier;
+  // 4 = normalised: one step of a sequence (gear legs, doors), turns `mul` DEGREES while v crosses its window [min, max]
+  // (measured 2026-11-15: the steps of one chain sum to 81-89 deg, the real wheel / door swing; read as rad × mul they gave 5-7 rad per step)
+  const dofX = (u, v) => { let x = u.flags & 2 ? -v : v; if (u.flags & 1) x = clamp(x, u.min, u.max);
+    if (u.flags & 4) return u.max > u.min ? (x - u.min) / (u.max - u.min) * u.mul * D2R : 0; return x * u.mul; };
+  const zA = new THREE.Vector3(0, 0, 1), vD = new THREE.Vector3(), BS = M.bms ? M.bms.sign : null;
+  const setDof = (k, v) => { const L = bms && bms.dofs[k]; if (!L) return; for (const n of L) { const u = n.userData, x = dofX(u, v);
+    if (u.type === 1) n.position.copy(u.p0).add(vD.set(...u.axis).multiplyScalar(x * .3048)); else if (u.type === 0) n.quaternion.copy(u.q0).multiply(qT.setFromAxisAngle(zA, -x)); } };
+  /* -x: BMS is left-handed, the z flip reverses the turn (measured 2026-11-15: +x swung the gear legs up into the body, -x puts them down) */
+  // BMS draws every DOF at value 0 unless something drives it; the file's rest pose is not that state (e.g. 41 air-refuelling door: open at rest, closed at 0)
+  if (bms) for (const k in bms.dofs) setDof(k, 0);
+  // S3b: ejection seats (front + rear, one geometry); a missing seat file only drops the seats. The BMS airframe has its own seat and pilot.
   const seats = [];
-  if (M.seat) try { const sg = (await new GLTFLoader().loadAsync(M.seat.url.href)).scene;
+  if (M.seat && !bms) try { const sg = (await new GLTFLoader().loadAsync(M.seat.url.href)).scene;
     for (const p of M.seat.at) { const s = seats.length ? sg.clone() : sg; s.position.set(...p); s.name = 'Seat' + seats.length; model.add(s); seats.push(s); } }
   catch (e) { console.warn('seat model', e); }
   model.traverse(n => { nodes[n.name] = n;
-    if (!n.isMesh) return; const m = n.material; n.castShadow = m.name !== 'Glass'; n.receiveShadow = true; stats.tris += (n.geometry.index ? n.geometry.index.count : n.geometry.attributes.position.count) / 3; });
+    if (!n.isMesh) return; const m = n.material; n.castShadow = !/^(Glass|Lights)/.test(m.name); n.receiveShadow = true; stats.tris += (n.geometry.index ? n.geometry.index.count : n.geometry.attributes.position.count) / 3; });
   // materials (our look, not the source's Cycles values): the paint is a dielectric semi-matte grey; the texture's gloss map is remapped to 0.38-0.8 roughness
   const mats = {}; model.traverse(n => { if (n.isMesh) mats[n.material.name] = n.material; });
   if (mats.Paint) { const p = mats.Paint; p.metalness = .12; p.roughness = 1;
@@ -97,9 +157,10 @@ export async function createGfx(F, core, o) {
   if (mats.Glass) { mats.Glass.depthWrite = false; mats.Glass.envMapIntensity = 1.4; mats.Glass.opacity = .16; }
   // S3b: while the scanned cockpit is shown, the body's own cockpit block (inside the cut box, craft frame) is not drawn (fragment discard)
   const cutU = { value: 0 }, cutA = new THREE.Vector3(), cutB = new THREE.Vector3();
-  if (M.cockpit && nodes.Body) { cutA.set(...M.cockpit.cut[0]); cutB.set(...M.cockpit.cut[1]); model.updateMatrixWorld(true);
+  const cutRoot = bms ? model : nodes.Body;   // the BMS airframe: all of it (its cockpit tub, seat and pilot sit inside the box)
+  if (M.cockpit && cutRoot) { cutA.set(...M.cockpit.cut[0]); cutB.set(...M.cockpit.cut[1]); model.updateMatrixWorld(true);
     const inv = new THREE.Matrix4().copy(model.matrixWorld).invert();
-    nodes.Body.traverse(n => { if (!n.isMesh) return; const m0 = n.material, m = m0.clone(), prev = m0.onBeforeCompile, cutM = { value: new THREE.Matrix4().multiplyMatrices(inv, n.matrixWorld) };
+    cutRoot.traverse(n => { if (!n.isMesh) return; const m0 = n.material, m = m0.clone(), prev = m0.onBeforeCompile, cutM = { value: new THREE.Matrix4().multiplyMatrices(inv, n.matrixWorld) };
       m.onBeforeCompile = (sh, r) => { if (prev) prev(sh, r); Object.assign(sh.uniforms, { uCut: cutU, uCutA: { value: cutA }, uCutB: { value: cutB }, uCutM: cutM });
         sh.vertexShader = 'uniform mat4 uCutM; varying vec3 vCut;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvCut = (uCutM * vec4(position, 1.)).xyz;');
         sh.fragmentShader = 'uniform float uCut; uniform vec3 uCutA, uCutB; varying vec3 vCut;\n' + sh.fragmentShader.replace('#include <clipping_planes_fragment>',
@@ -138,7 +199,10 @@ export async function createGfx(F, core, o) {
   const hinge = {}; model.traverse(n => { if (n.userData && n.userData.hinge) hinge[n.name] = { n, ax: new THREE.Vector3(...n.userData.hinge).normalize(), q0: n.quaternion.clone() }; });
   const turn = (name, deg) => { const h = hinge[name]; if (h) h.n.quaternion.copy(h.q0).multiply(qT.setFromAxisAngle(h.ax, deg * D2R)); };
   // nozzle iris: scaled about its own axis
-  const exitP = nodes.NozzleExit ? nodes.NozzleExit.position.clone() : new THREE.Vector3(0, .5, 6), nozR = (nodes.Nozzle && nodes.Nozzle.userData.radius) || .33;
+  let exitP = nodes.NozzleExit ? nodes.NozzleExit.position.clone() : new THREE.Vector3(0, .5, 6), nozR = (nodes.Nozzle && nodes.Nozzle.userData.radius) || .33;
+  if (bms && bms.dofs[39]) { const b = new THREE.Box3(); model.updateMatrixWorld(true); const inv = new THREE.Matrix4().copy(model.matrixWorld).invert();   // the nozzle petals (DOF 39), model frame
+    for (const n of bms.dofs[39]) n.traverse(m => { if (m.isMesh) { m.geometry.computeBoundingBox(); b.union(m.geometry.boundingBox.clone().applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, m.matrixWorld))); } });
+    const c = b.getCenter(new THREE.Vector3()); exitP = new THREE.Vector3(c.x, c.y, b.max.z); nozR = .4 * Math.min(b.max.x - b.min.x, b.max.y - b.min.y); stats.nozzle = { exit: exitP.toArray(), r: nozR }; }
   let iris = null; if (nodes.Nozzle) { iris = new THREE.Group(); iris.position.set(exitP.x, exitP.y, 0); nodes.Nozzle.parent.add(iris); iris.attach(nodes.Nozzle); }
   const gearN = ['Gear_N', 'Gear_L', 'Gear_R', 'Doors_Down'].map(n => nodes[n]).filter(Boolean);
   // upload to the GPU now (else it happens on the first frame) and estimate the GPU memory (vertex + index buffers, textures with mip-maps)
@@ -172,8 +236,11 @@ export async function createGfx(F, core, o) {
   const gt = glowTex(THREE), spr = (c, s) => { const m = new THREE.SpriteMaterial({ map: gt, color: c, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true });
     const x = new THREE.Sprite(m); x.userData.s = s; x.renderOrder = 4; model.add(x); return x; };
   const navR = spr(0xff2020, .35), navG = spr(0x20ff50, .35), navT = spr(0xffffff, .3), strobe = spr(0xffffff, .6), land = spr(0xfff2dd, .5);
-  navR.position.set(...M.nav.red); navG.position.set(...M.nav.green); navT.position.set(...M.nav.tail); strobe.position.set(...M.strobe);
-  const landP = nodes.LandingLight ? nodes.LandingLight.position.clone() : new THREE.Vector3(0, -.9, -3.8); land.position.copy(landP).add(new THREE.Vector3(0, 0, -.15));
+  const NAV = bms ? M.bms.nav : M.nav; navR.position.set(...NAV.red); navG.position.set(...NAV.green); navT.position.set(...NAV.tail); strobe.position.set(...(bms ? M.bms.strobe : M.strobe));
+  // BMS: the landing / taxi lenses ride on the nose gear door; their geometry centres (mesh frame), carried to the model frame every frame
+  const lampM = []; if (bms) for (const n of bms.sw) if (n.userData.branch === 0 && M.bms.lampSw.includes(n.userData.sw)) n.traverse(m => { if (m.isMesh) { m.geometry.computeBoundingBox(); lampM.push([m, m.geometry.boundingBox.getCenter(new THREE.Vector3())]); } });
+  const relM = (n, out) => { out.identity(); for (let p = n; p && p !== model; p = p.parent) { p.updateMatrix(); out.premultiply(p.matrix); } return out; };
+  const landP = bms ? new THREE.Vector3(...M.bms.land) : nodes.LandingLight ? nodes.LandingLight.position.clone() : new THREE.Vector3(0, -.9, -3.8); land.position.copy(landP).add(new THREE.Vector3(0, 0, -.15));
   // ground: planar shadow (each model mesh re-drawn flattened; depthFunc Less draws every pixel once) + the landing light pool
   // the shadow darkens each pixel once, however many triangles overlap: pass 1 writes the opacity into the target's alpha (colour kept), pass 2
   // multiplies the colour by (1 − alpha) and sets alpha 0 (a second overlapping triangle then multiplies by 1), pass 3 puts alpha back to 1
@@ -228,6 +295,7 @@ export async function createGfx(F, core, o) {
   R.domElement.addEventListener('wheel', onWheel, { passive: true });
 
   // ── per frame: P = core's draw pose (W), t = earthgl time (ms)
+  const roll = { d: 0, t: -1 }, wB = new THREE.Vector3();   // wheels: metres rolled on the ground; last frame time
   const camRel = new THREE.Vector3(), nW = new THREE.Vector3(), lB = new THREE.Vector3(), uB = new THREE.Vector3(), qInv = new THREE.Quaternion(), S4 = new THREE.Matrix4(), rel = new THREE.Matrix4();
   function update(P, t) {
     const s = core.state, h = core.hud, srf = s.srf || {}, e = (s.eng && s.eng[0]) || {}, up = nW.copy(P.pos).normalize(), sun = F.sun().clone().normalize();
@@ -250,11 +318,32 @@ export async function createGfx(F, core, o) {
     turn('Stab_L', el - M.stabDiff * ai); turn('Stab_R', el + M.stabDiff * ai);
     turn('Flaperon_L', clamp(tef - ai, -23, 20)); turn('Flaperon_R', clamp(tef + ai, -23, 20));
     turn('LEF_L', -lef); turn('LEF_R', -lef); turn('Rudder', -ru);
+    // BMS airframe: Falcon's DOF numbers (0 / 1 stabilators, 2 / 3 flaperons, 4 rudder, 9 / 10 LEFs, 19-24 gear + doors, 39 nozzle petals); signs: BS
+    if (bms) { const g = BS.gear, r = D2R;
+      setDof(0, BS.stab * (el - M.stabDiff * ai) * r); setDof(1, BS.stab * (el + M.stabDiff * ai) * r);
+      setDof(2, BS.flap * clamp(tef - ai, -23, 20) * r); setDof(3, BS.flap * clamp(tef + ai, -23, 20) * r);
+      setDof(9, BS.lef * lef * r); setDof(10, BS.lef * lef * r); setDof(4, BS.rud * ru * r);
+      // gear sequence (M.bms.gearSeq): legs 19 / 20 / 21, nose door 22, main doors 23 / 24 (opened past their 90 deg DOF limit while the wheels pass)
+      const GS = M.bms.gearSeq, gUp = gear <= GS.legs, shut = clamp((gear - GS.shut) / (GS.legs - GS.shut), 0, 1);
+      const L = gUp ? GS.lMin : GS.lMin + (1 - GS.lMin) * (gear - GS.legs) / (1 - GS.legs), on = !gUp || shut > GS.hide;   /* legs held in the well, off once the doors pass `hide` */
+      const dA = (gear >= GS.overAt ? 90 + (GS.over - 90) * (1 - gear) / (1 - GS.overAt) : !gUp ? GS.over : GS.over * shut) * D2R;
+      for (const k of [19, 20, 21]) setDof(k, g[k] * L);
+      setDof(22, g[22] * shut);
+      for (const k of [23, 24]) { setDof(k, dA); for (const n of bms.dofs[k] || []) { const u = n.userData; if (u.type === 0 && u.mul === 1 && dA > u.max) n.quaternion.copy(u.q0).multiply(qT.setFromAxisAngle(zA, -dA)); } }
+      for (const n of bms.sw) if (M.bms.gearSw.includes(n.userData.sw)) n.visible = on;
+      // struts: each tyre pushed up to the ground plane (origin height agl + rest, local vertical in body axes), within its stroke; wheels roll on the ground
+      const hG = (h.agl || 0) + (def ? def.rest || 0 : 0); wB.copy(up).applyQuaternion(qInv.copy(P.quat).invert());
+      for (const S of M.bms.strut) { const pen = gear > .95 ? -(wB.dot(vD.set(...S.low)) + hG) : 0; setDof(S.dof, S.k * clamp(pen, 0, S.max)); }
+      if (s.onGround && roll.t >= 0) roll.d += (h.tas || 0) * clamp((t - roll.t) / 1000, 0, .2); roll.t = t;
+      for (const k in M.bms.spin) setDof(k, (roll.d / M.bms.spin[k]) % (2 * Math.PI));
+      if (lampM.length) { landP.set(0, 0, 0); for (const [m, c] of lampM) landP.add(vS.copy(c).applyMatrix4(relM(m, mT))); landP.multiplyScalar(1 / lampM.length);
+        land.position.copy(landP); land.position.z -= .15; } }
     // gear: telescoped into the wells (a stand-in for the real retraction paths), doors closed when up
     for (const n of gearN) { n.visible = gear > .01; n.scale.set(1, Math.max(.01, gear), 1); }
     if (nodes.Doors_Up) nodes.Doors_Up.visible = gear <= .01;
     // engine: power 0..100 (S2: < 50 dry, 50..100 afterburner); nozzle open at idle and in AB, closed at MIL
     const pw = e.power || 0, on = !!e.on, ab = on && pw > 50, st = ab ? (pw - 50) / 50 : 0, wide = clamp(Math.pow(101325 / Math.max(1, air.p), .3), 1, 8);
+    if (bms) setDof(39, BS.noz * (1 - (ab ? .6 + .4 * st : .7 - .7 * clamp(pw / 50, 0, 1))));   // openness 0 = closed (MIL) .. 1 = open (estimate; same schedule as iris); DOF 0 = open
     if (iris) { const f = ab ? 1.0 + .12 * st : 1.08 - .16 * clamp(pw / 50, 0, 1); iris.scale.set(f, f, 1); }
     const U = plume.material.uniforms; U.uTime.value = t / 1000; U.uStage.value = st; U.uWide.value = wide;
     if (ab) { U.uLen.value = (2.5 + 5.5 * st) * (1 + .3 * (wide - 1)); U.uR0.value = nozR * 1.15; U.uBright.value = 1.6 + 2.4 * st; U.uDiam.value = clamp(2 - wide, 0, 1); }
@@ -315,8 +404,8 @@ export async function createGfx(F, core, o) {
       const v = s.v, qq = s.q; if (v && qq) plM.uniforms.uW.value.set(v[0], v[1], v[2]).applyQuaternion(qT.set(qq[0], qq[1], qq[2], qq[3]).invert()).normalize(); }
   }
 
-  const credit = [M.credit, M.cockpit && M.cockpit.credit, seats.length && M.seat.credit].filter(Boolean).join(' · ');
-  const api = { model, nodes, hinge, stats, update, plume, orbit, credit, trail, trailMesh: trailM, seats,
+  const credit = [bms ? M.bms.credit : M.credit, M.cockpit && M.cockpit.credit, seats.length && M.seat.credit].filter(Boolean).join(' · ');
+  const api = { model, nodes, hinge, stats, update, plume, orbit, credit, trail, trailMesh: trailM, seats, bms, setDof,   // setDof(n, v): tests (the next update overrides driven DOFs)
     get cockpit() { return ck.obj; }, set cockpitOff(v) { ck.off = !!v; },   // tests: cockpitOff = true shows the cockpit view without the scan
     set modelVisible(on) { stats.modelOn = on; model.visible = on; shG.visible = false; pool.visible = false; }, get modelVisible() { return stats.modelOn; },
     plasma(k) { plasmaK = k; },   // S5: k 0..1 forces the glow, null = automatic
