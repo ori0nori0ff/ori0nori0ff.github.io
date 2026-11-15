@@ -85,9 +85,12 @@ export function makePlasma(THREE) {
 }
 
 // ── a soft round glow texture (canvas; no blob / data URL needed)
-function glowTex(THREE) { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), gr = x.createRadialGradient(32, 32, 0, 32, 32, 32);
-  gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.2, 'rgba(255,255,255,.55)'); gr.addColorStop(.5, 'rgba(255,255,255,.12)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
-  x.fillStyle = gr; x.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); }
+// light glow: small sharp core + glare falling like 1/(1 + (r/c)^2), no plateau (the old linear gradient, times the night gain, clipped to a
+// flat disc out to ~half the radius under ACES and read as a solid ball)
+function glowTex(THREE) { const N = 128, c = document.createElement('canvas'); c.width = c.height = N; const x = c.getContext('2d'), im = x.createImageData(N, N);
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const r = Math.min(1, Math.hypot(i + .5 - N / 2, j + .5 - N / 2) / (N / 2)), k = (i + j * N) * 4;
+    const a = (1 - r * r) ** 2 / (1 + (r / .05) ** 2);   /* point + 1/r^2 glare, window with zero slope at the edge: no plateau, no rim (a cone or gaussian halo read as a ball) */ im.data[k] = im.data[k + 1] = im.data[k + 2] = 255; im.data[k + 3] = Math.round(255 * a); }
+  x.putImageData(im, 0, 0); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.NoColorSpace; return t; }
 
 // F = api.flight(); core = createCore(); o = { scene (craft layer), camera (craft layer), craft (Group: position W, scale 1/R_E), sun (DirectionalLight),
 // amb (HemisphereLight), model ('f16'), def (craft definition: views, rest) }
@@ -235,7 +238,7 @@ export async function createGfx(F, core, o) {
   // ── navigation + strobe + landing lights (glow sprites; real light only on the ground pool)
   const gt = glowTex(THREE), spr = (c, s) => { const m = new THREE.SpriteMaterial({ map: gt, color: c, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true });
     const x = new THREE.Sprite(m); x.userData.s = s; x.renderOrder = 4; model.add(x); return x; };
-  const navR = spr(0xff2020, .35), navG = spr(0x20ff50, .35), navT = spr(0xffffff, .3), strobe = spr(0xffffff, .6), land = spr(0xfff2dd, .5);
+  const navR = spr(0xff2020, .35), navG = spr(0x20ff50, .35), navT = spr(0xffffff, .3), strobe = spr(0xffffff, 1.2), land = spr(0xfff2dd, .5);
   const NAV = bms ? M.bms.nav : M.nav; navR.position.set(...NAV.red); navG.position.set(...NAV.green); navT.position.set(...NAV.tail); strobe.position.set(...(bms ? M.bms.strobe : M.strobe));
   // BMS: the landing / taxi lenses ride on the nose gear door; their geometry centres (mesh frame), carried to the model frame every frame
   const lampM = []; if (bms) for (const n of bms.sw) if (n.userData.branch === 0 && M.bms.lampSw.includes(n.userData.sw)) n.traverse(m => { if (m.isMesh) { m.geometry.computeBoundingBox(); lampM.push([m, m.geometry.boundingBox.getCenter(new THREE.Vector3())]); } });
@@ -357,7 +360,7 @@ export async function createGfx(F, core, o) {
     else { U.uLen.value = .9; U.uR0.value = nozR * .9; U.uBright.value = on ? .15 + .35 * clamp(pw / 50, 0, 1) : 0; U.uDiam.value = 0; }
     plume.visible = U.uBright.value > 0; abL.intensity = ab ? (60 + 140 * st) / (R_E * R_E) : 0;
     // lights: sprites keep a few pixels at any distance; the strobe flashes 60 ms every 1.2 s
-    const pxm = Math.max(1, d) * .004, night = 1 + 3 * (1 - dl);
+    const pxm = Math.max(1, d) * 2 * Math.tan(o.camera.fov * Math.PI / 360) / Math.max(1, R.domElement.clientHeight) * 8, night   /* 8 px wide far away, in any zoom */ = 1 + 3 * (1 - dl);
     for (const x of [navR, navG, navT, strobe, land]) x.scale.setScalar(Math.max(x.userData.s, pxm * x.userData.s / .35));
     navR.material.color.setRGB(1.6 * night, .1, .1); navG.material.color.setRGB(.1, 1.6 * night, .3); navT.material.color.setScalar(1.2 * night);
     const inCock = F.piloting && def && core.view === 0;   // from the seat: the own light bulbs are not seen (only the light pool on the ground)
@@ -366,7 +369,7 @@ export async function createGfx(F, core, o) {
     const ckOn = inCock && !!ck.obj && !ck.off; if (ck.obj) ck.obj.visible = ckOn; cutU.value = ckOn ? 1 : 0; if (seats[0]) seats[0].visible = !ckOn;
     ck.back.value = .6 * (1 - dl); ck.flood.value = .12 * (1 - dl);   // estimates: backlit lettering + flood light, faded in with the dusk
     if (nodes.Canopy) nodes.Canopy.visible = !inCock;   // its two halves overlap on the centre line: a dark seam right in the pilot's view
-    strobe.visible = !inCock && (t / 1000) % 1.2 < .06; strobe.material.color.setScalar(8 * night); land.visible = gear > .95; land.material.color.setRGB(3 * night, 2.9 * night, 2.6 * night);
+    strobe.visible = !inCock && (t / 1000) % 1.2 < .06; strobe.material.color.setScalar(1.6 * night);   /* a gain of 8 x night clipped the glow to a flat white disc; the flash reads by its size */ land.visible = gear > .95; land.material.color.setRGB(1.8 * night, 1.74 * night, 1.56 * night);
     // ground: tangent plane under the craft in body axes (origin height = agl + rest), sun direction in body axes
     const hO = (h.agl || 0) + (def ? def.rest || 0 : 0); qInv.copy(P.quat).invert(); uB.copy(up).applyQuaternion(qInv); lB.copy(sun).applyQuaternion(qInv);
     const ul = uB.dot(lB), shOn = hO < 300 && ul > .05 && sunL.intensity > .1; shG.visible = shOn;

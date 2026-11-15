@@ -77,7 +77,7 @@ export async function startFlight(earth, host, o = {}) {
   let onPose = null, extraTick = null, extraDispose = null, credit = '', P0 = null;
 
   if (kind === 'f16') {
-    const [{ loadAircraft }, { createGfx }, { createF16Cockpit }, { createSound }] = await Promise.all([import('./aero.js?v=1dd47b94'), import('./gfx.js?v=313bddb9'), import('./instruments/f16.js?v=a6cddb97'), import('./sound.js?v=fce60eab')]);
+    const [{ loadAircraft }, { createGfx }, { createF16Cockpit }, { createSound }] = await Promise.all([import('./aero.js?v=1dd47b94'), import('./gfx.js?v=8609367e'), import('./instruments/f16.js?v=a6cddb97'), import('./sound.js?v=fce60eab')]);
     const ac = await loadAircraft(new URL('aircraft/f16.json', import.meta.url)), def = ac.def;
     const core = S.core = createCore(F, def, RWY, { mods: ac.mods });
     try { S.gfx = await createGfx(F, core, { scene: cs, camera: cc, craft, sun: sunL, amb, model: 'f16', def, quality, scan }); }   /* credits: only in the 3D view's Sources list (user, 2026-11-14) */
@@ -88,7 +88,7 @@ export async function startFlight(earth, host, o = {}) {
     onPose = (P, t) => { if (S.gfx) S.gfx.update(P, t); if (S.cockpit) S.cockpit.update(P, t); if (S.hud) S.hud.forceShow = !(S.gfx && S.gfx.cockpit); S.snd.update(P, t); };
     o.atName = RWY.name;
   } else if (kind === 'rocket') {   // S5: flight/rocket.js builds the craft, views, panel
-    const { setupRocket } = await import('./rocket.js?v=6a1c4fb2'), RK = await setupRocket(S, o, ui, { sunL, createCore, createScreenHud });
+    const { setupRocket } = await import('./rocket.js?v=a2f9aec3'), RK = await setupRocket(S, o, ui, { sunL, createCore, createScreenHud });
     onPose = RK.onPose; extraTick = RK.tick; extraDispose = RK.dispose; credit = RK.credit;
   } else {
     const orbit = await import('./orbit.js?v=2a2bb0bd'), { createOrbit, gravityModule, orbiterModule, ORBITER, createOrbitView, BODIES } = orbit;
