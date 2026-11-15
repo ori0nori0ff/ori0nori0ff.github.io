@@ -9,7 +9,7 @@
    Outside: distance law of the BMS table (full up to minFt, then minFt / d, silent past maxFt), the sound cone (our reading of
    BMS's inside / outside cone, see coneGain) and a left / right pan; no Doppler. BMS (DirectSound) never plays above 0 dB: gains clamp at 1.
    Audio starts on the first click / key (browser rule). The Sound button steps the volume 100 / 60 / 30 % / off (localStorage aurora.flsnd). */
-import { R_E } from './core.js?v=47034b95';
+import { R_E } from './core.js?v=9235aa0c';
 const DIR = new URL('sounds/f16-bms/', import.meta.url);
 const FT = 3.28084, D2R = Math.PI / 180;
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
@@ -81,9 +81,11 @@ export function createSound(F, core, ui) {
     const right = new THREE.Vector3(1, 0, 0).applyQuaternion(cp ? cp.quat : cam.quaternion).applyQuaternion(qi);
     L.pos = [rel.x, rel.y, rel.z]; L.right = [right.x, right.y, right.z];
     const eye = core.def.views[0].eye; L.inside = core.view === 0 && Math.hypot(rel.x - eye[0], rel.y - eye[1], rel.z - eye[2]) < 2; }
-  // our reading of the BMS cone: full inside coneIn / 2 of the axis, then a dB-linear fade to coneAtt over the next coneOut / 2 degrees
-  function coneGain(m, ang) { if (m.coneIn == null) return 1; const a = m.coneIn / 2, b = a + (m.coneOut || 0) / 2;
-    return ang <= a ? 1 : db((m.coneAtt || 0) * clamp((ang - a) / Math.max(1, b - a), 0, 1)); }
+  // our reading of the BMS cone: full inside coneIn / 2 of the axis, then a dB-linear fade reaching coneAtt only at 180 deg (the opposite
+  // direction). coneOut is not used: BMS gives it smaller than coneIn, which DirectSound does not define. The first reading (fade over
+  // coneOut / 2) left the side of the jet 10-17 dB under the rear (afterburner roar -17 dB at 90 deg): muffled, user 2026-11-15.
+  function coneGain(m, ang) { if (m.coneIn == null) return 1; const a = m.coneIn / 2;
+    return ang <= a ? 1 : db((m.coneAtt || 0) * clamp((ang - a) / Math.max(1, 180 - a), 0, 1)); }
   // flags + distance + cone -> amplitude factor and pan for sound k at point `at`
   function place(k, at, axis) {
     const m = man.sounds[k], f = m.flags[0], I = L.inside;

@@ -283,7 +283,7 @@ export function createCore(F, def, at, opts = {}) {
     cam.pos.set(...p); cam.quat.set(...q).multiply(qa.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -.5)); cam.agl = 1500; return cam; }
 
   let tNow = 0; const off = F.onFrame((dt, t) => { tNow = t; frame(dt, t); if (api.onPose) api.onPose(hold ? null : drawPose(t), t); });
-  const api = { state: s, hud, stats, def, touch: null, get hold() { return hold; }, get view() { return view; }, set view(v) { view = v % def.views.length; },
+  const api = { state: s, hud, stats, def, touch: null, get hold() { return hold; }, get view() { return view; }, set view(v) { view = v % def.views.length; if (ph) ph.look.identity(); },
     pilot(on) { const h = F.pilot(on, () => camPose(tNow)); ph = on ? h : null; if (on && h) h.onOff = () => { ph = null; if (api.onPilotOff) api.onPilotOff(); }; },
     setWarp, warps: WARPS, drawPose, camPose, poseW, fixedPose,
     teleport(P) { setFromFixed(s.t, P); prevW = curW = poseW(); },

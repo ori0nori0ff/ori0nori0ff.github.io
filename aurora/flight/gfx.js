@@ -293,12 +293,19 @@ export async function createGfx(F, core, o) {
   const def = o.def; if (def) { const v = def.views; v[0] = { ...v[0], eye: (M.head || M.eye).slice(), tilt: -.19, fov: 62 }; /* S3b / S4: cockpit 62° vertical (Earth camera 35°), 11° down: HUD + MFDs + ADI in view */ if (!v.some(x => x.name === 'Orbit')) v.push(orbit); }
   const onWheel = e => { if (!F.piloting || !def || def.views[core.view] !== orbit) return; orbit.dist = clamp(orbit.dist * Math.exp(Math.sign(e.deltaY) * .15), 6, 3000); };
   R.domElement.addEventListener('wheel', onWheel, { passive: true });
+  // flyby, ground, onboard and free cameras (flight/cams.js): onboard eyes from the airframe's bounds in the model frame (plasma glow left out)
+  let cams = null;
+  if (def) { const bbM = new THREE.Box3(), bx = new THREE.Box3(), mR = new THREE.Matrix4();
+    model.traverse(n => { if (!n.isMesh || n === plasma || !n.geometry) return; for (let p = n; p && p !== model; p = p.parent) if (p.visible === false) return;
+      if (!n.geometry.boundingBox) n.geometry.computeBoundingBox(); bbM.union(bx.copy(n.geometry.boundingBox).applyMatrix4(relM(n, mR))); });
+    if (!bbM.isEmpty()) cams = (await import('./cams.js?v=fa335c7b')).addCameraViews(F, core, def, { bb: bbM, head: (M.head || M.eye).slice() }); }
 
   // ── per frame: P = core's draw pose (W), t = earthgl time (ms)
   const roll = { d: 0, t: -1 }, wB = new THREE.Vector3();   // wheels: metres rolled on the ground; last frame time
   const camRel = new THREE.Vector3(), nW = new THREE.Vector3(), lB = new THREE.Vector3(), uB = new THREE.Vector3(), qInv = new THREE.Quaternion(), S4 = new THREE.Matrix4(), rel = new THREE.Matrix4();
   function update(P, t) {
     const s = core.state, h = core.hud, srf = s.srf || {}, e = (s.eng && s.eng[0]) || {}, up = nW.copy(P.pos).normalize(), sun = F.sun().clone().normalize();
+    if (cams) cams.tick(P, t);   // the craft's ground track for the flyby / ground / free cameras
     // the camera of this frame (earthgl moves its camera after the frame callbacks): the pilot camera pose, else earthgl's
     const cpp = F.piloting ? core.camPose(t) : null, cp = cpp ? cpp.pos : F.camera.position;
     const altMSL = h.altMSL || 0, air = atmosphere(altMSL), se = sun.dot(up), dl = smooth(-.1, .1, se), d = cp.distanceTo(P.pos) * R_E;
@@ -409,7 +416,7 @@ export async function createGfx(F, core, o) {
     get cockpit() { return ck.obj; }, set cockpitOff(v) { ck.off = !!v; },   // tests: cockpitOff = true shows the cockpit view without the scan
     set modelVisible(on) { stats.modelOn = on; model.visible = on; shG.visible = false; pool.visible = false; }, get modelVisible() { return stats.modelOn; },
     plasma(k) { plasmaK = k; },   // S5: k 0..1 forces the glow, null = automatic
-    dispose() { R.domElement.removeEventListener('wheel', onWheel); craft.remove(model, shG, pool); cs.remove(trailM); if (envRT) envRT.dispose(); pm.dispose();
+    dispose() { R.domElement.removeEventListener('wheel', onWheel); if (cams) cams.dispose(); craft.remove(model, shG, pool); cs.remove(trailM); if (envRT) envRT.dispose(); pm.dispose();
       R.shadowMap.enabled = shadowWas; if (sunL.shadow.map) { sunL.shadow.map.dispose(); sunL.shadow.map = null; } } };
   return api;
 }

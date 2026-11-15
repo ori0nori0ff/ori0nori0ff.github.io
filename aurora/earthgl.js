@@ -12,6 +12,7 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 import { createVeg } from './veg.js?v=7e75086a';
 import { createNightOsm } from './nightosm.js?v=b082f45d';
+import { createAirfield } from './airfield.js?v=a063b7ff';
 import { createSolar } from './solar.js?v=179ba626';
 
 const esriKey = () => { try { const k = (localStorage.getItem('aurora.esri') || '').trim(); return /^[\w.\-]{20,600}$/.test(k) ? k : ''; } catch (e) { return ''; } };   // the user's own Esri key (⚙), this device only
@@ -213,6 +214,7 @@ function create(host, opts) {
   const wTx = () => { const t = new THREE.DataTexture(new Float32Array(360 * 181 * 4), 360, 181, THREE.RGBAFormat, THREE.FloatType);   // read by texelFetch only
     Object.assign(t, { magFilter: THREE.NearestFilter, minFilter: THREE.NearestFilter, needsUpdate: true }); return t; };
   Object.assign(U, { wA: { value: wTx() }, wB: { value: wTx() }, wTau: { value: 0 }, wOn: { value: 0 } });
+  const AF = createAirfield(THREE); Object.assign(U, AF.uniforms);   /* runway paint, flat profile and lights (airfield.js) */
   // one light model for the globe and the close-up tiles: n = up, P = the point, N = relief normal, Nw = water-surface normal, rough = wave slope variance,
   // d = colour, w = water 0…1, g = map uv, rk = how strongly the relief shades
   // the sunlight that reaches the ground through the air (Rayleigh + Mie, the same air as the shell): white at noon, gold then red at sunrise / sunset.
@@ -676,8 +678,8 @@ ${SUNLIB}${MOONV}
     g.setAttribute('sk', new THREE.Float32BufferAttribute(SK, 1)); g.setIndex(I); return g; };
   const tileGeo = mkGeo(HD.G), tileGeo2 = mkGeo(HD.G * 2);   // the dense one: for the two levels under the heights' own (z13–14), where a tile spans 128 / 64 height pixels
   const TVS = /* glsl */`
-    uniform vec4 rect; uniform sampler2D hmap; uniform vec3 hsub, cV, e0, n0, u0; uniform vec2 cs; uniform float skirt, ex; attribute float sk;
-    varying vec2 vT; varying vec2 vG; varying vec3 vO; varying vec3 vP; varying float vLat;
+    uniform vec4 rect, rwT, rwP; uniform sampler2D hmap; uniform vec3 hsub, cV, e0, n0, u0; uniform vec2 cs; uniform float skirt, ex; attribute float sk;
+    varying vec2 vT; varying vec2 vG; varying vec3 vO; varying vec3 vP; varying float vLat; varying vec2 vRw;
     // 32-bit floats hold a point on the unit sphere to ~0.8 m only. So a vertex is built as a small offset from its tile's centre (u0, with east e0 and
     // north n0 there; cs = cos / sin of its latitude) and added to that centre as seen from the camera (cV, worked out in 64 bits on the CPU): centimetres.
     float sh(float x) { return abs(x) < .05 ? x * (1. + x * x / 6.) : .5 * (exp(x) - exp(-x)); }
@@ -698,12 +700,15 @@ ${SUNLIB}${MOONV}
       float dl = (uq.x - .5) * rect.y, dmy = (.5 - uq.y) * rect.w, cl = 2. / (exp(my) + exp(-my));   // cl = cos(lat) = 1 / cosh(my)
       float sd = sh(dmy * .5) * (exp(my - dmy * .5) + exp(dmy * .5 - my)) * cl * cs.x, hv = 2. * sn(dl * .5) * sn(dl * .5);   // sd = sin(lat − lat0), hv = 1 − cos(lon − lon0)
       vec3 dn = e0 * (cl * sn(dl)) + n0 * (sd + cl * cs.y * hv) - u0 * (sd * sd / (1. + sqrt(max(1. - sd * sd, 0.))) + cl * cs.x * hv), n = u0 + dn;
+      vec2 en = vec2(cl * sn(dl), sd + cl * cs.y * hv) * 6371000.;   /* east / north metres from the tile centre: runway coordinates (airfield.js) */
+      ${AF.VS}
       float hh = (h * ex + 400.) / 6371000. - sk * skirt;
       vO = n; vP = n * (1. + hh); vLat = lat; vG = vec2(lon / 6.2831853 + .5, lat / 3.1415927 + .5);
       gl_Position = projectionMatrix * vec4(cV + mat3(modelViewMatrix) * (dn + n * hh), 1.); }`;
   const TFS = /* glsl */`
     uniform sampler2D img, pimg, nmap, limg, cimg; uniform vec3 psub, hsub, lsub; uniform vec4 rect, wo; uniform float fade, hdA, pxk, wtime, ex, lodR, altF, lA, nHd, oK;
-    varying vec2 vT; varying vec2 vG; varying vec3 vO; varying vec3 vP; varying float vLat; ${SHADE}
+    uniform vec4 rwP; uniform sampler2D rwNum; varying vec2 vRw;
+    varying vec2 vT; varying vec2 vG; varying vec3 vO; varying vec3 vP; varying float vLat; ${SHADE}${AF.GLSL}
     // waves: the slopes of WN gravity waves (deep-water speeds, see waveSet): wK = whole cycles per WP m (x, y), slope, phase.
     // fw = the pixel's footprint on the water in metres (from screen derivatives, so it grows at grazing views): a wave shorter than ~2–4 pixels
     // fades out instead of aliasing into moiré rings; its slopes then only widen the glint (rough, Cox–Munk)
@@ -721,6 +726,7 @@ ${SUNLIB}${MOONV}
       // all of that by 2 × — where the next coarser tiles begin. So two levels (often two different photo sets) never meet along a tile edge.
       float dq = length(camO - vP), wl = 1. - smoothstep(1.2, 2., dq / clamp(1.2 * sqrt(altF / dq), .5, 1.) / lodR);
       vec3 d = mix(texture2D(pimg, psub.xy + vT * psub.z).rgb, texture2D(img, vT).rgb, fade * wl) * 1.15;
+      d = rwPaint(vRw, rwP, d, max(length(fwidth(vRw)), 1e-3));   /* runway paint (airfield.js) */
       vec4 nm = texture2D(nmap, hsub.xy + vT * hsub.z); vec3 tn = nm.xyz * 2. - 1.; tn.xy *= ex;   // the map holds true slopes; × ex = the slopes as drawn
       float w = nm.a * (1. - smoothstep(.05, .12, dot(d, vec3(.3, .59, .11))));   // sea level and dark = water
       vec3 N = normalize(mix(normalize(ea * tn.x + no * tn.y + n * tn.z), n, w));
@@ -802,7 +808,7 @@ ${SUNLIB}${MOONV}
     const my = Math.log(Math.tan(Math.PI / 4 + Math.max(-1.48, Math.min(1.48, lat)) / 2));
     for (let z = HD.ZT; z >= 2; z--) { const n = 1 << z, fx = (lon + Math.PI) / (2 * Math.PI) * n, fy = (1 - my / Math.PI) / 2 * n, t = tiles.get(z + '/' + (fx | 0) + '/' + (fy | 0));
       if (t && t.dem) { const h = t.dem.h, u = Math.min(254.999, Math.max(0, (fx % 1) * 256 - .5)), v = Math.min(254.999, Math.max(0, (fy % 1) * 256 - .5)), i = u | 0, j = v | 0, a = u - i, b = v - j, k = j * 256 + i;   // bilinear, like the mesh
-        return Math.max(0, (h[k] * (1 - a) + h[k + 1] * a) * (1 - b) + (h[k + 256] * (1 - a) + h[k + 257] * a) * b); } } return nd; }
+        return Math.max(0, AF.flat(lat, lon, (h[k] * (1 - a) + h[k + 1] * a) * (1 - b) + (h[k + 256] * (1 - a) + h[k + 257] * a) * b)); } } return nd; }
   const gR = (lat, lon) => (groundAt(lat, lon) * U.ex.value + 400) / 6371000;   // the drawn ground, Earth radii above the sea-level sphere
   const gMax = v => { const la = Math.asin(Math.max(-1, Math.min(1, v.y))), lo = Math.atan2(-v.z, v.x), e = 9e-6; let m = gR(la, lo);   // a few metres around too: the mesh between its vertices
     for (const [a, b] of [[e, 0], [-e, 0], [0, e], [0, -e]]) m = Math.max(m, gR(la + a, lo + b / Math.max(.05, Math.cos(la)))); return m; };
@@ -811,7 +817,7 @@ ${SUNLIB}${MOONV}
     const mat = new THREE.ShaderMaterial({ uniforms: { ...U, img: { value: t.img }, pimg: { value: t.img }, psub: { value: new THREE.Vector3(0, 0, 1) },
         hmap: { value: d.dem.ht }, nmap: { value: d.dem.nt }, hsub: { value: new THREE.Vector3((t.x % m) * s, (t.y % m) * s, s) }, rect: { value: new THREE.Vector4(t.lon0, t.dlon, t.my0, t.dmy) },
         fade: { value: 1 }, lodR: { value: 1e9 }, limg: { value: TX.night }, cimg: { value: OSM.cov(-1, -1) }, lsub: { value: new THREE.Vector3(0, 0, 1) }, lA: { value: 0 }, skirt: { value: Math.max(t.rho * .05, 8e-6) }, wo: { value: new THREE.Vector4() },
-        cV: { value: new THREE.Vector3() }, e0: { value: t.e0 }, n0: { value: t.n0 }, u0: { value: t.u0 }, cs: { value: t.cs } }, vertexShader: TVS, fragmentShader: TFS, transparent: true, side: THREE.DoubleSide });
+        cV: { value: new THREE.Vector3() }, e0: { value: t.e0 }, n0: { value: t.n0 }, u0: { value: t.u0 }, cs: { value: t.cs }, rwT: { value: t.rwT || (t.rwT = AF.tileVec(t)) } }, vertexShader: TVS, fragmentShader: TFS, transparent: true, side: THREE.DoubleSide });
     { const p = setPar(mat.uniforms, t); if (!t.img) mat.uniforms.img.value = p.img; }
     t.mesh = new THREE.Mesh(t.z > HD.ZT && t.z <= HD.ZT + 2 ? tileGeo2 : tileGeo, mat); t.mesh.frustumCulled = false; t.mesh.renderOrder = 1; t.born = 0; return t.mesh; }
   const fr = new THREE.Frustum(), fm = new THREE.Matrix4(), mvD = new THREE.Matrix4(), sph = new THREE.Sphere(), camN = new THREE.Vector3(), camG = new THREE.Vector3();
@@ -852,6 +858,7 @@ ${SUNLIB}${MOONV}
         else if (!l.ltP && (l.ltF || 0) < 4 && act < 24) loadLights(l); }
       hd.add(m); }
     VEG.update(hd, mvD, camN, altG * 6371000);   /* trees and bushes near the ground (veg.js) */
+    AF.update(hd, mvD, U, pxK, altG * 6371000);   /* runway lights (airfield.js) */
     OSM.update(hd, mvD, camN, altG * 6371000);   /* street-light points from OSM roads at night (nightosm.js) */
     if (tiles.size > HD.KEEP) for (const t of [...tiles.values()].sort((a, b) => a.used - b.used).slice(0, 200)) { if (t.used > frameNo - 600) break; if (t.imgP || t.demP || t.ltP) continue;   // over the limit: forget what you have not looked at for ~10 s (turning back finds it still there); never one that is still downloading
       t.img?.dispose(); t.lt?.dispose(); t.dem?.ht.dispose(); t.dem?.nt.dispose(); t.mesh?.material.dispose(); tiles.delete(t.k); }
@@ -1767,7 +1774,7 @@ ${SUNLIB}${MOONV}
   const pad = v => String(v).padStart(2, '0'), localStr = t => { const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
   $('fly').onclick = () => fly ? flyOff() : flyOn();
   // S4 flight menu (flight/menu.js, loaded on the first click): pick a craft and fly it in this view
-  $('craft').onclick = () => { if (fly) flyOff(); import('./flight/menu.js?v=cfad6798').then(m => m.openMenu(api, host, $('craft'))).catch(e => console.error('flight menu', e)); };
+  $('craft').onclick = () => { if (fly) flyOff(); import('./flight/menu.js?v=d4d57428').then(m => m.openMenu(api, host, $('craft'))).catch(e => console.error('flight menu', e)); };
   const di = $('date'); di.onchange = () => { const t = Date.parse(di.value); if (isFinite(t)) tOver = Math.max(Date.UTC(1800, 0, 1), Math.min(Date.UTC(2050, 0, 1), t)); };
   $('now').onclick = () => { playSet(false, 1); spd = 0; $('dyS').value = '0'; tOver = null; di.value = localStr(now()); };
   // time of day at the place you look at: local Sun time (UTC + longitude / 15) on the same day; moving it switches the real Sun on

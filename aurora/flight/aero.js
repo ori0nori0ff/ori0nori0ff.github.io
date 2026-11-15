@@ -4,7 +4,7 @@
    createAircraft(json) -> { def, mods } for flight/core.js createCore(F, def, at, { mods }).
    Frames: core's body axes are three.js (x right, y up, z aft); the tables use x forward, y right, z down ("SL" below).
    SL -> three: t = [y, -z, -x]; moments the same; rates: three w = [q, -r, -p]. */
-import { OMEGA_I, toF, latLonOf, R_E, GM_E } from './core.js?v=47034b95';
+import { OMEGA_I, toF, latLonOf, R_E, GM_E } from './core.js?v=9235aa0c';
 import { atmosphere, casOf } from './atmos.js?v=7ee6d1db';
 
 const D2R = Math.PI / 180, G0 = 9.80665, LBF = 4.448222, FT = .3048;

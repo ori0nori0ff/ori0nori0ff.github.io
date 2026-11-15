@@ -3,7 +3,7 @@
    core (flight/core.js) with the craft's force modules, the visuals (flight/gfx.js), the live F-16 cockpit (flight/instruments/f16.js), the
    screen HUD (flight/hud.js), the controls bar, the key help and, for the test spacecraft, the mission panel + orbit lines (from S1).
    EN only for now (RO / DE later: every new string is listed in the plan, S4). */
-import { createCore, R_E, fromF, qFromBasis } from './core.js?v=47034b95';
+import { createCore, R_E, fromF, qFromBasis } from './core.js?v=9235aa0c';
 import { createScreenHud, dur, km } from './hud.js?v=eff5db9f';
 import { fmt } from './instruments/draw.js?v=c3b9eb1c';
 
@@ -17,7 +17,8 @@ export const CRAFTS = {
   rocket: { name: 'Rocket', what: 'A multi-stage launcher on a real pad, from published stage figures: autopilot to orbit, then a capsule back to the ground. Placeholder shapes.' } };
 const KEYS = {
   f16: [['W / S', 'pitch (W = nose down)'], ['A / D', 'roll'], ['Q / E', 'yaw'], ['R / F', 'throttle up / down'], ['X', 'throttle to 0'], ['B', 'brakes'], ['G', 'gear'],
-    ['C', 'next view: cockpit, chase, far chase, orbit'], ['M / Shift+M', 'next page on the left / right MFD'], ['Wheel, Z (hold)', 'zoom in the cockpit'], ['Drag', 'look around'],
+    ['C', 'next view'], ['1 … 6', 'cockpit · chase / far chase / orbit · flyby · onboard (tail, wing, front, low rear) · ground camera · free camera (press again = next in the group)'],
+    ['I / K, J / L, U / O', 'free camera: forward / back, left / right, down / up (Shift ×10, wheel = speed)'], ['M / Shift+M', 'next page on the left / right MFD'], ['Wheel, Z (hold)', 'zoom in the cockpit'], ['Drag', 'look around'],
     [', / .', 'slower / faster time (max ×4 in the air)'], ['Esc', 'leave the pilot seat']],
   orbiter: [['W / S', 'pitch'], ['A / D', 'roll'], ['Q / E', 'yaw'], ['R / F', 'throttle up / down'], ['X', 'engine off'], ['T', 'attitude hold on / off'], ['N', 'auto-execute the node'],
     ['Delete', 'remove the node'], ['C', 'next view'], ['Drag', 'look around'], [', / .', 'slower / faster time'], ['Esc', 'leave the pilot seat']],
@@ -76,7 +77,7 @@ export async function startFlight(earth, host, o = {}) {
   let onPose = null, extraTick = null, extraDispose = null, credit = '', P0 = null;
 
   if (kind === 'f16') {
-    const [{ loadAircraft }, { createGfx }, { createF16Cockpit }, { createSound }] = await Promise.all([import('./aero.js?v=5dfff859'), import('./gfx.js?v=683befb9'), import('./instruments/f16.js?v=a6cddb97'), import('./sound.js?v=4c62c633')]);
+    const [{ loadAircraft }, { createGfx }, { createF16Cockpit }, { createSound }] = await Promise.all([import('./aero.js?v=1dd47b94'), import('./gfx.js?v=313bddb9'), import('./instruments/f16.js?v=a6cddb97'), import('./sound.js?v=fce60eab')]);
     const ac = await loadAircraft(new URL('aircraft/f16.json', import.meta.url)), def = ac.def;
     const core = S.core = createCore(F, def, RWY, { mods: ac.mods });
     try { S.gfx = await createGfx(F, core, { scene: cs, camera: cc, craft, sun: sunL, amb, model: 'f16', def, quality, scan }); }   /* credits: only in the 3D view's Sources list (user, 2026-11-14) */
@@ -87,10 +88,10 @@ export async function startFlight(earth, host, o = {}) {
     onPose = (P, t) => { if (S.gfx) S.gfx.update(P, t); if (S.cockpit) S.cockpit.update(P, t); if (S.hud) S.hud.forceShow = !(S.gfx && S.gfx.cockpit); S.snd.update(P, t); };
     o.atName = RWY.name;
   } else if (kind === 'rocket') {   // S5: flight/rocket.js builds the craft, views, panel
-    const { setupRocket } = await import('./rocket.js?v=cf331c1e'), RK = await setupRocket(S, o, ui, { sunL, createCore, createScreenHud });
+    const { setupRocket } = await import('./rocket.js?v=6a1c4fb2'), RK = await setupRocket(S, o, ui, { sunL, createCore, createScreenHud });
     onPose = RK.onPose; extraTick = RK.tick; extraDispose = RK.dispose; credit = RK.credit;
   } else {
-    const orbit = await import('./orbit.js?v=11d73788'), { createOrbit, gravityModule, orbiterModule, ORBITER, createOrbitView, BODIES } = orbit;
+    const orbit = await import('./orbit.js?v=2a2bb0bd'), { createOrbit, gravityModule, orbiterModule, ORBITER, createOrbitView, BODIES } = orbit;
     const ALT = (o.alt || 400) * 1e3, INC = o.inc || 51.6, START = { lat: 45.64, lon: 25.59, heading: 0 };
     const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]], mul = (a, k) => [a[0] * k, a[1] * k, a[2] * k], len = a => Math.hypot(a[0], a[1], a[2]);
     const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]], unit = a => mul(a, 1 / len(a));
