@@ -989,9 +989,14 @@ ${SUNLIB}${MOONV}
     r.setRenderTarget(o); };
   const cvU = { tDepth: { value: null }, pxA: { value: .001 }, cvB: { value: .4 } /* km of drawn ground under the clouds, see the frame loop */, projInv: airPass.uniforms.projInv, camW: airPass.uniforms.camW, toObj: airPass.uniforms.toObj, cn: airPass.uniforms.cn,
     clouds: U.clouds, cN: { value: cnRT.texture }, sun: U.sun, camO: U.camO, cloudShift: U.cloudShift, cloudR: U.cloudR, cVol: U.cVol, airK: U.airK, lightsOn: U.lightsOn, eMoon: U.eMoon, eSun: U.eSun, rain: U.rain, rainOn: U.rainOn,
-    wA: U.wA, wB: U.wB, wTau: U.wTau, wOn: U.wOn };
+    wA: U.wA, wB: U.wB, wTau: U.wTau, wOn: U.wOn, bmsS: { value: null }, ciS: { value: 0 } };
+  // cirrus shapes from Falcon BMS 4.38 (img/clouds-bms, used with the BMS team's permission; tools/build_bms_clouds.py): drawn as a thin
+  // shell in cvPass instead of the volume's cirrus (ciS = 1 once loaded). Off by default (the user preferred the volume's cirrus, 15 Nov 2026);
+  // localStorage aurora.cirrus = bms turns it on
+  if ((() => { try { return localStorage.getItem('aurora.cirrus') === 'bms'; } catch (e) { return false; } })())
+    new THREE.TextureLoader().load(BASE + 'img/clouds-bms/shapes.png', t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = Math.min(4, aniso); cvU.bmsS.value = t; cvU.ciS.value = 1; });
   const CVLIB = /* glsl */`
-    uniform sampler2D tDepth, clouds; uniform highp sampler3D cN; uniform mat4 projInv, camW; uniform mat3 toObj; uniform vec2 cn; uniform vec3 sun, camO; uniform float cloudShift, cloudR, cVol, pxA, cvB;
+    uniform sampler2D tDepth, clouds, bmsS; uniform highp sampler3D cN; uniform mat4 projInv, camW; uniform mat3 toObj; uniform vec2 cn; uniform vec3 sun, camO; uniform float cloudShift, cloudR, cVol, pxA, cvB, ciS;
     varying vec2 vUv; ${SUNT}${CNOISE}${RAINF}${WINDF}${AIRT}
     vec2 hit(vec3 o, vec3 d, float r) { float b = dot(o, d), c = dot(o, o) - r * r, h = b * b - c; if (h < 0.) return vec2(1e9, -1e9); h = sqrt(h); return vec2(-b - h, -b + h); }
     float hg(float c, float g) { float k = 1. + g * g - 2. * g * c; return (1. - g * g) / (12.566 * k * sqrt(k)); }
@@ -1009,6 +1014,15 @@ ${SUNLIB}${MOONV}
     // two power-of-2 scales blended so it never jumps: far decks get bigger, irregular clumps instead of a lattice
     float shp(vec3 q, float L, float pk) { float s = max(log2(pk * 32. / L), 0.), f = floor(s), r = s - f, L0 = L * exp2(f);
       return mix(shq(q, L0, pk, fract(vec3(.31, .17, .53) * f)), shq(q, L0 * 2., pk, fract(vec3(.31, .17, .53) * (f + 1.))), r); }
+    // BMS sprite atlas (channel ch, N x N sheets): each S km cell shows a random sheet, randomly flipped; two grids offset by half a cell,
+    // the max of both. The sheets' faint haze ends in straight, square edges: each cell fades out over its outer 30 % (the other grid's cell
+    // centre lies there) and the shell drops alpha < .15, else a lattice of straight lines showed from 14 km. pk = one pixel in km (mip level, at most 4)
+    float bH(vec2 i) { return fract(sin(dot(i, vec2(12.9898, 78.233))) * 43758.5453); }
+    float bCell(vec2 g, float N, float lod, int ch) { vec2 i = floor(g), f = fract(g), wf = smoothstep(0., .3, f) * smoothstep(1., .7, f); float h = bH(i), k = floor(h * N * N);
+      if (fract(h * 7.31) > .5) f.x = 1. - f.x; if (fract(h * 3.17) > .5) f.y = 1. - f.y;
+      vec4 c = textureLod(bmsS, (vec2(mod(k, N), floor(k / N)) + .03 + .94 * f) / N, lod); return (ch == 0 ? c.r : ch == 1 ? c.g : c.b) * wf.x * wf.y; }
+    float bmsA(vec2 e, float S, float N, float pk, int ch) { float l0 = log2(max(pk * 1024. / (S * N), 1.)), lod = min(l0, 4.); vec2 g = e / S;   /* farther: toward the mean (~.2), no shimmer */
+      return mix(max(bCell(g, N, lod, ch), bCell(g + vec2(17.5, 3.5), N, lod, ch)), .2, smoothstep(4., 6., l0)); }
     // the wind of this pixel's ray (WINDF's wA / wB at the middle of the ray inside the slab), read once in main(), not at every step
     // (per step it cost 3.5 ms a frame at 3 km); a long grazing ray uses one wind for all of its length (an approximation)
     vec4 gWa = vec4(0.); vec2 gWb = vec2(0.), gD = vec2(0.);
@@ -1044,7 +1058,7 @@ ${SUNLIB}${MOONV}
       if (xl >= 0. && xl <= 1.) { cov = min(w.x * mix(.75 + .5 * wv, 1., sc), 1.); x = xl; st = sc; sx = .35; L = mix(7., 5., sc);   // cumulus: flat base, domes; stratocumulus: flat top
         pr = mix(smoothstep(0., .08, x) * (1. - .8 * x * x), smoothstep(0., .12, x) * (1. - smoothstep(.7, 1., x)), sc); }
       else if (xm >= 0. && xm <= 1.) { cov = w.y; x = xm; pr = smoothstep(0., .15, x) * (1. - smoothstep(.55, 1., x)); L = 3.5; k = .7; }   // altocumulus: thin, small cells
-      else if (xh >= 0. && xh <= 1.) { cov = w.z; x = xh; pr = smoothstep(0., .3, x) * (1. - smoothstep(.45, 1., x)); k = .025; st = 1.; sx = .15; L = 9.; }   // cirrus: thin (vertical optical depth ~.5), streaked along the east; the decks below show through
+      else if (xh >= 0. && xh <= 1.) { cov = w.z * (1. - ciS); x = xh; pr = smoothstep(0., .3, x) * (1. - smoothstep(.45, 1., x)); k = .025; st = 1.; sx = .15; L = 9.; }   // cirrus: thin (vertical optical depth ~.5), streaked along the east; the decks below show through
       // storm towers: narrower columns below, an anvil spreading under a flat top (the coldest, brightest tops are mostly anvil)
       if (xt >= 0. && xt <= 1. && w.w > .01) { float an = smoothstep(.62, .8, xt), ct = min(w.w * mix(.8, 1.4, an), 1.), pt = smoothstep(0., .04, xt) * (1. - smoothstep(.92, 1., xt)) * (1. - .3 * xt);
         if (ct * pt > cov * pr) { cov = ct; x = xt; pr = pt; L = 9.; k = 1.; st = an; sx = .6; sy = .3; } }
@@ -1117,6 +1131,21 @@ ${SUNLIB}${MOONV}
         // 3.8 (was 4.5 with the shadow error): the same mean brightness under a high Sun as before (measured .721 vs .729)
         vec3 S = (sT * ss + (sT * fm + vec3(.62, .7, .85) * (1. - fm)) * ms) * 3.8 * day + mix(vec3(.42, .36, .5), vec3(.5, .63, .95), smoothstep(.02, .3, mu)) * (.05 + .33 * x * x) * smoothstep(-.1, .25, mu);
         float e = exp(-de * 12. * ds / hk), ta = airT(o, p); L += Tr * S * (1. - e) * ta; Hz += Tr * (1. - e) * (1. - ta); Tr *= e; if (Tr < .02) break; }   // extinction up to 12 per km (real cumulus ~20–50)
+      // cirrus as a thin shell at 9.75 km (ciS, BMS shapes): one exact sphere crossing instead of the march, whose steps are too coarse for a ~1 km
+      // layer (a diagonal hatch, measured). Cover as the volume's cirrus (cLay(b).z × c); vertical optical depth up to .67 (real cirrus ~.1-.5),
+      // slant path / mu. Lit like the volume with no shadow toward the Sun (thin). Behind the volume's samples when the camera is below it, in front above
+      if (ciS > .5) { float rc = 1. + (9.75 + cvB) * hk; vec2 hc = hit(o, d, rc); float tcs = hc.x > 0. ? hc.x : hc.y;
+        if (hc.x <= hc.y && tcs > 0. && tcs < ts) { vec3 pc = o + d * tcs, nc = normalize(pc); float loc = atan(-nc.z, nc.x), lac = asin(clamp(nc.y, -1., 1.));
+          vec2 uc = vec2(fract(loc / 6.2831853 + .5 + cloudShift), .5 + lac / 3.1415927) + gD; float txc = tcs * pxA / .001534, lkc = log2(float(textureSize(clouds, 0).x) / 4096.);
+          float bc = textureLod(clouds, uc, log2(max(txc, 1.)) + lkc).r, cvc = cLay(bc).z * smoothstep(.07, .75, bc + cDet(uc, txc) * .7 * sqrt(bc));
+          if (cvc > .01) { float muc = max(abs(dot(d, nc)), .05); vec2 e1 = vec2(loc * 6371. * cos(lac), lac * 6371.) - mix(gWa.rg, gWb, .86) * wOn * wTau * .001;
+            float ec = exp(-(.55 * smoothstep(.15, .9, bmsA(e1, 12., 2., txc * 10. / sqrt(muc), 0)) * smoothstep(0., .5, cvc) + .12 * smoothstep(.6, 1., cvc)) / muc);   /* + a thin veil where the cover is high (cirrostratus) */
+            float mu0 = dot(nc, sun), fm = .6 + .4 * smoothstep(.05, .5, mu0), tac = airT(o, pc); vec3 sTc = vec3(1.04, 1.03, 1.) * sunTh(mu0, 9.75 + cvB);
+            vec3 Sc = (sTc * ph + (sTc * fm + vec3(.62, .7, .85) * (1. - fm)) * (.16 + .15 * ph)) * 3.8 * smoothstep(-.05, .03, mu0) * eclF(nc)
+              + mix(vec3(.42, .36, .5), vec3(.5, .63, .95), smoothstep(.02, .3, mu0)) * .13 * smoothstep(-.1, .25, mu0);
+            if (length(o) < rc) { L += Tr * Sc * (1. - ec) * tac; Hz += Tr * (1. - ec) * (1. - tac); }
+            else { L = Sc * (1. - ec) * tac + ec * L; Hz = (1. - ec) * (1. - tac) + ec * Hz; }
+            Tr *= ec; } } }
       // the clouds' shadow on the ground, from the same 3D shapes: from the ground point (scene depth) toward the Sun through the layers, 6 steps.
       // It dims the picture behind the clouds; light scattered by the clouds keeps ~25 % (the 2D shadow in shade() gives way to this, see cVol)
       float sf = 1.;

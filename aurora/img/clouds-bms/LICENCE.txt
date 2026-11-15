@@ -1,0 +1,13 @@
+Cloud shapes from Falcon BMS 4.38 (Benchmark Sims), Data/TerrData/Korea/Weather/*.dds.
+Used on this page with the permission of the BMS team. Not covered by this project's own licence;
+do not reuse outside this page without asking Benchmark Sims (https://www.benchmarksims.org/).
+
+Only the opacity (alpha) of each sprite sheet is kept, downscaled and stretched to 0..255:
+shapes.png R = Cirrus.dds alpha x 255/191
+shapes.png G = CirrCum.dds alpha x 255/241
+shapes.png B = Cumulus.dds alpha x 255/255
+overcast.png R = BelowOvercastPoor.dds alpha x 255/255
+overcast.png G = AboveOvercastPoor.dds alpha x 255/255
+overcast.png B = BelowOvercastInclement.dds alpha x 255/255
+
+Built by tools/build_bms_clouds.py.
