@@ -1,0 +1,5 @@
+roads.webp: road surface textures (Road_Asphalt_E_01, TrailGravel_01, Road_Dirt_01: colour + opacity maps) from Arma Reforger
+(Bohemia Interactive), read from the game files with tools/enfusion/ and converted by tools/build_roads_tex.py.
+Used with the permission of the site owner, who holds the right to use them. Not covered by this project's own licence.
+Road lines on the 3D Earth (web/aurora/roads.js): OpenStreetMap contributors (ODbL 1.0), via OpenFreeMap vector tiles
+(OpenMapTiles schema).

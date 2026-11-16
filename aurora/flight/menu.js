@@ -16,6 +16,10 @@ export function openMenu(earth, host, btn) {
   const keys = phone ? 'Touch: stick on the left, throttle on the right.' : 'Keys: R throttle, B brakes, S pull up, C views.';
   box.innerHTML = `<b style="font-size:15px">Fly a craft</b>
     <button data-c="f16" style="${B}">F-16 fighter jet<br><span style="font-weight:500;color:#AEB8C4">On runway 03 of Brașov-Ghimbav. Flight model from NASA wind-tunnel data; ${lite ? 'chase view with the flight data on the screen.' : 'a live cockpit (HUD, MFDs, gauges).'} ${keys}</span></button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;font-size:12px;color:#AEB8C4">
+      <label>Missiles <select data-k="load" style="${SEL}"><option value="aa">2 x AIM-9 + 4 x AIM-120</option><option value="clean">none</option></select></label>
+      <label>Tanks <select data-k="tanks" style="${SEL}"><option value="0">clean</option><option value="2">2 x 370 gal tanks</option><option value="3">2 x 370 + 300 gal tanks</option></select></label>
+      <label>Start <select data-k="start" style="${SEL}"><option value="runway">engine at idle</option><option value="cold">cold and dark (N = auto start)</option></select></label></div>
     ${lite ? `<label style="display:flex;gap:8px;align-items:center;margin-top:6px;color:#AEB8C4;font-size:12px"><input type="checkbox" data-k="cockpit" style="width:20px;height:20px;accent-color:#39FF9E"> Load the full F-16 cockpit too (~10 MB more, heavy for a phone)</label>` : ''}
     <button data-c="orbiter" style="${B}">Test spacecraft<br><span style="font-weight:500;color:#AEB8C4">In orbit 400 km over Brașov. Real orbital mechanics; pick a mission and it flies itself. A placeholder shape for now.</span></button>
     <button data-c="rocket" style="${B}">Rocket to orbit<br><span style="font-weight:500;color:#AEB8C4">A multi-stage launcher on a real pad: the autopilot flies to orbit, then a capsule comes back under parachutes. Placeholder shapes.</span></button>
@@ -28,9 +32,10 @@ export function openMenu(earth, host, btn) {
   box.querySelector('[data-c="f16"]').focus();
   const val = k => { const e = box.querySelector(`[data-k="${k}"]`); return !e ? null : e.type === 'checkbox' ? e.checked : e.value; };
   box.onclick = async e => { const b = e.target.closest('button'); if (!b) return; const c = b.dataset.c; if (!c) return;
-    const o = { craft: c, rocket: val('rocket'), pad: val('pad') || (val('rocket') === 'saturn5' ? 'lc39a' : 'slc40'), cockpit: lite ? val('cockpit') : undefined };
+    const o = { craft: c, rocket: val('rocket'), pad: val('pad') || (val('rocket') === 'saturn5' ? 'lc39a' : 'slc40'), cockpit: lite ? val('cockpit') : undefined,
+      tanks: +val('tanks'), start: val('start'), load: val('load') };
     close(); if (c === 'close') return;
-    const { startFlight } = await import('./session.js?v=43d1d188');
+    const { startFlight } = await import('./session.js?v=dda4c9e6');
     current = await startFlight(earth, host, { ...o, onExit: () => { current = null; } }); };
   function close() { if (box) box.remove(); box = null; if (btn) btn.setAttribute('aria-expanded', 'false'); }
   box.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); close(); } });

@@ -6,7 +6,7 @@
    Own code. Methods from the standard texts: Vallado, Fundamentals of Astrodynamics and Applications (universal-variable Kepler problem,
    elements); Curtis, Orbital Mechanics for Engineering Students; Dormand & Prince 1980 (RK5(4) coefficients); Laplace sphere of influence.
    No third-party code. Units SI; frame I = solar.js ecliptic axes, origin = the reference body's centre (see the plan's Interfaces). */
-import { R_E, GM_E, toF, qIF } from './core.js?v=9235aa0c';
+import { R_E, GM_E, toF, qIF } from './core.js?v=d29b8afa';
 
 const D2R = Math.PI / 180, G0 = 9.80665, AU = 1.495978707e11, EPS = 23.4393 * D2R;
 const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]], sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];

@@ -32,13 +32,21 @@ export const MODELS = {
       // DOF signs (+1 / -1, our deg -> BMS rad), measured 2026-11-15 by the moved vertices at +0.3 rad: stab / flap + = trailing edge down,
       // lef + = leading edge down, rudder + = trailing edge right (so -1). Nozzle DOF 39: 0 = open (exit ring r 0.50 m), + closes (0.3 -> 0.29 m);
       // noz = the value at MIL (closed; estimate r ~0.35 m, F110 exit ~0.7 x open). Gear DOF values with the gear down (= the DOF's max; 0 = up, the rest pose)
-      sign: { stab: 1, flap: 1, lef: 1, rud: -1, noz: .22, gear: { 19: 1.92, 20: 1.48, 21: 1.48, 22: 1.31, 23: 1.62, 24: 1.62 } },
+      sign: { stab: 1, flap: 1, lef: 1, rud: -1, noz: .22, sb: 1, gear: { 19: 1.92, 20: 1.48, 21: 1.48, 22: 1.31, 23: 1.62, 24: 1.62 } },
       // gear struts (measured 2026-11-15): lowest tyre point with the gear down and the struts extended (craft frame, m); k = DOF value per metre the
       // wheel moves up (58 nose: translate, -0.1 ft -> 29 mm; 59 / 60 mains: rotate, -0.1 rad -> 109 mm); max = stroke used (estimates; BMS clamps 60 at 0.087 rad)
       // (static on the runway: wheels 31-83 mm below the ground without the struts, within 2 mm with them)
       strut: [{ dof: 58, low: [.005, -1.500, -3.717], k: -1 / .29, max: .15 }, { dof: 59, low: [-1.219, -1.493, .370], k: -1 / 1.09, max: .095 },
         { dof: 60, low: [1.218, -1.493, .371], k: -1 / 1.09, max: .095 }],
-      spin: { 50: .218, 51: .369, 52: .369 } },   // wheel DOFs: tyre radius (m); + = rolling forward (bottom moves aft)
+      spin: { 50: .218, 51: .369, 52: .369 },   // wheel DOFs: tyre radius (m); + = rolling forward (bottom moves aft)
+      // keyed parts (P / H in core.js). Canopy DOF 30 (both models, hinge at the rear): open = its BMS limit 0.524 rad (30 deg); opens only on the ground
+      // below gs m/s (estimate ~25 kt, a fast taxi; not from the F-16 manual) and closes by itself above it; time = s for a full swing (estimate).
+      // Hook DOF 37 (no limits in the file): down = the angle at which its tip meets the runway with the craft at rest (measured); time estimate.
+      // Pilot head (looks at an outside camera): DOF 90 = yaw, a chain of 5 neck nodes (+ the mask hose) that turns the head ~1.6 x the value up to
+      // ~50 deg, ~85 deg at most, + = to the pilot's right; DOF 89 = pitch, 0.5 x the value, +-20 deg at most, + = up (measured 2026-11-15, look vector of the head mesh).
+      // The neck axis leans back: a turn also lowers the look by ~0.17 x the turn (9 deg at 48 deg); tilt adds that back to the pitch.
+      // The boarding ladder (switch 60) hangs on DOF 30 too: stowed off the left wing tip at 0, on the cockpit sill at 0.524.
+      keyed: { canopy: { dof: 30, open: .524, gs: 13, time: 6 }, hook: { dof: 37, down: .74, time: 1.5 }, head: { yaw: 90, pitch: 89, kYaw: 1.6, kPit: .5, tilt: .17, rate: 2 } } },
     // where the BMS cockpit's origin (its eye) sits in the craft (estimate from S4: ~25 cm in front of the seat's head rest)
     eye: [0, 1.29, -4.70],
     // the pilot's head = eye + BMS head_translation_offset (Data/Art/CkptArt/3dCkpit.dat: forward 0.1 ft, down 0.02 ft); flight/instruments/f16.js
@@ -47,7 +55,7 @@ export const MODELS = {
     // the Falcon BMS 4.38 cockpit (model 888, tools/build_bms_cockpit.py; loaded the first time the Cockpit view is used): node origin = the BMS eye, placed at `eye`
     cockpit: { url: new URL('models/f16-cockpit/bms-cockpit.glb', import.meta.url),
       credit: 'Cockpit: Falcon BMS 4.38 F-16 cockpit model (Benchmark Sims), used with permission',
-      cut: [[-.4, .75, -5.9], [.4, 1.75, -4.25]] },   // box (craft frame) where the F-16D body's own cockpit block is not drawn while the cockpit is shown
+      cut: [[-.62, .35, -5.9], [.62, 1.75, -4.06]] },   // box (craft frame) where the airframe's own cockpit (consoles, pilot, seat) is not drawn while the cockpit is shown; 2026-11-15 widened from x +-0.4, y > 0.75, z < -4.25: the BMS airframe's consoles and pilot legs hid model 888's console faces
     seat: { url: new URL('models/seat/seat.gltf', import.meta.url), credit: 'Ejection seat: "Fighter Jet Ejection Seat" by k.botond431 (Sketchfab), CC BY 4.0, scaled',
       at: [[0, .2, -4.55], [0, .3, -2.75]] },   // estimates: front seat (outside views only), rear seat (raised)
     nav: { red: [-0.82, -0.12, -3.45], green: [0.78, -0.15, -3.51], tail: [0, 1.34, 5.30] },   // the model's light bulbs (intake sides, fin base)
@@ -164,11 +172,14 @@ export async function createGfx(F, core, o) {
   if (M.cockpit && cutRoot) { cutA.set(...M.cockpit.cut[0]); cutB.set(...M.cockpit.cut[1]); model.updateMatrixWorld(true);
     const inv = new THREE.Matrix4().copy(model.matrixWorld).invert();
     cutRoot.traverse(n => { if (!n.isMesh) return; const m0 = n.material, m = m0.clone(), prev = m0.onBeforeCompile, cutM = { value: new THREE.Matrix4().multiplyMatrices(inv, n.matrixWorld) };
-      m.onBeforeCompile = (sh, r) => { if (prev) prev(sh, r); Object.assign(sh.uniforms, { uCut: cutU, uCutA: { value: cutA }, uCutB: { value: cutB }, uCutM: cutM });
+      const cut = (sh, r) => { Object.assign(sh.uniforms, { uCut: cutU, uCutA: { value: cutA }, uCutB: { value: cutB }, uCutM: cutM });
         sh.vertexShader = 'uniform mat4 uCutM; varying vec3 vCut;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvCut = (uCutM * vec4(position, 1.)).xyz;');
         sh.fragmentShader = 'uniform float uCut; uniform vec3 uCutA, uCutB; varying vec3 vCut;\n' + sh.fragmentShader.replace('#include <clipping_planes_fragment>',
           'if (uCut > .5 && all(greaterThan(vCut, uCutA)) && all(lessThan(vCut, uCutB))) discard;\n#include <clipping_planes_fragment>'); };
-      m.customProgramCacheKey = () => 'bodycut'; n.material = m; }); }
+      m.onBeforeCompile = (sh, r) => { if (prev) prev(sh, r); cut(sh, r); };
+      m.customProgramCacheKey = () => 'bodycut'; n.material = m;
+      // the same cut in the Sun's shadow pass: else the hidden parts (the airframe's consoles just above model 888's, its pilot) still shade the cockpit
+      const dm = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking }); dm.onBeforeCompile = cut; dm.customProgramCacheKey = () => 'bodycutd'; n.customDepthMaterial = dm; }); }
   // the BMS cockpit, loaded the first time the Cockpit view is used: geometry 7.5 MB + textures (o.scan 'hi' = tex/4k ~17 MB, else tex/2k ~5 MB).
   // Night: the 'lit' map holds the backlit lettering (R) and BMS's baked flood light (G); ck.back / ck.flood (0..1) scale them.
   const ck = { obj: null, loading: null, off: false, back: { value: 0 }, flood: { value: 0 } };
@@ -267,7 +278,8 @@ export async function createGfx(F, core, o) {
       '  float I = exp(-.5 * r2 * sqrt(r2)) + .02 * exp(-.5 * r2 / 4.); float E = uI0 * I * max(0., -dot(l, uN)) / (d * d) * (1. - smoothstep(.7 * uR, uR, d));\n' +
       '  gl_FragColor = vec4(vec3(1., .9, .76) * .7 * (1. - exp(-E * .02)), 1.); }' });   /* .7 = uMax, .02 = uK (1/lx): tuned by pixel reads */
   const pool = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), poolM); pool.renderOrder = 2; pool.frustumCulled = false; craft.add(pool);
-  // the two lamps (estimates; the F-16 LANDING / TAXI switch is not modelled: taxi below 6 m and 30 m/s, else landing): depression below the body
+  // the two lamps (estimates; switch s.ctl.lights, key T: 'auto' (default) = taxi below 6 m and 30 m/s, else landing; 'off' / 'taxi' / 'land'; gear down only,
+  // the lamps sit on the nose gear door): depression below the body
   // axis, σ horizontal / vertical, peak intensity I0 (cd; PAR-46-class sealed beams are ~10⁵ cd). Landing is aimed low for the ~13° approach AoA.
   const LAMPS = { taxi: { dep: 1.5, sh: 9, sv: 2.5, I0: 8e4 }, land: { dep: 14, sh: 4.5, sv: 3, I0: 2e5 } };   /* 14°: at 13° AoA on a 3° path the beam axis meets the ground ~14 heights ahead */
   // ── contrail: a camera-facing ribbon through the nozzle's past positions (W, doubles), vertices relative to the craft (metres, float32-safe)
@@ -301,10 +313,26 @@ export async function createGfx(F, core, o) {
   if (def) { const bbM = new THREE.Box3(), bx = new THREE.Box3(), mR = new THREE.Matrix4();
     model.traverse(n => { if (!n.isMesh || n === plasma || !n.geometry) return; for (let p = n; p && p !== model; p = p.parent) if (p.visible === false) return;
       if (!n.geometry.boundingBox) n.geometry.computeBoundingBox(); bbM.union(bx.copy(n.geometry.boundingBox).applyMatrix4(relM(n, mR))); });
-    if (!bbM.isEmpty()) cams = (await import('./cams.js?v=fa335c7b')).addCameraViews(F, core, def, { bb: bbM, head: (M.head || M.eye).slice() }); }
+    if (!bbM.isEmpty()) cams = (await import('./cams.js?v=15182c04')).addCameraViews(F, core, def, { bb: bbM, head: (M.head || M.eye).slice() }); }
 
   // ── per frame: P = core's draw pose (W), t = earthgl time (ms)
   const roll = { d: 0, t: -1 }, wB = new THREE.Vector3();   // wheels: metres rolled on the ground; last frame time
+  // keyed BMS parts (M.bms.keyed): canopy (exterior + cockpit model, same DOF 30 and hinge), tail hook, pilot head; an = animated state 0..1 / rad
+  const an = { t: -1, can: 0, hook: 0, yaw: 0, pit: 0 }, hC = new THREE.Vector3(), qB = new THREE.Quaternion();
+  const toward = (x, aim, step) => x + clamp(aim - x, -step, step);
+  function keyed(s, h, P, t, cp) { const K = M.bms.keyed, c = s.ctl || {}, dt = an.t >= 0 ? clamp((t - an.t) / 1000, 0, .2) : 0; an.t = t;
+    if (c.canopy && !(s.onGround && (h.gs || 0) < K.canopy.gs)) c.canopy = 0;
+    an.can = toward(an.can, c.canopy ? 1 : 0, dt / K.canopy.time); setDof(K.canopy.dof, K.canopy.open * an.can);
+    if (ck.obj && !ck.can) { ck.can = []; ck.obj.traverse(n => { const u = n.userData; if (u && u.dof === K.canopy.dof) { u.cq0 = n.quaternion.clone(); ck.can.push(n); } }); }
+    if (ck.can) for (const n of ck.can) n.quaternion.copy(n.userData.cq0).multiply(qT.setFromAxisAngle(zA, -dofX(n.userData, K.canopy.open * an.can)));   /* struts: own multipliers */
+    // the boarding ladder (switch 60, hung on the sill by DOF 30 from its stowed place off the wing tip): only with the canopy fully open and the parking brake set
+    const lad = an.can > .999 && !!c.park; if (lad !== an.lad) { an.lad = lad; for (const n of bms.sw) if (n.userData.sw === 60) n.visible = lad && n.userData.branch === 0; }
+    an.hook = toward(an.hook, c.hook ? 1 : 0, dt / K.hook.time); setDof(K.hook.dof, K.hook.down * an.hook);
+    // head: towards the camera (body frame) when it is ahead of the pilot's shoulders; straight ahead from behind (no flip at 180 deg) or in the cockpit view
+    hC.copy(cp).sub(P.pos).multiplyScalar(R_E).applyQuaternion(qB.copy(P.quat).invert()).sub(vD.set(...(M.head || M.eye)));
+    const yA = Math.atan2(-hC.x, -hC.z), out = !(F.piloting && def && core.view === 0) && Math.abs(yA) < 110 * D2R;
+    an.yaw = toward(an.yaw, out ? yA : 0, K.head.rate * dt); an.pit = toward(an.pit, out ? Math.atan2(hC.y, Math.hypot(hC.x, hC.z)) + K.head.tilt * Math.abs(an.yaw) : 0, K.head.rate * dt);
+    setDof(K.head.yaw, -an.yaw / K.head.kYaw); setDof(K.head.pitch, an.pit / K.head.kPit); }
   const camRel = new THREE.Vector3(), nW = new THREE.Vector3(), lB = new THREE.Vector3(), uB = new THREE.Vector3(), qInv = new THREE.Quaternion(), S4 = new THREE.Matrix4(), rel = new THREE.Matrix4();
   function update(P, t) {
     const s = core.state, h = core.hud, srf = s.srf || {}, e = (s.eng && s.eng[0]) || {}, up = nW.copy(P.pos).normalize(), sun = F.sun().clone().normalize();
@@ -346,6 +374,7 @@ export async function createGfx(F, core, o) {
       for (const S of M.bms.strut) { const pen = gear > .95 ? -(wB.dot(vD.set(...S.low)) + hG) : 0; setDof(S.dof, S.k * clamp(pen, 0, S.max)); }
       if (s.onGround && roll.t >= 0) roll.d += (h.tas || 0) * clamp((t - roll.t) / 1000, 0, .2); roll.t = t;
       for (const k in M.bms.spin) setDof(k, (roll.d / M.bms.spin[k]) % (2 * Math.PI));
+      keyed(s, h, P, t, cp);
       if (lampM.length) { landP.set(0, 0, 0); for (const [m, c] of lampM) landP.add(vS.copy(c).applyMatrix4(relM(m, mT))); landP.multiplyScalar(1 / lampM.length);
         land.position.copy(landP); land.position.z -= .15; } }
     // gear: telescoped into the wells (a stand-in for the real retraction paths), doors closed when up
@@ -354,6 +383,7 @@ export async function createGfx(F, core, o) {
     // engine: power 0..100 (S2: < 50 dry, 50..100 afterburner); nozzle open at idle and in AB, closed at MIL
     const pw = e.power || 0, on = !!e.on, ab = on && pw > 50, st = ab ? (pw - 50) / 50 : 0, wide = clamp(Math.pow(101325 / Math.max(1, air.p), .3), 1, 8);
     if (bms) setDof(39, BS.noz * (1 - (ab ? .6 + .4 * st : .7 - .7 * clamp(pw / 50, 0, 1))));   // openness 0 = closed (MIL) .. 1 = open (estimate; same schedule as iris); DOF 0 = open
+    if (bms) { const sb = BS.sb * (srf.spoiler || 0) * 60 * D2R; setDof(15, sb); setDof(17, sb); }   /* speed brake petals L / R (opening 0..1 of 60 deg; DOF in rad, upper / lower halves split by flag 2) */
     if (iris) { const f = ab ? 1.0 + .12 * st : 1.08 - .16 * clamp(pw / 50, 0, 1); iris.scale.set(f, f, 1); }
     const U = plume.material.uniforms; U.uTime.value = t / 1000; U.uStage.value = st; U.uWide.value = wide;
     if (ab) { U.uLen.value = (2.5 + 5.5 * st) * (1 + .3 * (wide - 1)); U.uR0.value = nozR * 1.15; U.uBright.value = 1.6 + 2.4 * st; U.uDiam.value = clamp(2 - wide, 0, 1); }
@@ -369,7 +399,7 @@ export async function createGfx(F, core, o) {
     const ckOn = inCock && !!ck.obj && !ck.off; if (ck.obj) ck.obj.visible = ckOn; cutU.value = ckOn ? 1 : 0; if (seats[0]) seats[0].visible = !ckOn;
     ck.back.value = .6 * (1 - dl); ck.flood.value = .12 * (1 - dl);   // estimates: backlit lettering + flood light, faded in with the dusk
     if (nodes.Canopy) nodes.Canopy.visible = !inCock;   // its two halves overlap on the centre line: a dark seam right in the pilot's view
-    strobe.visible = !inCock && (t / 1000) % 1.2 < .06; strobe.material.color.setScalar(1.6 * night);   /* a gain of 8 x night clipped the glow to a flat white disc; the flash reads by its size */ land.visible = gear > .95; land.material.color.setRGB(1.8 * night, 1.74 * night, 1.56 * night);
+    strobe.visible = !inCock && (t / 1000) % 1.2 < .06; strobe.material.color.setScalar(1.6 * night);   /* a gain of 8 x night clipped the glow to a flat white disc; the flash reads by its size */ land.visible = gear > .95 && s.ctl.lights !== 'off'; land.material.color.setRGB(1.8 * night, 1.74 * night, 1.56 * night);
     // ground: tangent plane under the craft in body axes (origin height = agl + rest), sun direction in body axes
     const hO = (h.agl || 0) + (def ? def.rest || 0 : 0); qInv.copy(P.quat).invert(); uB.copy(up).applyQuaternion(qInv); lB.copy(sun).applyQuaternion(qInv);
     const ul = uB.dot(lB), shOn = hO < 300 && ul > .05 && sunL.intensity > .1; shG.visible = shOn;
@@ -381,7 +411,7 @@ export async function createGfx(F, core, o) {
         rel.copy(n.matrix); for (let p = n.parent; p && p !== model; p = p.parent) { p.updateMatrix(); rel.premultiply(p.matrix); } for (const m of ms) m.matrix.multiplyMatrices(S4, rel); } }
     // landing / taxi light on the ground: a quad on the ground plane under the beam (from below the lamp to the beam's upper 3.5σ edge, ≤ uR),
     // lit per pixel; gear down, lamp < 300 m above the ground. Night only: ~1-100 lx vs 10⁴-10⁵ lx of daylight
-    { const L = LAMPS[hO < 6 && (h.tas || 0) < 30 ? 'taxi' : 'land'], a = L.dep * D2R, dir = vT.set(0, -Math.sin(a), -Math.cos(a)), hL = uB.dot(landP) + hO, Rm = poolU.uR.value;
+    { const lm = s.ctl.lights, L = LAMPS[lm === 'taxi' || lm === 'land' ? lm : hO < 6 && (h.tas || 0) < 30 ? 'taxi' : 'land'], a = L.dep * D2R, dir = vT.set(0, -Math.sin(a), -Math.cos(a)), hL = uB.dot(landP) + hO, Rm = poolU.uR.value;
       const fwd = vU.copy(dir).addScaledVector(uB, -dir.dot(uB)), fl = fwd.length();
       pool.visible = land.visible && hL > .05 && hL < 300 && fl > .2 && dl < .9; if (inCock) land.visible = false;
       if (pool.visible) { fwd.multiplyScalar(1 / fl); const X = new THREE.Vector3().crossVectors(fwd, uB);
@@ -417,6 +447,7 @@ export async function createGfx(F, core, o) {
   const credit = [bms ? M.bms.credit : M.credit, M.cockpit && M.cockpit.credit, seats.length && M.seat.credit].filter(Boolean).join(' · ');
   const api = { model, nodes, hinge, stats, update, plume, orbit, credit, trail, trailMesh: trailM, seats, bms, setDof,   // setDof(n, v): tests (the next update overrides driven DOFs)
     get cockpit() { return ck.obj; }, set cockpitOff(v) { ck.off = !!v; },   // tests: cockpitOff = true shows the cockpit view without the scan
+    get canopy() { return an.can; },   // canopy 0 shut .. 1 open as drawn (the cockpit's canopy switch shows it moving)
     set modelVisible(on) { stats.modelOn = on; model.visible = on; shG.visible = false; pool.visible = false; }, get modelVisible() { return stats.modelOn; },
     plasma(k) { plasmaK = k; },   // S5: k 0..1 forces the glow, null = automatic
     dispose() { R.domElement.removeEventListener('wheel', onWheel); if (cams) cams.dispose(); craft.remove(model, shG, pool); cs.remove(trailM); if (envRT) envRT.dispose(); pm.dispose();

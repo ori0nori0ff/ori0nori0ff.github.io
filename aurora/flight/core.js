@@ -56,6 +56,7 @@ const enu = (lat, lon) => [[-Math.sin(lon), 0, -Math.cos(lon)], [-Math.sin(lat) 
 // ── air: US Standard Atmosphere 1976 (S2, flight/atmos.js); wind: GFS (S6, flight/wind.js)
 import { atmosphere } from './atmos.js?v=7ee6d1db';
 import { sharedWind, createGusts } from './wind.js?v=f82bd853';
+import { createHotas } from './input-hotas.js?v=8ee579c4';
 
 // ── PLACEHOLDER force model for the test craft (S1 / S2 replace it): point-mass gravity of the Earth, drag ½ρv²·CdA, a lift thruster along
 // body +y (throttle 1 = 2 g), control torques + attitude damping. Not an aircraft: it hovers and flies by tilting, like a lander.
@@ -91,10 +92,15 @@ export const TEST_CRAFT = (() => { const m = 1000, w = 4, h = 1.5, l = 6;
     rest: h / 2 - .05 }; })();
 
 // ── input: keyboard + Gamepad API (standard mapping) -> state.ctl
-// keys: W / S pitch (W = nose down), A / D roll, Q / E yaw, arrows = pitch / roll, R / F throttle, X throttle 0, B brake, G gear, C view,  , / . time speed
-const KEYS = ['KeyW', 'KeyS', 'KeyA', 'KeyD', 'KeyQ', 'KeyE', 'KeyR', 'KeyF', 'KeyX', 'KeyB', 'KeyG', 'KeyC', 'Comma', 'Period', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
-function createInput(on, ext) {   // ext() -> touch controls (session.js, phones) or null
-  const k = new Set(), ev = [];
+// keys: W / S pitch (W = nose down), A / D roll, Q / E yaw, arrows = pitch / roll, R / F throttle, X throttle 0, B brake, G gear, V speed brake, C view,
+// , / . time speed, P canopy, H tail hook, T landing light switch (auto / off / taxi / landing), 0 emergency jettison (twice within 1 s; flight/stores.js)
+const KEYS = ['KeyW', 'KeyS', 'KeyA', 'KeyD', 'KeyQ', 'KeyE', 'KeyR', 'KeyF', 'KeyX', 'KeyB', 'KeyG', 'KeyV', 'KeyC', 'KeyP', 'KeyH', 'KeyT', 'Comma', 'Period', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Digit0'];
+const LIGHTS = ['auto', 'off', 'taxi', 'land'];
+// trim + autopilot (flight/autopilot.js): [ / ] pitch trim, ; / ' roll trim, \ trim reset, Y autopilot; passed on to the craft in s.ctl.ev
+const AP_KEYS = ['BracketLeft', 'BracketRight', 'Semicolon', 'Quote', 'Backslash', 'KeyY']; KEYS.push(...AP_KEYS);
+const AP_EV = [...AP_KEYS, 'apAlt', 'apAtt', 'apOff', 'apRollAtt', 'apRollHdg', 'apRollToggle'];   // + switch positions from HOTAS / cockpit (one-shot events)
+function createInput(on, ext, craft) {   // ext() -> touch controls (session.js, phones) or null; craft = def.name
+  const k = new Set(), ev = [], hotas = createHotas();   // HOTAS Warthog + pedals (input-hotas.js); none connected = no change
   const kd = e => { if (!on() || e.ctrlKey || e.metaKey || e.altKey || e.target.closest?.('input,textarea,select,[contenteditable]') || !KEYS.includes(e.code)) return;
     e.preventDefault(); if (!e.repeat && !k.has(e.code)) ev.push(e.code); k.add(e.code); };
   const ku = e => k.delete(e.code), bl = () => k.clear();
@@ -104,26 +110,33 @@ function createInput(on, ext) {   // ext() -> touch controls (session.js, phones
   const dz = a => Math.abs(a) < .1 ? 0 : (a - Math.sign(a) * .1) / .9;
   return {
     // returns one-shot events ('KeyC', 'KeyG', 'Comma', 'Period', 'pad3', …) and updates ctl in place
-    update(ctl, dt) { const out = ev.splice(0), has = c => k.has(c);
+    update(ctl, dt, st) { const hx = hotas.poll(ctl, on() && craft === 'F-16', st);   // first: its buttons arrive as key events below
+      const out = ev.splice(0), has = c => k.has(c); if (hx) out.push(...hx.ev);
       const ax = (p, n) => (has(p) ? 1 : 0) - (has(n) ? 1 : 0);
       let pitch = ax('KeyS', 'KeyW') || ax('ArrowDown', 'ArrowUp'), roll = ax('KeyD', 'KeyA') || ax('ArrowRight', 'ArrowLeft'), yaw = ax('KeyE', 'KeyQ');
       let thr = ax('KeyR', 'KeyF') * .6, brake = has('KeyB') ? 1 : 0, pad = null;
-      const gp = navigator.getGamepads ? [...navigator.getGamepads()].find(g => g && g.connected) : null;
+      const gp = navigator.getGamepads ? [...navigator.getGamepads()].find(g => g && g.connected && !hotas.owns(g)) : null;
       if (gp) { pad = gp.id; const a = gp.axes, b = gp.buttons, bv = i => b[i] ? b[i].value : 0;
         if (dz(a[1] || 0)) pitch = dz(a[1]); if (dz(a[0] || 0)) roll = dz(a[0]); if (dz(a[2] || 0)) yaw = dz(a[2]);
         if (bv(7) > .05 || bv(6) > .05) thr = (bv(7) - bv(6)) * .8; if (bv(1) > .5) brake = 1;
         b.forEach((x, i) => { if (x.pressed && !padPrev[i]) out.push('pad' + i); }); padPrev = b.map(x => x.pressed); }
+      // HOTAS axes: stick / pedals set the controls directly (like a gamepad stick); the lever sets the throttle when it moves
+      let hStick = false, hYaw = false;
+      if (hx) { if (hx.pitch || hx.roll) { pitch = hx.pitch; roll = hx.roll; hStick = true; } if (hx.yaw) { yaw = hx.yaw; hYaw = true; }
+        if (hx.throttle != null) ctl.throttle = hx.throttle; brake = Math.max(brake, hx.brake); }
       // S7 touch controls: a virtual stick sets pitch / roll like a gamepad stick; the throttle slider sets the throttle; buttons send key events
       const tc = ext && ext(); let tStick = false;
       if (tc) { if (tc.active) { pitch = tc.pitch; roll = tc.roll; tStick = true; } if (tc.thr != null) { ctl.throttle = tc.thr; tc.thr = null; } if (tc.brake) brake = 1; if (tc.ev.length) out.push(...tc.ev.splice(0)); }
       // keys ramp the controls (3 /s out, 4 /s back to centre); a stick sets them directly
       const kRate = (x, aim) => toward(x, aim, aim ? 3 : 4, dt);
-      ctl.pitch = tStick || (gp && dz(gp.axes[1] || 0)) ? pitch : kRate(ctl.pitch, pitch); ctl.roll = tStick || (gp && dz(gp.axes[0] || 0)) ? roll : kRate(ctl.roll, roll);
-      ctl.yaw = gp && dz(gp.axes[2] || 0) ? yaw : kRate(ctl.yaw, yaw);
-      ctl.throttle = Math.max(0, Math.min(1, ctl.throttle + thr * dt)); ctl.brake = brake; ctl.pad = pad;
+      ctl.pitch = tStick || hStick || (gp && dz(gp.axes[1] || 0)) ? pitch : kRate(ctl.pitch, pitch); ctl.roll = tStick || hStick || (gp && dz(gp.axes[0] || 0)) ? roll : kRate(ctl.roll, roll);
+      ctl.yaw = hYaw || (gp && dz(gp.axes[2] || 0)) ? yaw : kRate(ctl.yaw, yaw);
+      ctl.throttle = Math.max(0, Math.min(1, ctl.throttle + thr * dt)); ctl.brake = brake; ctl.pad = pad; ctl.hotas = hx ? hx.names : null;
+      ctl.trimAx = [ax('BracketRight', 'BracketLeft'), ax('Quote', 'Semicolon')];   // held trim keys (+ = nose up / right wing down)
       if (out.includes('KeyX')) ctl.throttle = 0;
       return out; },
-    dispose() { window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku); window.removeEventListener('blur', bl); } };
+    push(code) { ev.push(code); },   // a one-shot event from elsewhere (cockpit clicks): the same path as its key
+    dispose() { hotas.dispose(); window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku); window.removeEventListener('blur', bl); } };
 }
 
 // ── the core
@@ -132,12 +145,13 @@ export function createCore(F, def, at, opts = {}) {
   const THREE = F.THREE, clock = F.clock;
   const mods = opts.mods || [testForces(def), groundContact(def.gear)];
   const nSub = Math.max(1, ...mods.map(m => m.substeps || 1)), steps = mods.filter(m => m.step), hudMods = mods.filter(m => m.hud);
+  const keyMods = mods.filter(m => m.key); for (const m of keyMods) for (const k of m.keys || []) if (!KEYS.includes(k)) KEYS.push(k);   // a module's own keys (one-shot, through key(s, code))
   // S1: other reference bodies (offset of their centre from the Earth's) and Kepler arcs at high warp
   const railsMod = mods.find(m => m.rails), offMod = mods.find(m => m.refOffset);
   const offOf = (ref, t) => ref === 'Earth' || !offMod ? [0, 0, 0] : offMod.refOffset(ref, t);
   const VAC = { rho: 0, T: 3, p: 0, a: 1 };
   const s = { ref: 'Earth', r: [R_E, 0, 0], v: [0, 0, 0], q: [0, 0, 0, 1], w: [0, 0, 0], m: def.m, I: def.I, cg: def.cg,
-    ctl: { pitch: 0, roll: 0, yaw: 0, throttle: 0, brake: 1, gear: 1, flaps: 0, trim: 0, stage: 0, pad: null },
+    ctl: { pitch: 0, roll: 0, yaw: 0, throttle: 0, brake: 1, gear: 1, speedbrake: 0, flaps: 0, trim: 0, stage: 0, pad: null, canopy: 0, hook: 0, lights: 'auto' },
     srf: { elev: 0, ail: 0, rud: 0, flap: 0, spoiler: 0, gear: 1 }, eng: [], sys: { fuel: [] }, contact: [], onGround: false, t: 0 };
   if (def.init) def.init(s);   // S2: the craft sets its own systems (fuel, parking brake, surfaces)
   let Iinv = inv3(s.I), Iof = s.I;   // cached while the mass properties stay the same (S5: recompute when m / I change)
@@ -146,7 +160,7 @@ export function createCore(F, def, at, opts = {}) {
   let tBase = 0, kSub = 0;   // kSub counts the finest sub-steps (H / nSub); far over the ground (> 300 m) a step is one sub-step: no contact to resolve
   let hold = true, gSeen = null, gSince = 0, view = 0, warpWant = 1, lastG = 400;
   const stats = { ms: 0, msMax: 0, steps: 0, frames: 0, warp: 1, warpCap: AIR_WARP, onRails: false, log: null };
-  const input = createInput(() => !!F.piloting && !hold, () => !hold && F.piloting ? api.touch : null);
+  const input = createInput(() => !!F.piloting && !hold, () => !hold && F.piloting ? api.touch : null, def.name);
   // the ground physics uses: true relief + 400 m (= what is drawn in pilot mode, where earthgl pins the relief factor to 1); the last value where no
   // height tile is loaded yet
   const groundOf = (la, lo) => { const g = F.groundAt(la, lo); if (g != null) lastG = g + 400; return lastG; };
@@ -236,11 +250,18 @@ export function createCore(F, def, at, opts = {}) {
       if (railsMod && !s.onGround && (s.ref !== 'Earth' || len(s.r) - R_E - 400 > AIR_TOP)) { railsMod.rails(s, t); s.t = tBase = t; kSub = 0; }
       else setFromFixed(t, fixedPose());
       prevW = curW = poseW(); }
-    const evs = input.update(s.ctl, Math.min(.1, dtReal));
+    const evs = input.update(s.ctl, Math.min(.1, dtReal), s);
     for (const e of evs) { if (e === 'KeyC' || e === 'pad3') { view = (view + 1) % def.views.length; if (ph) ph.look.identity(); }
       else if (e === 'KeyG' || e === 'pad0') s.ctl.gear = s.ctl.gear ? 0 : 1;
+      else if (e === 'Digit0') s.ctl.jett = (s.ctl.jett || 0) + 1;   // jettison key presses (the craft's stores module arms / confirms)
+      else if (e === 'KeyV' || e === 'pad2') { s.ctl.speedbrake = s.ctl.speedbrake ? 0 : 1; s.ctl.sbSw = null; }   // speed brake open / closed (aero.js limits and moves it); the key overrides the HOTAS switch
+      else if (e === 'KeyP') s.ctl.canopy = s.ctl.canopy ? 0 : 1;   // the airframe (gfx.js) opens it only on the ground at taxi speed and resets it otherwise
+      else if (e === 'KeyH') s.ctl.hook = s.ctl.hook ? 0 : 1;
+      else if (e === 'KeyT') s.ctl.lights = LIGHTS[(LIGHTS.indexOf(s.ctl.lights) + 1) % LIGHTS.length];
       else if (e === 'Period' || e === 'pad5') setWarp(WARPS[Math.min(WARPS.length - 1, WARPS.indexOf(warpWant) + 1)]);
-      else if (e === 'Comma' || e === 'pad4') setWarp(WARPS[Math.max(0, WARPS.indexOf(warpWant) - 1)]); }
+      else if (e === 'Comma' || e === 'pad4') setWarp(WARPS[Math.max(0, WARPS.indexOf(warpWant) - 1)]);
+      else if (AP_EV.includes(e) && (s.ctl.ev || (s.ctl.ev = [])).length < 32) s.ctl.ev.push(e); }   // for the craft's own systems (autopilot.js drains it each step)
+    for (const m of keyMods) for (const e of evs) m.key(s, e);
     // warp cap: x4 inside the air / on the ground; elsewhere steps per frame ≤ MAX_STEPS (S1 puts the craft on rails above that)
     if (s.warpReq) { setWarp(s.warpReq); delete s.warpReq; }   // a module asks for a time speed (S1: x1 at the start of an auto burn)
     // S1 "on rails": above the cap, outside the air, without thrust -> Kepler arc about the dominant body to the clock's time
@@ -283,7 +304,7 @@ export function createCore(F, def, at, opts = {}) {
     cam.pos.set(...p); cam.quat.set(...q).multiply(qa.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -.5)); cam.agl = 1500; return cam; }
 
   let tNow = 0; const off = F.onFrame((dt, t) => { tNow = t; frame(dt, t); if (api.onPose) api.onPose(hold ? null : drawPose(t), t); });
-  const api = { state: s, hud, stats, def, touch: null, get hold() { return hold; }, get view() { return view; }, set view(v) { view = v % def.views.length; if (ph) ph.look.identity(); },
+  const api = { state: s, hud, stats, def, touch: null, key: code => input.push(code), /* a key's action without the key (cockpit clicks) */ get hold() { return hold; }, get view() { return view; }, set view(v) { view = v % def.views.length; if (ph) ph.look.identity(); },
     pilot(on) { const h = F.pilot(on, () => camPose(tNow)); ph = on ? h : null; if (on && h) h.onOff = () => { ph = null; if (api.onPilotOff) api.onPilotOff(); }; },
     setWarp, warps: WARPS, drawPose, camPose, poseW, fixedPose,
     teleport(P) { setFromFixed(s.t, P); prevW = curW = poseW(); },

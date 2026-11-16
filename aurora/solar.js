@@ -186,7 +186,9 @@ export function helio(name, t) { const T = (t / DAY + 2440587.5 - 2451545) / 365
 import { createBodyHD } from './bodyhd.js?v=e199e9f2';
 import { createSun, makeCme } from './sunfx.js?v=a1d3b067';
 
-export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, quatW, dayTex }) {
+// lite (earthgl earthOnly): only the Sun and Moon maps + the eclipse table are loaded; planets are plain grey balls; no NOAA Sun
+// (sunfx), no belts, moons of other planets, small bodies, spacecraft or ISS
+export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, quatW, dayTex, lite }) {
   const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(camera.fov, camera.aspect, 1, 1e8);
   const TP = new URL('./img/planets/', import.meta.url).href, HI = Q !== 'low';
   // textures: decoded off the main thread (ImageBitmap), sent to the GPU one at a time over the next frames (no stall on the
@@ -249,7 +251,7 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
       fragmentShader: `uniform sampler2D map; varying vec2 vUv; varying vec3 vN, vV; void main() { float mu = max(dot(normalize(vN), vV), 0.);
         vec3 c = texture2D(map, vUv).rgb * vec3(1.6, 1.25, .8) * (.45 + .55 * pow(mu, .5)); gl_FragColor = vec4(c * 2.2, 1.); }` });
     else if (name === 'Earth') mat = pMat(dayTex, [.35, .6, 1]);
-    else if (!b[5]) mat = pMat(grey());
+    else if (!b[5] || (lite && name !== 'Moon')) mat = pMat(grey());
     else { const tx = tex(TP + b[5] + '_2k.jpg');
       mat = pMat(tx, name === 'Venus' ? [1, .85, .6] : name === 'Mars' ? [.9, .55, .4] : null, /Jupiter|Saturn|Uranus|Neptune/.test(name)); }
     const m = new THREE.Mesh(sphere, mat); m.frustumCulled = false; scene.add(m);
@@ -259,13 +261,13 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
   for (const [name, b] of Object.entries(BODY)) mkBody(name, b);
   // the cinematic Sun (sunfx.js: today's NOAA regions, loops, eruptions, SDO looks); the textured ball stands in until it is built
   let SUN = null, sunTurn = null, sAt = 0, lastTd = null; const sunHold = new THREE.Group();
-  createSun({ auto: false }).then(s => { SUN = s; sunHold.add(s.group); scene.add(sunHold, s.halo); bodies.Sun.mesh.visible = false; }).catch(() => {});
+  if (!lite) createSun({ auto: false }).then(s => { SUN = s; sunHold.add(s.group); scene.add(sunHold, s.halo); bodies.Sun.mesh.visible = false; }).catch(() => {});
   // the Sun's glow (always faces the camera)
   const gc = document.createElement('canvas'); gc.width = gc.height = 256; { const g = gc.getContext('2d'), gr = g.createRadialGradient(128, 128, 0, 128, 128, 128);
     gr.addColorStop(0, 'rgba(255,240,210,1)'); gr.addColorStop(.12, 'rgba(255,220,160,.55)'); gr.addColorStop(.35, 'rgba(255,170,90,.14)'); gr.addColorStop(1, 'rgba(255,150,60,0)'); g.fillStyle = gr; g.fillRect(0, 0, 256, 256); }
   const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(gc), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true })); scene.add(glow);
   // Saturn's rings: radial strip (C ring 74 500 km → F ring ~140 000 km), lit, with the planet's shadow
-  const ringT = tex(TP + 'saturn_ring_2k.png', null, false);
+  const ringT = lite ? new THREE.Texture() : tex(TP + 'saturn_ring_2k.png', null, false);
   const ringGeo = new THREE.RingGeometry(74500 / 58232, 140220 / 58232, 256, 1); ringGeo.rotateX(-Math.PI / 2);   // in the planet's equator (x–z), y = pole
   const ring = new THREE.Mesh(ringGeo, new THREE.ShaderMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide, uniforms: { map: { value: ringT }, sun: { value: new THREE.Vector3() }, inner: { value: 74500 / 58232 }, outer: { value: 140220 / 58232 } },
     vertexShader: `varying vec3 vP, vW; void main() { vP = position; vec4 w = modelMatrix * vec4(position, 1.); vW = w.xyz - (modelMatrix * vec4(0., 0., 0., 1.)).xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
@@ -333,7 +335,7 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
   // the belts: ~33 000 real orbits (every asteroid brighter than H 14 + the known Kuiper belt), solved on the GPU each frame
   const beltU = { dJ: { value: 0 }, AUr: { value: AU }, px: { value: 1 }, k: { value: 1 } };
   let beltP = null, beltOn = false;
-  fetch(TP + 'belt.bin').then(r => r.arrayBuffer()).then(buf => { const u = new Uint16Array(buf), N = u.length / 6, ib = new THREE.InterleavedBuffer(u, 6), g = new THREE.BufferGeometry();
+  if (!lite) fetch(TP + 'belt.bin').then(r => r.arrayBuffer()).then(buf => { const u = new Uint16Array(buf), N = u.length / 6, ib = new THREE.InterleavedBuffer(u, 6), g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.InterleavedBufferAttribute(ib, 3, 0, true)); g.setAttribute('k2', new THREE.InterleavedBufferAttribute(ib, 3, 3, true));
     g.setDrawRange(0, HI ? N : Math.floor(N / 2));
     beltP = new THREE.Points(g, new THREE.ShaderMaterial({ uniforms: beltU, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
@@ -348,11 +350,11 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
       fragmentShader: `varying vec4 vC; void main() { float f = smoothstep(.5, .15, length(gl_PointCoord - .5)); if (f <= 0.) discard; gl_FragColor = vec4(vC.rgb * vC.a * f, 1.); }` }));
     beltP.frustumCulled = false; beltP.visible = beltOn; helioG.add(beltP); }).catch(e => console.warn('3D belts:', e));
   // the spacecraft: a small gold dot + name; the ones near the Earth only while the Earth is close (L1 = 235 R⊕)
-  fetch(new URL('./data/craft.json?' + Math.floor(Date.now() / 36e5), import.meta.url).href).then(r => r.json()).then(j => { Object.assign(CR, j.craft);
+  if (!lite) fetch(new URL('./data/craft.json?' + Math.floor(Date.now() / 36e5), import.meta.url).href).then(r => r.json()).then(j => { Object.assign(CR, j.craft);
     for (const n of [...Object.keys(j.craft), 'GOES-19']) mkBody(n, [.01, 0, 90, 0, 0, '', 2.4, '#FFD36E'], { kind: 'craft', near: n === 'GOES-19' || j.craft[n].c === 'E' }); }).catch(() => {});
   const MOONB = { Io: [1821.6, 'io', '#F2D36B'], Europa: [1560.8, 'europa', '#E8DCC8'], Ganymede: [2634.1, 'ganymede', '#C2B6A6'], Callisto: [2410.3, 'callisto', '#A8967E'],
     Titan: [2574.7, 'titan', '#E0A050'], Triton: [1353.4, 'triton', '#D9C7C2'] };
-  fetch(TP + 'moons.json').then(r => r.json()).then(j => { Object.assign(MO, j.m);
+  if (!lite) fetch(TP + 'moons.json').then(r => r.json()).then(j => { Object.assign(MO, j.m);
     for (const [n, [R, m, c]] of Object.entries(MOONB)) if (MO[n]) mkBody(n, [R, 0, 90, 0, 0, m, 1.6, c], { kind: 'moon', host: MHOST[n] }); orbT = -1e15; }).catch(() => {});
   // a simplified ISS to scale (1 = 54.5 m, half the truss): truss across the orbit, the pressurised modules along it, 8 solar wings that turn to the Sun
   let issG = null; const issScene = new THREE.Scene(), issSun = { value: new THREE.Vector3() }, issLit = { value: 1 };
@@ -373,11 +375,11 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
   // its orbit: one turn round the Earth, half behind and half ahead of now
   const issLine = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xFFD36E, transparent: true, opacity: .55, depthWrite: false }));
   issLine.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(121 * 3), 3)); issLine.frustumCulled = false; issLine.visible = false; scene.add(issLine);
-  fetch(new URL('./data/iss.txt?' + Math.floor(Date.now() / 36e5), import.meta.url).href).then(r => r.ok ? r.text() : Promise.reject()).then(x => {
+  if (!lite) fetch(new URL('./data/iss.txt?' + Math.floor(Date.now() / 36e5), import.meta.url).href).then(r => r.ok ? r.text() : Promise.reject()).then(x => {
     const L = x.split(/\r?\n/), i = L.findIndex(l => l.startsWith('1 25544')); if (i < 0 || !L[i + 1]) return;
     ISS = SGP.init(L[i], L[i + 1]); issModel(mkBody('ISS', [.0545, 0, 90, 0, 0, '', 2.4, '#FFD36E'], { kind: 'craft', near: true, iss: true })); }).catch(() => {});
   fetch(TP + 'eclipses.json').then(r => r.json()).then(j => { ECL = j.e; }).catch(() => {});
-  fetch(TP + 'sb.json').then(r => r.json()).then(j => { Object.assign(SB, j.b); for (const [n, [b, x]] of Object.entries(SBB)) if (n === 'Charon' ? SB.Pluto : SB[n]) mkBody(n, b, x); orbT = -1e15; }).catch(() => {});
+  if (!lite) fetch(TP + 'sb.json').then(r => r.json()).then(j => { Object.assign(SB, j.b); for (const [n, [b, x]] of Object.entries(SBB)) if (n === 'Charon' ? SB.Pluto : SB[n]) mkBody(n, b, x); orbT = -1e15; }).catch(() => {});
   const OMEGA = 2 * Math.PI / 25.38, kmsAU = v => v * 86400 / 1.495978707e8, JS = 64, KS = 340, DTW = 1 / 24, NW = JS * KS;
   const helioG = new THREE.Group(); scene.add(helioG);
   const wGeo = new THREE.BufferGeometry(), wa = new Float32Array(NW * 4), wb = new Float32Array(NW * 4);
@@ -442,12 +444,24 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
     wSeries.forEach(p => { if (p.cme) { if (!seg) seg = { t: p.t, v: p.v }; else seg.v = Math.max(seg.v, p.v); } else if (seg) { out.push(seg); seg = null; } }); if (seg) out.push(seg);
     return out.map(c => ({ t: c.t - (1 - 0.1) / kmsAU(c.v) * DAY, lat: 0, lon: 0, half: 35, v: c.v, est: true })); }
   // the slider's marks: when each CME leaves the Sun and (if it is aimed at us) reaches the Earth
-  const cmeMarks = () => cmes.map(c => { const va = kmsAU(c.v), hit = Math.cos(c.lat * D2R) * Math.cos(c.lon * D2R) >= Math.cos(Math.max(5, c.half) * D2R);
-    return { t0: c.t - .1 / va * DAY, tE: hit ? c.t + .9 / va * DAY : null, v: c.v, est: !!c.est }; });
+  const cmeMarks = () => cmes.map(c => { const va = kmsAU(c.v), hit = c._hit;
+    return { t0: c.t - .1 / va * DAY, tE: hit ? c.t + .9 / kmsAU(c.vE || c.v) * DAY : null, v: c.v, est: !!c.est }; });
   // the switch in Layers: only the CMEs aimed at the Earth (default) or every CME NASA DONKI lists (most leave in other directions)
   let cmeAll = false; try { cmeAll = localStorage.getItem('aurora.cmeall') === '1'; } catch (e) {}
-  const hitE = c => Math.cos(c.lat * D2R) * Math.cos(c.lon * D2R) >= Math.cos(Math.max(5, c.half) * D2R);
-  function setCmes(list) { if (list) donki = list.filter(c => c.v > 0); const L = donki && donki.length ? donki : fromEnlil(); cmes = cmeAll ? L : L.filter(hitE); }
+  // aimed at the Earth: inside the cone, or a flank hit the ENLIL run sees (its "cloud" at the Earth within 1.5 days of the
+  // constant-speed arrival, axis within half + 25 deg: the shock and sheath are wider than the cone) — estimate
+  const cosE = c => Math.cos(c.lat * D2R) * Math.cos(c.lon * D2R);
+  // a match also sets vE: the mean 0.1 AU -> Earth speed that lands the front at the ENLIL onset (ENLIL slows fast CMEs) — estimate
+  const hitE = c => { c.vE = 0; if (c.est) return true; const cone = cosE(c) >= Math.cos(Math.max(5, c.half) * D2R);
+    if (!cone && cosE(c) < Math.cos(Math.min(85, c.half + 25) * D2R)) return false;
+    const tE = c.t + .9 / kmsAU(c.v) * DAY; let on = null;
+    for (const s of enlOnsets) if (Math.abs(s - tE) < 1.5 * DAY && (on === null || Math.abs(s - tE) < Math.abs(on - tE))) on = s;
+    if (on !== null && on > c.t) c.vE = Math.max(.4, Math.min(1.6, (tE - c.t) / (on - c.t))) * c.v;
+    return cone || on !== null; };
+  let enlOnsets = [];
+  function setCmes(list) { if (list) donki = list.filter(c => c.v > 0);
+    enlOnsets = []; let prev = false; for (const p of wSeries) { if (p.cme && !prev) enlOnsets.push(p.t); prev = p.cme; }
+    const L = donki && donki.length ? donki : fromEnlil(); L.forEach(c => { c._hit = hitE(c); }); cmes = cmeAll ? L : L.filter(c => c._hit); }
   const CP = 1600, NC = 12, cGeo = new THREE.BufferGeometry(), ca = new Float32Array(CP * 4);
   for (let i = 0; i < CP; i++) { const sh = i < 1100; ca.set(sh ? [(i + .5) / 1100, i * 2.39996, 1, Math.random()] : [Math.random(), Math.random() * 6.283, 0, Math.random()], i * 4); }
   cGeo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(CP * 3), 3)); cGeo.setAttribute('c', new THREE.BufferAttribute(ca, 4));
@@ -472,7 +486,7 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
   function windUpdate(t, pxr) { const td = t / DAY, nqf = Math.floor(td / DTW), tq = nqf * DTW;
     wU.frac.value = td - tq; wU.ph0.value = (OMEGA * tq) % (2 * Math.PI); wU.nq.value = nqf % 100000; wU.tsec.value = (performance.now() / 1000) % 1000; wU.px.value = pxr;
     active = []; let m = 0;
-    for (const c of cmes) { const va = kmsAU(c.v), r = .1 + va * (td - c.t / DAY); if (r < .02 || r > 3.4 || m >= NC) continue;
+    for (const c of cmes) { const va = kmsAU(c.vE || c.v), r = .1 + va * (td - c.t / DAY); if (r < .02 || r > 3.4 || m >= NC) continue;
       const E = helio('Earth', c.t), lon = Math.atan2(E[1], E[0]) + c.lon * D2R, la = c.lat * D2R, h = Math.max(5, c.half) * D2R;
       const ax = new THREE.Vector3(Math.cos(la) * Math.cos(lon), Math.cos(la) * Math.sin(lon), Math.sin(la)), up = Math.abs(ax.z) > .9 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 0, 1);
       if (!c._u) c._u = ropeAxisOf(c, ax); const u = c._u ? c._u.clone().addScaledVector(ax, -c._u.dot(ax)).normalize() : new THREE.Vector3().crossVectors(ax, up).normalize(), w = new THREE.Vector3().crossVectors(ax, u), U = cmeP[m].material.uniforms;
@@ -484,8 +498,8 @@ export function createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, q
     for (; m < NC; m++) { cmeP[m].visible = false; cmeP[m].userData.look.group.visible = false; } }
   // how hard a CME is pressing on Earth now (0–1) + hours until the next one arrives (same rule as space3d)
   function cmeAtEarth(t) { const E = helio('Earth', t), rE = Math.hypot(...E) / AU, ue = E.map(x => x / (rE * AU)); let f = 0, eta = null, hit = null;
-    for (const { c, r, ax } of active) { if (ax.x * ue[0] + ax.y * ue[1] + ax.z * ue[2] < Math.cos(Math.max(5, c.half) * D2R)) continue;
-      const d = r - rE; if (d < 0) { const hrs = -d / kmsAU(c.v) * 24; if (eta == null || hrs < eta) eta = hrs; }
+    for (const { c, r, ax } of active) { if (!c._hit || (ax.x * ue[0] + ax.y * ue[1] + ax.z * ue[2] < Math.cos(Math.max(5, c.half) * D2R) && !c.vE)) continue;
+      const d = r - rE; if (d < 0) { const hrs = -d / kmsAU(c.vE || c.v) * 24; if (eta == null || hrs < eta) eta = hrs; }
       else if (rE > r * .62) { const g = Math.min(1, d / .02) * Math.min(1, (rE - r * .62) / (r * .1)); if (g > f) { f = g; hit = c; } } }
     return { f, eta, hit }; }
 

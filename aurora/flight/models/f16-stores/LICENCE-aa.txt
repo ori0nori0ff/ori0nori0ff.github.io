@@ -1,0 +1,9 @@
+aim9m.glb, aim120c.glb, lau129p.glb and tex/{aim9m,aim120c,lau129p}_*: converted from the site owner's Falcon BMS 4.38 installation (Benchmark Sims).
+  - aim9m:   model 1691 (Falcon4_WCD 174 'AIM-9M Sidewinder' -> CT 225), textures merged-aim9m_*; switch 0 geometry dropped
+  - aim120c: model 2016 (WCD 159 'AIM-120C AMRAAM' -> CT 1699), textures AIM-120C-Low_Aim-120C_*
+  - lau129p: model 1663 (WCD 661 'R LAU-129+16S300' -> CT 1858, the LAU-129 launcher on its pylon, stations 2/3/7/8), textures Lau-129_*
+Used with permission of the Falcon BMS team, as stated by the site owner on 2026-11-14 (free to use).
+NOT covered by the code licence of this repository. Do not reuse outside this site without checking Benchmark Sims' own terms.
+
+Made by tools/build_bms_missiles.py (512 texture sets; same channel layout as LICENCE.txt).
+Masses, drag, attachment points: web/aurora/flight/weapons/data/loadouts.json (sources there and in docs/flight-notes/f16-stations.md).

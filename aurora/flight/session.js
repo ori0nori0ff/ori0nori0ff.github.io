@@ -3,8 +3,8 @@
    core (flight/core.js) with the craft's force modules, the visuals (flight/gfx.js), the live F-16 cockpit (flight/instruments/f16.js), the
    screen HUD (flight/hud.js), the controls bar, the key help and, for the test spacecraft, the mission panel + orbit lines (from S1).
    EN only for now (RO / DE later: every new string is listed in the plan, S4). */
-import { createCore, R_E, fromF, qFromBasis } from './core.js?v=9235aa0c';
-import { createScreenHud, dur, km } from './hud.js?v=eff5db9f';
+import { createCore, R_E, fromF, qFromBasis } from './core.js?v=d29b8afa';
+import { createScreenHud, dur, km } from './hud.js?v=6194529e';
 import { fmt } from './instruments/draw.js?v=c3b9eb1c';
 
 const D2R = Math.PI / 180;
@@ -16,14 +16,21 @@ export const CRAFTS = {
   orbiter: { name: 'Test spacecraft', what: 'A placeholder spacecraft in a 400 km orbit over Brașov: real orbital mechanics, missions that fly themselves, navball.' },
   rocket: { name: 'Rocket', what: 'A multi-stage launcher on a real pad, from published stage figures: autopilot to orbit, then a capsule back to the ground. Placeholder shapes.' } };
 const KEYS = {
-  f16: [['W / S', 'pitch (W = nose down)'], ['A / D', 'roll'], ['Q / E', 'yaw'], ['R / F', 'throttle up / down'], ['X', 'throttle to 0'], ['B', 'brakes'], ['G', 'gear'],
+  f16: [['W / S', 'pitch (W = nose down)'], ['A / D', 'roll'], ['Q / E', 'yaw'], ['R / F', 'throttle up / down'], ['X', 'throttle to 0'], ['B', 'brakes'], ['G', 'gear'], ['V', 'speed brake open / closed (43° with the gear down)'],
+    ['P', 'canopy open / close (on the ground, below ~25 kt)'], ['H', 'tail hook down / up'], ['T', 'landing light: auto → off → taxi → landing (gear down)'],
+    ['[ / ]', 'pitch trim nose down / up (press = small step, hold = run)'], ["; / '", 'roll trim left / right wing down'], ['\\', 'trim to zero'],
+    ['Y', 'autopilot: off → ATT HOLD → ALT HOLD → ALT HOLD + HDG SEL → off (gear up, AOA < 15°; the stick adds to it, in ATT HOLD it sets a new attitude)'],
     ['C', 'next view'], ['1 … 6', 'cockpit · chase / far chase / orbit · flyby · onboard (tail, wing, front, low rear) · ground camera · free camera (press again = next in the group)'],
     ['I / K, J / L, U / O', 'free camera: forward / back, left / right, down / up (Shift ×10, wheel = speed)'], ['M / Shift+M', 'next page on the left / right MFD'], ['Wheel, Z (hold)', 'zoom in the cockpit'], ['Drag', 'look around'],
+    ['Click (cockpit)', 'switches on the left panel: gear handle, hook, parking brake, landing light, canopy (look down-left)'],
+    ['0, 0', 'emergency jettison of the external tanks (press twice within 1 s; not on the ground)'],
     [', / .', 'slower / faster time (max ×4 in the air)'], ['Esc', 'leave the pilot seat']],
   orbiter: [['W / S', 'pitch'], ['A / D', 'roll'], ['Q / E', 'yaw'], ['R / F', 'throttle up / down'], ['X', 'engine off'], ['T', 'attitude hold on / off'], ['N', 'auto-execute the node'],
     ['Delete', 'remove the node'], ['C', 'next view'], ['Drag', 'look around'], [', / .', 'slower / faster time'], ['Esc', 'leave the pilot seat']],
   rocket: [['Space', 'launch (on the pad) / next stage'], ['P', 'autopilot on / off'], ['W / S, A / D, Q / E', 'pitch, roll, yaw rate (takes over from the autopilot)'], ['R / F', 'throttle up / down (manual)'],
     ['X', 'throttle to 0'], ['C', 'next view: auto, chase, side, tower, far chase'], ['Drag', 'look around'], [', / .', 'slower / faster time (max ×4 in the air)'], ['Esc', 'leave the pilot seat']] };
+KEYS.f16.splice(KEYS.f16.findIndex(k => k[0] === 'G') + 1, 0, ['N', 'engine: auto start when off (fly.html?start=cold) / shutdown at idle on the ground'], ['=', 'EPU on / off']);   // flight/engine-start.js
+KEYS.f16.push(['Space (hold)', 'gun trigger (Master Arm ARM, in the air)'], ['7', 'Master Arm ARM / SAFE'], ['8', 'test drone: a new one 6 km north of LRBV, 3000 ft above the field']);   // flight/weapons
 
 const STYLE = `.fl-on .e3g > :not(canvas), .fl-on .s3d-tabs, .fl-on .s3d-ctl, .fl-on .s3d-btns, .fl-on .s3d-time, .fl-on .s3d-info, .fl-on .s3d-top { display: none !important }
 .fl-ui { position: absolute; inset: 0; z-index: 4; pointer-events: none; font: 500 13px Inter, system-ui, sans-serif; color: #E6EBF1 }
@@ -65,7 +72,7 @@ export async function startFlight(earth, host, o = {}) {
     <div class="fl-ctl">${o.onExit ? '<button data-a="exit">✕ Exit flight</button>' : ''}<button data-a="pilot" aria-pressed="true">✈ Pilot</button><button data-a="view">View</button><button data-a="reset">Reset</button>
       <button data-a="keys" aria-expanded="true">Keys</button><div class="fl-warps" role="group" aria-label="Time speed"></div></div>
     <div class="fl-help" role="dialog" aria-label="Keys"><h2>${CRAFTS[kind].name}: keys</h2><table>${keyList.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</table>
-      <p>${kind === 'f16' ? 'Start: R to add throttle (past 50 % = afterburner), B releases the parking brake, pull back (S) at ~140 kt. A gamepad works too.' : kind === 'rocket' ? 'Press Launch (or Space): the autopilot flies to orbit and stages by itself. In orbit, "Deorbit and land" brings the capsule down under parachutes.' : 'Pick a mission on the left; the craft turns and burns by itself. Speed up time with the buttons at the top right.'}</p>
+      <p>${kind === 'f16' ? 'Start: R to add throttle (past 50 % = afterburner), B releases the parking brake, pull back (S) at ~140 kt. A gamepad works too; a Thrustmaster HOTAS Warthog + pedals are mapped like the DCS F-16C profile (console: hotasCheck()).' : kind === 'rocket' ? 'Press Launch (or Space): the autopilot flies to orbit and stages by itself. In orbit, "Deorbit and land" brings the capsule down under parachutes.' : 'Pick a mission on the left; the craft turns and burns by itself. Speed up time with the buttons at the top right.'}</p>
       ${touch ? `<p>Touch: drag the circle at the bottom left = stick (down = nose up, sideways = roll); the slider at the bottom right = throttle${kind === 'f16' ? ' (the parking brake lets go above 5 %; hold Brake to stop)' : ''}. Drag anywhere else = look around.</p>` : ''}
       <p><button data-a="keys">Close</button></p></div>`;
   const $ = s => ui.querySelector(s), st = $('.fl-st'), help = $('.fl-help');
@@ -77,21 +84,31 @@ export async function startFlight(earth, host, o = {}) {
   let onPose = null, extraTick = null, extraDispose = null, credit = '', P0 = null;
 
   if (kind === 'f16') {
-    const [{ loadAircraft }, { createGfx }, { createF16Cockpit }, { createSound }] = await Promise.all([import('./aero.js?v=1dd47b94'), import('./gfx.js?v=8609367e'), import('./instruments/f16.js?v=a6cddb97'), import('./sound.js?v=fce60eab')]);
-    const ac = await loadAircraft(new URL('aircraft/f16.json', import.meta.url)), def = ac.def;
+    const [{ loadAircraft }, { createGfx }, { createF16Cockpit }, { createSound }] = await Promise.all([import('./aero.js?v=7d6eba32'), import('./gfx.js?v=bc80a648'), import('./instruments/f16.js?v=6a913b46'), import('./sound.js?v=682fe207')]);
+    const ac = await loadAircraft(new URL('aircraft/f16.json', import.meta.url), { start: o.start, tanks: o.tanks || 0 }), def = ac.def;   // o.start: 'cold' = everything off (flight/engine-start.js); o.tanks: 0 | 2 | 3 external tanks (flight/stores.js)
+    const [{ createWeapons }, { attachWeapons }] = await Promise.all([import('./weapons/weapons.js?v=98af5389'), import('./weapons/fx.js?v=93a333d9')]), Wp = createWeapons(F, def); ac.mods.push(Wp.module);   // M61A1 gun + test drone
     const core = S.core = createCore(F, def, RWY, { mods: ac.mods });
     try { S.gfx = await createGfx(F, core, { scene: cs, camera: cc, craft, sun: sunL, amb, model: 'f16', def, quality, scan }); }   /* credits: only in the 3D view's Sources list (user, 2026-11-14) */
     catch (e) { console.error('F-16 model', e); credit = '3D model not loaded'; }
     if (S.gfx && scan !== 'none') S.cockpit = createF16Cockpit(F, core, S.gfx, { quality }); else core.view = 1;   // no scanned cockpit: chase view, screen HUD in every view
     S.hud = createScreenHud(core, ui, { kind: 'air', hideInView: S.cockpit ? [0] : [] });
     S.snd = createSound(F, core, ui);   // Falcon BMS sounds (flight/sound.js); audio starts on the first click / key
-    onPose = (P, t) => { if (S.gfx) S.gfx.update(P, t); if (S.cockpit) S.cockpit.update(P, t); if (S.hud) S.hud.forceShow = !(S.gfx && S.gfx.cockpit); S.snd.update(P, t); };
+    if (S.gfx && def.stores && def.stores.items.length) try { S.stores = await (await import('./stores-gfx.js?v=94d11e2b')).createStoresGfx(F, core, S.gfx, { scene: cs }); } catch (e) { console.error('stores model', e); }   // external tanks drawn + jettisoned (flight/stores-gfx.js)
+    onPose = (P, t) => { if (S.gfx) S.gfx.update(P, t); if (S.stores) S.stores.update(P, t); if (S.cockpit) S.cockpit.update(P, t); if (S.hud) S.hud.forceShow = !(S.gfx && S.gfx.cockpit); S.snd.update(P, t); };
+    { S.wpn = attachWeapons(S, Wp, { at: RWY, target: o.target ?? new URLSearchParams(location.search).get('target') === '1' }); const op = onPose; onPose = (P, t) => { op(P, t); S.wpn.update(P, t); };
+      // weapons plug-ins (flight/weapons/plugins.js: stations, AI targets, radar, missiles; each file optional)
+      if (o.load) S.load = o.load;   // missile load from the 3D flight menu (weapons/stations.js; else &load=, else A-A 2+4)
+      try { S.plugins = await (await import('./weapons/plugins.js?v=da73a264')).loadPlugins(S, { S, F, core, def, Wp, cs, ui }); const op2 = onPose; onPose = (P, t) => { op2(P, t); S.plugins.update(P, t); };
+        const tb = ui.querySelector('.fl-help table'); if (tb) for (const [k, v] of S.plugins.help) tb.insertAdjacentHTML('beforeend', `<tr><td>${k}</td><td>${v}</td></tr>`); } catch (e) { console.error('weapons plug-ins', e); }
+      for (const u of [S.hud, S.cockpit]) if (u && u.bindWeapons) u.bindWeapons(S);   // weapon state on both HUDs (flight/weapon-hud.js)
+      import('./input-hotas.js?v=8ee579c4').then(m => m.hotasLink(S)).catch(e => console.error('hotas link', e));   // Warthog DGFT / MRM + ANT ELEV reach the weapons plug-ins (also in the 3D view)
+      extraDispose = () => { if (S.plugins) S.plugins.dispose(); S.wpn.dispose(); }; ui.addEventListener('click', e => { if (e.target.closest('[data-a="reset"]')) S.wpn.reset(); }); }   // after gfx: tracers / drone / gun symbols, the craft layer's near / far
     o.atName = RWY.name;
   } else if (kind === 'rocket') {   // S5: flight/rocket.js builds the craft, views, panel
-    const { setupRocket } = await import('./rocket.js?v=a2f9aec3'), RK = await setupRocket(S, o, ui, { sunL, createCore, createScreenHud });
+    const { setupRocket } = await import('./rocket.js?v=6f265c27'), RK = await setupRocket(S, o, ui, { sunL, createCore, createScreenHud });
     onPose = RK.onPose; extraTick = RK.tick; extraDispose = RK.dispose; credit = RK.credit;
   } else {
-    const orbit = await import('./orbit.js?v=2a2bb0bd'), { createOrbit, gravityModule, orbiterModule, ORBITER, createOrbitView, BODIES } = orbit;
+    const orbit = await import('./orbit.js?v=f135957d'), { createOrbit, gravityModule, orbiterModule, ORBITER, createOrbitView, BODIES } = orbit;
     const ALT = (o.alt || 400) * 1e3, INC = o.inc || 51.6, START = { lat: 45.64, lon: 25.59, heading: 0 };
     const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]], mul = (a, k) => [a[0] * k, a[1] * k, a[2] * k], len = a => Math.hypot(a[0], a[1], a[2]);
     const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]], unit = a => mul(a, 1 / len(a));
@@ -146,19 +163,28 @@ export async function startFlight(earth, host, o = {}) {
   if (kind === 'f16') { F.renderer.domElement.addEventListener('wheel', onWheel, { passive: true }); addEventListener('keydown', onKey); addEventListener('keyup', onKey); }
   setTimeout(() => { if (!help.hidden) { help.hidden = true; $('[data-a="keys"]').setAttribute('aria-expanded', 'false'); } }, 12000);
 
-  // status line (5 Hz): craft, place / orbit, view, time speed, physics cost, credit
+  // frame rate: frames shown in the last second + the longest frame in it (a stutter shows there first); S.fps for tests
+  S.fps = { fps: 0, worstMs: 0 }; let fpsN = 0, fpsT0 = performance.now(), fpsLast = fpsT0, fpsWorst = 0, fpsRaf = 0;
+  const fpsTick = now => { fpsN++; fpsWorst = Math.max(fpsWorst, now - fpsLast); fpsLast = now;
+    if (now - fpsT0 >= 1000) { S.fps = { fps: fpsN * 1000 / (now - fpsT0), worstMs: fpsWorst }; fpsN = 0; fpsWorst = 0; fpsT0 = now; }
+    fpsRaf = requestAnimationFrame(fpsTick); };
+  fpsRaf = requestAnimationFrame(fpsTick);
+  const fpsHtml = () => { const v = S.fps.fps, c = v >= 55 ? '#39FF9E' : v >= 30 ? '#FFB347' : '#FF6B6B';
+    return `<span style="color:${c};font-weight:700">${fmt(v, 0)} FPS</span> (max ${fmt(S.fps.worstMs, 0)} ms)`; };
+
+  // status line (5 Hz): craft, place / orbit, view, time speed, frame rate, physics cost, credit
   const timer = setInterval(() => { const h = core.hud, sts = core.stats;
     for (const b of wb.querySelectorAll('[data-w]')) b.setAttribute('aria-pressed', String(Math.abs(+b.dataset.w - (h.warp || 1)) < 1e-6));
     if (extraTick && !core.hold) extraTick();
     if (core.hold) { st.innerHTML = `<b>${CRAFTS[kind].name}</b> · ${kind === 'f16' ? 'Waiting for the ground heights at ' + RWY.name + '…' : 'Starting…'}`; return; }
     const vName = h.view || '', where = kind === 'f16' ? (h.crash ? `<b style="color:#FF6B6B">Crash: ${h.crash}</b>` : h.onGround ? 'on the ground at ' + RWY.name : 'flying') : 'around ' + (h.ref || '–');
-    st.innerHTML = `<b>${CRAFTS[kind].name}</b> · ${where} · View: ${vName}${kind === 'f16' && core.view === 0 && S.cockpit ? ' (' + Math.round(ckView.fov) + '°)' : ''} · Time ×${fmt(h.warp, 0)}${kind === 'f16' ? ' (max ×' + sts.warpCap + ' in the air)' : h.onRails ? ' (on rails)' : ''}
-      <small>Physics ${fmt(sts.ms, 2)} ms / frame${S.cockpit && S.cockpit.group.visible ? ` · HUD ${fmt(S.cockpit.stats.hudMs, 2)} ms · displays ${fmt(S.cockpit.stats.dynMs, 2)} ms` : ''}${credit ? ' · ' + credit : ''}</small>`; }, 200);
+    st.innerHTML = `<b>${CRAFTS[kind].name}</b> · ${where} · View: ${vName}${kind === 'f16' && core.view === 0 && S.cockpit ? ' (' + Math.round(ckView.fov) + '°)' : ''} · Time ×${fmt(h.warp, 0)}${kind === 'f16' ? ' (max ×' + sts.warpCap + ' in the air)' : h.onRails ? ' (on rails)' : ''}${core.state.ctl.hotas ? ' · HOTAS: ' + core.state.ctl.hotas.join(', ') : ''}
+      <small>${fpsHtml()} · Physics ${fmt(sts.ms, 2)} ms / frame${S.cockpit && S.cockpit.group.visible ? ` · HUD ${fmt(S.cockpit.stats.hudMs, 2)} ms · displays ${fmt(S.cockpit.stats.dynMs, 2)} ms` : ''}${credit ? ' · ' + credit : ''}</small>`; }, 200);
 
-  function stop() { clearInterval(timer); core.onPose = null; core.touch = null; if (S.touchUi) S.touchUi.dispose();
+  function stop() { clearInterval(timer); cancelAnimationFrame(fpsRaf); core.onPose = null; core.touch = null; if (S.touchUi) S.touchUi.dispose();
     const gpu = new Set(); cs.traverse(n => { if (n.geometry) gpu.add(n.geometry); for (const m of [].concat(n.material || [])) { gpu.add(m); for (const v of Object.values(m)) if (v && v.isTexture) gpu.add(v);
       if (m.uniforms) for (const u of Object.values(m.uniforms)) if (u && u.value && u.value.isTexture) gpu.add(u.value); } });   // freed after the modules let go (S7: nothing left on the GPU)
-    core.dispose(); if (S.snd) S.snd.dispose(); if (S.cockpit) S.cockpit.dispose(); if (S.gfx) S.gfx.dispose(); if (S.hud) S.hud.dispose(); if (extraDispose) extraDispose();
+    core.dispose(); if (S.snd) S.snd.dispose(); if (S.cockpit) S.cockpit.dispose(); if (S.stores) S.stores.dispose(); if (S.gfx) S.gfx.dispose(); if (S.hud) S.hud.dispose(); if (extraDispose) extraDispose();
     F.renderer.domElement.removeEventListener('wheel', onWheel); removeEventListener('keydown', onKey); removeEventListener('keyup', onKey);
     F.craftLayer(null); for (const x of gpu) x.dispose(); sunL.dispose(); ui.remove(); host.classList.remove('fl-on'); if (o.onExit) o.onExit(); }
   if (touch) S.touchUi = touchControls(S, ui, kind);

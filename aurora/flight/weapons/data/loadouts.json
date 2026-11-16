@@ -1,0 +1,16 @@
+{
+  "_doc": "F-16 air-to-air stations (flight/weapons/stations.js). Station positions: aircraft/f16.json stores.stations (BMS model 1052 slots). Body frame of core: x right, y up, z aft, metres. Types: lb (mass), drag (BMS drag units, same scale as f16.json stores: dCD = units x dragPerUnit(Mach)), model (models/f16-stores/<model>.glb, origin = attachment point), cm (mass point and launch point from the attachment point). Racks: slot = where the missile's attachment point sits on the rack. Sources: docs/flight-notes/f16-stations.md.",
+  "default": "aa",
+  "types": {
+    "AIM-9M": { "kind": "AIM-9", "lb": 189, "drag": 4, "model": "aim9m", "cm": [0, -0.082, -0.018], "_src": "BMS 4.38 Falcon4_WCD.xml WCD 174 'AIM-9M Sidewinder' Weight 189, Drag 4, CtIdx 225 -> model 1691; cm = centre of the model's bounding box (ESTIMATE)" },
+    "AIM-120C": { "kind": "AIM-120", "lb": 338, "drag": 4, "model": "aim120c", "cm": [0, -0.094, -0.237], "_src": "BMS 4.38 Falcon4_WCD.xml WCD 159 'AIM-120C AMRAAM' Weight 338, Drag 4, CtIdx 1699 -> model 2016; cm = centre of the model's bounding box (ESTIMATE)" },
+    "LAU-129P": { "kind": "rack", "lb": 95, "drag": 2, "model": "lau129p", "slot": [0, -0.3668, -0.5823], "cm": [0, -0.197, -0.494], "_src": "BMS 4.38 Falcon4_WCD.xml WCD 661 'R LAU-129+16S300' Weight 95, Drag 2, CtIdx 1858 -> model 1663 (BmsRack.dat f16-2/8, f16-3/4, f16-6/7: pylon MRL, pylonct 1858); slot = the model's store slot; cm = bounding-box centre (ESTIMATE)" }
+  },
+  "racks": { "1": null, "2": "LAU-129P", "3": "LAU-129P", "7": "LAU-129P", "8": "LAU-129P", "9": null,
+    "_src": "BmsRack.dat definegroup f16-wingtip: pylonct 0, rack aim-no-rail (rackct 0) -> the missile hangs on the station slot itself (rail part of the airframe model 1052); f16-2/8 and f16-3/4 / f16-6/7: pylon MRL pylonct 1858" },
+  "fireOrder": { "AIM-9": [1, 9, 2, 8, 3, 7], "AIM-120": [3, 7, 2, 8, 1, 9], "_src": "ESTIMATE: outboard missiles first for AIM-9 (wingtips), inboard first for AIM-120, alternating left / right" },
+  "loads": {
+    "aa": { "name": "A-A 2+4", "st": { "1": "AIM-9M", "9": "AIM-9M", "2": "AIM-120C", "8": "AIM-120C", "3": "AIM-120C", "7": "AIM-120C" } },
+    "clean": { "name": "clean", "st": {} }
+  }
+}

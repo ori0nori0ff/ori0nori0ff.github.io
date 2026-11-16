@@ -1,0 +1,52 @@
+{
+  "_note": "S12 two-way combat: GAME values for flight/weapons/damage.js, ew.js and ai-weapons.js. Every number is invented for gameplay and readability; none is taken from, or tuned against, any real weapon, sensor or countermeasure. Units: s, m, m/s, deg, kg/s, fractions 0..1.",
+  "f16": {
+    "hp": 100,
+    "gunHit": 4,
+    "blast": 55,
+    "zoneShare": 1.6,
+    "zones": {
+      "engine": { "label": "ENGINE", "thrustLossMax": 0.7 },
+      "controls": { "label": "FLT CONTROL", "authorityMin": 0.2, "rateMin": 0.3 },
+      "fuel": { "label": "FUEL LEAK", "leakMax": 6.0 }
+    },
+    "zoneSplit": { "_": "body m (x right, y up, z aft of the CG): engine = z > engineZ; controls = |x| > wingX or z > tailZ; else fuel (engine also needs |x| < wingX, |y| < 0.9)", "engineZ": 2.5, "wingX": 1.4, "tailZ": 4.5 },
+    "rcs": 4, "ir": 1,
+    "boxes": [
+      { "c": [0, 0, 0], "h": [0.7, 0.9, 7.4] },
+      { "c": [0, -0.05, 1.0], "h": [4.7, 0.15, 1.9] },
+      { "c": [0, 0, 6.0], "h": [2.8, 0.1, 0.8] },
+      { "c": [0, 1.7, 5.6], "h": [0.12, 1.3, 1.1] }
+    ],
+    "_boxes": "ESTIMATE from the public F-16 size (length 15.0 m, span 9.45 m with missiles, height 5.1 m); body axes x right, y up, z aft of the CG",
+    "size": 8.5
+  },
+  "cms": {
+    "flares": 30, "chaff": 30,
+    "gap": 0.5,
+    "_gap": "s between two releases of the key's program (one flare + one chaff)",
+    "decoy": {
+      "short": { "flare": 0.33, "chaff": 0.02 },
+      "long": { "flare": 0.02, "chaff": 0.28 }
+    },
+    "_decoy": "chance that ONE release makes ONE incoming game missile of that class lose its target (rolled per missile per release; class short = IR-like, long = radar-like)",
+    "flareLife": 4.0, "chaffLife": 3.0
+  },
+  "rwr": {
+    "range": 40000,
+    "lockRange": 18000,
+    "lockCone": 60,
+    "mwsRange": 4000,
+    "_mwsRange": "game missile warning for the short class (IR missiles give no RWR launch cue): MISSILE when one is this close",
+    "newGap": 4, "lockGap": 1.2, "launchGap": 0.9
+  },
+  "ai": {
+    "gun": { "rounds": 150, "rate": 30, "range": 900, "cone": 5, "aspect": 100, "burst": 1.0, "cooldown": 2.0, "spreadMrad": 6, "every": 4 },
+    "_gun": "rate = rounds/s (game, fewer than a real gun for frame cost); cone = deg off the bandit's nose to its lead point; aspect = max deg between the F-16's tail and the line to the bandit (rear hemisphere + a bit)",
+    "short": { "count": 2, "minRange": 800, "maxRange": 6000, "cone": 25, "cooldown": 8 },
+    "long": { "count": 2, "minRange": 4000, "maxRange": 16000, "cone": 25, "cooldown": 20 },
+    "firstShot": 3, "firstShotJitter": 5,
+    "_firstShot": "s after a bandit enters MERGE before it may shoot, + a random 0..firstShotJitter s per merge (a pair does not fire together)",
+    "cms": { "flares": 16, "chaff": 16, "gap": 0.8, "range": 5000 }
+  }
+}

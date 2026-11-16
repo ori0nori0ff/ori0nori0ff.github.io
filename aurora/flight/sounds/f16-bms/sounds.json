@@ -526,6 +526,14 @@
    "minFt": 10.0,
    "vol": 3000.0
   },
+  "aoaBetty": {
+   "file": "f15maxaoa.ogg",
+   "flags": "V",
+   "id": 432,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": -950.0
+  },
   "aoaHigh": {
    "file": "aoahighspeed.ogg",
    "flags": "ILH",
@@ -550,6 +558,22 @@
    "minFt": 0.0,
    "vol": -950.0
   },
+  "boomA1": {
+   "file": "booma1.ogg",
+   "flags": "E",
+   "id": 43,
+   "maxFt": 30300.0,
+   "minFt": 100.0,
+   "vol": 1500.0
+  },
+  "boomA2": {
+   "file": "booma2.ogg",
+   "flags": "E",
+   "id": 44,
+   "maxFt": 30300.0,
+   "minFt": 100.0,
+   "vol": 1500.0
+  },
   "brake": {
    "file": "wheelbrake.ogg",
    "flags": "ILF",
@@ -557,6 +581,22 @@
    "maxFt": 99999.0,
    "minFt": 0.0,
    "vol": 0.0
+  },
+  "cmBetty": {
+   "file": "chaflare.ogg",
+   "flags": "V",
+   "id": 183,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": -950.0
+  },
+  "cmRelease": {
+   "file": "flareint.ogg",
+   "flags": "IH",
+   "id": 131,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": -1000.0
   },
   "ext1": {
    "coneAtt": -1500.0,
@@ -714,6 +754,54 @@
    "minFt": 0.0,
    "vol": 500.0
   },
+  "gunEnd": {
+   "file": "vulendext.ogg",
+   "flags": "E",
+   "id": 27,
+   "maxFt": 24000.0,
+   "minFt": 50.0,
+   "vol": 2000.0
+  },
+  "gunEndInt": {
+   "file": "vulend.ogg",
+   "flags": "I",
+   "id": 72,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": 0.0
+  },
+  "gunLoop": {
+   "file": "vulloopext.ogg",
+   "flags": "EL",
+   "id": 26,
+   "maxFt": 24000.0,
+   "minFt": 50.0,
+   "vol": 2000.0
+  },
+  "gunLoopInt": {
+   "file": "vulloop.ogg",
+   "flags": "IL",
+   "id": 71,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": 0.0
+  },
+  "gunStart": {
+   "file": "vulstartext.ogg",
+   "flags": "E",
+   "id": 25,
+   "maxFt": 24000.0,
+   "minFt": 50.0,
+   "vol": 500.0
+  },
+  "gunStartInt": {
+   "file": "vulstart.ogg",
+   "flags": "I",
+   "id": 51,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": 0.0
+  },
   "handleDn": {
    "file": "geardown.ogg",
    "flags": "I",
@@ -754,13 +842,80 @@
    "minFt": 0.0,
    "vol": 0.0
   },
+  "jfsEnd": {
+   "file": "f16jfsend.ogg",
+   "flags": "E",
+   "id": 290,
+   "maxFt": 6000.0,
+   "minFt": 20.0,
+   "vol": -1500.0
+  },
+  "jfsEndInt": {
+   "file": "f16jfsendint.ogg",
+   "flags": "I",
+   "id": 308,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": -300.0
+  },
+  "jfsLoop": {
+   "file": "f16jfsloop.ogg",
+   "flags": "EL",
+   "id": 289,
+   "maxFt": 6000.0,
+   "minFt": 20.0,
+   "vol": -1500.0
+  },
+  "jfsLoopInt": {
+   "file": "f16jfsloopint.ogg",
+   "flags": "IL",
+   "id": 307,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": -300.0
+  },
+  "jfsStart": {
+   "file": "f16jfsstart.ogg",
+   "flags": "E",
+   "id": 288,
+   "maxFt": 6000.0,
+   "minFt": 20.0,
+   "vol": -1500.0
+  },
+  "jfsStartInt": {
+   "file": "f16jfsstartint.ogg",
+   "flags": "I",
+   "id": 306,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": -300.0
+  },
   "maxg": {
-   "file": "nadiamaxg.ogg",
+   "file": "f15_overg.ogg",
    "flags": "V",
-   "id": 413,
+   "id": 428,
    "maxFt": 99999.0,
    "minFt": 0.0,
    "vol": -950.0
+  },
+  "mslLaunch": {
+   "coneAtt": -500.0,
+   "coneIn": 180.0,
+   "coneOut": 0.0,
+   "file": "small.ogg",
+   "flags": "OLFC",
+   "id": 266,
+   "maxFt": 24000.0,
+   "minFt": 20.0,
+   "vol": 500.0
+  },
+  "mslLaunchInt": {
+   "file": "missile1.ogg",
+   "flags": "I",
+   "id": 10,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": 1000.0
   },
   "pullup": {
    "file": "pullup.ogg",
@@ -786,6 +941,30 @@
    "minFt": 0.0,
    "vol": 0.0
   },
+  "rwrLaunch": {
+   "file": "alr56_launch.ogg",
+   "flags": "I",
+   "id": 405,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": 0.0
+  },
+  "rwrLock": {
+   "file": "alr56_lock.ogg",
+   "flags": "I",
+   "id": 406,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": 0.0
+  },
+  "rwrNew": {
+   "file": "alr56_newaa.ogg",
+   "flags": "I",
+   "id": 346,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": 0.0
+  },
   "touchdown": {
    "file": "touchdown.ogg",
    "flags": "E",
@@ -793,6 +972,14 @@
    "maxFt": 6000.0,
    "minFt": 10.0,
    "vol": 3000.0
+  },
+  "wpnSel": {
+   "file": "momntary.ogg",
+   "flags": "I",
+   "id": 127,
+   "maxFt": 99999.0,
+   "minFt": 0.0,
+   "vol": -208.0
   }
  },
  "source": "Falcon BMS 4.38 (Benchmark Sims): Data/Sounds + Data/Sim/Acdata/F-16CM-50.txtpb",

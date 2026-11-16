@@ -1,0 +1,31 @@
+{
+  "_note": "Arcade game values for flight/weapons/missiles.js. All numbers are invented for gameplay and readability; none is taken from, or tuned against, any real weapon. Units: s, m, m/s, m/s^2, deg/s, deg.",
+  "classes": {
+    "short": {
+      "sel": "AIM-9", "label": "SHORT", "store": "AIM-9M", "model": "aim9m",
+      "railTime": 0.15, "boostTime": 1.5, "addSpeed": 450, "decel": 22,
+      "turnRate": 32, "lead": 0.8, "lostAngle": 80,
+      "lifetime": 20, "minSpeed": 140, "hitRadius": 14,
+      "pickCone": 35, "pickRange": 9000,
+      "len": 2.9, "diam": 0.13,
+      "fallback": { "count": 2, "pos": [[-4.9, -0.25, 0.4], [4.9, -0.25, 0.4]] }
+    },
+    "long": {
+      "sel": "AIM-120", "label": "LONG", "store": "AIM-120C", "model": "aim120c",
+      "railTime": 0.25, "boostTime": 3, "addSpeed": 600, "decel": 12,
+      "turnRate": 22, "lead": 0.8, "lostAngle": 80,
+      "lifetime": 50, "minSpeed": 160, "hitRadius": 16,
+      "activeRange": 9000,
+      "len": 3.7, "diam": 0.18,
+      "fallback": { "count": 4, "pos": [[-3.6, -0.6, 0.2], [3.6, -0.6, 0.2], [-2.6, -0.65, 0.3], [2.6, -0.65, 0.3]] }
+    }
+  },
+  "game": {
+    "launchGap": 0.6,
+    "blastHits": 50,
+    "msgTime": 2.0,
+    "smokeStep": 7,
+    "smokeLife": 5,
+    "smokeCoast": false
+  }
+}

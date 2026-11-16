@@ -23,22 +23,22 @@ function hash(a, b, c) {   // three integers -> [0, 1)
 }
 const sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
-export function createVeg({ THREE, Q, SHADE, U, tiles, groundAt, camera, renderer }) {
+export function createVeg({ THREE, Q, SHADE, U, tiles, groundAt, camera, renderer, off: off0 }) {
   const P = QP[Q] || QP.medium;
-  let off = false; try { off = localStorage.getItem('aurora.veg') === 'off'; } catch (e) {}
+  let off = !!off0; try { off = off || localStorage.getItem('aurora.veg') === 'off'; } catch (e) {}
   const base = new URL('.', import.meta.url);
   const cells = new Map(), maps = new Map(), est = new Map();
   let meta = null, index = null, frame = 0, job = null;
   const cv = new OffscreenCanvas(256, 256), cx = cv.getContext('2d', { willReadFrequently: true });
 
   // ── textures and the sprite table
-  const tex = new THREE.TextureLoader().load(new URL('img/veg/veg.webp', base).href);
+  const tex = off ? new THREE.Texture() : new THREE.TextureLoader().load(new URL('img/veg/veg.webp', base).href);   // off: nothing is downloaded
   tex.flipY = false; tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
   const SR = [], SA = [];
   for (let i = 0; i < 16; i++) { SR.push(new THREE.Vector4(0, 0, 1, 1)); SA.push(1); }
-  fetch(new URL('img/veg/veg.json', base)).then(r => r.json()).then(m => { m.forEach((s, i) => { SR[i].set(s.u0, s.v0, s.u1, s.v1); SA[i] = s.a; }); meta = m; }).catch(() => {});
+  if (!off) fetch(new URL('img/veg/veg.json', base)).then(r => r.json()).then(m => { m.forEach((s, i) => { SR[i].set(s.u0, s.v0, s.u1, s.v1); SA[i] = s.a; }); meta = m; }).catch(() => {});
   const NONE = { z: 12, pz: 9, packs: new Set() };
-  fetch(new URL('data/veg/index.json', base)).then(r => r.ok ? r.json() : null).then(j => { index = j ? { ...j, packs: new Set(j.packs) } : NONE; }).catch(() => { index = NONE; });
+  if (!off) fetch(new URL('data/veg/index.json', base)).then(r => r.ok ? r.json() : null).then(j => { index = j ? { ...j, packs: new Set(j.packs) } : NONE; }).catch(() => { index = NONE; });
 
   // ── the baked map: packs of 2048 x 2048 (one z9 square at z12 pixels), one value per pixel:
   //    bits 0-1 tree share x 3, bit 2 shrubland >= 1/2, bits 3-4 grass share x 3 (tools/build_veg_map.py)

@@ -16,7 +16,12 @@
 
 const R = 6371000;
 export const RUNWAYS = [
-  { id: 'LRBV', ends: ['03', '21'], a: [45.6960, 25.5128], b: [45.7165, 25.5342], w: 45, h: [535.8, 521.6], papi: 300, bld: true },   /* bld: models/airports/lrbv.bin */
+  { id: 'LRBV', ends: ['03', '21'], a: [45.6960, 25.5128], b: [45.7165, 25.5342], w: 45, h: [535.8, 521.6], papi: 300, bld: true,   /* bld: models/airports/lrbv.bin */
+    /* taxiway centre lines (segments) and the terminal apron (polygon), metres east / north of the runway centre: OpenStreetMap contributors
+       (ODbL 1.0), aeroway layer of the OpenFreeMap z14 tiles read by tools/bms/airport_osm.py on 2026-11-15. At most 4 segments and 5 corners
+       (the shader's array sizes). OSM has no width: 23 m is an ESTIMATE */
+    twy: [[-664.93, -1248.91, -822.38, -1129.75], [-596.2, -1184.75, -635.77, -1236.82], [-635.77, -1236.82, -644.93, -1242.66], [-644.93, -1242.66, -664.93, -1248.91]], twyW: 23,
+    apron: [[-676.59, -1263.07], [-664.93, -1248.91], [-587.03, -1146.83], [-479.98, -1228.08], [-566.62, -1344.32]] },
 ];
 
 const nrm = (la, lo) => [Math.cos(la) * Math.cos(lo), Math.sin(la), -Math.cos(la) * Math.sin(lo)];   // same frame as earthgl.js nrmOf
@@ -39,7 +44,25 @@ const GLSL = /* glsl */`
   float rwH(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
   float rwN(vec2 p) { vec2 i = floor(p), f = p - i; f = f * f * (3. - 2. * f);
     return mix(mix(rwH(i), rwH(i + vec2(1., 0.)), f.x), mix(rwH(i + vec2(0., 1.)), rwH(i + 1.), f.x), f.y); }
+  /* taxiways (capsules round rwTw's segments, half width rwTwW) and the apron (polygon rwAp), under the runway's paint. rwAb = their box
+     (centre, half size). Asphalt taxiway with a yellow centre line 0.15 m, concrete apron with slab joints every 7.5 m: tones and joints are an ESTIMATE */
+  uniform vec4 rwTw[4]; uniform vec2 rwAp[5]; uniform vec4 rwAb; uniform float rwTwW;
+  vec3 rwAero(vec2 p, vec3 photo, float fw) {
+    vec2 q = abs(p - rwAb.xy) - rwAb.zw; if (max(q.x, q.y) > fw) return photo;
+    float dT = 1e9; for (int k = 0; k < 4; k++) { vec2 a = rwTw[k].xy, e = rwTw[k].zw - a; dT = min(dT, length(p - a - e * clamp(dot(p - a, e) / dot(e, e), 0., 1.))); }
+    float d = dot(p - rwAp[0], p - rwAp[0]), sg = 1.; int j = 4;   /* signed distance to the polygon, inside negative */
+    for (int i = 0; i < 5; i++) { vec2 e = rwAp[j] - rwAp[i], w = p - rwAp[i], b = w - e * clamp(dot(w, e) / max(dot(e, e), 1e-9), 0., 1.); d = min(d, dot(b, b));
+      bvec3 c = bvec3(p.y >= rwAp[i].y, p.y < rwAp[j].y, e.x * w.y > e.y * w.x); if (all(c) || all(not(c))) sg = -sg; j = i; }
+    float mT = clamp(.5 - (dT - rwTwW) / fw, 0., 1.), mA = clamp(.5 - sg * sqrt(d) / fw, 0., 1.), m = max(mT, mA); if (m <= 0.) return photo;
+    float g = mix(.5, rwN(p * 2.5), 1. - smoothstep(.2, .6, fw)), pt = rwN(p * .2);
+    vec3 asph = vec3(.1, .1, .105) * (.85 + .15 * g + .12 * (pt - .5)), conc = vec3(.3, .3, .285) * (.9 + .1 * g + .12 * (pt - .5));
+    float jt = min(abs(fract(p.x / 7.5) - .5), abs(fract(p.y / 7.5) - .5)) * 7.5;   /* metres to the nearest slab joint (the apron lies along the runway's axes) */
+    conc *= 1. - .3 * clamp(.5 - (jt - .03) / fw, 0., 1.) * min(1., .2 / fw);
+    vec3 c = mix(asph, conc, mA);
+    c = mix(c, vec3(.72, .58, .06) * (.8 + .2 * g), clamp(.5 - (dT - .075) / fw, 0., 1.) * min(1., .3 / fw) * (1. - mA));   /* centre line, fading with distance like its real width */
+    return mix(photo, c, m); }
   vec3 rwPaint(vec2 p, vec4 P, vec3 photo, float fw) {
+    photo = rwAero(p, photo, fw);
     float L = P.x, W = P.y; if (abs(p.x) > W + fw || abs(p.y) > L + fw) return photo;
     float inR = rwBox(p, vec2(0.), vec2(W, L), fw);
     float s = L - abs(p.y), x = p.y < 0. ? p.x : -p.x;   /* s: metres from the nearer threshold; x: across, mirrored so the pattern reads from its approach */
@@ -71,6 +94,15 @@ export function createAirfield(THREE) {
   const num = new THREE.CanvasTexture(cv); num.generateMipmaps = true; num.minFilter = THREE.LinearMipmapLinearFilter; num.anisotropy = 8;
   num.wrapS = num.wrapT = THREE.ClampToEdgeWrapping;
   const uniforms = { rwP: { value: new THREE.Vector4(r0.L, r0.W, r0.hm, r0.sl) }, rwNum: { value: num } };
+  { // taxiways + apron in runway coordinates (x across, y along), padded with far-away values up to the shader's array sizes
+    const rw = (e, n) => [e * r0.ax[1] - n * r0.ax[0], e * r0.ax[0] + n * r0.ax[1]], FARP = 1e7;
+    const tw = (r0.twy || []).slice(0, 4).map(s => [...rw(s[0], s[1]), ...rw(s[2], s[3])]), ap = (r0.apron || []).slice(0, 5).map(q => rw(q[0], q[1]));
+    const all = [...tw.flatMap(s => [[s[0], s[1]], [s[2], s[3]]]), ...ap], hw = (r0.twyW || 23) / 2;
+    const lo = [0, 1].map(k => Math.min(...all.map(q => q[k])) - hw - 2), hi = [0, 1].map(k => Math.max(...all.map(q => q[k])) + hw + 2);
+    while (tw.length < 4) tw.push([FARP, FARP, FARP + 1, FARP]);
+    while (ap.length < 5) ap.push(ap.length ? ap[ap.length - 1] : [FARP, FARP]);   /* repeated last corner: zero-length edges change nothing */
+    uniforms.rwTw = { value: tw.map(s => new THREE.Vector4(...s)) }; uniforms.rwAp = { value: ap.map(q => new THREE.Vector2(...q)) }; uniforms.rwTwW = { value: hw };
+    uniforms.rwAb = { value: all.length ? new THREE.Vector4((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (hi[0] - lo[0]) / 2, (hi[1] - lo[1]) / 2) : new THREE.Vector4(FARP, FARP, 0, 0) }; }
 
   // per tile: the runway centre in the tile's own east / north metres (the chord components its vertex shader uses) + the axis there
   const FAR = new THREE.Vector4(1e9, 1e9, 1, 0);
@@ -120,12 +152,14 @@ export function createAirfield(THREE) {
       else if (k < 2.5) { bool out_ = k < 1.5 ? al < 0. : al > 0.; c = out_ ? vec3(.2, 1., .45) : vec3(1., .12, .08); I = on; }
       else { c = el > ib.z ? vec3(1., .95, .85) : vec3(1., .1, .06); I = (.35 + .65 * on) * smoothstep(-.05, .2, al * ib.w); }   /* PAPI: seen from its approach only */
       if (I <= 0. || dm > 25000.) { gl_Position = vec4(2., 2., 2., 1.); return; }
-      vS = clamp(.9 * pxK / dm, 1.6, 9.); gl_PointSize = vS * 3.;
-      vC = c * I * clamp(2500. / dm, .35, 1.6);
+      vS = clamp(3. * pxK / dm, 8., 28.); gl_PointSize = vS;   /* sprite width in pixels: 3 m of glare near, 8 px far away */
+      vC = c * I * 4. * clamp(2500. / dm, .35, 1.6);
       gl_Position = projectionMatrix * vec4(bv * (1. - min(.002 + 4. / dm, .2)), 1.); }`;
   const LFS = /* glsl */`
     varying vec3 vC; varying float vS;
-    void main() { vec2 r = (gl_PointCoord - .5) * vS * 3.; float q = exp(-dot(r, r) / (.5 * vS * vS)); if (q < .01) discard; gl_FragColor = vec4(vC * q * 1.6, 1.); }`;
+    void main() {   /* point + 1/r^2 glare with a zero-slope window at the edge (like the F-16 lights, gfx.js glowTex): the old gaussian x 1.6 clipped to a flat white disc */
+      float r2 = min(1., dot(gl_PointCoord - .5, gl_PointCoord - .5) * 4.), w = 1.2 / vS, q = (1. - r2) * (1. - r2) / (1. + r2 / (w * w));   /* core radius ~0.6 px at any sprite size */
+      if (q < .003) discard; gl_FragColor = vec4(vC * q, 1.); }`;
   let pts = null;
 
   // ── buildings (each RUNWAYS entry with bld: true): OSM footprints extruded to their render_height + a Falcon BMS 4.38 control tower,

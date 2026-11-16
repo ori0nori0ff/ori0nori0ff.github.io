@@ -13,7 +13,7 @@
      inclination; engine cut when the orbital energy reaches the target circular orbit. What PEG-class guidance adds: the optimal (linear
      tangent) thrust direction, gravity / thrust integrals over the arc, plane targeting with yaw steering, coast phases, tail-off.
    Body axes: -z = nose (up on the pad), +y = downrange on the pad, +x = right. Frame I, SI units (see the plan's Interfaces). */
-import { R_E, toF, fromF, qIF, qFromBasis, OMEGA_I, latLonOf, groundContact } from './core.js?v=9235aa0c';
+import { R_E, toF, fromF, qIF, qFromBasis, OMEGA_I, latLonOf, groundContact } from './core.js?v=d29b8afa';
 import { atmosphere } from './atmos.js?v=7ee6d1db';
 
 const G0 = 9.80665, D2R = Math.PI / 180, P0 = 101325, MU = 3.986004418e14, KSG = 1.7415e-4;   // KSG: Sutton-Graves constant (Earth air, SI)
@@ -285,7 +285,7 @@ export function buildRocketMesh(THREE, R, makePlume) {
 // ── a rocket flight inside a flight session (flight/session.js): model, views, HUD, orbit lines, panel. o = { rocket, pad, inc, alt (km), entry }
 export async function setupRocket(S, o, ui, { sunL, createCore, createScreenHud }) {
   const F = S.F, THREE = F.THREE;
-  const [{ createOrbit, gravityModule, createOrbitView }, { makePlume, makePlasma }] = await Promise.all([import('./orbit.js?v=2a2bb0bd'), import('./gfx.js?v=8609367e')]);
+  const [{ createOrbit, gravityModule, createOrbitView }, { makePlume, makePlasma }] = await Promise.all([import('./orbit.js?v=f135957d'), import('./gfx.js?v=bc80a648')]);
   const R = await loadRocket(o.rocket), orb = createOrbit({ helio: F.solar.helio }), ctx = S.ctx = { orb, node: null, sas: 'pad', last: null };
   const RK = S.rocket = createRocket(R, ctx, { pad: o.pad, inc: o.inc, alt: (o.alt || 200) * 1e3, F, wait: 1500, entry: o.entry ? { alt: 120e3, v: 7830, gamma: -1.5 } : null });
   const K = RK.K, pad = K.pad, { root, parts } = buildRocketMesh(THREE, R, makePlume); S.craft.add(root);

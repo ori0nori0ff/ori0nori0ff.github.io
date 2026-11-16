@@ -4,8 +4,11 @@
    createAircraft(json) -> { def, mods } for flight/core.js createCore(F, def, at, { mods }).
    Frames: core's body axes are three.js (x right, y up, z aft); the tables use x forward, y right, z down ("SL" below).
    SL -> three: t = [y, -z, -x]; moments the same; rates: three w = [q, -r, -p]. */
-import { OMEGA_I, toF, latLonOf, R_E, GM_E } from './core.js?v=9235aa0c';
+import { OMEGA_I, toF, latLonOf, R_E, GM_E } from './core.js?v=d29b8afa';
 import { atmosphere, casOf } from './atmos.js?v=7ee6d1db';
+import { createAutopilot } from './autopilot.js?v=18967122';
+import { createEngineStart } from './engine-start.js?v=4087dd4b';
+import { createStores } from './stores.js?v=6ceb1c0c';
 
 const D2R = Math.PI / 180, G0 = 9.80665, LBF = 4.448222, FT = .3048;
 const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]], sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -25,20 +28,24 @@ export const lut1 = (n, y, x) => { const [i, f] = seg(n, x); return y[i] + (y[i 
 export const lut2 = (rn, cn, T, r, c) => { const [i, f] = seg(rn, r), [j, g] = seg(cn, c);
   const a = T[i][j] + (T[i][j + 1] - T[i][j]) * g, b = T[i + 1][j] + (T[i + 1][j + 1] - T[i + 1][j]) * g; return a + (b - a) * f; };
 
-export function createAircraft(J) {
+export function createAircraft(J, o = {}) {   // o.start = 'cold' | 'runway' (flight/engine-start.js); o.tanks = 0 | 2 | 3, o.fuel = internal kg (flight/stores.js)
+  const ES = createEngineStart(J, o), IDLE = J.start.idleRpm, ST = createStores(J, o);
   const G = J.geometry, A = J.alpha, D = J.damp, Mt = J.mach, PS = J.postStall, E = J.engine, GR = J.gear, FC = J.fcs, CT = J.controls;
   const S = G.S, b = G.b, c = G.cbar;
 
   // ── aerodynamic coefficients (SL body axes). al, be in deg; el, ai, ru in deg; p, q, r rad/s; V m/s; M Mach; xcg in cbar; gear 0..1
-  function coef(al, be, M, el, ai, ru, p, q, r, V, xcg, gear) {
+  const SB = J.speedBrake;
+  function coef(al, be, M, el, ai, ru, p, q, r, V, xcg, gear, sb) {
     const ac = clamp(al, A[0], A[A.length - 1]), ab = Math.abs(be), bs = Math.sign(be) || 1, bc = clamp(be, -30, 30);
-    const kL = lut1(Mt.M, Mt.kL, M), dCD = lut1(Mt.M, Mt.dCD, M) + J.gearDrag * gear, dX = lut1(Mt.M, Mt.dXac, M);
+    const kL = lut1(Mt.M, Mt.kL, M), dCD = lut1(Mt.M, Mt.dCD, M) + J.gearDrag * gear + ST.dCD(M), dX = lut1(Mt.M, Mt.dXac, M);
     let CX = lut2(J.elevNodes, A, J.CX, el, ac), CZ = lut1(A, J.CZ, ac) * kL * (1 - Math.pow(Math.min(ab, 30) / 57.3, 2)) + J.linear.CZelev * el / 25;
     let CM = lut2(J.elevNodes, A, J.CM, el, ac);
     // post-stall: blend into a flat-plate-like body (estimate)
     const w = al > 0 ? smooth(PS.from, PS.full, al) : smooth(-PS.fromNeg, -PS.fullNeg, -al), ar = al * D2R;
     if (w > 0) { CX += (-PS.CA90 * Math.cos(ar) - CX) * w; CZ += (-PS.CN90 * Math.sin(ar) - CZ) * w; CM += (PS.CM90 * Math.sin(ar) - CM) * w; }
     CX -= dCD * Math.cos(ar); CZ -= dCD * Math.sin(ar);
+    // speed brake: TP-1538 increments at 60 deg × (deflection / 60); sb = opening 0..1 of 60 deg (its alpha range -20..90 deg covers the post-stall blend)
+    if (SB && sb > 0) { const sa = clamp(al, -20, 90); CX += lut1(SB.alpha, SB.dCX, sa) * sb; CM += lut1(SB.alpha, SB.dCM, sa) * sb; }
     const da = ai / 20, dr = ru / 30, Vd = Math.max(V, 5), ch = c / (2 * Vd), bh = b / (2 * Vd), dmp = n => lut1(A, D[n], ac);
     CX += ch * dmp('CXq') * q; CZ += ch * dmp('CZq') * q;
     const CY = J.linear.CYbeta * bc + J.linear.CYail * da + J.linear.CYrud * dr + bh * (dmp('CYr') * r + dmp('CYp') * p);
@@ -51,7 +58,7 @@ export function createAircraft(J) {
   // air data of a state (alpha, beta in deg)
   function airData(st, env) { const vb = qrot(qinv(st.q), env.vAirOf(st)), V = len(vb);
     return { V, al: Math.atan2(-vb[1], -vb[2]) / D2R, be: V > 1e-3 ? Math.asin(clamp(vb[0] / V, -1, 1)) / D2R : 0, M: V / env.air.a, qb: .5 * env.air.rho * V * V }; }
-  const aeroFM = (st, env, ad, srf) => { const w = st.w, Cf = coef(ad.al, ad.be, ad.M, srf.elev, srf.ail, srf.rud, -w[2], w[0], -w[1], ad.V, xcgOf(st), srf.gear), qS = ad.qb * S;
+  const aeroFM = (st, env, ad, srf) => { const w = st.w, Cf = coef(ad.al, ad.be, ad.M, srf.elev, srf.ail, srf.rud, -w[2], w[0], -w[1], ad.V, xcgOf(st), srf.gear, srf.spoiler || 0), qS = ad.qb * S;
     return { F: [qS * Cf[1], -qS * Cf[2], -qS * Cf[0]], M: [qS * c * Cf[4], -qS * b * Cf[5], -qS * b * Cf[3]], Cf }; };
 
   // ── engine (thrust in N); pw = power level 0..100 (50 = military, 100 = full afterburner), altitude m, Mach
@@ -71,12 +78,8 @@ export function createAircraft(J) {
     else { if (p3 >= 50) { T = 5; p2 = 40; } else { p2 = p1; T = rtau(p2 - p3); } }
     return T * (p2 - p3); }
 
-  // ── mass properties: dry + fuel in tanks (point masses at x aft of the reference CG; wings ±2 m)
-  const MS = J.mass, FU = J.fuel, tanks = FU.tanks.map(t => ({ ...t, y: t.name === 'wings' ? 2 : 0 }));
-  const fuelJ = f => { let jx = 0, jyz = 0, mx = 0; for (const t of tanks) { const m = f * t.share; jx += m * t.y * t.y; jyz += m * t.x * t.x; mx += m * t.x; } return { jx, jyz, mx }; };
-  const f0 = fuelJ(FU.start), mDry = MS.mRef - FU.start, Jd = { x: MS.Jx - f0.jx, y: MS.Jy - f0.jyz, z: MS.Jz - f0.jx - f0.jyz }, cgDry = -f0.mx / mDry;
-  function massOf(f) { const k = fuelJ(f), m = mDry + f, cg = (mDry * cgDry + k.mx) / m, Jx = Jd.x + k.jx, Jy = Jd.y + k.jyz, Jz = Jd.z + k.jx + k.jyz;
-    return { m, cg, I: [[Jy, 0, 0], [0, Jz, -MS.Jxz], [0, -MS.Jxz, Jx]] }; }
+  // ── mass properties: dry + fuel per tank + stores (flight/stores.js; point masses, body axes)
+  const MS = J.mass, massOf = ST.massOf;
   const xcgOf = st => G.xcgRef + (st.cg ? st.cg[2] : 0) / c;
   const hEng = st => [0, 0, -MS.hEngine * clamp((st.eng[0] ? st.eng[0].spool : 0), 0, 1)];
 
@@ -127,14 +130,17 @@ export function createAircraft(J) {
     else {
       const V = Math.max(ad.V, 40), al = ad.al * D2R, be = ad.be * D2R, gV = G0 / V;
       const ref = cth * (cph >= .5 ? 1 / cph : cph > -.5 ? 4 * cph : 1 / cph), st = clamp(ctl.pitch, -1, 1);
-      let nzC = st >= 0 ? ref + st * (FC.nzMax - ref) : ref + st * (ref - FC.nzMin); nzC = clamp(nzC, FC.nzMin, FC.nzMax);
+      // trim (flight/autopilot.js): ctl.trim g added to the g command, ctl.trimRoll deg/s to the roll-rate command. Autopilot axis (s.ap.nz / .p
+      // not null): its command replaces the hands-off reference + trim, and the stick increment is added to it (TO 1F-16CM-1 35.5: additive)
+      const ap = s.ap, apN = ap && ap.nz != null, apP = ap && ap.p != null;
+      let nzC = (apN ? ap.nz : ref + (ctl.trim || 0)) + (st >= 0 ? st * (FC.nzMax - ref) : st * (ref - FC.nzMin)); nzC = clamp(nzC, FC.nzMin, FC.nzMax);
       const aLim = ad.al > FC.alphaMax - 3 || ad.al < FC.alphaMin + 2;
       if (!aLim) In = clamp(In + (nzC - nz) * h, -2, 2);
       let qC = gV * ((nzC - cc) + (nzC - nz) + In);
       const qg = gV * (nz - cc); qC = Math.min(qC, qg + 2 * (FC.alphaMax * D2R - al)); qC = Math.max(qC, qg + 2 * (FC.alphaMin * D2R - al));
       qC = clamp(qC, -1, 1);
       const fade = clamp(ad.qb / 8000, .3, 1) * (srf.gear > .5 ? .5 : 1) * (ad.al > 15 ? clamp(1 - (ad.al - 15) / 20, .3, 1) : 1);
-      const pS = clamp(ctl.roll, -1, 1) * FC.rollRate * D2R * fade, rS = ay / V - FC.kbeta * (clamp(ctl.yaw, -1, 1) * FC.betaCmd * D2R - be);
+      const pS = ((apP ? ap.p : ctl.trimRoll || 0) + clamp(ctl.roll, -1, 1) * FC.rollRate) * D2R * fade, rS = ay / V - FC.kbeta * (clamp(ctl.yaw, -1, 1) * FC.betaCmd * D2R - be);
       const pB = pS * Math.cos(al) - rS * Math.sin(al), rB = pS * Math.sin(al) + rS * Math.cos(al), w = s.w;
       const wd = [FC.kq * (qC - w[0]), FC.kr * (-rB - w[1]), FC.kp * (-pB - w[2])], hE = hEng(s);
       const Md = add(mv(s.I, wd), cross(w, add(mv(s.I, w), hE)));
@@ -161,28 +167,40 @@ export function createAircraft(J) {
     if (ctl.park && (ctl.throttle > .05 || ctl.brake)) ctl.park = false;
     if (wow && !ctl.gear) ctl.gear = 1;   // weight on wheels: the gear handle stays down
     s.srf.gear = clamp(s.srf.gear + clamp((ctl.gear ? 1 : 0) - s.srf.gear, -h / GR.retract, h / GR.retract), 0, 1);
+    // speed brake (opening 0..1 of SB.max): 43 deg with the gear down and locked, full again with the wheels on the ground (stand-in for the nose WOW switch)
+    // HOTAS switch ctl.sbSw (input-hotas.js; null / undefined = keys: ctl.speedbrake toggles): 1 = EXTEND held -> opens, past the
+    // gear-down limit too (override); -1 = RETRACT; 0 = OFF -> stays where it is (back to the limit after an override)
+    if (SB) { const lim = s.srf.gear >= .95 && !wow ? SB.gearMax / SB.max : 1, sp = s.srf.spoiler || 0, sw = ctl.sbSw;
+      const aim = sw == null ? (ctl.speedbrake ? lim : 0) : sw > 0 ? 1 : sw < 0 ? 0 : Math.min(sp, lim);
+      s.srf.spoiler = clamp(sp + clamp(aim - sp, -h * SB.rate / SB.max, h * SB.rate / SB.max), 0, 1); }
     if (s.crash) { ctl.throttle = 0; }
     fcs(s, env, h);
-    const fuel = s.sys.fuel[0], on = fuel > 0 && !s.crash, p1 = on ? tgear(clamp(ctl.throttle, 0, 1)) : 0;
+    // engine: start / shutdown / electrics in flight/engine-start.js; while it reports run (lit + governed) the engine below is the S2 one
+    // fuel at the engine = the two feed reservoirs (flight/stores.js): fuselage kg while they feed, else 0
+    const fuel = ST.feeds(s) ? ST.fuselage(s) : 0, ad = airData(s, env), es = ES.tick(s, env, h, { fuel, wow, pw, mach: ad.M, altFt: env.altMSL / FT, kt: casOf(ad.M, env.air.p) * 1.943844 });
+    const on = es.run && fuel > 0 && !s.crash, p1 = on ? tgear(clamp(ctl.throttle, 0, 1)) : 0;
     pw = clamp(pw + (on ? pdot(pw, p1) : -pw * .5) * h, 0, 100);
-    const ad = airData(s, env), th = thrustOf(pw, env.altMSL, ad.M), T = on ? th.T : 0, tf = (1 + E.tsfc.machFactor * ad.M) * Math.sqrt(env.air.T / 288.15) / (G0 * 3600);
+    const th = thrustOf(pw, env.altMSL, ad.M), tI = on ? 0 : thrustOf(0, env.altMSL, ad.M).T, tf = (1 + E.tsfc.machFactor * ad.M) * Math.sqrt(env.air.T / 288.15) / (G0 * 3600);
+    const T = on ? th.T : es.lit ? tI * es.thrustK : Math.min(0, tI);   // starting: a share of idle thrust; dead engine: only the ram drag of the idle table (estimate)
     const inc = (E.tsfc.ab * th.max - E.tsfc.mil * th.mil) / Math.max(1, th.max - th.mil);
-    const ff = on ? Math.max(E.tsfc.idleKgS, (pw < 50 ? Math.max(0, T) * E.tsfc.mil : th.mil * E.tsfc.mil + (T - th.mil) * inc) * tf) : 0;
-    s.eng[0] = { n1: null, n2: pw < 50 ? 65 + .7 * pw : 100, spool: on ? .6 + .4 * Math.min(pw, 50) / 50 : 0, thrust: T, ff, egt: null, on, power: pw, ab: pw > 50 };
-    s.sys.fuel[0] = Math.max(0, fuel - ff * h); const mp = massOf(s.sys.fuel[0]); s.m = mp.m; s.I = mp.I; s.cg = [0, 0, mp.cg];
+    const ff = on ? Math.max(E.tsfc.idleKgS, (pw < 50 ? Math.max(0, T) * E.tsfc.mil : th.mil * E.tsfc.mil + (T - th.mil) * inc) * tf) : es.ff;
+    const n2 = on ? (pw < 50 ? IDLE + (100 - IDLE) * pw / 50 : 100) : es.rpm;   // core rpm %: idle (BMS 70 %) .. 100 % at MIL
+    s.eng[0] = { n1: null, n2, rpm: n2, ftit: es.ftit, spool: on ? .6 + .4 * Math.min(pw, 50) / 50 : .6 * es.rpm / IDLE, thrust: T, ff, egt: null, on: on || es.lit, power: pw, ab: pw > 50 };
+    ST.step(s, ff, h, wow); const mp = massOf(s); s.m = mp.m; s.I = mp.I; s.cg = mp.cg;   // fuel feed + transfer, jettison (flight/stores.js)
     // crash: a hard point in the ground, or a gear strut past its stroke
     if (!s.crash) { for (const p of GR.hard) if (groundPt(s, env, p).d > .15) { s.crash = 'structure hit the ground'; break; }
       if (!s.crash && s.contact.some(x => x.compression > GR.stroke)) s.crash = 'gear collapsed';
       if (!s.crash && s.srf.gear < .95 && GR.wheels.some(w => groundPt(s, env, w.p).d > 0)) s.crash = 'gear not down'; }
   }, hud(s, env, hud) { const ad = airData(s, env), e = s.eng[0] || {};
-    Object.assign(hud, { ias: casOf(ad.M, env.air.p), mach: ad.M, aoa: ad.al, beta: ad.be, fuel: s.sys.fuel[0], mass: s.m, eng: s.eng, power: e.power, ab: !!e.ab, thrust: e.thrust, ff: e.ff,
-      gear: s.srf.gear, park: !!s.ctl.park, crash: s.crash || null, stall: ad.al > FC.alphaMax + 2 && ad.V > 20, fcs: s.fcs ? s.fcs.mode : '', srf: s.srf, air: env.air }); } };
+    ST.hud(s, hud);   // fuel (total kg = the totaliser), fuelInt / fuelExt, fuelFR / fuelAL, FUEL LOW, TRP FUEL, stores
+    Object.assign(hud, { ias: casOf(ad.M, env.air.p), mach: ad.M, aoa: ad.al, beta: ad.be, mass: s.m, eng: s.eng, power: e.power, ab: !!e.ab, thrust: e.thrust, ff: e.ff,
+      gear: s.srf.gear, speedbrake: SB ? (s.srf.spoiler || 0) * SB.max : 0, park: !!s.ctl.park, crash: s.crash || null, stall: ad.al > FC.alphaMax + 2 && ad.V > 20, fcs: s.fcs ? s.fcs.mode : '', srf: s.srf, air: env.air }); } };
 
-  const mp = massOf(FU.start);
-  const def = { name: J.name, m: mp.m, I: mp.I, cg: [0, 0, mp.cg], size: J.size, rest: J.rest, views: J.views, json: J,
+  const s0 = { ctl: {}, sys: {}, t: 0 }; ST.init(s0); const mp = massOf(s0), apm = J.autopilot && J.trim ? createAutopilot(J) : null;   // trim + autopilot: runs before step() (FCS)
+  const def = { name: J.name, m: mp.m, I: mp.I, cg: mp.cg, size: J.size, rest: J.rest, views: J.views, json: J, stores: ST,
     gear: { points: GR.wheels.map(w => w.p) },
-    init(s) { s.sys.fuel = [FU.start]; s.ctl.park = true; s.ctl.throttle = 0; s.crash = null; pw = 0; In = 0; s.srf.elev = s.srf.ail = s.srf.rud = 0; s.srf.gear = 1; s.ctl.gear = 1; } };
-  return { def, mods: [forces, step], coef, thrustOf, massOf };
+    init(s) { ST.init(s); const m0 = massOf(s); s.m = m0.m; s.I = m0.I; s.cg = m0.cg; s.ctl.park = true; s.ctl.throttle = 0; s.crash = null; pw = 0; In = 0; s.srf.elev = s.srf.ail = s.srf.rud = 0; s.srf.gear = 1; s.ctl.gear = 1; if (apm) apm.reset(s); ES.init(s); } };
+  return { def, mods: apm ? [apm, forces, step, ES.mod] : [forces, step, ES.mod], coef, thrustOf, massOf, autopilot: apm, engineStart: ES, stores: ST };
 }
 
-export async function loadAircraft(url) { const r = await fetch(url); if (!r.ok) throw new Error(url + ' ' + r.status); return createAircraft(await r.json()); }
+export async function loadAircraft(url, o) { const r = await fetch(url); if (!r.ok) throw new Error(url + ' ' + r.status); return createAircraft(await r.json(), o); }

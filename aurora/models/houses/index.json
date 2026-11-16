@@ -1,0 +1,1222 @@
+{
+ "note": "Built by tools/build_houses.py from Arma Reforger (Bohemia Interactive) house prefabs; used with the user's permission. Sizes in metres, glTF axes (Y up).",
+ "types": [
+  {
+   "id": "ApartmentBuilding_5I01",
+   "file": "ApartmentBuilding_5I01.glb",
+   "cat": "block",
+   "floors": 5,
+   "prefab": "Prefabs/Structures/Houses/Prefabricated/ApartmentBuilding_5I01/ApartmentBuilding_USSR_5I01.et",
+   "placed": 1,
+   "bytes": 1127252,
+   "w": 54.4,
+   "d": 20.07,
+   "cx": 1.17,
+   "cz": -1.74,
+   "h": 22.54,
+   "fill": 0.757,
+   "qx": -0.018,
+   "qz": 0.071,
+   "tris": [
+    21617,
+    270,
+    120
+   ],
+   "lods": [
+    2,
+    4,
+    5
+   ],
+   "all_lod_tris": [
+    100938,
+    49288,
+    21617,
+    9448,
+    270,
+    120
+   ]
+  },
+  {
+   "id": "ApartmentPrefab_5I01",
+   "file": "ApartmentPrefab_5I01.glb",
+   "cat": "block",
+   "floors": 5,
+   "prefab": "Prefabs/Structures/Houses/Prefabricated/ApartmentPrefab_5I01/ApartmentPrefab_USSR_5I01_blue.et",
+   "placed": 5,
+   "bytes": 1656564,
+   "w": 17.18,
+   "d": 11.88,
+   "cx": 0.0,
+   "cz": 0.05,
+   "h": 20.31,
+   "fill": 0.979,
+   "qx": 0.002,
+   "qz": -0.005,
+   "tris": [
+    28886,
+    7065,
+    30
+   ],
+   "lods": [
+    1,
+    3,
+    5
+   ],
+   "all_lod_tris": [
+    58024,
+    28886,
+    14519,
+    7065,
+    4477,
+    30
+   ]
+  },
+  {
+   "id": "Cottage_E_01",
+   "file": "Cottage_E_01.glb",
+   "cat": "house",
+   "floors": 1,
+   "prefab": "PrefabLibrary/DefaultLibrary/Structures/Houses/Cottage_E_01.et",
+   "placed": 2,
+   "bytes": 681476,
+   "w": 5.9,
+   "d": 9.1,
+   "cx": 0.1,
+   "cz": -0.5,
+   "h": 5.09,
+   "fill": 0.958,
+   "qx": -0.013,
+   "qz": -0.005,
+   "tris": [
+    16414,
+    2341,
+    62
+   ],
+   "lods": [
+    0,
+    3,
+    5
+   ],
+   "all_lod_tris": [
+    16414,
+    9225,
+    4487,
+    2341,
+    1178,
+    62
+   ]
+  },
+  {
+   "id": "FarmHouse_E_1L01",
+   "file": "FarmHouse_E_1L01.glb",
+   "cat": "house",
+   "floors": 1,
+   "prefab": "Prefabs/Structures/Houses/Farm/FarmHouse_E_1L01/FarmHouse_E_1L01_Green.et",
+   "placed": 2,
+   "bytes": 1100484,
+   "w": 15.25,
+   "d": 20.47,
+   "cx": -2.1,
+   "cz": -1.11,
+   "h": 11.25,
+   "fill": 0.709,
+   "qx": 0.111,
+   "qz": 0.076,
+   "tris": [
+    21036,
+    3484,
+    87
+   ],
+   "lods": [
+    1,
+    3,
+    5
+   ],
+   "all_lod_tris": [
+    53963,
+    21036,
+    6659,
+    3484,
+    1807,
+    87
+   ]
+  },
+  {
+   "id": "Garage_E_01",
+   "file": "Garage_E_01.glb",
+   "cat": "shed",
+   "floors": 1,
+   "prefab": "PrefabLibrary/DefaultLibrary/Structures/Houses/Garage_E_01.et",
+   "placed": 2,
+   "bytes": 175896,
+   "w": 4.84,
+   "d": 7.42,
+   "cx": 0.0,
+   "cz": 0.52,
+   "h": 3.34,
+   "fill": 1.0,
+   "qx": -0.009,
+   "qz": 0.006,
+   "tris": [
+    4303,
+    979,
+    36
+   ],
+   "lods": [
+    0,
+    2,
+    5
+   ],
+   "all_lod_tris": [
+    4303,
+    2059,
+    979,
+    454,
+    157,
+    36
+   ]
+  },
+  {
+   "id": "HouseAddon_Shed_E_01",
+   "file": "HouseAddon_Shed_E_01.glb",
+   "cat": "shed",
+   "floors": 1,
+   "prefab": "PrefabLibrary/DefaultLibrary/Structures/Houses/HouseAddon_Shed_E_01.et",
+   "placed": 1,
+   "bytes": 702596,
+   "w": 4.63,
+   "d": 8.15,
+   "cx": -0.27,
+   "cz": 0.0,
+   "h": 5.08,
+   "fill": 0.919,
+   "qx": -0.014,
+   "qz": -0.009,
+   "tris": [
+    12278,
+    3047,
+    31
+   ],
+   "lods": [
+    0,
+    2,
+    6
+   ],
+   "all_lod_tris": [
+    12278,
+    6133,
+    3047,
+    1505,
+    730,
+    377,
+    31
+   ]
+  },
+  {
+   "id": "House_Mountain_E_1I01",
+   "file": "House_Mountain_E_1I01.glb",
+   "cat": "house",
+   "floors": 1,
+   "prefab": "Prefabs/Structures/Houses/Village/House_Mountain_E_1I01/House_Mountain_E_1I01.et",
+   "placed": 1,
+   "bytes": 849300,
+   "w": 23.2,
+   "d": 12.99,
+   "cx": -0.13,
+   "cz": 0.42,
+   "h": 8.88,
+   "fill": 0.807,
+   "qx": -0.008,
+   "qz": -0.031,
+   "tris": [
+    16997,
+    2222,
+    114
+   ],
+   "lods": [
+    0,
+    3,
+    5
+   ],
+   "all_lod_tris": [
+    16997,
+    8919,
+    4545,
+    2222,
+    1242,
+    114
+   ]
+  },
+  {
+   "id": "House_Mountain_E_1I01_short",
+   "file": "House_Mountain_E_1I01_short.glb",
+   "cat": "house",
+   "floors": 1,
+   "prefab": "PrefabLibrary/DefaultLibrary/Structures/Houses/House_Mountain_E_1I01_short.et",
+   "placed": 1,
+   "bytes": 554212,
+   "w": 16.02,
+   "d": 10.76,
+   "cx": -3.71,
+   "cz": -0.7,
+   "h": 8.88,
+   "fill": 0.93,
+   "qx": -0.003,
+   "qz": 0.034,
+   "tris": [
+    12090,
+    1262,
+    76
+   ],
+   "lods": [
+    0,
+    3,
+    4
+   ],
+   "all_lod_tris": [
+    12090,
+    6529,
+    3218,
+    1262,
+    76
+   ]
+  },
+  {
+   "id": "House_Prefab_2I01",
+   "file": "House_Prefab_2I01.glb",
+   "cat": "house",
+   "floors": 2,
+   "prefab": "Prefabs/Structures/Houses/Prefabricated/House_Prefab_2I01/House_Prefab_2I01_v2.et",
+   "placed": 1,
+   "bytes": 1071792,
+   "w": 12.7,
+   "d": 12.01,
+   "cx": 0.54,
+   "cz": 0.78,
+   "h": 11.54,
+   "fill": 0.891,
+   "qx": 0.005,
+   "qz": -0.052,
+   "tris": [
+    18990,
+    4630,
+    76
+   ],
+   "lods": [
+    0,
+    2,
+    5
+   ],
+   "all_lod_tris": [
+    18990,
+    10178,
+    4630,
+    2555,
+    1327,
+    76
+   ]
+  },
+  {
+   "id": "House_Prefab_2I02t",
+   "file": "House_Prefab_2I02t.glb",
+   "cat": "house",
+   "floors": 2,
+   "prefab": "Prefabs/Structures/Houses/Prefabricated/House_Prefab_2I02/House_Prefab_2I02t.et",
+   "placed": 2,
+   "bytes": 1131276,
+   "w": 9.55,
+   "d": 13.72,
+   "cx": -0.28,
+   "cz": -0.8,
+   "h": 11.59,
+   "fill": 0.994,
+   "qx": -0.0,
+   "qz": 0.004,
+   "tris": [
+    24262,
+    5856,
+    60
+   ],
+   "lods": [
+    0,
+    2,
+    7
+   ],
+   "all_lod_tris": [
+    24262,
+    11310,
+    5856,
+    2872,
+    1380,
+    834,
+    387,
+    60
+   ]
+  },
+  {
+   "id": "House_Town_E_2I01",
+   "file": "House_Town_E_2I01.glb",
+   "cat": "house",
+   "floors": 2,
+   "prefab": "Prefabs/Structures/Houses/Town/House_Town_E_2I01/House_Town_E_2I01_orange.et",
+   "placed": 3,
+   "bytes": 1751792,
+   "w": 12.3,
+   "d": 16.52,
+   "cx": 0.04,
+   "cz": 0.41,
+   "h": 15.11,
+   "fill": 0.985,
+   "qx": 0.001,
+   "qz": -0.008,
+   "tris": [
+    34261,
+    7222,
+    56
+   ],
+   "lods": [
+    0,
+    2,
+    5
+   ],
+   "all_lod_tris": [
+    34261,
+    17167,
+    7222,
+    3626,
+    1778,
+    56
+   ]
+  },
+  {
+   "id": "House_Town_E_2I02",
+   "file": "House_Town_E_2I02.glb",
+   "cat": "house",
+   "floors": 2,
+   "prefab": "Prefabs/Structures/Houses/Town/House_Town_E_2I02/House_Town_E_2I02_yellow.et",
+   "placed": 2,
+   "bytes": 1417488,
+   "w": 18.32,
+   "d": 12.83,
+   "cx": -0.0,
+   "cz": 0.0,
+   "h": 16.52,
+   "fill": 1.0,
+   "qx": -0.002,
+   "qz": -0.003,
+   "tris": [
+    31843,
+    5100,
+    62
+   ],
+   "lods": [
+    0,
+    2,
+    5
+   ],
+   "all_lod_tris": [
+    31843,
+    13087,
+    5100,
+    2423,
+    1122,
+    62
+   ]
+  },
+  {
+   "id": "House_Town_E_2I03",
+   "file": "House_Town_E_2I03.glb",
+   "cat": "house",
+   "floors": 2,
+   "prefab": "PrefabLibrary/DefaultLibrary/Structures/Houses/House_Town_E_2I03.et",
+   "placed": 2,
+   "bytes": 1040924,
+   "w": 19.71,
+   "d": 12.02,
+   "cx": 0.0,
+   "cz": -0.06,
+   "h": 16.45,
+   "fill": 1.0,
+   "qx": 0.001,
+   "qz": -0.001,
+   "tris": [
+    19204,
+    2435,
+    40
+   ],
+   "lods": [
+    1,
+    4,
+    5
+   ],
+   "all_lod_tris": [
+    40670,
+    19204,
+    10387,
+    4831,
+    2435,
+    40
+   ]
+  },
+  {
+   "id": "House_Village_E_1I01",
+   "file": "House_Village_E_1I01.glb",
+   "cat": "house",
+   "floors": 1,
+   "prefab": "Prefabs/Structures/Houses/Village/House_Village_E_1I01/House_Village_E_1I01.et",
+   "placed": 10,
+   "bytes": 1455816,
+   "w": 8.69,
+   "d": 12.08,
+   "cx": -0.13,
+   "cz": -0.14,
+   "h": 10.91,
+   "fill": 1.0,
+   "qx": 0.003,
+   "qz": -0.003,
+   "tris": [
+    33726,
+    6673,
+    40
+   ],
+   "lods": [
+    0,
+    2,
+    5
+   ],
+   "all_lod_tris": [
+    33726,
+    15206,
+    6673,
+    1949,
+    673,
+    40
+   ]
+  },
+  {
+   "id": "House_Village_E_1I02",
+   "file": "House_Village_E_1I02.glb",
+   "cat": "house",
+   "floors": 1,
+   "prefab": "Prefabs/Structures/Houses/Village/House_Village_E_1I02/House_Village_E_1I02.et",
+   "placed": 5,
+   "bytes": 643868,
+   "w": 10.35,
+   "d": 20.08,
+   "cx": 0.6,
+   "cz": 1.0,
+   "h": 11.16,
+   "fill": 1.0,
+   "qx": -0.005,
+   "qz": -0.002,
+   "tris": [
+    12630,
+    1931,
+    64
+   ],
+   "lods": [
+    0,
+    2,
+    5
+   ],
+   "all_lod_tris": [
+    12630,
+    4948,
+    1931,
+    996,
+    414,
+    64
+   ]
+  },
+  {
+   "id": "House_Village_E_1I03_V2",
+   "file": "House_Village_E_1I03_V2.glb",
+   "cat": "house",
+   "floors": 1,
+   "prefab": "Prefabs/Structures/Houses/Village/House_Village_E_1I03/House_Village_E_1I03_yellow.et",
+   "placed": 2,
+   "bytes": 703964,
+   "w": 15.05,
+   "d": 24.97,
+   "cx": -1.69,
+   "cz": -0.05,
+   "h": 10.29,
+   "fill": 0.818,
+   "qx": 0.085,
+   "qz": -0.005,
+   "tris": [
+    14536,
+    2532,
+    44
+   ],
+   "lods": [
+    0,
+    3,
+    4
+   ],
+   "all_lod_tris": [
+    14536,
+    7704,
+    4174,
+    2532,
+    44
+   ]
+  },
+  {
+   "id": "House_Village_E_1I04sf",
+   "file": "House_Village_E_1I04sf.glb",
+   "cat": "house",
+   "floors": 1,
+   "prefab": "Prefabs/Structures/Houses/Village/House_Village_E_1I04/House_Village_E_1I04sf_red.et",
+   "placed": 2,
+   "bytes": 783016,
+   "w": 21.01,
+   "d": 10.39,
+   "cx": -0.05,
+   "cz": 0.17,
+   "h": 11.34,
+   "fill": 0.977,
+   "qx": -0.012,
+   "qz": 0.001,
+   "tris": [
+    15629,
+    3435,
+    39
+   ],
+   "lods": [
+    0,
+    2,
+    5
+   ],
+   "all_lod_tris": [
+    15629,
+    7218,
+    3435,
+    1399,
+    567,
+    39
+   ]
+  },
+  {
+   "id": "House_Village_E_1I04sr",
+   "file": "House_Village_E_1I04sr.glb",
+   "cat": "house",
+   "floors": 1,
+   "prefab": "Prefabs/Structures/Houses/Village/House_Village_E_1I04/House_Village_E_1I04sr_green.et",
+   "placed": 2,
+   "bytes": 829160,
+   "w": 21.05,
+   "d": 10.39,
+   "cx": -0.03,
+   "cz": 0.17,
+   "h": 11.34,
+   "fill": 0.978,
+   "qx": -0.012,
+   "qz": 0.009,
+   "tris": [
+    15777,
+    3447,
+    39
+   ],
+   "lods": [
+    0,
+    2,
+    5
+   ],
+   "all_lod_tris": [
+    15777,
+    7277,
+    3447,
+    1393,
+    563,
+    39
+   ]
+  },
+  {
+   "id": "House_Village_E_1I04t",
+   "file": "House_Village_E_1I04t.glb",
+   "cat": "house",
+   "floors": 1,
+   "prefab": "Prefabs/Structures/Houses/Village/House_Village_E_1I04/House_Village_E_1I04t_red.et",
+   "placed": 1,
+   "bytes": 801744,
+   "w": 20.05,
+   "d": 10.39,
+   "cx": -0.53,
+   "cz": 0.17,
+   "h": 11.34,
+   "fill": 1.0,
+   "qx": -0.001,
+   "qz": 0.005,
+   "tris": [
+    15668,
+    3409,
+    32
+   ],
+   "lods": [
+    0,
+    2,
+    5
+   ],
+   "all_lod_tris": [
+    15668,
+    7185,
+    3409,
+    1381,
+    557,
+    32
+   ]
+  },
+  {
+   "id": "House_Village_E_1I05s",
+   "file": "House_Village_E_1I05s.glb",
+   "cat": "house",
+   "floors": 1,
+   "prefab": "PrefabLibrary/DefaultLibrary/Structures/Houses/House_Village_E_1I05s.et",
+   "placed": 1,
+   "bytes": 1071488,
+   "w": 26.52,
+   "d": 10.4,
+   "cx": -0.36,
+   "cz": 0.0,
+   "h": 10.77,
+   "fill": 0.918,
+   "qx": 0.017,
+   "qz": 0.011,
+   "tris": [
+    23083,
+    1550,
+    19
+   ],
+   "lods": [
+    1,
+    3,
+    4
+   ],
+   "all_lod_tris": [
+    54305,
+    23083,
+    8883,
+    1550,
+    19
+   ]
+  },
+  {
+   "id": "House_Village_E_1I06",
+   "file": "House_Village_E_1I06.glb",
+   "cat": "house",
+   "floors": 1,
+   "prefab": "Prefabs/Structures/Houses/Village/House_Village_E_1I06/House_Village_E_1I06_white.et",
+   "placed": 5,
+   "bytes": 1566360,
+   "w": 16.07,
+   "d": 13.09,
+   "cx": -1.58,
+   "cz": 1.67,
+   "h": 12.52,
+   "fill": 0.916,
+   "qx": 0.016,
+   "qz": -0.023,
+   "tris": [
+    30792,
+    7618,
+    32
+   ],
+   "lods": [
+    0,
+    2,
+    5
+   ],
+   "all_lod_tris": [
+    30792,
+    15123,
+    7618,
+    2914,
+    1744,
+    32
+   ]
+  },
+  {
+   "id": "House_Village_E_1I08t",
+   "file": "House_Village_E_1I08t.glb",
+   "cat": "house",
+   "floors": 1,
+   "prefab": "Prefabs/Structures/Houses/Village/House_Village_E_1I08/House_Village_E_1I08t.et",
+   "placed": 6,
+   "bytes": 1835208,
+   "w": 18.69,
+   "d": 9.6,
+   "cx": -0.0,
+   "cz": -0.04,
+   "h": 10.35,
+   "fill": 1.0,
+   "qx": 0.002,
+   "qz": -0.005,
+   "tris": [
+    35886,
+    8445,
+    40
+   ],
+   "lods": [
+    0,
+    2,
+    6
+   ],
+   "all_lod_tris": [
+    35886,
+    18384,
+    8445,
+    3054,
+    1505,
+    738,
+    40
+   ]
+  },
+  {
+   "id": "House_Village_E_1L01",
+   "file": "House_Village_E_1L01.glb",
+   "cat": "house",
+   "floors": 1,
+   "prefab": "Prefabs/Structures/Houses/Village/House_Village_E_1L01/House_Village_E_1L01.et",
+   "placed": 6,
+   "bytes": 861008,
+   "w": 19.96,
+   "d": 18.91,
+   "cx": 4.2,
+   "cz": -2.12,
+   "h": 11.89,
+   "fill": 0.693,
+   "qx": -0.097,
+   "qz": 0.076,
+   "tris": [
+    17412,
+    1955,
+    60
+   ],
+   "lods": [
+    1,
+    4,
+    6
+   ],
+   "all_lod_tris": [
+    39430,
+    17412,
+    8738,
+    4816,
+    1955,
+    696,
+    60
+   ]
+  },
+  {
+   "id": "House_Village_E_1L02t",
+   "file": "House_Village_E_1L02t.glb",
+   "cat": "house",
+   "floors": 1,
+   "prefab": "Prefabs/Structures/Houses/Village/House_Village_E_1L02/House_Village_E_1L02t.et",
+   "placed": 4,
+   "bytes": 854692,
+   "w": 20.32,
+   "d": 25.32,
+   "cx": 0.16,
+   "cz": -7.44,
+   "h": 11.54,
+   "fill": 0.626,
+   "qx": 0.103,
+   "qz": 0.105,
+   "tris": [
+    18763,
+    2076,
+    26
+   ],
+   "lods": [
+    0,
+    2,
+    4
+   ],
+   "all_lod_tris": [
+    18763,
+    9569,
+    2076,
+    545,
+    26
+   ]
+  },
+  {
+   "id": "House_Village_E_1L03t",
+   "file": "House_Village_E_1L03t.glb",
+   "cat": "house",
+   "floors": 1,
+   "prefab": "Prefabs/Structures/Houses/Village/House_Village_E_1L03/House_Village_E_1L03t_yellow.et",
+   "placed": 3,
+   "bytes": 1756864,
+   "w": 25.33,
+   "d": 24.78,
+   "cx": 0.43,
+   "cz": -7.61,
+   "h": 11.39,
+   "fill": 0.701,
+   "qx": -0.059,
+   "qz": 0.109,
+   "tris": [
+    33427,
+    4294,
+    55
+   ],
+   "lods": [
+    1,
+    3,
+    5
+   ],
+   "all_lod_tris": [
+    71896,
+    33427,
+    12134,
+    4294,
+    2659,
+    55
+   ]
+  },
+  {
+   "id": "House_Wooden_E_1I01",
+   "file": "House_Wooden_E_1I01.glb",
+   "cat": "house",
+   "floors": 1,
+   "prefab": "Prefabs/Structures/Houses/Wooden/House_Wooden_E_1I01/House_Wooden_E_1I01_panels.et",
+   "placed": 2,
+   "bytes": 307976,
+   "w": 12.84,
+   "d": 6.62,
+   "cx": 0.86,
+   "cz": 0.02,
+   "h": 8.39,
+   "fill": 0.977,
+   "qx": -0.013,
+   "qz": -0.006,
+   "tris": [
+    5257,
+    915,
+    79
+   ],
+   "lods": [
+    0,
+    2,
+    3
+   ],
+   "all_lod_tris": [
+    5257,
+    2878,
+    915,
+    79
+   ]
+  },
+  {
+   "id": "House_Wooden_E_1I02",
+   "file": "House_Wooden_E_1I02.glb",
+   "cat": "house",
+   "floors": 1,
+   "prefab": "Prefabs/Structures/Houses/Wooden/House_Wooden_E_1I02/House_Wooden_E_1I02.et",
+   "placed": 1,
+   "bytes": 1211976,
+   "w": 13.86,
+   "d": 12.53,
+   "cx": 1.35,
+   "cz": -1.28,
+   "h": 7.4,
+   "fill": 0.822,
+   "qx": 0.011,
+   "qz": 0.028,
+   "tris": [
+    21250,
+    4907,
+    130
+   ],
+   "lods": [
+    0,
+    2,
+    5
+   ],
+   "all_lod_tris": [
+    21250,
+    12397,
+    4907,
+    2578,
+    1198,
+    130
+   ]
+  },
+  {
+   "id": "Shed_01",
+   "file": "Shed_01.glb",
+   "cat": "shed",
+   "floors": 1,
+   "prefab": "PrefabLibrary/DefaultLibrary/Structures/Houses/Shed_01.et",
+   "placed": 2,
+   "bytes": 331380,
+   "w": 3.57,
+   "d": 2.51,
+   "cx": 0.08,
+   "cz": 0.14,
+   "h": 2.72,
+   "fill": 1.0,
+   "qx": -0.01,
+   "qz": -0.003,
+   "tris": [
+    7062,
+    878,
+    26
+   ],
+   "lods": [
+    0,
+    3,
+    5
+   ],
+   "all_lod_tris": [
+    7062,
+    3484,
+    2023,
+    878,
+    324,
+    26
+   ]
+  },
+  {
+   "id": "Shed_02_big_V1",
+   "file": "Shed_02_big_V1.glb",
+   "cat": "shed",
+   "floors": 1,
+   "prefab": "Prefabs/Structures/Houses/Shed/Shed_02/Shed_02_big_V1.et",
+   "placed": 3,
+   "bytes": 437752,
+   "w": 6.47,
+   "d": 3.34,
+   "cx": -0.01,
+   "cz": 0.22,
+   "h": 2.68,
+   "fill": 0.962,
+   "qx": 0.022,
+   "qz": -0.013,
+   "tris": [
+    8462,
+    1910,
+    26
+   ],
+   "lods": [
+    0,
+    2,
+    3
+   ],
+   "all_lod_tris": [
+    8462,
+    4251,
+    1910,
+    26
+   ]
+  },
+  {
+   "id": "Shed_02_line",
+   "file": "Shed_02_line.glb",
+   "cat": "shed",
+   "floors": 1,
+   "prefab": "Prefabs/Structures/Houses/Shed/Shed_02/Shed_02_line.et",
+   "placed": 1,
+   "bytes": 398668,
+   "w": 6.52,
+   "d": 2.34,
+   "cx": 0.01,
+   "cz": 0.24,
+   "h": 2.7,
+   "fill": 0.876,
+   "qx": 0.006,
+   "qz": -0.068,
+   "tris": [
+    7405,
+    1663,
+    43
+   ],
+   "lods": [
+    0,
+    2,
+    3
+   ],
+   "all_lod_tris": [
+    7405,
+    3757,
+    1663,
+    43
+   ]
+  },
+  {
+   "id": "Shed_02_small",
+   "file": "Shed_02_small.glb",
+   "cat": "shed",
+   "floors": 1,
+   "prefab": "PrefabLibrary/DefaultLibrary/Structures/Houses/Shed_02_small.et",
+   "placed": 2,
+   "bytes": 303464,
+   "w": 3.46,
+   "d": 2.25,
+   "cx": -0.02,
+   "cz": 0.2,
+   "h": 2.71,
+   "fill": 1.0,
+   "qx": 0.006,
+   "qz": 0.0,
+   "tris": [
+    6702,
+    586,
+    34
+   ],
+   "lods": [
+    0,
+    2,
+    3
+   ],
+   "all_lod_tris": [
+    6702,
+    2302,
+    586,
+    34
+   ]
+  },
+  {
+   "id": "Shed_02_square",
+   "file": "Shed_02_square.glb",
+   "cat": "shed",
+   "floors": 1,
+   "prefab": "PrefabLibrary/DefaultLibrary/Structures/Houses/Shed_02_square.et",
+   "placed": 3,
+   "bytes": 439400,
+   "w": 4.31,
+   "d": 3.28,
+   "cx": -0.01,
+   "cz": 0.23,
+   "h": 2.73,
+   "fill": 1.0,
+   "qx": -0.007,
+   "qz": -0.005,
+   "tris": [
+    10448,
+    1694,
+    34
+   ],
+   "lods": [
+    0,
+    2,
+    3
+   ],
+   "all_lod_tris": [
+    10448,
+    5710,
+    1694,
+    34
+   ]
+  },
+  {
+   "id": "Shed_03",
+   "file": "Shed_03.glb",
+   "cat": "shed",
+   "floors": 1,
+   "prefab": "Prefabs/Structures/Houses/Shed/Shed_03/Shed_03.et",
+   "placed": 4,
+   "bytes": 500844,
+   "w": 5.42,
+   "d": 3.21,
+   "cx": -0.06,
+   "cz": -0.04,
+   "h": 3.66,
+   "fill": 1.0,
+   "qx": 0.008,
+   "qz": 0.006,
+   "tris": [
+    14485,
+    3350,
+    40
+   ],
+   "lods": [
+    0,
+    2,
+    6
+   ],
+   "all_lod_tris": [
+    14485,
+    6956,
+    3350,
+    750,
+    304,
+    180,
+    40
+   ]
+  },
+  {
+   "id": "Villa_2I04",
+   "file": "Villa_2I04.glb",
+   "cat": "house",
+   "floors": 2,
+   "prefab": "Prefabs/Structures/Houses/Villa/Villa_2I04/Villa_USSR_2I04_Guba.et",
+   "placed": 1,
+   "bytes": 891932,
+   "w": 16.83,
+   "d": 12.55,
+   "cx": 0.23,
+   "cz": -0.35,
+   "h": 12.6,
+   "fill": 0.952,
+   "qx": 0.002,
+   "qz": 0.0,
+   "tris": [
+    17354,
+    3372,
+    90
+   ],
+   "lods": [
+    2,
+    4,
+    5
+   ],
+   "all_lod_tris": [
+    121303,
+    36008,
+    17354,
+    8319,
+    3372,
+    90
+   ]
+  },
+  {
+   "id": "Villa_E_2I01",
+   "file": "Villa_E_2I01.glb",
+   "cat": "house",
+   "floors": 2,
+   "prefab": "PrefabLibrary/DefaultLibrary/Structures/Houses/Villa_E_2I01.et",
+   "placed": 3,
+   "bytes": 1032608,
+   "w": 13.64,
+   "d": 11.17,
+   "cx": -0.43,
+   "cz": -1.32,
+   "h": 14.68,
+   "fill": 0.96,
+   "qx": -0.005,
+   "qz": -0.007,
+   "tris": [
+    18539,
+    4173,
+    56
+   ],
+   "lods": [
+    1,
+    3,
+    5
+   ],
+   "all_lod_tris": [
+    36264,
+    18539,
+    8637,
+    4173,
+    1628,
+    56
+   ]
+  }
+ ]
+}

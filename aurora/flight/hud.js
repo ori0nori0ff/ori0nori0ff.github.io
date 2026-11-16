@@ -4,8 +4,10 @@
    radial out / in and the manoeuvre node marked), orbit data (Ap / Pe / period / inclination / eccentricity from flight/orbit.js), delta-v
    left, burn timer, time speed. Own code and own look; text on a dark plate (contrast > 4.5:1), labels ≥ 12 px. */
 import { D2R, clamp, FONT, MONO, fmt, pad } from './instruments/draw.js?v=c3b9eb1c';
+import { createWeaponHud } from './weapon-hud.js?v=84d03827';
+import { R_E } from './core.js?v=d29b8afa';
 
-const KT = 1.943844, FT = 3.28084;
+const KT = 1.943844, FT = 3.28084, LBK = 1 / .45359237;
 const qrot = (q, v) => { const [x, y, z, w] = q, tx = 2 * (y * v[2] - z * v[1]), ty = 2 * (z * v[0] - x * v[2]), tz = 2 * (x * v[1] - y * v[0]);
   return [v[0] + w * tx + y * tz - z * ty, v[1] + w * ty + z * tx - x * tz, v[2] + w * tz + x * ty - y * tx]; };
 const qconj = q => [-q[0], -q[1], -q[2], q[3]];
@@ -26,7 +28,7 @@ export function createScreenHud(core, host, o = {}) {
   const txt = (s, px, py, o2 = {}) => { x.font = `${o2.w || 600} ${o2.s || 13}px ${o2.mono ? MONO : FONT}`; x.fillStyle = o2.c || '#E6EBF1'; x.textAlign = o2.a || 'left'; x.textBaseline = 'middle'; x.fillText(s, px, py); };
 
   // ── aircraft: a compact flight display at the bottom centre
-  function air(h) { const cx = W / 2, R = Math.min(54, W * .1), pw = Math.min(W - 24, 720), compact = pw < 700, ph = 2 * R + 64 + (compact ? 78 : 0), by = H - 16 - ph + R + 34, px = cx - pw / 2;
+  function air(h) { const cx = W / 2, R = Math.min(54, W * .1), pw = Math.min(W - 24, 720), compact = pw < 700, ph = 2 * R + 64 + (compact ? 102 : 0), by = H - 16 - ph + R + 34, px = cx - pw / 2;
     plate(px, by - R - 34, pw, ph);
     // attitude ball: horizon rotated by the roll, moved by the pitch (2 px per degree × scale)
     const k = R / 30; x.save(); x.beginPath(); x.arc(cx, by, R, 0, 7); x.clip(); x.translate(cx, by); x.rotate(-(h.roll || 0) * D2R);
@@ -56,11 +58,38 @@ export function createScreenHud(core, host, o = {}) {
     // S6: GFS mean wind (from / kt) and its crosswind (L / R = from the left / right) and head / tail component, in kt
     if (h.wind) { const W = h.wind, KT = 1.943844; L.push(['WIND', pad(Math.round(W.from) % 360, 3) + '°/' + fmt(W.spd * KT, 0)]);
       Rr.push(['XW', (W.cross >= 0 ? 'R ' : 'L ') + fmt(Math.abs(W.cross) * KT, 0) + (W.head >= 0 ? ' H ' : ' T ') + fmt(Math.abs(W.head) * KT, 0) + ' kt']); }
+    // fuel (lb): the totaliser; with external tanks "internal+external"
+    if (h.fuel != null) L.push(['FUEL', h.fuelExt > .5 ? fmt(h.fuelInt * LBK, 0) + '+' + fmt(h.fuelExt * LBK, 0) : fmt(h.fuel * LBK, 0)]);
     const y0 = compact ? by + R + 26 : by - 24, lx = compact ? px + 14 : px + 16, rx = px + pw - 14;
     L.forEach(([k2, v], i) => { txt(k2, lx, y0 + i * 24, { c: '#9AA4B2', s: 12 }); txt(v, lx + 38, y0 + i * 24, { s: 15, w: 700, mono: true }); });
     Rr.forEach(([k2, v], i) => { txt(k2, rx - (compact ? 150 : 140), y0 + i * 24, { c: '#9AA4B2', s: 12 }); txt(v, rx, y0 + i * 24, { a: 'right', s: 15, w: 700, mono: true }); });
-    const flags = [h.stall && 'STALL', h.crash && 'CRASH: ' + h.crash, h.park && 'PARKING BRAKE', h.onGround && 'ON GROUND'].filter(Boolean).join(' · ');
-    if (flags) txt(flags, cx, by + R + 18, { a: 'center', s: 13, w: 700, c: h.crash || h.stall ? '#FF6B6B' : '#FFB347' }); }
+    const flags = [h.stall && 'STALL', h.crash && 'CRASH: ' + h.crash, h.park && 'PARKING BRAKE', h.speedbrake > .5 && 'SPEED BRAKE ' + Math.round(h.speedbrake) + '°', h.onGround && 'ON GROUND',
+      h.fuelLowFwd && 'FWD FUEL LOW', h.fuelLowAft && 'AFT FUEL LOW', h.trpFuel && 'TRP FUEL', h.storesMsg].filter(Boolean).join(' · ');
+    if (flags) txt(flags, cx, by + R + 18, { a: 'center', s: 13, w: 700, c: h.crash || h.stall ? '#FF6B6B' : '#FFB347' });
+    // trim + autopilot (flight/autopilot.js): one line over the plate
+    const tr = Math.abs(h.trim || 0) > 1e-3 || Math.abs(h.trimRoll || 0) > 1e-3 ? 'TRIM P ' + (h.trim >= 0 ? '+' : '') + fmt(h.trim, 2) + ' g  R ' + (h.trimRoll >= 0 ? '+' : '') + fmt(h.trimRoll, 1) + '°/s' : '';
+    const apl = [h.apMsg || h.ap, tr].filter(Boolean).join(' · ');
+    if (apl) { x.font = `700 13px ${FONT}`; const tw = x.measureText(apl).width + 20; plate(cx - tw / 2, by - R - 64, tw, 24); txt(apl, cx, by - R - 52, { a: 'center', s: 13, w: 700, c: h.apMsg ? '#FFB347' : '#39FF9E' }); }
+    weapons(h, cx, by - R - (apl ? 80 : 52)); }
+
+  // weapons (flight/weapon-hud.js): one line over the plate (weapon + count · ARM / SAFE · why it cannot launch · lock range / closure ·
+  // KILL / MISS for 2 s) and a circle on the short-range pick, projected with the view camera (needs bindWeapons(S))
+  const wh = createWeaponHud();
+  function weapons(h, cx, ly) { const Wd = wh.read(h, core.state); if (!Wd) return;
+    const parts = [[Wd.sel + (Wd.n != null ? ' ' + Wd.n : ''), '#39FF9E'], [Wd.arm ? 'ARM' : 'SAFE', Wd.arm ? '#FFB347' : '#39FF9E']];
+    if (Wd.warn) parts.push([Wd.warn, '#FF6B6B']);
+    if (Wd.lock) parts.push([fmt(Wd.lock.range / 1852, 1) + ' NM  VC ' + fmt(Wd.lock.closing * KT, 0), '#39FF9E']);
+    if (Wd.flash) parts.push([Wd.flash, Wd.flash === 'KILL' ? '#39FF9E' : '#FFB347']);
+    const E = Wd.ew; if (E) { if (E.warn) parts.unshift([E.warn, '#FF6B6B']); parts.push(['F ' + E.flares + ' C ' + E.chaff, '#9AA4B2']); if (E.hp < 100) parts.push(['HP ' + Math.round(E.hp) + (E.cautions.length ? ' ' + E.cautions.join(' ') : ''), E.hp < 40 ? '#FF6B6B' : '#FFB347']); }   // S12
+    x.font = `700 13px ${FONT}`; const sep = x.measureText('  ·  ').width, ws = parts.map(p => x.measureText(p[0]).width), tw = ws.reduce((a, b) => a + b, 0) + sep * (parts.length - 1) + 20;
+    plate(cx - tw / 2, ly - 12, tw, 24); let px = cx - tw / 2 + 10;
+    parts.forEach((p, i) => { if (i) { txt('·', px + sep / 2, ly, { a: 'center', s: 13, c: '#9AA4B2' }); px += sep; } txt(p[0], px, ly, { s: 13, w: 700, c: p[1] }); px += ws[i]; });
+    const S = wh.session, b = Wd.tgt && Wd.tgt.b, cam = S && S.F && S.F.camera, craft = S && S.craft; if (!b || !cam || !craft || !S.F.THREE) return;
+    const v = (pv || (pv = new S.F.THREE.Vector3())).set(b[0], b[1], b[2]).applyQuaternion(craft.quaternion).multiplyScalar(Wd.tgt.d / R_E).add(craft.position).project(cam);
+    if (v.z < -1 || v.z > 1 || Math.abs(v.x) > 1 || Math.abs(v.y) > 1) return;
+    const qx = (v.x + 1) / 2 * W, qy = (1 - v.y) / 2 * H; x.strokeStyle = '#39FF9E'; x.lineWidth = 2; x.beginPath(); x.arc(qx, qy, 14, 0, 7); x.stroke();
+    txt(fmt(Wd.tgt.d / 1852, 1) + ' NM', qx, qy + 26, { a: 'center', s: 12, w: 700, c: '#39FF9E' }); }
+  let pv = null;
 
   // ── spacecraft: navball + orbit data
   const nb = document.createElement('canvas'), nx = nb.getContext('2d'); let nbAt = 0, nbImg = null;
@@ -101,10 +130,20 @@ export function createScreenHud(core, host, o = {}) {
       ['Attitude', (ctx.sas || 'off').toUpperCase()], ['Time', '×' + fmt(h.warp, 0) + (h.onRails ? ' on rails' : '')], ['Next SOI', h.soiNext ? h.soiNext.body + ' · ' + dur((h.soiNext.t - s.t) / 1e3) : '–']];
     Rr.forEach(([k2, v2], i) => { txt(k2, rx, ly + i * step, { c: '#9AA4B2', s: 12 }); txt(v2, px + pw - 12, ly + i * step, { a: 'right', s: 13, w: 700, mono: true, c: k2 === 'Burn' && B && B.phase === 'burn' ? '#FFB347' : '#E6EBF1' }); }); }
 
+  // engine line (flight/engine-start.js): parts joined by ' · ', wrapped to the width, on a plate over the flight display (outside views)
+  // or near the bottom (cockpit view, no flight display)
+  function engLine(t, cockpit) { x.font = `600 13px ${FONT}`; const max = W - 48, L = [];
+    for (const p of t.split(' · ')) { const c = L.length ? L[L.length - 1] + ' · ' + p : p; if (L.length && x.measureText(c).width <= max) L[L.length - 1] = c; else L.push(p); }
+    const w = Math.min(W - 24, Math.max(...L.map(l => x.measureText(l).width)) + 24), R = Math.min(54, W * .1), pw = Math.min(W - 24, 720), ph = 2 * R + 64 + (pw < 700 ? 78 : 0);
+    const bh = 20 * L.length + 8, y0 = (cockpit ? H - 24 : H - 16 - ph - 10) - bh;
+    plate(W / 2 - w / 2, y0, w, bh); L.forEach((l, i) => txt(l, W / 2, y0 + 14 + 20 * i, { a: 'center', s: 13, c: '#FFB347' })); }
+
   function update() { if (!stats.on || core.hold) { if (cv.width) { x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, cv.width, cv.height); } return; }
     const t0 = performance.now(); size(); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, W, H);
     const hide = (o.hideInView || []).includes(core.view) && core.def.views[core.view] && !o.forceShow;
     if (!hide) (o.kind === 'space' ? space : air)(core.hud);
+    if (o.kind !== 'space' && core.hud.engLine) engLine(core.hud.engLine, hide);   // flight/engine-start.js: start / off / EPU state, in every view
     stats.ms += (performance.now() - t0 - stats.ms) * .05; stats.frames++; }
-  return { canvas: cv, update, stats, set on(v) { stats.on = !!v; }, get on() { return stats.on; }, dispose() { cv.remove(); } };
+  return { canvas: cv, update, stats, set on(v) { stats.on = !!v; }, get on() { return stats.on; }, dispose() { wh.dispose(); cv.remove(); },
+    bindWeapons: s => wh.bind(s) };   // flight/session.js after the weapons plug-ins: events + missiles.pickTarget for the weapons line
 }

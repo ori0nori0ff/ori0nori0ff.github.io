@@ -1,0 +1,5 @@
+*.glb, tex/*.jpg: house models and textures from Arma Reforger (Bohemia Interactive), read from the game files with tools/enfusion/
+and converted by tools/build_houses.py. Used with the permission of the site owner, who holds the right to use them.
+Not covered by this project's own licence.
+Placement on the 3D Earth (web/aurora/buildings.js): building footprints and heights from OpenStreetMap contributors (ODbL 1.0),
+via OpenFreeMap vector tiles (OpenMapTiles schema).

@@ -1,7 +1,8 @@
 /* The Earth view of the 3D module, cinematic (three.js r170, MIT, bundled in lib/three/): NASA Blue Marble / Black Marble + clouds (today's from
    NOAA GMGSI or the NASA composite), ray-marched air, volumetric OVATION aurora + curtains, HD close-ups (Sentinel-2 cloudless by EOX + Terrarium
    relief), water with sky + glint + waves, NASA SVS star map, studio light or the real Sun. Same interface as the old earth3d.js:
-   Earth3D.create(host, { places: [{name, lat, lon}], time: () => ms, onBack, onOut, quality, storm, paused }) → { show(lat, lon, far), hide(), setTime(), flyTo(), setPlaces() }
+   Earth3D.create(host, { places: [{name, lat, lon}], time: () => ms, onBack, onOut, quality, storm, paused, earthOnly })
+   (earthOnly: a background Earth seen from orbit, e.g. the game menu: no planet / moon / spacecraft / belt data, plain Sun ball, no trees) → { show(lat, lon, far), hide(), setTime(), flyTo(), setPlaces() }
    Preview page: web/earthprev/. */
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
@@ -10,10 +11,13 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
-import { createVeg } from './veg.js?v=7e75086a';
+import { createVeg } from './veg.js?v=2c676ade';
+import { createBuildings } from './buildings.js?v=a47b7113';
+import { createMsfsAirports } from './msfsair.js?v=0a345195';
 import { createNightOsm } from './nightosm.js?v=b082f45d';
-import { createAirfield } from './airfield.js?v=f61f2df1';
-import { createSolar } from './solar.js?v=179ba626';
+import { createAirfield } from './airfield.js?v=102ac20a';
+import { createRoads, GLSL as RD_GLSL } from './roads.js?v=19f1c06a';
+import { createSolar } from './solar.js?v=959e85aa';
 
 const esriKey = () => { try { const k = (localStorage.getItem('aurora.esri') || '').trim(); return /^[\w.\-]{20,600}$/.test(k) ? k : ''; } catch (e) { return ''; } };   // the user's own Esri key (⚙), this device only
 const tr = (s, o) => window.T ? window.T(s, o) : String(s).replace(/\{(\w+)\}/g, (m, k) => o && o[k] != null ? o[k] : m);
@@ -152,7 +156,7 @@ function create(host, opts) {
     <div class="e3g-nav"><button data-k="fly" aria-pressed="false" title="${tr('Free flight: W A S D, drag to look, Esc to stop')}" aria-label="${tr('Free flight: W A S D, drag to look, Esc to stop')}">✈</button><button data-k="craft" aria-expanded="false" title="${tr('Fly a craft: F-16 or spacecraft')}" aria-label="${tr('Fly a craft: F-16 or spacecraft')}"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 2l2 7 7 5v2l-7-2-1 5 3 2v1l-4-1-4 1v-1l3-2-1-5-7 2v-2l7-5z" fill="#E6EBF1"/></svg></button><button data-k="ang" aria-pressed="false" aria-label="${tr('Tilt')} / ${tr('Heading')}">∠</button><button data-k="cmp" aria-label="${tr('Reset to north')}"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 3l4 9h-8z" fill="#FF4D4D"/><path d="M12 21l-4-9h8z" fill="#E6EBF1"/></svg></button><button data-k="3d" aria-pressed="true" aria-label="${tr('3D view')}">3D</button><button data-k="zout" aria-label="${tr('Zoom out')}">−</button><button data-k="zin" aria-label="${tr('Zoom in')}">+</button></div>
     <div class="e3g-info" hidden aria-live="polite"></div>
     <div class="e3g-pnl" hidden><label>${tr('Tilt')}<input type="range" data-s="tilt" min="0" max="100" value="100"></label><label>${tr('Heading')}<input type="range" data-s="head" min="-180" max="180" value="0"></label><button data-k="north">${tr('Reset to north')}</button><small>${tr('Shift + drag or right-drag: tilt and turn')}</small></div>
-    <details class="e3g-attr"><summary>ⓘ ${tr('Sources')}</summary><div>NASA Blue Marble · Black Marble · SVS star map · NOAA GMGSI · NASA GPM IMERG (GIBS) · OVATION · ${tr('close-up')}: Sentinel-2 cloudless 2023 by EOX (CC BY-NC-SA 4.0)${esriKey() ? ' · Esri World Imagery (Powered by Esri — Esri, Maxar, Earthstar Geographics, and the GIS User Community)' : ''} · Mapzen Terrarium / AWS · ${tr('Moon')}: JAXA Kaguya TC · NASA LRO LOLA (Moon Trek) · ${tr('Mars')}: MRO CTX (NASA/JPL/MSSS/Caltech Murray Lab/Esri) · Viking · MOLA / HRSC (Mars Trek) · ${tr("small bodies")}: NASA/JPL SBDB · Ceres, Vesta: NASA Dawn (DLR / USGS) · Pluto: NASA New Horizons (USGS) · Flight (✈ craft): F-16D 3D model by alexskyrex-5de5f7 (CGTrader, Royalty Free licence, not redistributable) · <a href="https://sketchfab.com/3d-models/f-16c-cockpit-photogrammetry-41cdec4eac10453c8a272579d0e2c9fa" target="_blank" rel="noopener">"F-16C Cockpit Photogrammetry"</a> by <a href="https://sketchfab.com/VTX_car" target="_blank" rel="noopener">VTX</a>, <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener">CC BY-NC-SA 4.0</a> (reduced and placed; same licence) · <a href="https://sketchfab.com/3d-models/fighter-jet-ejection-seat-d7ba3a2437d64dfe8309f4a557db8cd7" target="_blank" rel="noopener">"Fighter Jet Ejection Seat"</a> by <a href="https://sketchfab.com/k.botond431" target="_blank" rel="noopener">k.botond431</a>, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a> (scaled) · F-16 aero data: NASA TP-1538 · wind: NOAA GFS</div></details>`;
+    <details class="e3g-attr"><summary>ⓘ ${tr('Sources')} · © OpenStreetMap</summary><div>${tr('Buildings, roads and street lights')}: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors (OpenFreeMap, OpenMapTiles) · ${tr('house models')}, ${tr('road textures')}: Arma Reforger (Bohemia Interactive) ·NASA Blue Marble · Black Marble · SVS star map · NOAA GMGSI · NASA GPM IMERG (GIBS) · OVATION · ${tr('close-up')}: Sentinel-2 cloudless 2023 by EOX (CC BY-NC-SA 4.0)${esriKey() ? ' · Esri World Imagery (Powered by Esri — Esri, Maxar, Earthstar Geographics, and the GIS User Community)' : ''} · Mapzen Terrarium / AWS · ${tr('Moon')}: JAXA Kaguya TC · NASA LRO LOLA (Moon Trek) · ${tr('Mars')}: MRO CTX (NASA/JPL/MSSS/Caltech Murray Lab/Esri) · Viking · MOLA / HRSC (Mars Trek) · ${tr("small bodies")}: NASA/JPL SBDB · Ceres, Vesta: NASA Dawn (DLR / USGS) · Pluto: NASA New Horizons (USGS) · Flight (✈ craft): F-16D 3D model by alexskyrex-5de5f7 (CGTrader, Royalty Free licence, not redistributable) · <a href="https://sketchfab.com/3d-models/f-16c-cockpit-photogrammetry-41cdec4eac10453c8a272579d0e2c9fa" target="_blank" rel="noopener">"F-16C Cockpit Photogrammetry"</a> by <a href="https://sketchfab.com/VTX_car" target="_blank" rel="noopener">VTX</a>, <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener">CC BY-NC-SA 4.0</a> (reduced and placed; same licence) · <a href="https://sketchfab.com/3d-models/fighter-jet-ejection-seat-d7ba3a2437d64dfe8309f4a557db8cd7" target="_blank" rel="noopener">"Fighter Jet Ejection Seat"</a> by <a href="https://sketchfab.com/k.botond431" target="_blank" rel="noopener">k.botond431</a>, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a> (scaled) · F-16 aero data: NASA TP-1538 · wind: NOAA GFS</div></details>`;
   let W = 800, H = 600;
   const Q = opts.quality || (() => { try { const v = localStorage.getItem('aurora.q3d'); if (/^(low|medium|high)$/.test(v || '')) return v; } catch (e) {} return null; })() || (document.documentElement.classList.contains('lite') ? 'low' : 'high');   // low | medium | high (light mode → low)
   const renderer = new THREE.WebGLRenderer({ antialias: Q !== 'low', powerPreference: 'high-performance' });
@@ -215,6 +219,7 @@ function create(host, opts) {
     Object.assign(t, { magFilter: THREE.NearestFilter, minFilter: THREE.NearestFilter, needsUpdate: true }); return t; };
   Object.assign(U, { wA: { value: wTx() }, wB: { value: wTx() }, wTau: { value: 0 }, wOn: { value: 0 } });
   const AF = createAirfield(THREE); Object.assign(U, AF.uniforms);   /* runway paint, flat profile and lights (airfield.js) */
+  const RD = createRoads({ THREE, Q, off: !!opts.earthOnly }); Object.assign(U, RD.uniforms);   /* OSM roads painted in the ground tiles (roads.js) */
   // one light model for the globe and the close-up tiles: n = up, P = the point, N = relief normal, Nw = water-surface normal, rough = wave slope variance,
   // d = colour, w = water 0…1, g = map uv, rk = how strongly the relief shades
   // the sunlight that reaches the ground through the air (Rayleigh + Mie, the same air as the shell): white at noon, gold then red at sunrise / sunset.
@@ -708,7 +713,7 @@ ${SUNLIB}${MOONV}
   const TFS = /* glsl */`
     uniform sampler2D img, pimg, nmap, limg, cimg; uniform vec3 psub, hsub, lsub; uniform vec4 rect, wo; uniform float fade, hdA, pxk, wtime, ex, lodR, altF, lA, nHd, oK;
     uniform vec4 rwP; uniform sampler2D rwNum; varying vec2 vRw;
-    varying vec2 vT; varying vec2 vG; varying vec3 vO; varying vec3 vP; varying float vLat; ${SHADE}${AF.GLSL}
+    varying vec2 vT; varying vec2 vG; varying vec3 vO; varying vec3 vP; varying float vLat; ${SHADE}${AF.GLSL}${RD_GLSL}
     // waves: the slopes of WN gravity waves (deep-water speeds, see waveSet): wK = whole cycles per WP m (x, y), slope, phase.
     // fw = the pixel's footprint on the water in metres (from screen derivatives, so it grows at grazing views): a wave shorter than ~2–4 pixels
     // fades out instead of aliasing into moiré rings; its slopes then only widen the glint (rough, Cox–Munk)
@@ -726,6 +731,7 @@ ${SUNLIB}${MOONV}
       // all of that by 2 × — where the next coarser tiles begin. So two levels (often two different photo sets) never meet along a tile edge.
       float dq = length(camO - vP), wl = 1. - smoothstep(1.2, 2., dq / clamp(1.2 * sqrt(altF / dq), .5, 1.) / lodR);
       vec3 d = mix(texture2D(pimg, psub.xy + vT * psub.z).rgb, texture2D(img, vT).rgb, fade * wl) * 1.15;
+      d = rdPaint(vT, d);   /* OSM roads (roads.js) */
       d = rwPaint(vRw, rwP, d, max(length(fwidth(vRw)), 1e-3));   /* runway paint (airfield.js) */
       vec4 nm = texture2D(nmap, hsub.xy + vT * hsub.z); vec3 tn = nm.xyz * 2. - 1.; tn.xy *= ex;   // the map holds true slopes; × ex = the slopes as drawn
       float w = nm.a * (1. - smoothstep(.05, .12, dot(d, vec3(.3, .59, .11))));   // sea level and dark = water
@@ -817,7 +823,7 @@ ${SUNLIB}${MOONV}
     const mat = new THREE.ShaderMaterial({ uniforms: { ...U, img: { value: t.img }, pimg: { value: t.img }, psub: { value: new THREE.Vector3(0, 0, 1) },
         hmap: { value: d.dem.ht }, nmap: { value: d.dem.nt }, hsub: { value: new THREE.Vector3((t.x % m) * s, (t.y % m) * s, s) }, rect: { value: new THREE.Vector4(t.lon0, t.dlon, t.my0, t.dmy) },
         fade: { value: 1 }, lodR: { value: 1e9 }, limg: { value: TX.night }, cimg: { value: OSM.cov(-1, -1) }, lsub: { value: new THREE.Vector3(0, 0, 1) }, lA: { value: 0 }, skirt: { value: Math.max(t.rho * .05, 8e-6) }, wo: { value: new THREE.Vector4() },
-        cV: { value: new THREE.Vector3() }, e0: { value: t.e0 }, n0: { value: t.n0 }, u0: { value: t.u0 }, cs: { value: t.cs }, rwT: { value: t.rwT || (t.rwT = AF.tileVec(t)) } }, vertexShader: TVS, fragmentShader: TFS, transparent: true, side: THREE.DoubleSide });
+        cV: { value: new THREE.Vector3() }, e0: { value: t.e0 }, n0: { value: t.n0 }, u0: { value: t.u0 }, cs: { value: t.cs }, rwT: { value: t.rwT || (t.rwT = AF.tileVec(t)) }, ...RD.tileU() }, vertexShader: TVS, fragmentShader: TFS, transparent: true, side: THREE.DoubleSide });
     { const p = setPar(mat.uniforms, t); if (!t.img) mat.uniforms.img.value = p.img; }
     t.mesh = new THREE.Mesh(t.z > HD.ZT && t.z <= HD.ZT + 2 ? tileGeo2 : tileGeo, mat); t.mesh.frustumCulled = false; t.mesh.renderOrder = 1; t.born = 0; return t.mesh; }
   const fr = new THREE.Frustum(), fm = new THREE.Matrix4(), mvD = new THREE.Matrix4(), sph = new THREE.Sphere(), camN = new THREE.Vector3(), camG = new THREE.Vector3();
@@ -856,21 +862,26 @@ ${SUNLIB}${MOONV}
       u.lA.value = 0; if (t.z >= LZ0 && U.lightsOn.value > 0 && t.c.dot(U.sun.value) < Math.sin(t.rho) + .1) { const l = lightsOf(t);   /* night side (or near it) only */
         if (l.lt) { const s = t.z > LZ ? 1 / (1 << (t.z - LZ)) : 1, mm = t.z > LZ ? 1 << (t.z - LZ) : 1, f = Math.min(1, (now - l.ltB) / 400); u.limg.value = l.lt; u.lsub.value.set((t.x % mm) * s, (t.y % mm) * s, s); u.lA.value = f * f * (3 - 2 * f); u.cimg.value = OSM.cov(l.z === LZ ? l.x : -1, l.y); l.used = frameNo; }
         else if (!l.ltP && (l.ltF || 0) < 4 && act < 24) loadLights(l); }
-      hd.add(m); }
+      RD.bind(t, u); hd.add(m); }
+    RD.update();   /* road masks: load + rasterize the z14 tiles the near ground asks for (roads.js) */
     VEG.update(hd, mvD, camN, altG * 6371000);   /* trees and bushes near the ground (veg.js) */
+    MSA.update(hd, mvD, camN, altG * 6371000);   /* MSFS airport objects (msfsair.js); before BLD so its covers() is current */
+    BLD.update(hd, mvD, camN, altG * 6371000);   /* OSM buildings: house models in Romania + extruded walls (buildings.js) */
     AF.update(hd, mvD, U, pxK, altG * 6371000, SHADE);   /* runway lights and the LRBV buildings (airfield.js) */
     OSM.update(hd, mvD, camN, altG * 6371000);   /* street-light points from OSM roads at night (nightosm.js) */
     if (tiles.size > HD.KEEP) for (const t of [...tiles.values()].sort((a, b) => a.used - b.used).slice(0, 200)) { if (t.used > frameNo - 600) break; if (t.imgP || t.demP || t.ltP) continue;   // over the limit: forget what you have not looked at for ~10 s (turning back finds it still there); never one that is still downloading
       t.img?.dispose(); t.lt?.dispose(); t.dem?.ht.dispose(); t.dem?.nt.dispose(); t.mesh?.material.dispose(); tiles.delete(t.k); }
     return drawn.length; }
-  const VEG = createVeg({ THREE, Q, SHADE, U, tiles, groundAt: (la, lo) => groundAt(la, lo, null), camera, renderer });
+  const VEG = createVeg({ THREE, Q, SHADE, U, tiles, groundAt: (la, lo) => groundAt(la, lo, null), camera, renderer, off: !!opts.earthOnly });
+  const MSA = createMsfsAirports({ THREE, Q, SHADE, U, groundAt: (la, lo) => groundAt(la, lo, null), renderer, off: !!opts.earthOnly });
+  const BLD = createBuildings({ THREE, Q, SHADE, U, groundAt: (la, lo) => groundAt(la, lo, null), renderer, off: !!opts.earthOnly, skip: MSA });
   const OSM = createNightOsm({ THREE, U, tiles, groundAt: (la, lo) => groundAt(la, lo, null), camera, renderer });
   const gmst = t => ((280.46061837 + 360.98564736629 * (t / 864e5 + 2440587.5 - 2451545)) % 360) * D2R;
   
   // bloom: city lights, the glint and the aurora glow a little (off on low)
   let PR = renderer.getPixelRatio(); const rt = new THREE.WebGLRenderTarget(W * renderer.getPixelRatio(), H * renderer.getPixelRatio(), { type: THREE.HalfFloatType, samples: Q === "high" && renderer.getPixelRatio() <= 1.05 ? 4 : 0 });   // MSAA only when pixels are big
   rt.depthTexture = new THREE.DepthTexture(rt.width, rt.height);   // the air pass reads how far the ground is in each pixel
-  const solar = createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, quatW: earth.quaternion, dayTex: TX.day });
+  const solar = createSolar({ THREE, renderer, camera, Q, tr, el, nrmOf, gmst, quatW: earth.quaternion, dayTex: TX.day, lite: !!opts.earthOnly });
   earth.remove(stars); { const sg = new THREE.Group(); sg.quaternion.copy(earth.quaternion); sg.add(stars); solar.scene.add(sg); stars.position.set(0, 0, 0); }   // the sky is the far layer's background
   const composer = new EffectComposer(renderer, rt); composer.addPass(new RenderPass(solar.scene, solar.cam));
   { const np = new RenderPass(scene, camera), r0 = np.render.bind(np); np.clear = false; np.render = (r, w, rb, ...a) => { r.setRenderTarget(rb); r.clearDepth(); r0(r, w, rb, ...a); }; composer.addPass(np); }   // the Earth's scene: its own depth, over the far layer
@@ -1213,9 +1224,31 @@ ${SUNLIB}${MOONV}
   // in sunlight): at .88 a third of the sky bloomed into a white cone. Only what is far brighter than the sky (glint, the Sun) glows by day
   const bloom = Q !== 'low' ? new UnrealBloomPass(new THREE.Vector2(W, H), .35, .6, .88) : null; if (bloom) composer.addPass(bloom);
   composer.addPass(new OutputPass());
+  let fxPass = null;
   { const sp = new RenderPass(sunScene, camera); sp.clear = false; composer.addPass(sp);   // the Sun's disc over the finished picture, then out to the screen
-    composer.addPass(new ShaderPass({ uniforms: { tDiffuse: { value: null } }, vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`,
-      fragmentShader: `uniform sampler2D tDiffuse; varying vec2 vUv; void main() { gl_FragColor = texture2D(tDiffuse, vUv); }` })); }
+    // + edge smoothing near the ground (aa: 1 under 50 km, 0 above 100 km, set per frame). The far skyline is made by the air pass, which ends each
+    // pixel's ray at that pixel's one depth: a hard step that MSAA cannot smooth (measured 15 Nov 2026, flight view at LRBV: skyline columns with a
+    // one-row step 68 % with MSAA 4, 55 % without, 27 % / 21 % with this filter). The method is FXAA (T. Lottes, NVIDIA; the short "console"
+    // form), written out here: blur a few taps along the local edge direction, only where the 5-tap luma contrast is above 8 %
+    fxPass = new ShaderPass({ uniforms: { tDiffuse: { value: null }, aa: { value: 0 } }, vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`,
+      fragmentShader: /* glsl */`uniform sampler2D tDiffuse; uniform float aa; varying vec2 vUv;
+        float lum(vec3 c) { return dot(c, vec3(.299, .587, .114)); }
+        void main() { vec4 c0 = texture2D(tDiffuse, vUv); if (aa <= 0.) { gl_FragColor = c0; return; }
+          vec2 px = 1. / vec2(textureSize(tDiffuse, 0));
+          float lNW = lum(texture2D(tDiffuse, vUv + vec2(-1., -1.) * px).rgb), lNE = lum(texture2D(tDiffuse, vUv + vec2(1., -1.) * px).rgb), lSW = lum(texture2D(tDiffuse, vUv + vec2(-1., 1.) * px).rgb), lSE = lum(texture2D(tDiffuse, vUv + vec2(1., 1.) * px).rgb), lM = lum(c0.rgb);
+          float lMin = min(lM, min(min(lNW, lNE), min(lSW, lSE))), lMax = max(lM, max(max(lNW, lNE), max(lSW, lSE)));
+          if (lMax - lMin < max(.03, lMax * .08)) { gl_FragColor = c0; return; }   /* flat area: untouched */
+          /* one bright sample among the five = a point (a star, a far lamp), not an edge: untouched (without this the stars lost 2/3 of their bright pixels) */
+          float m4 = max(max(lNW, lNE), max(lSW, lSE)), s4 = max(min(max(lNW, lNE), max(lSW, lSE)), max(min(lNW, lNE), min(lSW, lSE))), hi2 = lM >= m4 ? m4 : max(s4, lM);
+          if (hi2 - lMin < .25 * (lMax - lMin)) { gl_FragColor = c0; return; }
+          /* and nothing with black 3 px away (the night sky: bright stars are discs a few pixels wide with a glow) */
+          if (min(min(lum(texture2D(tDiffuse, vUv + vec2(-3., -3.) * px).rgb), lum(texture2D(tDiffuse, vUv + vec2(3., -3.) * px).rgb)), min(lum(texture2D(tDiffuse, vUv + vec2(-3., 3.) * px).rgb), lum(texture2D(tDiffuse, vUv + vec2(3., 3.) * px).rgb))) < .04) { gl_FragColor = c0; return; }
+          vec2 dir = vec2(-((lNW + lNE) - (lSW + lSE)), (lNW + lSW) - (lNE + lSE));
+          float red = max((lNW + lNE + lSW + lSE) * .03125, .0078125), rc = 1. / (min(abs(dir.x), abs(dir.y)) + red);
+          dir = clamp(dir * rc, -8., 8.) * px;
+          vec3 a = .5 * (texture2D(tDiffuse, vUv + dir * (1. / 3. - .5)).rgb + texture2D(tDiffuse, vUv + dir * (2. / 3. - .5)).rgb);
+          vec3 b = a * .5 + .25 * (texture2D(tDiffuse, vUv - dir * .5).rgb + texture2D(tDiffuse, vUv + dir * .5).rgb);
+          float lB = lum(b); gl_FragColor = vec4(mix(c0.rgb, lB < lMin || lB > lMax ? a : b, aa), c0.a); }` }); composer.addPass(fxPass); }
   for (const p of composer.passes) if (p.material) { p.material.depthTest = false; p.material.depthWrite = false; }   // full-screen passes: never tested against an old depth
 
   
@@ -1803,7 +1836,7 @@ ${SUNLIB}${MOONV}
   const pad = v => String(v).padStart(2, '0'), localStr = t => { const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
   $('fly').onclick = () => fly ? flyOff() : flyOn();
   // S4 flight menu (flight/menu.js, loaded on the first click): pick a craft and fly it in this view
-  $('craft').onclick = () => { if (fly) flyOff(); import('./flight/menu.js?v=b145b8e2').then(m => m.openMenu(api, host, $('craft'))).catch(e => console.error('flight menu', e)); };
+  $('craft').onclick = () => { if (fly) flyOff(); import('./flight/menu.js?v=17477e77').then(m => m.openMenu(api, host, $('craft'))).catch(e => console.error('flight menu', e)); };
   const di = $('date'); di.onchange = () => { const t = Date.parse(di.value); if (isFinite(t)) tOver = Math.max(Date.UTC(1800, 0, 1), Math.min(Date.UTC(2050, 0, 1), t)); };
   $('now').onclick = () => { playSet(false, 1); spd = 0; $('dyS').value = '0'; tOver = null; di.value = localStr(now()); };
   // time of day at the place you look at: local Sun time (UTC + longitude / 15) on the same day; moving it switches the real Sun on
@@ -2066,7 +2099,7 @@ ${SUNLIB}${MOONV}
     if (focus !== 'Earth' && solar.bodies[focus]) cl.copy(camera.position).sub(fc).applyQuaternion(solar.bodies[focus].mesh.quaternion.clone().invert()).normalize();   // another body: its own latitude / longitude
     todShow(t); if (el.classList.contains('sy') || el.classList.contains('mso')) dyShow(t); if (fly) flyHud();
     el.querySelector('.e3g-alt').innerHTML = `${focus !== 'Earth' ? tr(focus) + ' · ' : ''}${tr('Altitude')} ${km >= 1000 ? Math.round(km).toLocaleString(window.LOC || 'en-GB') : km.toFixed(km < 10 ? 1 : 0)} km${focus === 'Earth' && hAG * 6371 < 3 ? ' · ' + Math.round(hAG * 6371000) + ' m ' + tr('above the ground') : ''}<small>${plN && performance.now() < plT ? '<b style="color:#39FF9E">' + plN + '</b> · ' : ''}${(Math.asin(cl.y) / D2R).toFixed(2)}°, ${(Math.atan2(-cl.z, cl.x) / D2R).toFixed(2)}° · ${new Date(t).toLocaleString(window.LOC || 'en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}${tOver != null ? '' : ' · ' + tr('live')}</small>`;
-    airPass.uniforms.projInv.value.copy(camera.projectionMatrixInverse); airPass.uniforms.camW.value.copy(camera.matrixWorld); airPass.uniforms.toObj.value.setFromMatrix4(inv); airPass.uniforms.cn.value.set(camera.near, camera.far); airPass.enabled = air.visible && scene.visible;
+    airPass.uniforms.projInv.value.copy(camera.projectionMatrixInverse); airPass.uniforms.camW.value.copy(camera.matrixWorld); airPass.uniforms.toObj.value.setFromMatrix4(inv); airPass.uniforms.cn.value.set(camera.near, camera.far); airPass.enabled = air.visible && scene.visible; fxPass.uniforms.aa.value = focus === 'Earth' ? 1 - THREE.MathUtils.smoothstep(km, 50, 100) : 0;
     U.cVol.value = VOL && focus === 'Earth' && U.cloudOn.value && U.morph.value < .01 ? 1 - smooth(350, 500, (U.camO.value.length() - 1) * 6371) : 0;   // the flat layer turns into the volume from 500 to 350 km
     cvPass.enabled = U.cVol.value > 0 && scene.visible; if (VOL && cnZ < CNN) cnBuild(renderer);   // the cloud noise: the first 8 frames
     // the cloud layers stand on the region's drawn ground, not on the sea-level sphere: the drawn ground is the relief × ex + 400 m, so at

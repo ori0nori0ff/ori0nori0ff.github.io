@@ -5,7 +5,7 @@
    Keys (while piloting): 1 cockpit, 2 chase / far chase / orbit, 3 flyby, 4 onboard angles, 5 ground camera, 6 free camera;
    free camera: I / K forward / back, J / L left / right, U / O down / up, Shift x10, wheel = speed.
    Note: the earlier camera pose is in `cam` (core reuses one object); F.camera is earthgl's globe camera while the frame callbacks run. */
-import { R_E, latLonOf } from './core.js?v=9235aa0c';
+import { R_E, latLonOf } from './core.js?v=d29b8afa';
 
 // F = api.flight(); core = createCore(); def = core.def; o = { bb (model-frame Box3, m), head ([x, y, z] pilot eye, m) }
 export function addCameraViews(F, core, def, o) {
